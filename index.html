@@ -1609,7 +1609,10 @@ function updateLayoutBtn(){
 function renderLayoutList(){
   const box=document.getElementById('layoutList'); if(!box) return; box.innerHTML='';
   if(!dwgLayouts.length){ box.innerHTML='<div style="color:var(--ink-dim);font-size:12.5px;padding:10px">Bản vẽ này chỉ có không gian Model.</div>'; return; }
+  let shown=0;
   dwgLayouts.forEach((L,i)=>{
+    if(!L.isModel && (!L.paper || (!L.paper.viewports.length && !L.paper.paperPrims.length))) return;  // bỏ layout rỗng (tránh kẹt)
+    shown++;
     const row=document.createElement('button'); row.type='button';
     row.className='layer-row'+(i===currentLayout?' lay-active':'');
     const sub = L.isModel ? 'Mô hình' : (((L.paper&&L.paper.viewports.length)||0)+' khung nhìn');
@@ -1617,32 +1620,42 @@ function renderLayoutList(){
     row.addEventListener('click',()=>switchLayout(i));
     box.appendChild(row);
   });
+  if(!shown) box.innerHTML='<div style="color:var(--ink-dim);font-size:12.5px;padding:10px">Chỉ có Model.</div>';
 }
 function switchLayout(i){
-  if(i<0||i>=dwgLayouts.length) return;
+  if(i<0||i>=dwgLayouts.length){ closeModal(layoutOverlay); return; }
   const L=dwgLayouts[i];
-  if(i!==currentLayout){
-    saveOverlay();                                  // lưu đo/ghi chú của layout hiện tại
-    currentLayout=i;
-    entities = L.isModel ? modelEntities : buildPaperEntities(L);
-    currentKey = baseKey ? (L.isModel ? baseKey : baseKey+'::'+L.name) : null;   // Model giữ khoá gốc (tương thích cũ)
-    measurements=[]; annotations=[]; measureTemp=[]; hoverWorld=null; selected=null; infoIdx=-1;
-    document.getElementById('infoCard').classList.remove('show');
-    hiddenUserLayers.clear();
-    buildSnap(); buildLayerList();
-    setMode('pan'); fitView(); loadOverlay();
-    updateLayoutBtn(); renderLayoutList();
-    if(L.isModel){ toast('Mô hình (Model) · '+entities.length+' đối tượng'); }
-    else {
-      const vpContent=entities.filter(e=>e.clip).length, nVp=(L.paper&&L.paper.viewports.length)||0;
-      if(nVp>0 && vpContent < Math.max(15, modelEntities.length*0.02))
-        toast('Layout: '+L.name+' — khung nhìn đang trỏ vào vùng trống (bản vẽ nằm xa khung). File lưu hướng nhìn chưa khớp nội dung.');
-      else
-        toast('Layout: '+L.name+' · '+nVp+' khung nhìn · '+entities.length+' đối tượng');
+  try{
+    if(i!==currentLayout){
+      saveOverlay();                                  // lưu đo/ghi chú của layout hiện tại
+      currentLayout=i;
+      entities = L.isModel ? modelEntities : buildPaperEntities(L);
+      currentKey = baseKey ? (L.isModel ? baseKey : baseKey+'::'+L.name) : null;   // Model giữ khoá gốc (tương thích cũ)
+      measurements=[]; annotations=[]; measureTemp=[]; hoverWorld=null; selected=null; infoIdx=-1;
+      document.getElementById('infoCard').classList.remove('show');
+      hiddenUserLayers.clear();
+      buildSnap(); buildLayerList();
+      setMode('pan'); fitView(); loadOverlay();
+      updateLayoutBtn(); renderLayoutList();
+      if(L.isModel){ toast('Mô hình (Model) · '+entities.length+' đối tượng'); }
+      else {
+        const vpContent=entities.filter(e=>e.clip).length, nVp=(L.paper&&L.paper.viewports.length)||0;
+        if(nVp>0 && vpContent < Math.max(15, modelEntities.length*0.02))
+          toast('Layout: '+L.name+' — khung nhìn đang trỏ vào vùng trống (bản vẽ nằm xa khung). File lưu hướng nhìn chưa khớp nội dung.');
+        else
+          toast('Layout: '+L.name+' · '+nVp+' khung nhìn · '+entities.length+' đối tượng');
+      }
     }
+  }catch(err){
+    console.error('switchLayout error', err);
+    toast('Không mở được layout này — đã quay về Model.');
+    try{ currentLayout=Math.max(0,dwgLayouts.findIndex(x=>x.isModel)); entities=modelEntities; currentKey=baseKey;
+         hiddenUserLayers.clear(); infoIdx=-1; buildSnap(); buildLayerList(); setMode('pan'); fitView();
+         updateLayoutBtn(); renderLayoutList(); }catch(_){}
+  }finally{
+    closeModal(layoutOverlay);
+    requestAnimationFrame(forceRedraw);               // ép iOS vẽ lại lên màn hình
   }
-  closeModal(layoutOverlay);
-  requestAnimationFrame(forceRedraw);               // ép iOS vẽ lại lên màn hình
 }
 function selectMeasure(i){ selected={kind:'m',i}; updateHint(); draw(); toast('Đã chọn phép đo · bấm Xoá để xoá'); }
 function editAnnotation(i){ selected={kind:'n',i}; editingIdx=i; showNoteModal(); }
@@ -2181,7 +2194,7 @@ document.getElementById('icClose').addEventListener('click',hideObjectInfo);
 
 /* ---- Bảng Layout / khung in ---- */
 const layoutOverlay=document.getElementById('layoutOverlay');
-document.getElementById('layoutBtn').addEventListener('click',()=>{ if(!entities.length)return; renderLayoutList(); openModal(layoutOverlay); });
+document.getElementById('layoutBtn').addEventListener('click',()=>{ if(!dwgLayouts.length)return; renderLayoutList(); openModal(layoutOverlay); });
 document.getElementById('layoutClose').addEventListener('click',()=>{ closeModal(layoutOverlay); requestAnimationFrame(forceRedraw); });
 layoutOverlay.addEventListener('click',e=>{ if(e.target===layoutOverlay){ closeModal(layoutOverlay); requestAnimationFrame(forceRedraw); } });
 
