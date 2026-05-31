@@ -141,7 +141,7 @@
 
   /* ---------- Note modal ---------- */
   .overlay{
-    position:fixed;inset:0;background:rgba(4,6,10,.6);backdrop-filter:blur(3px);
+    position:fixed;inset:0;background:rgba(4,6,10,.72);
     display:none;align-items:flex-end;justify-content:center;z-index:50;
   }
   .overlay.show{display:flex;animation:fade .15s ease}
@@ -1986,10 +1986,10 @@ document.getElementById('clearAll').addEventListener('click',()=>{measurements=[
 /* ---- Bảng Lớp + thẻ thông tin đối tượng ---- */
 const layerOverlay=document.getElementById('layerOverlay');
 document.getElementById('layerBtn').addEventListener('click',()=>{ if(!entities.length)return; buildLayerList(); renderLayerList(); openModal(layerOverlay); });
-document.getElementById('layerClose').addEventListener('click',()=>closeModal(layerOverlay));
+document.getElementById('layerClose').addEventListener('click',()=>{ closeModal(layerOverlay); requestAnimationFrame(draw); });
 document.getElementById('layerAllOn').addEventListener('click',()=>{ hiddenUserLayers.clear(); renderLayerList(); draw(); });
 document.getElementById('layerAllOff').addEventListener('click',()=>{ for(const L of layerList) hiddenUserLayers.add(L.name); renderLayerList(); draw(); });
-layerOverlay.addEventListener('click',e=>{ if(e.target===layerOverlay) closeModal(layerOverlay); });
+layerOverlay.addEventListener('click',e=>{ if(e.target===layerOverlay){ closeModal(layerOverlay); requestAnimationFrame(draw); } });
 document.getElementById('icClose').addEventListener('click',hideObjectInfo);
 
 // toast
