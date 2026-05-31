@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>CAD Xem · DWG/DXF</title>
+<meta name="theme-color" content="#0b0e14">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./apple-touch-icon-180.png">
+<!-- Hoàn toàn OFFLINE: không tải font hay bất kỳ tài nguyên nào từ internet.
+     Dùng font hệ thống của iPhone (San Francisco) nên không cần mạng. -->
+<style>
+  :root{
+    --bg:#0b0e14;
+    --bg-canvas:#0a0c11;
+    --panel:#11151d;
+    --panel-2:#171c26;
+    --line:#1f2733;
+    --ink:#e7ecf3;
+    --ink-dim:#8b97a8;
+    --ink-faint:#5a6678;
+    --entity:#9fb3c8;
+    --accent:#38bdf8;     /* sky — công cụ đang chọn / bắt điểm */
+    --measure:#f5b942;    /* hổ phách — phép đo */
+    --note:#ff7a85;       /* san hô — ghi chú */
+    --shadow:0 10px 40px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);
+    display:flex;flex-direction:column;overflow:hidden;
+    height:100dvh;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:10px;
+    padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;
+    background:linear-gradient(180deg,var(--panel) 0%,rgba(17,21,29,.85) 100%);
+    border-bottom:1px solid var(--line);
+    z-index:10;flex:0 0 auto;
+  }
+  .brand{display:flex;align-items:center;gap:9px;margin-right:auto;min-width:0}
+  .brand .mark{
+    width:30px;height:30px;border-radius:8px;flex:0 0 auto;
+    background:linear-gradient(135deg,var(--accent),#0ea5b7);
+    display:grid;place-items:center;box-shadow:0 0 18px rgba(56,189,248,.4);
+  }
+  .brand .mark svg{width:18px;height:18px;stroke:#06131a;stroke-width:2.4;fill:none}
+  .brand h1{font-size:15px;font-weight:700;letter-spacing:.5px;margin:0;white-space:nowrap}
+  .brand small{display:block;font-size:10px;color:var(--ink-faint);letter-spacing:1.5px;font-weight:500;text-transform:uppercase}
+
+  .top-btn{
+    font-family:inherit;font-size:12.5px;font-weight:600;letter-spacing:.4px;
+    color:var(--ink);background:var(--panel-2);border:1px solid var(--line);
+    padding:9px 13px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+    transition:.15s;white-space:nowrap;
+  }
+  .top-btn svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none}
+  .top-btn:active{transform:scale(.96)}
+  .top-btn.primary{background:linear-gradient(135deg,var(--accent),#0ea5b7);border-color:transparent;color:#06131a}
+  input[type=file]{display:none}
+
+  /* ---------- Canvas area ---------- */
+  .stage{position:relative;flex:1 1 auto;min-height:0;background:var(--bg-canvas);overflow:hidden}
+  .stage::after{ /* vignette nhẹ tạo chiều sâu */
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 100% at 50% 0%,transparent 55%,rgba(0,0,0,.45) 100%);
+  }
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+  /* zoom controls */
+  .zoom{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    display:flex;flex-direction:column;gap:1px;border-radius:11px;overflow:hidden;
+    background:var(--line);box-shadow:var(--shadow);z-index:6;
+  }
+  .zoom button{
+    width:42px;height:42px;border:none;background:rgba(17,21,29,.92);color:var(--ink);
+    font-size:22px;font-family:inherit;cursor:pointer;display:grid;place-items:center;
+    backdrop-filter:blur(8px);
+  }
+  .zoom button:active{background:var(--accent);color:#06131a}
+
+  /* readout / hint chip */
+  .readout{
+    position:absolute;left:50%;top:14px;transform:translateX(-50%);
+    display:flex;align-items:center;gap:12px;z-index:6;max-width:calc(100% - 24px);
+    background:rgba(17,21,29,.9);border:1px solid var(--line);backdrop-filter:blur(10px);
+    border-radius:11px;padding:8px 14px;box-shadow:var(--shadow);
+  }
+  .readout .hint{font-size:12.5px;color:var(--ink-dim);letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .readout .val{
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;font-weight:700;font-size:14px;color:var(--measure);
+    white-space:nowrap;display:none;padding-left:12px;border-left:1px solid var(--line);
+  }
+  .readout .val.show{display:block}
+
+  /* empty state */
+  .empty{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:20px;text-align:center;padding:30px;z-index:5;
+  }
+  .empty.hidden{display:none}
+  .empty .ill{width:84px;height:84px;opacity:.85}
+  .empty .ill svg{width:100%;height:100%;stroke:var(--accent);stroke-width:1.4;fill:none}
+  .empty h2{font-size:18px;margin:0;font-weight:600;letter-spacing:.3px}
+  .empty p{font-size:13px;color:var(--ink-dim);margin:0;max-width:300px;line-height:1.6}
+  .empty .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+
+  /* ---------- Bottom toolbar ---------- */
+  .toolbar{
+    display:flex;align-items:stretch;justify-content:space-around;gap:4px;
+    background:linear-gradient(0deg,var(--panel) 0%,rgba(17,21,29,.92) 100%);
+    border-top:1px solid var(--line);
+    padding:8px 8px calc(env(safe-area-inset-bottom) + 8px);
+    flex:0 0 auto;z-index:10;
+  }
+  .tool{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+    background:none;border:none;color:var(--ink-dim);font-family:inherit;
+    font-size:10.5px;font-weight:600;letter-spacing:.3px;cursor:pointer;padding:6px 2px;
+    border-radius:11px;transition:.15s;position:relative;
+  }
+  .tool svg{width:23px;height:23px;stroke:currentColor;stroke-width:1.7;fill:none}
+  .tool:active{transform:scale(.93)}
+  .tool.active{color:var(--accent)}
+  .tool.active::before{
+    content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:26px;height:3px;border-radius:3px;background:var(--accent);box-shadow:0 0 10px var(--accent);
+  }
+
+  /* ---------- Note modal ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(4,6,10,.6);backdrop-filter:blur(3px);
+    display:none;align-items:flex-end;justify-content:center;z-index:50;
+  }
+  .overlay.show{display:flex;animation:fade .15s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modal{
+    width:100%;max-width:460px;background:var(--panel);border:1px solid var(--line);
+    border-radius:18px 18px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom) + 18px);
+    box-shadow:var(--shadow);animation:slideup .22s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes slideup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .modal h3{margin:0 0 4px;font-size:15px;font-weight:600}
+  .modal p{margin:0 0 14px;font-size:12px;color:var(--ink-dim)}
+  .modal input{
+    width:100%;font-family:inherit;font-size:15px;color:var(--ink);
+    background:var(--bg-canvas);border:1px solid var(--line);border-radius:10px;padding:12px 14px;outline:none;
+  }
+  .modal input:focus{border-color:var(--accent)}
+  .modal-actions{display:flex;gap:10px;margin-top:16px}
+  .modal-actions button{
+    flex:1;font-family:inherit;font-size:14px;font-weight:600;padding:12px;border-radius:10px;cursor:pointer;border:1px solid var(--line);
+  }
+  .btn-ghost{background:var(--panel-2);color:var(--ink)}
+  .btn-solid{background:linear-gradient(135deg,var(--accent),#0ea5b7);color:#06131a;border-color:transparent}
+  .btn-danger{background:linear-gradient(135deg,var(--note),#e0525d);color:#1a0608;border-color:transparent}
+
+  /* action sheet items */
+  .sheet-item{
+    width:100%;text-align:left;font-family:inherit;font-size:14.5px;font-weight:600;color:var(--ink);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:14px 16px;margin-bottom:8px;
+    cursor:pointer;display:flex;align-items:center;gap:11px;
+  }
+  .sheet-item svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.8;fill:none}
+  .sheet-item.danger{color:var(--note)}
+  .sheet-item:active{transform:scale(.98)}
+
+  /* toast */
+  .toast{
+    position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 92px);transform:translateX(-50%) translateY(20px);
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    padding:11px 18px;border-radius:12px;font-size:13px;font-weight:500;box-shadow:var(--shadow);
+    opacity:0;pointer-events:none;transition:.25s;z-index:60;max-width:90%;text-align:center;line-height:1.5;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark"><svg viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 3v18"/></svg></span>
+      <div>
+        <h1>CAD&nbsp;Xem</h1>
+        <small>Trình xem DXF</small>
+      </div>
+    </div>
+    <label class="top-btn" for="fileInput">
+      <svg viewBox="0 0 24 24"><path d="M4 4h6l2 3h8v13H4z"/></svg> Mở file
+    </label>
+    <input type="file" id="fileInput" accept=".dxf,.dwg">
+    <button class="top-btn primary" id="sampleBtn">
+      <svg viewBox="0 0 24 24"><path d="M5 3h14v18H5z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg> Mẫu
+    </button>
+  </header>
+
+  <!-- CANVAS STAGE -->
+  <div class="stage">
+    <canvas id="cv"></canvas>
+
+    <div class="readout">
+      <span class="hint" id="hint">Mở file .dxf/.dwg hoặc bấm "Mẫu"</span>
+      <span class="val" id="val"></span>
+    </div>
+
+    <div class="zoom">
+      <button id="zoomIn" aria-label="Phóng to">+</button>
+      <button id="zoomOut" aria-label="Thu nhỏ">−</button>
+    </div>
+
+    <div class="empty" id="empty">
+      <div class="ill"><svg viewBox="0 0 64 64"><path d="M8 8h48v48H8z"/><path d="M8 22h48M22 8v48"/><circle cx="42" cy="40" r="8"/><path d="M48 46l8 8"/></svg></div>
+      <div>
+        <h2>Chưa có bản vẽ</h2>
+        <p>Mở file <b>.dxf</b> hoặc <b>.dwg</b> từ iPhone, hoặc xem bản vẽ mẫu để thử đo và ghi chú.</p>
+      </div>
+      <div class="row">
+        <label class="top-btn primary" for="fileInput" style="font-size:13px">Chọn file .dxf</label>
+        <button class="top-btn" id="sampleBtn2" style="font-size:13px">Xem bản vẽ mẫu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM TOOLBAR -->
+  <nav class="toolbar">
+    <button class="tool active" data-mode="pan" id="t-pan">
+      <svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg>
+      Di chuyển
+    </button>
+    <button class="tool" data-mode="measure" id="t-measure">
+      <svg viewBox="0 0 24 24"><path d="M3 16.5L16.5 3 21 7.5 7.5 21z"/><path d="M7 12.5l2 2M10 9.5l2 2M13 6.5l2 2"/></svg>
+      Đo
+    </button>
+    <button class="tool" data-mode="note" id="t-note">
+      <svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-12a7 7 0 0 0-14 0c0 5.7 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+      Ghi chú
+    </button>
+    <button class="tool" id="t-fit">
+      <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      Vừa khung
+    </button>
+    <button class="tool" id="t-clear">
+      <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+      Xoá
+    </button>
+  </nav>
+
+  <!-- NOTE MODAL -->
+  <div class="overlay" id="noteOverlay">
+    <div class="modal">
+      <h3>Thêm ghi chú</h3>
+      <p>Ghi chú sẽ được ghim tại điểm bạn vừa chạm trên bản vẽ.</p>
+      <input type="text" id="noteInput" placeholder="Nhập nội dung ghi chú…" autocomplete="off">
+      <div class="modal-actions">
+        <button class="btn-ghost" id="noteCancel">Huỷ</button>
+        <button class="btn-solid" id="noteOk">Thêm ghim</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLEAR ACTION SHEET -->
+  <div class="overlay" id="clearOverlay">
+    <div class="modal">
+      <h3>Xoá nội dung</h3>
+      <p>Chọn nội dung muốn xoá khỏi bản vẽ.</p>
+      <button class="sheet-item" id="clearMeasure">
+        <svg viewBox="0 0 24 24"><path d="M3 16.5L16.5 3 21 7.5 7.5 21z"/></svg> Xoá tất cả phép đo
+      </button>
+      <button class="sheet-item" id="clearNotes">
+        <svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-12a7 7 0 0 0-14 0c0 5.7 7 12 7 12z"/></svg> Xoá tất cả ghi chú
+      </button>
+      <button class="sheet-item danger" id="clearAll">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg> Xoá hết (đo + ghi chú)
+      </button>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="clearCancel">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   1) DXF PARSER  — đọc các thực thể 2D phổ biến từ file DXF (text)
+   ========================================================================= */
+function parseDXF(text){
+  const lines = text.split(/\r\n|\r|\n/);
+  const pairs = [];
+  for(let i=0;i+1<lines.length;i+=2){
+    const code = parseInt(lines[i].trim(),10);
+    if(Number.isNaN(code)) continue;
+    pairs.push({code, value:lines[i+1]});
+  }
+
+  // Đơn vị bản vẽ ($INSUNITS)
+  let insunits = 0;
+  for(let i=0;i<pairs.length-1;i++){
+    if(pairs[i].code===9 && pairs[i].value.trim()==='$INSUNITS'){
+      insunits = parseInt(pairs[i+1].value.trim(),10)||0; break;
+    }
+  }
+
+  const num=(g,c)=>{ for(const it of g) if(it.code===c) return parseFloat(it.value); return undefined; };
+  const str=(g,c)=>{ for(const it of g) if(it.code===c) return it.value.trim(); return undefined; };
+  const all=(g,c)=>{ const o=[]; for(const it of g) if(it.code===c) o.push(parseFloat(it.value)); return o; };
+
+  function build(type,g){
+    const layer = str(g,8) || '0';
+    switch(type){
+      case 'LINE': return {type,layer,x1:num(g,10),y1:num(g,20),x2:num(g,11),y2:num(g,21)};
+      case 'CIRCLE': return {type,layer,cx:num(g,10),cy:num(g,20),r:num(g,40)};
+      case 'ARC': return {type,layer,cx:num(g,10),cy:num(g,20),r:num(g,40),a1:num(g,50),a2:num(g,51)};
+      case 'ELLIPSE': return {type,layer,cx:num(g,10),cy:num(g,20),mx:num(g,11),my:num(g,21),ratio:num(g,40)??1,p1:num(g,41)??0,p2:num(g,42)??(2*Math.PI)};
+      case 'POINT': return {type,layer,x:num(g,10),y:num(g,20)};
+      case 'TEXT': return {type,layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:str(g,1)||'',rot:num(g,50)||0};
+      case 'MTEXT':{
+        let t=''; for(const it of g){ if(it.code===3) t+=it.value; else if(it.code===1) t+=it.value; }
+        t=t.replace(/\\P/g,' ').replace(/\\[A-Za-z][^;]*;/g,'').replace(/[{}]/g,'');
+        return {type:'TEXT',layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:t,rot:0};
+      }
+      case 'LWPOLYLINE':{
+        const closed=((num(g,70)||0)&1)===1, v=[];
+        for(let k=0;k<g.length;k++){
+          if(g[k].code===10){
+            const x=parseFloat(g[k].value); let y=0,bulge=0;
+            if(g[k+1]&&g[k+1].code===20) y=parseFloat(g[k+1].value);
+            for(let q=k+1;q<g.length && g[q].code!==10;q++){ if(g[q].code===42) bulge=parseFloat(g[q].value); }
+            v.push({x,y,bulge});
+          }
+        }
+        const verts=expandPolyline(v,closed);
+        return verts.length>=2?{type:'POLYLINE',layer,vertices:verts,closed:false}:null;
+      }
+      case 'SOLID': case '3DFACE':{
+        const pts=[];
+        [[10,20],[11,21],[12,22],[13,23]].forEach(([a,b])=>{const x=num(g,a),y=num(g,b);if(x!==undefined&&y!==undefined)pts.push({x,y});});
+        return {type:'SOLID',layer,pts};
+      }
+      case 'INSERT': return {type:'INSERT',layer,name:str(g,2)||'',ix:num(g,10)||0,iy:num(g,20)||0,sx:(num(g,41)??1),sy:(num(g,42)??1),rot:num(g,50)||0,cols:num(g,70)||1,rows:num(g,71)||1,csp:num(g,44)||0,rsp:num(g,45)||0};
+      case 'DIMENSION':{ const nm=str(g,2)||''; return nm?{type:'INSERT',layer,name:nm,ix:0,iy:0,sx:1,sy:1,rot:0,cols:1,rows:1,csp:0,rsp:0,_dim:true}:null; }
+      case 'SPLINE':{
+        const cx=all(g,10),cy=all(g,20),v=[]; for(let k=0;k<Math.min(cx.length,cy.length);k++) v.push({x:cx[k],y:cy[k]});
+        const fx=all(g,11),fy=all(g,21),fit=[]; for(let k=0;k<Math.min(fx.length,fy.length);k++) fit.push({x:fx[k],y:fy[k]});
+        const knots=all(g,40),weights=all(g,41),flag=num(g,70)||0;
+        const verts=splineToVertices({degree:num(g,71)||3,ctrl:v,knots,weights:(weights.length?weights:null),fit,closed:(flag&1)===1});
+        return (verts&&verts.length>=2)?{type:'POLYLINE',layer,vertices:verts,closed:(flag&1)===1}:null;
+      }
+      case 'HATCH':{ const loops=dxfHatchLoops(g); return loops.length?{type:'HATCH',layer,loops,solid:(num(g,70)===1)}:null; }
+      default: return null;
+    }
+  }
+
+  // Đọc danh sách thực thể trong [start,end)
+  function readEntities(start,end){
+    const out=[]; let i=start;
+    while(i<end){
+      if(pairs[i].code!==0){ i++; continue; }
+      const type=pairs[i].value.trim();
+      if(type==='POLYLINE'){ // polyline kiểu cũ: header + VERTEX… + SEQEND
+        let j=i+1; const header=[];
+        while(j<end && pairs[j].code!==0){ header.push(pairs[j]); j++; }
+        const verts=[];
+        while(j<end && pairs[j].code===0 && pairs[j].value.trim()==='VERTEX'){
+          let k=j+1; const vg=[];
+          while(k<end && pairs[k].code!==0){ vg.push(pairs[k]); k++; }
+          verts.push({x:num(vg,10),y:num(vg,20),bulge:num(vg,42)||0}); j=k;
+        }
+        if(j<end && pairs[j].code===0 && pairs[j].value.trim()==='SEQEND'){
+          let k=j+1; while(k<end && pairs[k].code!==0) k++; j=k;
+        }
+        const plClosed=((num(header,70)||0)&1)===1;
+        out.push({type:'POLYLINE',layer:str(header,8)||'0',vertices:expandPolyline(verts,plClosed),closed:false});
+        i=j;
+      } else {
+        let j=i+1; const g=[];
+        while(j<end && pairs[j].code!==0){ g.push(pairs[j]); j++; }
+        const e=build(type,g); if(e) out.push(e);
+        i=j;
+      }
+    }
+    return out;
+  }
+
+  // Tìm phạm vi của một section (yêu cầu đứng ngay sau "0 SECTION")
+  function sectionRange(name){
+    let s=-1,e=pairs.length;
+    for(let i=0;i<pairs.length;i++){
+      if(pairs[i].code===2 && pairs[i].value.trim()===name && i>0 && pairs[i-1].code===0 && pairs[i-1].value.trim()==='SECTION'){ s=i+1; }
+      else if(s>=0 && pairs[i].code===0 && pairs[i].value.trim()==='ENDSEC'){ e=i; break; }
+    }
+    return [s,e];
+  }
+
+  // BLOCKS -> bản đồ tên block
+  const blocks={};
+  const [bs,be]=sectionRange('BLOCKS');
+  if(bs>=0){
+    let i=bs;
+    while(i<be){
+      if(pairs[i].code===0 && pairs[i].value.trim()==='BLOCK'){
+        let j=i+1; const hdr=[];
+        while(j<be && pairs[j].code!==0){ hdr.push(pairs[j]); j++; }
+        const name=str(hdr,2)||'', base={x:num(hdr,10)||0,y:num(hdr,20)||0};
+        let k=j; while(k<be && !(pairs[k].code===0 && pairs[k].value.trim()==='ENDBLK')) k++;
+        const ents=readEntities(j,k);
+        if(name) blocks[name]={base,entities:ents};
+        let m=k+1; while(m<be && pairs[m].code!==0) m++;
+        i=m;
+      } else i++;
+    }
+  }
+
+  // ENTITIES (model space)
+  const [es,ee]=sectionRange('ENTITIES');
+  const entities = es>=0 ? readEntities(es,ee) : readEntities(0,pairs.length);
+
+  return {entities, blocks, insunits};
+}
+
+/* ============================================================
+   Biến đổi affine + "explode" INSERT/DIMENSION thành hình gốc
+   (dùng chung cho cả DXF và DWG)
+   ============================================================ */
+const M_ID={a:1,b:0,c:0,d:1,e:0,f:0};
+function mMul(M,N){ return {
+  a:M.a*N.a+M.c*N.b, b:M.b*N.a+M.d*N.b,
+  c:M.a*N.c+M.c*N.d, d:M.b*N.c+M.d*N.d,
+  e:M.a*N.e+M.c*N.f+M.e, f:M.b*N.e+M.d*N.f+M.f }; }
+const mT=(x,y)=>({a:1,b:0,c:0,d:1,e:x,f:y});
+const mS=(sx,sy)=>({a:sx,b:0,c:0,d:sy,e:0,f:0});
+const mR=t=>{const c=Math.cos(t),s=Math.sin(t);return {a:c,b:s,c:-s,d:c,e:0,f:0};};
+const mApply=(M,x,y)=>({x:M.a*x+M.c*y+M.e, y:M.b*x+M.d*y+M.f});
+const mIsId=M=>Math.abs(M.a-1)<1e-9&&Math.abs(M.d-1)<1e-9&&Math.abs(M.b)<1e-9&&Math.abs(M.c)<1e-9&&Math.abs(M.e)<1e-9&&Math.abs(M.f)<1e-9;
+function insertMatrix(e,base){
+  let M=mT(e.ix||0,e.iy||0);
+  M=mMul(M,mR((e.rot||0)*Math.PI/180));
+  M=mMul(M,mS(e.sx??1,e.sy??1));
+  M=mMul(M,mT(-(base?base.x:0),-(base?base.y:0)));
+  return M;
+}
+function smpCircle(cx,cy,r){const p=[];for(let i=0;i<=64;i++){const a=i/64*2*Math.PI;p.push({x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r});}return p;}
+function smpArc(cx,cy,r,a1d,a2d){let a1=a1d*Math.PI/180,a2=a2d*Math.PI/180;if(a2<a1)a2+=2*Math.PI;const n=Math.max(8,Math.ceil((a2-a1)/(Math.PI/48))),p=[];for(let i=0;i<=n;i++){const a=a1+(a2-a1)*i/n;p.push({x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r});}return p;}
+function smpEllipse(e){const Mx=e.mx,My=e.my,mx=-e.my*e.ratio,my=e.mx*e.ratio;let p1=e.p1,p2=e.p2;if(p2<=p1)p2+=2*Math.PI;const n=72,p=[];for(let i=0;i<=n;i++){const t=p1+(p2-p1)*i/n;p.push({x:e.cx+Math.cos(t)*Mx+Math.sin(t)*mx,y:e.cy+Math.cos(t)*My+Math.sin(t)*my});}return p;}
+function transformPrim(e,M){
+  const L=e.layer;
+  switch(e.type){
+    case 'LINE':{const a=mApply(M,e.x1,e.y1),b=mApply(M,e.x2,e.y2);return {type:'LINE',layer:L,x1:a.x,y1:a.y,x2:b.x,y2:b.y};}
+    case 'POLYLINE': return {type:'POLYLINE',layer:L,closed:e.closed,vertices:e.vertices.map(p=>mApply(M,p.x,p.y))};
+    case 'POINT':{const a=mApply(M,e.x,e.y);return {type:'POINT',layer:L,x:a.x,y:a.y};}
+    case 'SOLID': return {type:'SOLID',layer:L,pts:e.pts.map(p=>mApply(M,p.x,p.y))};
+    case 'TEXT':{const a=mApply(M,e.x,e.y),ys=Math.hypot(M.c,M.d)||1,rotAdd=Math.atan2(M.b,M.a)*180/Math.PI;return {type:'TEXT',layer:L,x:a.x,y:a.y,h:(e.h||10)*ys,text:e.text,rot:(e.rot||0)+rotAdd};}
+    case 'CIRCLE': return mIsId(M)?e:{type:'POLYLINE',layer:L,closed:true,vertices:smpCircle(e.cx,e.cy,e.r).map(p=>mApply(M,p.x,p.y))};
+    case 'ARC': return mIsId(M)?e:{type:'POLYLINE',layer:L,closed:false,vertices:smpArc(e.cx,e.cy,e.r,e.a1,e.a2).map(p=>mApply(M,p.x,p.y))};
+    case 'ELLIPSE': return mIsId(M)?e:{type:'POLYLINE',layer:L,closed:false,vertices:smpEllipse(e).map(p=>mApply(M,p.x,p.y))};
+    case 'HATCH': return {type:'HATCH',layer:L,solid:e.solid,loops:e.loops.map(lp=>lp.map(p=>mApply(M,p.x,p.y)))};
+    default: return null;
+  }
+}
+function explodeInto(list,blocks,M,out,depth){
+  if(depth>12) return;
+  for(const e of list){
+    if(out.length>200000) return;
+    if(e.type==='INSERT'){
+      const blk=blocks[e.name]; if(!blk) continue;
+      const t=(e.rot||0)*Math.PI/180, cosT=Math.cos(t), sinT=Math.sin(t);
+      const cols=Math.max(1,e.cols||1), rows=Math.max(1,e.rows||1);
+      for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+        const ox=c*(e.csp||0), oy=r*(e.rsp||0);
+        const cell=Object.assign({},e,{ix:(e.ix||0)+(cosT*ox - sinT*oy), iy:(e.iy||0)+(sinT*ox + cosT*oy)});
+        explodeInto(blk.entities, blocks, mMul(M, insertMatrix(cell, blk.base)), out, depth+1);
+        if(out.length>200000) return;
+      }
+    } else {
+      if((e.layer||'').toLowerCase()==='defpoints') continue; // điểm dựng hình của dimension -> bỏ
+      const t=transformPrim(e,M); if(t) out.push(t);
+    }
+  }
+}
+// Trả về danh sách hình gốc đã khai triển hết INSERT/DIMENSION
+function resolveBlocks(entities, blocks){ const out=[]; explodeInto(entities, blocks||{}, M_ID, out, 0); return out; }
+
+/* ============================================================
+   SPLINE: dựng đường cong -> danh sách điểm
+   - Có control points: B-spline/NURBS (Cox–de Boor)
+   - Chỉ có fit points: nội suy Catmull-Rom (đi qua điểm)
+   ============================================================ */
+const RAD2DEG=180/Math.PI;
+function genClampedKnots(n,p){ const U=[]; for(let i=0;i<=p;i++)U.push(0); const inner=n-p; for(let i=1;i<=inner;i++)U.push(i/(inner+1)); for(let i=0;i<=p;i++)U.push(1); return U; }
+function bsFindSpan(n,p,u,U){ if(u>=U[n+1])return n; if(u<=U[p])return p; let lo=p,hi=n+1,mid=(lo+hi)>>1; while(u<U[mid]||u>=U[mid+1]){ if(u<U[mid])hi=mid; else lo=mid; mid=(lo+hi)>>1; } return mid; }
+function bsBasis(span,u,p,U){ const N=new Array(p+1).fill(0),L=new Array(p+1).fill(0),R=new Array(p+1).fill(0); N[0]=1; for(let j=1;j<=p;j++){ L[j]=u-U[span+1-j]; R[j]=U[span+j]-u; let s=0; for(let r=0;r<j;r++){ const den=R[r+1]+L[j-r]; const t=den!==0?N[r]/den:0; N[r]=s+R[r+1]*t; s=L[j-r]*t; } N[j]=s; } return N; }
+function sampleNurbs(ctrl,knots,weights,degree,steps){
+  const n=ctrl.length-1; let p=Math.min(degree||3,n); if(p<1)p=1;
+  const U=(knots&&knots.length===n+p+2)?knots.slice():genClampedKnots(n,p);
+  const w=(weights&&weights.length===ctrl.length)?weights:ctrl.map(c=>(c.w!=null?c.w:1));
+  const u0=U[p],u1=U[n+1],pts=[],N=Math.max(steps|0,2);
+  for(let s=0;s<=N;s++){
+    let u=u0+(u1-u0)*s/N; if(u>u1)u=u1;
+    const span=bsFindSpan(n,p,u,U),B=bsBasis(span,u,p,U); let x=0,y=0,wsum=0;
+    for(let i=0;i<=p;i++){ const idx=span-p+i, b=B[i]*w[idx]; x+=b*ctrl[idx].x; y+=b*ctrl[idx].y; wsum+=b; }
+    if(wsum!==0&&isFinite(x)&&isFinite(y)) pts.push({x:x/wsum,y:y/wsum});
+  }
+  return pts;
+}
+function sampleCatmull(fit,closed,perSeg){
+  const m=fit.length; if(m<2)return fit.slice(); if(m===2)return [fit[0],fit[1]];
+  const seg=Math.max(perSeg|0,4),pts=[];
+  const get=i=>closed?fit[(i%m+m)%m]:fit[Math.max(0,Math.min(m-1,i))];
+  const last=closed?m:m-1;
+  for(let i=0;i<last;i++){ const p0=get(i-1),p1=get(i),p2=get(i+1),p3=get(i+2);
+    for(let t=0;t<seg;t++){ const u=t/seg,u2=u*u,u3=u2*u;
+      pts.push({ x:0.5*((2*p1.x)+(-p0.x+p2.x)*u+(2*p0.x-5*p1.x+4*p2.x-p3.x)*u2+(-p0.x+3*p1.x-3*p2.x+p3.x)*u3),
+                 y:0.5*((2*p1.y)+(-p0.y+p2.y)*u+(2*p0.y-5*p1.y+4*p2.y-p3.y)*u2+(-p0.y+3*p1.y-3*p2.y+p3.y)*u3) }); } }
+  pts.push(closed?get(0):get(m-1)); return pts;
+}
+function splineToVertices(d){
+  if(d.ctrl && d.ctrl.length>=2){ const v=sampleNurbs(d.ctrl,d.knots,d.weights,d.degree,Math.min(Math.max(d.ctrl.length*16,40),600)); if(v.length>=2)return v; }
+  if(d.fit && d.fit.length>=2) return sampleCatmull(d.fit,!!d.closed,18);
+  return null;
+}
+
+/* ============================================================
+   BULGE: đoạn polyline cong (bulge = tan(góc cung/4)) -> cung tròn
+   ============================================================ */
+function bulgeArcPoints(p1,p2,b){
+  const dx=p2.x-p1.x, dy=p2.y-p1.y, chord=Math.hypot(dx,dy);
+  if(!b || chord<1e-12) return [{x:p1.x,y:p1.y},{x:p2.x,y:p2.y}];
+  const inc=4*Math.atan(b);                 // góc cung có dấu (âm = thuận chiều kim đồng hồ)
+  const s=Math.sin(inc/2); if(Math.abs(s)<1e-12) return [{x:p1.x,y:p1.y},{x:p2.x,y:p2.y}];
+  const r=chord/(2*s);                       // bán kính có dấu
+  const ux=dx/chord, uy=dy/chord, nx=-uy, ny=ux;
+  const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2, d=r*Math.cos(inc/2);
+  const cx=mx+nx*d, cy=my+ny*d, R=Math.abs(r);
+  const a0=Math.atan2(p1.y-cy,p1.x-cx);
+  const n=Math.max(2,Math.ceil(Math.abs(inc)/(Math.PI/48))), pts=[];
+  for(let i=0;i<=n;i++){ const a=a0+inc*i/n; pts.push({x:cx+R*Math.cos(a), y:cy+R*Math.sin(a)}); }
+  return pts;
+}
+// verts: [{x,y,bulge}] -> danh sách điểm phẳng (cung được lấy mẫu). Với closed: thêm đoạn cuối->đầu.
+function expandPolyline(verts, closed){
+  const n=verts.length;
+  if(n<2) return verts.map(v=>({x:v.x,y:v.y}));
+  const pts=[], segs=closed?n:n-1;
+  for(let i=0;i<segs;i++){
+    const a=verts[i], b=verts[(i+1)%n];
+    let seg = a.bulge ? bulgeArcPoints(a,b,a.bulge) : [{x:a.x,y:a.y},{x:b.x,y:b.y}];
+    if(pts.length){ const L=pts[pts.length-1]; if(Math.abs(L.x-seg[0].x)<1e-9&&Math.abs(L.y-seg[0].y)<1e-9) seg=seg.slice(1); }
+    for(const p of seg) pts.push(p);
+  }
+  return pts;
+}
+
+/* ============================================================
+   HATCH: lấy biên (loops) -> danh sách polygon điểm
+   ============================================================ */
+function sampleArcDir(cx,cy,r,a0,a1,ccw){
+  let s=a0*Math.PI/180,e=a1*Math.PI/180;
+  if(ccw){ if(e<s)e+=2*Math.PI; } else { if(s<e)s+=2*Math.PI; }
+  const n=Math.max(6,Math.ceil(Math.abs(e-s)/(Math.PI/48))),p=[];
+  for(let i=0;i<=n;i++){ const t=s+(e-s)*i/n; p.push({x:cx+Math.cos(t)*r,y:cy+Math.sin(t)*r}); } return p;
+}
+function sampleEllipseEdge(cx,cy,mx,my,ratio,a0,a1,ccw){
+  let s=a0*Math.PI/180,e=a1*Math.PI/180;
+  if(ccw){ if(e<s)e+=2*Math.PI; } else { if(s<e)s+=2*Math.PI; }
+  const nx=-my*ratio,ny=mx*ratio,n=72,p=[];
+  for(let i=0;i<=n;i++){ const t=s+(e-s)*i/n; p.push({x:cx+Math.cos(t)*mx+Math.sin(t)*nx, y:cy+Math.cos(t)*my+Math.sin(t)*ny}); } return p;
+}
+function hatchPathPoints(path){
+  if(path.polyline) return expandPolyline(path.vertices, !!path.closed);
+  const out=[];
+  for(const ed of (path.edges||[])){
+    let seg=[];
+    if(ed.kind==='line') seg=[ed.start,ed.end];
+    else if(ed.kind==='arc') seg=sampleArcDir(ed.cx,ed.cy,ed.r,ed.a0,ed.a1,ed.ccw);
+    else if(ed.kind==='ellipse') seg=sampleEllipseEdge(ed.cx,ed.cy,ed.mx,ed.my,ed.ratio,ed.a0,ed.a1,ed.ccw);
+    else if(ed.kind==='spline'){ seg=splineToVertices(ed.spline)||[]; }
+    if(out.length&&seg.length&&Math.abs(out[out.length-1].x-seg[0].x)<1e-9&&Math.abs(out[out.length-1].y-seg[0].y)<1e-9) seg=seg.slice(1);
+    for(const p of seg) out.push(p);
+  }
+  return out;
+}
+// DWG: boundaryPaths (đã có cấu trúc) -> loops
+function dwgHatchLoops(e){
+  const loops=[];
+  for(const p of (e.boundaryPaths||[])){
+    let path;
+    if(p.vertices) path={polyline:true,closed:p.isClosed,vertices:p.vertices.map(v=>({x:v.x,y:v.y,bulge:v.bulge||0}))};
+    else { const edges=[]; for(const ed of (p.edges||[])){
+      if(ed.type===1&&ed.start&&ed.end) edges.push({kind:'line',start:{x:ed.start.x,y:ed.start.y},end:{x:ed.end.x,y:ed.end.y}});
+      else if(ed.type===2&&ed.center) edges.push({kind:'arc',cx:ed.center.x,cy:ed.center.y,r:ed.radius,a0:ed.startAngle*RAD2DEG,a1:ed.endAngle*RAD2DEG,ccw:ed.isCCW!==false});
+      else if(ed.type===3&&ed.center&&ed.end) edges.push({kind:'ellipse',cx:ed.center.x,cy:ed.center.y,mx:ed.end.x,my:ed.end.y,ratio:(ed.lengthOfMinorAxis!=null?ed.lengthOfMinorAxis:1),a0:ed.startAngle*RAD2DEG,a1:ed.endAngle*RAD2DEG,ccw:ed.isCCW!==false});
+      else if(ed.type===4) edges.push({kind:'spline',spline:{degree:ed.degree,ctrl:(ed.controlPoints||[]).map(c=>({x:c.x,y:c.y,w:c.weight})),knots:ed.knots,fit:(ed.fitDatum||[]).map(f=>({x:f.x,y:f.y})),closed:false}});
+    } path={polyline:false,edges}; }
+    const pts=hatchPathPoints(path); if(pts.length>=2) loops.push(pts);
+  }
+  return loops;
+}
+// DXF: đọc tuần tự nhóm code -> loops
+function dxfHatchLoops(g){
+  const loops=[],N=g.length; let i=0;
+  while(i<N && g[i].code!==91) i++;
+  if(i>=N) return loops;
+  const numPaths=parseInt(g[i].value,10)||0; i++;
+  for(let pi=0; pi<numPaths; pi++){
+    while(i<N && g[i].code!==92) i++; if(i>=N) break;
+    const flag=parseInt(g[i].value,10)||0; i++;
+    if((flag&2)!==0){ // polyline path
+      let nv=0,closed=0; while(i<N && g[i].code!==93 && g[i].code!==92){ if(g[i].code===73) closed=parseInt(g[i].value,10)||0; i++; }
+      if(i<N && g[i].code===93){ nv=parseInt(g[i].value,10)||0; i++; }
+      const verts=[]; let cnt=0;
+      while(i<N && cnt<nv && g[i].code!==92 && g[i].code!==97){
+        if(g[i].code===10){ const x=parseFloat(g[i].value); let y=0,bulge=0; i++;
+          if(i<N&&g[i].code===20){ y=parseFloat(g[i].value); i++; }
+          while(i<N && g[i].code!==10 && g[i].code!==92 && g[i].code!==97){ if(g[i].code===42) bulge=parseFloat(g[i].value); i++; }
+          verts.push({x,y,bulge}); cnt++;
+        } else i++;
+      }
+      const pts=hatchPathPoints({polyline:true,closed:!!closed,vertices:verts}); if(pts.length>=2) loops.push(pts);
+    } else { // edge path
+      while(i<N && g[i].code!==93 && g[i].code!==92) i++;
+      let ne=0; if(i<N && g[i].code===93){ ne=parseInt(g[i].value,10)||0; i++; }
+      const edges=[];
+      for(let ei=0; ei<ne; ei++){
+        while(i<N && g[i].code!==72 && g[i].code!==92 && g[i].code!==97 && g[i].code!==91) i++;
+        if(i>=N || g[i].code!==72) break;
+        const et=parseInt(g[i].value,10)||0; i++;
+        const c10=[],c20=[],c11=[],c21=[],c40=[],c42=[]; let v50,v51,v73,v94;
+        while(i<N && g[i].code!==72 && g[i].code!==92 && g[i].code!==97 && g[i].code!==91){
+          const c=g[i].code,val=parseFloat(g[i].value);
+          if(c===10)c10.push(val); else if(c===20)c20.push(val); else if(c===11)c11.push(val); else if(c===21)c21.push(val);
+          else if(c===40)c40.push(val); else if(c===42)c42.push(val);
+          else if(c===50)v50=val; else if(c===51)v51=val; else if(c===73)v73=val; else if(c===94)v94=val;
+          i++;
+        }
+        if(et===1&&c10.length&&c11.length) edges.push({kind:'line',start:{x:c10[0],y:c20[0]},end:{x:c11[0],y:c21[0]}});
+        else if(et===2&&c10.length) edges.push({kind:'arc',cx:c10[0],cy:c20[0],r:c40[0],a0:(v50||0),a1:(v51!=null?v51:360),ccw:(v73!==0)});
+        else if(et===3&&c10.length&&c11.length) edges.push({kind:'ellipse',cx:c10[0],cy:c20[0],mx:c11[0],my:c21[0],ratio:(c40[0]!=null?c40[0]:1),a0:(v50||0),a1:(v51!=null?v51:360),ccw:(v73!==0)});
+        else if(et===4){ const ctrl=[]; for(let k=0;k<Math.min(c10.length,c20.length);k++) ctrl.push({x:c10[k],y:c20[k],w:(c42[k]!=null?c42[k]:1)}); const fit=[]; for(let k=0;k<Math.min(c11.length,c21.length);k++) fit.push({x:c11[k],y:c21[k]}); edges.push({kind:'spline',spline:{degree:v94||3,ctrl,knots:c40,fit,closed:false}}); }
+      }
+      const pts=hatchPathPoints({polyline:false,edges}); if(pts.length>=2) loops.push(pts);
+    }
+  }
+  return loops;
+}
+
+/* =========================================================================
+   2) TRẠNG THÁI & TIỆN ÍCH
+   ========================================================================= */
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let entities=[], insunits=0, bounds={minX:0,minY:0,maxX:100,maxY:100};
+let snapPts=[];
+let view={scale:1,offsetX:0,offsetY:0};
+let mode='pan';
+let measurements=[], measureTemp=[], hoverWorld=null;
+let annotations=[], pendingNote=null;
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const dist=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
+const W=()=>cv.clientWidth, H=()=>cv.clientHeight;
+
+const toScreen=(x,y)=>({x:x*view.scale+view.offsetX, y:-y*view.scale+view.offsetY});
+const toWorld=(sx,sy)=>({x:(sx-view.offsetX)/view.scale, y:-(sy-view.offsetY)/view.scale});
+
+const UNIT={1:'in',2:'ft',4:'mm',5:'cm',6:'m',8:'µin',9:'mil',14:'dm',15:'km'};
+function formatDist(d){
+  const u=UNIT[insunits];
+  const v = d>=1000 ? d.toFixed(0) : d>=100 ? d.toFixed(1) : d.toFixed(2);
+  return u ? `${v} ${u}` : v;
+}
+
+/* =========================================================================
+   3) PHẠM VI, SNAP, FIT VIEW
+   ========================================================================= */
+function computeBounds(){
+  let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;
+  const u=(x,y)=>{ if(x==null||y==null||!isFinite(x)||!isFinite(y))return; if(x<a)a=x;if(y<b)b=y;if(x>c)c=x;if(y>d)d=y; };
+  for(const e of entities){
+    switch(e.type){
+      case 'LINE': u(e.x1,e.y1);u(e.x2,e.y2); break;
+      case 'CIRCLE': case 'ARC': u(e.cx-e.r,e.cy-e.r);u(e.cx+e.r,e.cy+e.r); break;
+      case 'ELLIPSE':{const r=Math.hypot(e.mx,e.my);u(e.cx-r,e.cy-r);u(e.cx+r,e.cy+r);break;}
+      case 'POINT': case 'TEXT': u(e.x,e.y); break;
+      case 'POLYLINE': (e.vertices||[]).forEach(p=>u(p.x,p.y)); break;
+      case 'SOLID': (e.pts||[]).forEach(p=>u(p.x,p.y)); break;
+      case 'HATCH': (e.loops||[]).forEach(lp=>lp.forEach(p=>u(p.x,p.y))); break;
+    }
+  }
+  bounds = isFinite(a) ? {minX:a,minY:b,maxX:c,maxY:d} : {minX:0,minY:0,maxX:100,maxY:100};
+}
+function buildSnap(){
+  snapPts=[];
+  for(const e of entities){
+    switch(e.type){
+      case 'LINE': snapPts.push({x:e.x1,y:e.y1},{x:e.x2,y:e.y2}); break;
+      case 'CIRCLE': case 'ARC': case 'ELLIPSE': snapPts.push({x:e.cx,y:e.cy}); break;
+      case 'POINT': case 'TEXT': snapPts.push({x:e.x,y:e.y}); break;
+      case 'POLYLINE': (e.vertices||[]).forEach(p=>snapPts.push({x:p.x,y:p.y})); break;
+      case 'SOLID': (e.pts||[]).forEach(p=>snapPts.push({x:p.x,y:p.y})); break;
+    }
+  }
+}
+function snap(world, screen){
+  let best=null, bd=15; // ngưỡng bắt điểm (px)
+  for(const s of snapPts){
+    const sc=toScreen(s.x,s.y), dd=Math.hypot(sc.x-screen.x,sc.y-screen.y);
+    if(dd<bd){bd=dd;best=s;}
+  }
+  return best ? {x:best.x,y:best.y,snapped:true} : {x:world.x,y:world.y,snapped:false};
+}
+function fitView(){
+  computeBounds();
+  const w=Math.max(bounds.maxX-bounds.minX,1e-6), h=Math.max(bounds.maxY-bounds.minY,1e-6), pad=46;
+  view.scale=Math.min((W()-pad*2)/w,(H()-pad*2)/h);
+  const cx=(bounds.minX+bounds.maxX)/2, cy=(bounds.minY+bounds.maxY)/2;
+  view.offsetX=W()/2-cx*view.scale;
+  view.offsetY=H()/2+cy*view.scale;
+  draw();
+}
+
+/* =========================================================================
+   4) VẼ
+   ========================================================================= */
+function resize(){
+  const dpr=window.devicePixelRatio||1;
+  const r=cv.getBoundingClientRect();
+  cv.width=Math.max(1,Math.round(r.width*dpr));
+  cv.height=Math.max(1,Math.round(r.height*dpr));
+  draw();
+}
+function strokePts(points,close){
+  if(!points || !points.length) return;
+  ctx.beginPath();
+  const p0=toScreen(points[0].x,points[0].y); ctx.moveTo(p0.x,p0.y);
+  for(let k=1;k<points.length;k++){const p=toScreen(points[k].x,points[k].y);ctx.lineTo(p.x,p.y);}
+  if(close) ctx.closePath();
+  ctx.stroke();
+}
+function drawGrid(){
+  const target=80, perPx=1/view.scale, raw=target*perPx;
+  const pow=Math.pow(10,Math.floor(Math.log10(raw)));
+  const spacing=[1,2,5,10].map(m=>m*pow).find(c=>c>=raw)||10*pow;
+  const tl=toWorld(0,0), br=toWorld(W(),H());
+  const x0=Math.floor(Math.min(tl.x,br.x)/spacing)*spacing, x1=Math.ceil(Math.max(tl.x,br.x)/spacing)*spacing;
+  const y0=Math.floor(Math.min(tl.y,br.y)/spacing)*spacing, y1=Math.ceil(Math.max(tl.y,br.y)/spacing)*spacing;
+  if((x1-x0)/spacing>400||(y1-y0)/spacing>400) return;
+  ctx.save(); ctx.strokeStyle='rgba(120,140,170,.07)'; ctx.lineWidth=1;
+  for(let x=x0;x<=x1+1e-6;x+=spacing){const a=toScreen(x,y0),b=toScreen(x,y1);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+  for(let y=y0;y<=y1+1e-6;y+=spacing){const a=toScreen(x0,y),b=toScreen(x1,y);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+  ctx.restore();
+}
+function drawEntity(e){
+  switch(e.type){
+    case 'LINE':{const a=toScreen(e.x1,e.y1),b=toScreen(e.x2,e.y2);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();break;}
+    case 'CIRCLE':{const p=[];for(let i=0;i<=64;i++){const t=i/64*2*Math.PI;p.push({x:e.cx+Math.cos(t)*e.r,y:e.cy+Math.sin(t)*e.r});}strokePts(p,false);break;}
+    case 'ARC':{let a1=e.a1*Math.PI/180,a2=e.a2*Math.PI/180;if(a2<a1)a2+=2*Math.PI;const n=Math.max(8,Math.ceil((a2-a1)/(Math.PI/48)));const p=[];for(let i=0;i<=n;i++){const t=a1+(a2-a1)*i/n;p.push({x:e.cx+Math.cos(t)*e.r,y:e.cy+Math.sin(t)*e.r});}strokePts(p,false);break;}
+    case 'ELLIPSE':{const Mx=e.mx,My=e.my,mx=-e.my*e.ratio,my=e.mx*e.ratio;let p1=e.p1,p2=e.p2;if(p2<=p1)p2+=2*Math.PI;const n=72,p=[];for(let i=0;i<=n;i++){const t=p1+(p2-p1)*i/n;p.push({x:e.cx+Math.cos(t)*Mx+Math.sin(t)*mx,y:e.cy+Math.cos(t)*My+Math.sin(t)*my});}strokePts(p,false);break;}
+    case 'POLYLINE': strokePts(e.vertices,e.closed); break;
+    case 'SOLID':{const pts=e.pts;if(pts.length>=3){const o=pts.length===4?[pts[0],pts[1],pts[3],pts[2]]:pts;ctx.save();ctx.fillStyle='rgba(159,179,200,.12)';ctx.beginPath();const a=toScreen(o[0].x,o[0].y);ctx.moveTo(a.x,a.y);for(let k=1;k<o.length;k++){const q=toScreen(o[k].x,o[k].y);ctx.lineTo(q.x,q.y);}ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}break;}
+    case 'POINT':{const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=getCSS('--entity');ctx.beginPath();ctx.arc(p.x,p.y,2,0,2*Math.PI);ctx.fill();ctx.restore();break;}
+    case 'TEXT':{const size=e.h*view.scale;if(size<4||!e.text)break;const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle='#cdd6e3';ctx.font=`${Math.min(size,200)}px system-ui,sans-serif`;ctx.textBaseline='alphabetic';ctx.translate(p.x,p.y);if(e.rot)ctx.rotate(-e.rot*Math.PI/180);ctx.fillText(e.text,0,0);ctx.restore();break;}
+  }
+}
+function drawMeasurements(){
+  ctx.save();
+  ctx.lineWidth=1.6; ctx.font="600 12px ui-monospace,Menlo,monospace";
+  const seg=(a,b,active)=>{
+    const A=toScreen(a.x,a.y),B=toScreen(b.x,b.y);
+    ctx.strokeStyle=getCSS('--measure'); ctx.fillStyle=getCSS('--measure');
+    if(active){ctx.setLineDash([6,5]);}else{ctx.setLineDash([]);}
+    ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.setLineDash([]);
+    [A,B].forEach(P=>{ctx.beginPath();ctx.arc(P.x,P.y,3.5,0,2*Math.PI);ctx.fill();ctx.strokeStyle='#1a1205';ctx.lineWidth=1.4;ctx.stroke();ctx.lineWidth=1.6;});
+    const label=formatDist(dist(a,b)), m={x:(A.x+B.x)/2,y:(A.y+B.y)/2};
+    const tw=ctx.measureText(label).width;
+    ctx.fillStyle='rgba(11,14,20,.9)';roundRect(m.x-tw/2-7,m.y-22,tw+14,18,5);ctx.fill();
+    ctx.fillStyle=getCSS('--measure');ctx.textBaseline='middle';ctx.textAlign='center';
+    ctx.fillText(label,m.x,m.y-12);ctx.textAlign='left';
+  };
+  measurements.forEach(mm=>seg(mm.a,mm.b,false));
+  if(measureTemp.length===1){
+    const P=toScreen(measureTemp[0].x,measureTemp[0].y);
+    ctx.fillStyle=getCSS('--measure');ctx.beginPath();ctx.arc(P.x,P.y,4.5,0,2*Math.PI);ctx.fill();
+    if(hoverWorld) seg(measureTemp[0],hoverWorld,true);
+    if(hoverWorld&&hoverWorld.snapped) drawSnapMarker(toScreen(hoverWorld.x,hoverWorld.y));
+  }
+  ctx.restore();
+}
+function drawSnapMarker(P){
+  ctx.save();ctx.strokeStyle=getCSS('--accent');ctx.lineWidth=1.6;ctx.setLineDash([]);
+  ctx.strokeRect(P.x-6,P.y-6,12,12);ctx.restore();
+}
+function drawAnnotations(){
+  ctx.save();ctx.font="600 12px system-ui,sans-serif";ctx.textBaseline='middle';
+  for(const a of annotations){
+    const P=toScreen(a.x,a.y);
+    // ghim
+    ctx.fillStyle=getCSS('--note');ctx.beginPath();ctx.arc(P.x,P.y,5.5,0,2*Math.PI);ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.6;ctx.stroke();
+    // nhãn
+    const tw=ctx.measureText(a.text).width;
+    ctx.fillStyle='rgba(11,14,20,.92)';roundRect(P.x+10,P.y-11,tw+14,22,6);ctx.fill();
+    ctx.strokeStyle=getCSS('--note');ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#ffe3e5';ctx.fillText(a.text,P.x+17,P.y);
+  }
+  ctx.restore();
+}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function getCSS(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+
+function drawHatch(e){
+  if(!e.loops||!e.loops.length) return;
+  ctx.save();
+  ctx.beginPath();
+  for(const lp of e.loops){
+    if(!lp||lp.length<2) continue;
+    const p0=toScreen(lp[0].x,lp[0].y); ctx.moveTo(p0.x,p0.y);
+    for(let k=1;k<lp.length;k++){ const p=toScreen(lp[k].x,lp[k].y); ctx.lineTo(p.x,p.y); }
+    ctx.closePath();
+  }
+  // tô mờ (đặc hơn nếu solid), even-odd để chừa lỗ
+  ctx.fillStyle = e.solid ? 'rgba(159,179,200,.22)' : 'rgba(159,179,200,.12)';
+  ctx.fill('evenodd');
+  ctx.lineWidth=1; ctx.strokeStyle='rgba(159,179,200,.35)'; ctx.stroke();
+  ctx.restore();
+}
+function draw(){
+  const dpr=window.devicePixelRatio||1;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W(),H());
+  if(!entities.length) return;
+  drawGrid();
+  // lượt 1: tô nền HATCH (nằm dưới)
+  for(const e of entities) if(e.type==='HATCH') drawHatch(e);
+  // lượt 2: các nét vẽ
+  ctx.lineWidth=1.15; ctx.strokeStyle=getCSS('--entity'); ctx.lineJoin='round'; ctx.lineCap='round';
+  for(const e of entities) if(e.type!=='HATCH') drawEntity(e);
+  drawMeasurements();
+  drawAnnotations();
+}
+
+/* =========================================================================
+   5) TƯƠNG TÁC (kéo, chụm zoom, chạm)
+   ========================================================================= */
+const pointers=new Map();
+let downPt=null,lastPanPt=null,moved=false,lastPinchDist=null,lastCenter=null;
+
+function loc(e){const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+function applyZoom(f,cx,cy){const w=toWorld(cx,cy);view.scale=clamp(view.scale*f,1e-9,1e12);view.offsetX=cx-w.x*view.scale;view.offsetY=cy+w.y*view.scale;}
+
+cv.addEventListener('pointerdown',e=>{
+  cv.setPointerCapture(e.pointerId);
+  const p=loc(e); pointers.set(e.pointerId,p);
+  if(pointers.size===1){downPt=p;lastPanPt=p;moved=false;}
+  else if(pointers.size===2){const a=[...pointers.values()];lastPinchDist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);lastCenter={x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};}
+});
+cv.addEventListener('pointermove',e=>{
+  if(!pointers.has(e.pointerId))return;
+  const p=loc(e); pointers.set(e.pointerId,p);
+  if(pointers.size>=2){
+    const a=[...pointers.values()];
+    const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y), c={x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};
+    if(lastPinchDist!=null&&lastCenter){const w=toWorld(lastCenter.x,lastCenter.y);view.scale=clamp(view.scale*(d/lastPinchDist),1e-9,1e12);view.offsetX=c.x-w.x*view.scale;view.offsetY=c.y+w.y*view.scale;draw();}
+    lastPinchDist=d;lastCenter=c;moved=true;return;
+  }
+  if(Math.hypot(p.x-downPt.x,p.y-downPt.y)>6) moved=true;
+  if(mode==='pan'){view.offsetX+=p.x-lastPanPt.x;view.offsetY+=p.y-lastPanPt.y;lastPanPt=p;draw();}
+  else if(mode==='measure'&&measureTemp.length===1){const w=toWorld(p.x,p.y);hoverWorld=snap(w,p);draw();}
+});
+function endPointer(e){
+  const wasMoved=moved, had=pointers.size;
+  pointers.delete(e.pointerId);
+  if(pointers.size<2){lastPinchDist=null;lastCenter=null;}
+  if(pointers.size===0 && had===1 && !wasMoved) handleTap(loc(e));
+  if(pointers.size===0){hoverWorld=null;draw();}
+}
+cv.addEventListener('pointerup',endPointer);
+cv.addEventListener('pointercancel',endPointer);
+cv.addEventListener('wheel',e=>{e.preventDefault();const p=loc(e);applyZoom(e.deltaY<0?1.12:1/1.12,p.x,p.y);draw();},{passive:false});
+
+function handleTap(p){
+  if(!entities.length)return;
+  const w=toWorld(p.x,p.y), sn=snap(w,p);
+  if(mode==='measure'){
+    measureTemp.push({x:sn.x,y:sn.y});
+    if(measureTemp.length===2){
+      measurements.push({a:measureTemp[0],b:measureTemp[1]});
+      showVal(formatDist(dist(measureTemp[0],measureTemp[1])));
+      measureTemp=[]; hoverWorld=null;
+    }
+    updateHint(); draw();
+  } else if(mode==='note'){
+    pendingNote={x:sn.x,y:sn.y};
+    openModal(noteOverlay); setTimeout(()=>noteInput.focus(),60);
+  }
+}
+
+/* =========================================================================
+   6) UI
+   ========================================================================= */
+const hintEl=document.getElementById('hint'), valEl=document.getElementById('val');
+function updateHint(){
+  let t='';
+  if(mode==='pan') t='Kéo để di chuyển · chụm 2 ngón để phóng to';
+  else if(mode==='measure') t = measureTemp.length===0 ? 'Đo: chạm điểm thứ nhất' : 'Đo: chạm điểm thứ hai';
+  else if(mode==='note') t='Ghi chú: chạm vị trí cần ghim';
+  hintEl.textContent=t;
+}
+function showVal(s){valEl.textContent=s;valEl.classList.add('show');}
+function setMode(m){
+  mode=m; measureTemp=[]; hoverWorld=null;
+  document.querySelectorAll('.tool[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
+  updateHint(); draw();
+}
+document.querySelectorAll('.tool[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+document.getElementById('t-fit').addEventListener('click',()=>{if(entities.length)fitView();});
+document.getElementById('zoomIn').addEventListener('click',()=>{applyZoom(1.25,W()/2,H()/2);draw();});
+document.getElementById('zoomOut').addEventListener('click',()=>{applyZoom(1/1.25,W()/2,H()/2);draw();});
+
+// load file
+const empty=document.getElementById('empty');
+function loadDXF(text){
+  try{
+    const r=parseDXF(text);
+    entities=resolveBlocks(r.entities, r.blocks); insunits=r.insunits;
+    if(!entities.length){toast('Không tìm thấy thực thể vẽ nào trong file.');return;}
+    measurements=[]; annotations=[]; measureTemp=[]; hoverWorld=null;
+    buildSnap(); empty.classList.add('hidden');
+    setMode('pan'); fitView();
+    valEl.classList.remove('show');
+    toast(`Đã tải ${entities.length} đối tượng${UNIT[insunits]?` · đơn vị: ${UNIT[insunits]}`:''}`);
+  }catch(err){ toast('Lỗi đọc file DXF. File có thể không hợp lệ.'); console.error(err); }
+}
+// ---- DWG support: LibreDWG (WebAssembly), nạp khi cần (lazy) ----
+let _libredwg=null,_DwgType=null;
+async function getLibreDwg(){
+  if(_libredwg) return _libredwg;
+  toast('Đang tải bộ giải mã DWG (~15MB, chỉ lần đầu)…');
+  const mod=await import('./libredwg-web.js');     // bundle GPL-3.0 + WASM
+  _DwgType=mod.Dwg_File_Type;
+  _libredwg=await mod.LibreDwg.create('.');         // tìm libredwg-web.wasm cùng thư mục
+  return _libredwg;
+}
+// Chuyển 1 thực thể DWG -> node nội bộ (hình gốc hoặc INSERT). Trả null nếu bỏ qua.
+function dwgEntity(e){
+  const layer=e.layer||'0', deg=r=>r*180/Math.PI;   // libredwg trả góc bằng radian
+  switch(e.type){
+    case 'LINE': return (e.startPoint&&e.endPoint)?{type:'LINE',layer,x1:e.startPoint.x,y1:e.startPoint.y,x2:e.endPoint.x,y2:e.endPoint.y}:null;
+    case 'CIRCLE': return e.center?{type:'CIRCLE',layer,cx:e.center.x,cy:e.center.y,r:e.radius}:null;
+    case 'ARC': return e.center?{type:'ARC',layer,cx:e.center.x,cy:e.center.y,r:e.radius,a1:deg(e.startAngle||0),a2:deg(e.endAngle||0)}:null;
+    case 'ELLIPSE': return (e.center&&e.majorAxisEndPoint)?{type:'ELLIPSE',layer,cx:e.center.x,cy:e.center.y,mx:e.majorAxisEndPoint.x,my:e.majorAxisEndPoint.y,ratio:e.axisRatio??1,p1:e.startAngle??0,p2:e.endAngle??(2*Math.PI)}:null;
+    case 'POINT': return e.position?{type:'POINT',layer,x:e.position.x,y:e.position.y}:null;
+    case 'LWPOLYLINE': case 'POLYLINE2D': case 'POLYLINE3D': { const raw=(e.vertices||[]).map(p=>({x:p.x,y:p.y,bulge:p.bulge||0})).filter(p=>isFinite(p.x)&&isFinite(p.y)); if(!raw.length) return null; const verts=expandPolyline(raw, ((e.flag||0)&1)===1); return verts.length>=2?{type:'POLYLINE',layer,vertices:verts,closed:false}:null; }
+    case 'TEXT': return e.startPoint?{type:'TEXT',layer,x:e.startPoint.x,y:e.startPoint.y,h:e.height||10,text:e.text||'',rot:deg(e.rotation||0)}:null;
+    case 'MTEXT': { if(!e.insertionPoint) return null; const t=(e.text||'').replace(/\\P/g,' ').replace(/\\[A-Za-z][^;]*;/g,'').replace(/[{}]/g,''); return {type:'TEXT',layer,x:e.insertionPoint.x,y:e.insertionPoint.y,h:e.textHeight||10,text:t,rot:0}; }
+    case 'SOLID': case '3DFACE': { const c=[e.corner1,e.corner2,e.corner3,e.corner4||e.corner3].filter(Boolean).map(p=>({x:p.x,y:p.y})); return c.length>=3?{type:'SOLID',layer,pts:c}:null; }
+    case 'INSERT': return e.name?{type:'INSERT',layer,name:e.name,ix:(e.insertionPoint?e.insertionPoint.x:0),iy:(e.insertionPoint?e.insertionPoint.y:0),sx:(e.xScale??1),sy:(e.yScale??1),rot:deg(e.rotation||0),cols:e.columnCount||1,rows:e.rowCount||1,csp:e.columnSpacing||0,rsp:e.rowSpacing||0}:null;
+    case 'DIMENSION': return e.name?{type:'INSERT',layer,name:e.name,ix:0,iy:0,sx:1,sy:1,rot:0,cols:1,rows:1,csp:0,rsp:0,_dim:true}:null;
+    case 'SPLINE':{
+      const ctrl=(e.controlPoints||[]).map(p=>({x:p.x,y:p.y})), fit=(e.fitPoints||[]).map(p=>({x:p.x,y:p.y})), cl=((e.flag||0)&1)===1;
+      const verts=splineToVertices({degree:e.degree||3,ctrl,knots:e.knots,weights:(e.weights&&e.weights.length?e.weights:null),fit,closed:cl});
+      return (verts&&verts.length>=2)?{type:'POLYLINE',layer,vertices:verts,closed:cl}:null;
+    }
+    case 'HATCH':{ const loops=dwgHatchLoops(e); return loops.length?{type:'HATCH',layer,loops,solid:(e.solidFill===1)}:null; }
+    default: return null;   // các loại khác hiện bỏ qua
+  }
+}
+function dwgList(arr){ const o=[]; for(const e of (arr||[])){ const c=dwgEntity(e); if(c) o.push(c); } return o; }
+// Dựng bản đồ block + model space từ DwgDatabase, rồi khai triển INSERT/DIMENSION
+function dwgBuild(db){
+  const blocks={};
+  const recs=(db.tables&&db.tables.BLOCK_RECORD&&db.tables.BLOCK_RECORD.entries)||[];
+  for(const r of recs){ if(r.name) blocks[r.name]={base:r.basePoint||{x:0,y:0}, entities:dwgList(r.entities)}; }
+  const model=dwgList(db.entities);
+  return { entities: resolveBlocks(model, blocks), insunits:(db.header&&db.header.INSUNITS)||0 };
+}
+async function loadDWG(arrayBuffer){
+  try{
+    const lib=await getLibreDwg();
+    const ptr=lib.dwg_read_data(arrayBuffer,_DwgType.DWG);
+    if(ptr==null){ toast('Không đọc được file DWG này.'); return; }
+    const db=lib.convert(ptr);
+    const built=dwgBuild(db);
+    try{ lib.dwg_free(ptr); }catch(_){}
+    if(!built.entities.length){ toast('DWG đọc được nhưng chưa có đối tượng 2D nào được hỗ trợ.'); return; }
+    entities=built.entities; insunits=built.insunits;
+    measurements=[]; annotations=[]; measureTemp=[]; hoverWorld=null;
+    buildSnap(); empty.classList.add('hidden'); setMode('pan'); fitView(); valEl.classList.remove('show');
+    toast(`Đã đọc DWG: ${entities.length} đối tượng${UNIT[insunits]?` · đơn vị: ${UNIT[insunits]}`:''}`);
+  }catch(err){
+    console.error(err);
+    toast('Lỗi giải mã DWG. Có thể do phiên bản chưa hỗ trợ, hoặc cần mạng lần đầu để tải bộ giải mã.');
+  }
+}
+
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const reader=new FileReader();
+  if(f.name.toLowerCase().endsWith('.dwg')){
+    reader.onload=()=>loadDWG(reader.result);
+    reader.readAsArrayBuffer(f);
+  } else {
+    reader.onload=()=>loadDXF(reader.result);
+    reader.readAsText(f);
+  }
+  e.target.value='';
+});
+
+// note modal
+const noteOverlay=document.getElementById('noteOverlay'), noteInput=document.getElementById('noteInput');
+function openModal(o){o.classList.add('show');}
+function closeModal(o){o.classList.remove('show');}
+document.getElementById('noteCancel').addEventListener('click',()=>{pendingNote=null;noteInput.value='';closeModal(noteOverlay);});
+function commitNote(){
+  const t=noteInput.value.trim();
+  if(t&&pendingNote){annotations.push({x:pendingNote.x,y:pendingNote.y,text:t});draw();}
+  pendingNote=null;noteInput.value='';closeModal(noteOverlay);
+}
+document.getElementById('noteOk').addEventListener('click',commitNote);
+noteInput.addEventListener('keydown',e=>{if(e.key==='Enter')commitNote();});
+
+// clear sheet
+const clearOverlay=document.getElementById('clearOverlay');
+document.getElementById('t-clear').addEventListener('click',()=>{if(entities.length)openModal(clearOverlay);});
+document.getElementById('clearCancel').addEventListener('click',()=>closeModal(clearOverlay));
+document.getElementById('clearMeasure').addEventListener('click',()=>{measurements=[];measureTemp=[];valEl.classList.remove('show');draw();closeModal(clearOverlay);toast('Đã xoá các phép đo');});
+document.getElementById('clearNotes').addEventListener('click',()=>{annotations=[];draw();closeModal(clearOverlay);toast('Đã xoá các ghi chú');});
+document.getElementById('clearAll').addEventListener('click',()=>{measurements=[];annotations=[];measureTemp=[];valEl.classList.remove('show');draw();closeModal(clearOverlay);toast('Đã xoá hết');});
+[noteOverlay,clearOverlay].forEach(o=>o.addEventListener('click',e=>{if(e.target===o){closeModal(o);pendingNote=null;noteInput.value='';}}));
+
+// toast
+let toastT;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2600);}
+
+/* =========================================================================
+   7) BẢN VẼ MẪU (DXF nhúng) — mặt bằng đơn giản
+   ========================================================================= */
+const SAMPLE=`0
+SECTION
+2
+HEADER
+9
+$INSUNITS
+70
+4
+0
+ENDSEC
+0
+SECTION
+2
+ENTITIES
+0
+LWPOLYLINE
+8
+WALLS
+90
+4
+70
+1
+10
+0
+20
+0
+10
+6000
+20
+0
+10
+6000
+20
+4000
+10
+0
+20
+4000
+0
+LINE
+8
+WALLS
+10
+3500
+20
+0
+11
+3500
+21
+2500
+0
+LINE
+8
+WALLS
+10
+3500
+20
+2500
+11
+6000
+21
+2500
+0
+ARC
+8
+DOORS
+10
+3500
+20
+2500
+40
+700
+50
+180
+51
+270
+0
+LWPOLYLINE
+8
+FURNITURE
+90
+4
+70
+1
+10
+400
+20
+400
+10
+2400
+20
+400
+10
+2400
+20
+1200
+10
+400
+20
+1200
+0
+CIRCLE
+8
+COLUMNS
+10
+1700
+20
+2600
+40
+250
+0
+ELLIPSE
+8
+FURNITURE
+10
+4750
+20
+3200
+11
+650
+21
+0
+40
+0.6
+41
+0
+42
+6.283185
+0
+TEXT
+8
+TEXT
+10
+500
+20
+3500
+40
+220
+1
+PHONG KHACH
+0
+TEXT
+8
+TEXT
+10
+4100
+20
+600
+40
+200
+1
+BEP
+0
+TEXT
+8
+TEXT
+10
+4100
+20
+3500
+40
+200
+1
+PHONG NGU
+0
+ENDSEC
+0
+EOF`;
+function loadSample(){loadDXF(SAMPLE);}
+document.getElementById('sampleBtn').addEventListener('click',loadSample);
+document.getElementById('sampleBtn2').addEventListener('click',loadSample);
+
+/* init */
+new ResizeObserver(resize).observe(cv);
+window.addEventListener('orientationchange',()=>setTimeout(resize,250));
+resize(); updateHint();
+
+/* ---- PWA: đăng ký service worker để cài đặt + chạy offline ---- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('SW không đăng ký được:',err));
+  });
+}
+</script>
+</body>
+</html>
