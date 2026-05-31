@@ -349,14 +349,32 @@ function vniDecode(s){
   return out.join('');
 }
 
+/* ---- TCVN3 / VSCII (.VnTime, ABC) -> Unicode: ánh xạ 1 byte (0xA0..0xFF) ---- */
+const _TCVN3=(function(){
+  const T=[[0xA0,' '],[0xA1,'Ă'],[0xA2,'Â'],[0xA3,'Ê'],[0xA4,'Ô'],[0xA5,'Ơ'],[0xA6,'Ư'],[0xA7,'Đ'],
+   [0xA8,'ă'],[0xA9,'â'],[0xAA,'ê'],[0xAB,'ô'],[0xAC,'ơ'],[0xAD,'ư'],[0xAE,'đ'],[0xAF,'Ằ'],
+   [0xB0,'\u0300'],[0xB1,'\u0309'],[0xB2,'\u0303'],[0xB3,'\u0301'],[0xB4,'\u0323'],
+   [0xB5,'à'],[0xB6,'ả'],[0xB7,'ã'],[0xB8,'á'],[0xB9,'ạ'],[0xBA,'Ẳ'],[0xBB,'ằ'],[0xBC,'ẳ'],[0xBD,'ẵ'],[0xBE,'ắ'],[0xBF,'Ẵ'],
+   [0xC0,'Ắ'],[0xC1,'Ầ'],[0xC2,'Ẩ'],[0xC3,'Ẫ'],[0xC4,'Ấ'],[0xC5,'Ề'],[0xC6,'ặ'],[0xC7,'ầ'],[0xC8,'ẩ'],[0xC9,'ẫ'],[0xCA,'ấ'],[0xCB,'ậ'],[0xCC,'è'],[0xCD,'Ể'],[0xCE,'ẻ'],[0xCF,'ẽ'],
+   [0xD0,'é'],[0xD1,'ẹ'],[0xD2,'ề'],[0xD3,'ể'],[0xD4,'ễ'],[0xD5,'ế'],[0xD6,'ệ'],[0xD7,'ì'],[0xD8,'ỉ'],[0xD9,'Ễ'],[0xDA,'Ế'],[0xDB,'Ồ'],[0xDC,'ĩ'],[0xDD,'í'],[0xDE,'ị'],[0xDF,'ò'],
+   [0xE0,'Ổ'],[0xE1,'ỏ'],[0xE2,'õ'],[0xE3,'ó'],[0xE4,'ọ'],[0xE5,'ồ'],[0xE6,'ổ'],[0xE7,'ỗ'],[0xE8,'ố'],[0xE9,'ộ'],[0xEA,'ờ'],[0xEB,'ở'],[0xEC,'ỡ'],[0xED,'ớ'],[0xEE,'ợ'],[0xEF,'ù'],
+   [0xF0,'Ỗ'],[0xF1,'ủ'],[0xF2,'ũ'],[0xF3,'ú'],[0xF4,'ụ'],[0xF5,'ừ'],[0xF6,'ử'],[0xF7,'ữ'],[0xF8,'ứ'],[0xF9,'ự'],[0xFA,'ỳ'],[0xFB,'ỷ'],[0xFC,'ỹ'],[0xFD,'ý'],[0xFE,'ỵ'],[0xFF,'Ố']];
+  const m={}; for(const [b,ch] of T) m[String.fromCharCode(b)]=ch; return m;
+})();
+function tcvn3Decode(s){ let o=''; for(const ch of s) o += (_TCVN3[ch]!==undefined?_TCVN3[ch]:ch); return o; }
+
 function decodeCAD(s){
   if(s==null) return '';
   let t=String(s);
   // Unicode escapes \U+XXXX (đúng 4 hex của AutoCAD) & \M+nXXXX -> ký tự (gồm dấu kết hợp)
   t=t.replace(/\\U\+([0-9A-Fa-f]{4})/g,(_,h)=>{try{return String.fromCodePoint(parseInt(h,16));}catch(e){return '';}});
   t=t.replace(/\\M\+[0-9A-Fa-f]([0-9A-Fa-f]{4})/g,(_,h)=>{try{return String.fromCodePoint(parseInt(h,16));}catch(e){return '';}});
-  // các đoạn dùng font VNI/TCVN/ABC cũ -> chuyển sang Unicode (chỉ trong phạm vi run đó)
-  t=t.replace(/\\f([^;\\]*);([^\\{}]*)/g,(m,font,body)=> /VNI|\.Vn|TCVN|ABC/i.test(font) ? ('\\f'+font+';'+vniDecode(body)) : m);
+  // các đoạn dùng font cũ -> Unicode: VNI -> vniDecode; .Vn/TCVN/ABC -> tcvn3Decode
+  t=t.replace(/\\f([^;\\]*);([^\\{}]*)/g,(m,font,body)=>{
+    if(/VNI/i.test(font)) return '\\f'+font+';'+vniDecode(body);
+    if(/\.?Vn|TCVN|ABC|VSCII/i.test(font)) return '\\f'+font+';'+tcvn3Decode(body);
+    return m;
+  });
   // ngắt dòng/đoạn & khoảng trắng không ngắt -> khoảng trắng (giữ 1 dòng)
   t=t.replace(/\\P/g,' ').replace(/\\X/g,' ').replace(/\\~/g,' ');
   // mã định dạng MTEXT có dấu ';' (\fArial..; \H..; \C..; \A..; \W..; \Q..; \T..; \p..)
