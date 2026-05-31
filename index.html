@@ -1423,6 +1423,7 @@ function endPointer(e){
   }
   if(wasPick) commitPick();                       // chốt điểm / chọn / sửa
   else if(wasMark) finishMark();                  // hoàn tất hình đánh dấu
+  else if(mode==='measure' && !moved) confirmDimPoint();   // chạm bất kỳ = xác nhận điểm tại tâm ngắm
   else if(mode==='pan' && tapHit && tapHit.kind==='ann') editAnnotation(tapHit.i);   // chạm hình đánh dấu = sửa
   else if(mode==='pan' && !moved && !tapHit && selected){ selected=null; draw(); }   // chạm chỗ trống = bỏ chọn
   downHit=null;
@@ -1457,7 +1458,7 @@ function updateMeasureUI(){
 }
 function confirmDimPoint(){
   if(mode!=='measure'||!entities.length) return;
-  const sn=centerSnap||snap(toWorld(W()/2,H()/2),{x:W()/2,y:H()/2});
+  const sn=snap(toWorld(W()/2,H()/2),{x:W()/2,y:H()/2});   // dò lại ngay lúc xác nhận
   measureTemp.push({x:sn.x,y:sn.y});
   if(measureTemp.length>=dimNeeds(dimType)){
     const m={kind:dimType,pts:measureTemp.slice()}; measurements.push(m);
@@ -1476,7 +1477,7 @@ function updateHint(){
       ? 'Kéo nền để di chuyển · chạm đối tượng để sửa · kéo đầu mút để chỉnh điểm'
       : 'Kéo để di chuyển · chụm 2 ngón để phóng to';
   }
-  else if(mode==='measure'){ const need=dimNeeds(dimType); t=`Đo ${DIM_LABEL[dimType]||''}: kéo bản vẽ đưa điểm vào tâm ngắm rồi bấm “Bắt điểm” (${measureTemp.length}/${need})`; }
+  else if(mode==='measure'){ const need=dimNeeds(dimType); t=`Đo ${DIM_LABEL[dimType]||''}: kéo đưa điểm vào tâm ngắm rồi chạm màn hình để bắt điểm (${measureTemp.length}/${need})`; }
   else if(mode==='note'){
     t = noteSub==='pin'   ? 'Ghim: giữ & rê chọn vị trí, nhấc tay để ghim'
       : noteSub==='circle'? 'Khoanh tròn: kéo từ tâm ra để bao quanh vùng'
