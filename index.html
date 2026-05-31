@@ -209,6 +209,43 @@
     opacity:0;pointer-events:none;transition:.25s;z-index:60;max-width:90%;text-align:center;line-height:1.5;
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* nút nổi bên trái (Lớp / Layout) */
+  .ctools{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:none;flex-direction:column;gap:8px;z-index:6}
+  .ctools.show{display:flex}
+  .ctool{min-width:56px;padding:9px 8px;border-radius:11px;background:rgba(17,21,29,.92);border:1px solid var(--line);
+    color:var(--ink);font-family:inherit;font-size:10.5px;font-weight:600;letter-spacing:.2px;
+    display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;backdrop-filter:blur(8px);box-shadow:var(--shadow)}
+  .ctool svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.7;fill:none}
+  .ctool:active{transform:scale(.95)}
+  .ctool.on{color:var(--accent);border-color:var(--accent)}
+
+  /* thẻ thông tin đối tượng (chạm để xem) */
+  .infocard{position:absolute;left:12px;right:12px;bottom:12px;z-index:7;display:none;align-items:center;gap:11px;
+    background:rgba(17,21,29,.96);border:1px solid var(--line);border-radius:13px;padding:11px 12px;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+  .infocard.show{display:flex}
+  .infocard .ic-ico{width:34px;height:34px;flex:0 0 auto;border-radius:9px;background:var(--panel-2);display:grid;place-items:center;color:var(--accent)}
+  .infocard .ic-ico svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.8;fill:none}
+  .infocard .ic-txt{flex:1;min-width:0}
+  .infocard .ic-title{font-size:13.5px;font-weight:700;color:var(--ink)}
+  .infocard .ic-detail{font-size:12px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .infocard .ic-close{flex:0 0 auto;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-dim);font-size:20px;line-height:1;cursor:pointer}
+
+  /* bảng Lớp */
+  .layer-actions{display:flex;gap:10px;margin-bottom:10px}
+  .layer-actions button{flex:1;padding:9px;border-radius:9px;font-family:inherit;font-weight:600;font-size:12.5px;cursor:pointer;background:var(--panel-2);color:var(--ink);border:1px solid var(--line)}
+  .layer-actions button:active{transform:scale(.98)}
+  .layerlist{max-height:46vh;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px}
+  .layer-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;cursor:pointer;color:var(--ink);text-align:left}
+  .layer-row:active{transform:scale(.99)}
+  .layer-row .sw{width:14px;height:14px;border-radius:3px;flex:0 0 auto;border:1px solid rgba(255,255,255,.25)}
+  .layer-row .nm{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .layer-row .eye{width:20px;height:20px;flex:0 0 auto;stroke:currentColor;stroke-width:1.8;fill:none;color:var(--accent)}
+  .layer-row.off{opacity:.55}
+  .layer-row.off .nm{text-decoration:line-through}
+  .layer-row.off .eye{color:var(--ink-faint)}
+
+  .confirmrow .cr-done{flex:0 0 auto;min-width:104px;background:linear-gradient(135deg,#34d399,#10b981);color:#04130d;border-color:transparent}
 </style>
 </head>
 <body>
@@ -246,6 +283,19 @@
       <button id="zoomOut" aria-label="Thu nhỏ">−</button>
     </div>
 
+    <div class="ctools" id="ctools">
+      <button class="ctool" id="layerBtn">
+        <svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5M3 17l9 5 9-5"/></svg>
+        Lớp
+      </button>
+    </div>
+
+    <div class="infocard" id="infoCard">
+      <div class="ic-ico" id="icIco"></div>
+      <div class="ic-txt"><div class="ic-title" id="icTitle"></div><div class="ic-detail" id="icDetail"></div></div>
+      <button class="ic-close" id="icClose" aria-label="Đóng">×</button>
+    </div>
+
     <div class="empty" id="empty">
       <div class="ill"><svg viewBox="0 0 64 64"><path d="M8 8h48v48H8z"/><path d="M8 22h48M22 8v48"/><circle cx="42" cy="40" r="8"/><path d="M48 46l8 8"/></svg></div>
       <div>
@@ -275,10 +325,12 @@
     <button class="pill" data-dim="radius">Bán kính</button>
     <button class="pill" data-dim="diameter">Đường kính</button>
     <button class="pill" data-dim="angular">Góc</button>
+    <button class="pill" data-dim="area">Diện tích</button>
   </div>
   <div class="confirmrow" id="confirmRow">
     <button class="cr-undo" id="dimUndo">↶ Lùi</button>
     <button class="cr-ok" id="dimConfirm">Bắt điểm 1/2</button>
+    <button class="cr-done" id="dimDone" style="display:none">✓ Đóng vùng</button>
   </div>
 
   <!-- BOTTOM TOOLBAR -->
@@ -336,6 +388,20 @@
       <div class="modal-actions">
         <button class="btn-ghost" id="clearCancel">Đóng</button>
       </div>
+    </div>
+  </div>
+
+  <!-- LAYER PANEL -->
+  <div class="overlay" id="layerOverlay">
+    <div class="modal">
+      <h3>Lớp (Layers)</h3>
+      <p>Chạm để ẩn/hiện từng lớp. Phép đo &amp; ghi chú không bị ảnh hưởng.</p>
+      <div class="layer-actions">
+        <button id="layerAllOn">Hiện tất cả</button>
+        <button id="layerAllOff">Ẩn tất cả</button>
+      </div>
+      <div class="layerlist" id="layerList"></div>
+      <div class="modal-actions"><button class="btn-ghost" id="layerClose">Đóng</button></div>
     </div>
   </div>
 
@@ -861,6 +927,9 @@ let editingIdx=-1;          // chỉ số ghi chú đang sửa (-1 = thêm ghim 
 let noteSub='pin';          // 'pin' | 'circle' | 'cloud' | 'free'
 let mark=null;              // bản nháp đánh dấu đang vẽ
 let downHit=null;           // đối tượng chạm trúng lúc nhấn (để chọn khi chạm)
+let hiddenUserLayers=new Set();  // các lớp người dùng tự ẩn (khác HIDDEN_LAYERS theo file)
+let layerList=[];           // [{name,hex}] cho bảng Lớp
+let infoIdx=-1;             // chỉ số đối tượng đang hiện thông tin (chế độ Di chuyển)
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
@@ -876,8 +945,11 @@ function formatDist(d){
   return u ? `${v} ${u}` : v;
 }
 function formatAngle(deg){ return (deg>=100?deg.toFixed(1):deg.toFixed(2))+'°'; }
+function shoelace(p){ let s=0; for(let i=0;i<p.length;i++){ const a=p[i], b=p[(i+1)%p.length]; s+=a.x*b.y-b.x*a.y; } return s/2; }
+function formatArea(a){ const u=UNIT[insunits]; const v = a>=1e7 ? a.toExponential(2) : a>=1000 ? a.toFixed(0) : a>=10 ? a.toFixed(1) : a.toFixed(2); return u?`${v} ${u}²`:v; }
+function perimeter(p,closed){ let s=0; const n=p.length; for(let i=1;i<n;i++) s+=Math.hypot(p[i].x-p[i-1].x,p[i].y-p[i-1].y); if(closed&&n>2) s+=Math.hypot(p[0].x-p[n-1].x,p[0].y-p[n-1].y); return s; }
 function angleAt(v,a,b){ let g=Math.atan2(a.y-v.y,a.x-v.x)-Math.atan2(b.y-v.y,b.x-v.x); g=Math.abs(g); if(g>Math.PI) g=2*Math.PI-g; return g*180/Math.PI; }
-function dimNeeds(kind){ return kind==='angular'?3:2; }
+function dimNeeds(kind){ return kind==='angular'?3:kind==='area'?999:2; }
 function dimValue(m){
   const p=m.pts;
   switch(m.kind){
@@ -886,6 +958,7 @@ function dimValue(m){
     case 'radius':     return 'R '+formatDist(dist(p[0],p[1]));
     case 'diameter':   return 'Ø '+formatDist(dist(p[0],p[1]));
     case 'angular':    return p.length>=3?formatAngle(angleAt(p[0],p[1],p[2])):'';
+    case 'area':       return p.length>=3?('S '+formatArea(Math.abs(shoelace(p)))+' · P '+formatDist(perimeter(p,true))):'';
     default:           return formatDist(dist(p[0],p[1]));   // aligned (chéo)
   }
 }
@@ -894,7 +967,7 @@ function migrateMeas(m){              // chấp nhận cả định dạng cũ {
   if(m&&m.a&&m.b) return {kind:'aligned',pts:[m.a,m.b]};
   return null;
 }
-const DIM_LABEL={aligned:'Chéo',horizontal:'Ngang',vertical:'Dọc',radius:'Bán kính',diameter:'Đường kính',angular:'Góc'};
+const DIM_LABEL={aligned:'Chéo',horizontal:'Ngang',vertical:'Dọc',radius:'Bán kính',diameter:'Đường kính',angular:'Góc',area:'Diện tích'};
 
 /* =========================================================================
    3) PHẠM VI, SNAP, FIT VIEW
@@ -1078,6 +1151,13 @@ function drawOneDim(m,color){
       const R=46; ctx.beginPath();ctx.arc(V.x,V.y,R,a1,a1+diff,diff<0);ctx.stroke();
       const ma=a1+diff/2; dimLabel(V.x+Math.cos(ma)*(R+16),V.y+Math.sin(ma)*(R+16),dimValue(m),color);
     }
+  } else if(k==='area'){
+    if(p.length>=2){
+      ctx.save(); ctx.fillStyle=hexA(color,.16); ctx.beginPath(); ctx.moveTo(p[0].x,p[0].y); for(let q=1;q<p.length;q++)ctx.lineTo(p[q].x,p[q].y); ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.beginPath(); ctx.moveTo(p[0].x,p[0].y); for(let q=1;q<p.length;q++)ctx.lineTo(p[q].x,p[q].y); ctx.closePath(); ctx.stroke();
+      let cx=0,cy=0; for(const q of p){cx+=q.x;cy+=q.y;} cx/=p.length; cy/=p.length;
+      dimLabel(cx,cy,dimValue(m),color);
+    }
   }
   ctx.fillStyle=color; for(const P of p){ctx.beginPath();ctx.arc(P.x,P.y,3.2,0,2*Math.PI);ctx.fill();}
 }
@@ -1101,13 +1181,19 @@ function drawMeasureCursor(){
   // xem trước dim đang dựng (nét đứt qua tâm ngắm)
   if(measureTemp.length){
     const scr=measureTemp.map(q=>toScreen(q.x,q.y));
-    ctx.strokeStyle=measure; ctx.fillStyle=measure; ctx.lineWidth=1.6; ctx.setLineDash([6,5]);
-    ctx.beginPath();
-    if(dimType==='angular'){ const V=scr[0]; for(let q=1;q<scr.length;q++){ctx.moveTo(V.x,V.y);ctx.lineTo(scr[q].x,scr[q].y);} ctx.moveTo(V.x,V.y);ctx.lineTo(S.x,S.y); }
-    else { ctx.moveTo(scr[0].x,scr[0].y); for(let q=1;q<scr.length;q++)ctx.lineTo(scr[q].x,scr[q].y); ctx.lineTo(S.x,S.y); }
-    ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle=measure; ctx.fillStyle=measure; ctx.lineWidth=1.6;
+    if(dimType==='area'){
+      if(scr.length>=2){ ctx.save();ctx.globalAlpha=.12;ctx.beginPath();ctx.moveTo(scr[0].x,scr[0].y);for(let q=1;q<scr.length;q++)ctx.lineTo(scr[q].x,scr[q].y);ctx.lineTo(S.x,S.y);ctx.closePath();ctx.fill();ctx.restore(); }
+      ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(scr[0].x,scr[0].y);for(let q=1;q<scr.length;q++)ctx.lineTo(scr[q].x,scr[q].y);ctx.lineTo(S.x,S.y);ctx.stroke();
+      ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(S.x,S.y);ctx.lineTo(scr[0].x,scr[0].y);ctx.stroke();ctx.setLineDash([]);
+    } else {
+      ctx.setLineDash([6,5]); ctx.beginPath();
+      if(dimType==='angular'){ const V=scr[0]; for(let q=1;q<scr.length;q++){ctx.moveTo(V.x,V.y);ctx.lineTo(scr[q].x,scr[q].y);} ctx.moveTo(V.x,V.y);ctx.lineTo(S.x,S.y); }
+      else { ctx.moveTo(scr[0].x,scr[0].y); for(let q=1;q<scr.length;q++)ctx.lineTo(scr[q].x,scr[q].y); ctx.lineTo(S.x,S.y); }
+      ctx.stroke(); ctx.setLineDash([]);
+    }
     const tmp={kind:dimType,pts:[...measureTemp,{x:centerSnap.x,y:centerSnap.y}]};
-    dimLabel(S.x,S.y-18,dimValue(tmp),measure);
+    const lbl=dimValue(tmp); if(lbl) dimLabel(S.x,S.y-18,lbl,measure);
     for(const P of scr){ctx.beginPath();ctx.arc(P.x,P.y,4,0,2*Math.PI);ctx.fill();}
   }
   if(centerSnap.snapped) drawSnapMarker(S,centerSnap.kind);
@@ -1241,12 +1327,13 @@ function draw(){
   ctx.clearRect(0,0,W(),H());
   if(!entities.length) return;
   drawGrid();
+  const hideL=hiddenUserLayers;
   // lượt 1: tô nền HATCH (nằm dưới)
-  for(const e of entities) if(e.type==='HATCH') drawHatch(e);
-  // lượt 2: các nét vẽ
+  for(const e of entities) if(e.type==='HATCH' && !hideL.has(e.layer)) drawHatch(e);
   // lượt 2: các nét vẽ (mỗi đối tượng tự đặt màu theo layer)
   ctx.lineWidth=1.15; ctx.lineJoin='round'; ctx.lineCap='round';
-  for(const e of entities) if(e.type!=='HATCH') drawEntity(e);
+  for(const e of entities) if(e.type!=='HATCH' && !hideL.has(e.layer)) drawEntity(e);
+  drawInfoHighlight();
   drawMeasurements();
   drawAnnotations();
   drawMarkupPreview();
@@ -1320,6 +1407,108 @@ function hitHandle(screen){
     else if(t==='freehand'){ const p=a.pts||[]; for(let k=1;k<p.length;k++) if(distToSeg(w,p[k-1],p[k])*s<13) return {kind:'ann',i}; }
   }
   return null;
+}
+/* ---- CHẠM XEM THÔNG TIN ĐỐI TƯỢNG ---- */
+function polyDist(w,v,closed){ let d=Infinity; for(let i=1;i<v.length;i++){const dd=distToSeg(w,v[i-1],v[i]); if(dd<d)d=dd;} if(closed&&v.length>2){const dd=distToSeg(w,v[v.length-1],v[0]); if(dd<d)d=dd;} return d; }
+function pickEntity(screen){
+  const w=toWorld(screen.x,screen.y), tol=12/view.scale; let best=-1, bd=tol;
+  for(let i=0;i<entities.length;i++){
+    const e=entities[i]; if(hiddenUserLayers.has(e.layer)) continue;
+    let x0,y0,x1,y1;                                  // hộp bao -> loại nhanh
+    switch(e.type){
+      case 'LINE': x0=Math.min(e.x1,e.x2);x1=Math.max(e.x1,e.x2);y0=Math.min(e.y1,e.y2);y1=Math.max(e.y1,e.y2); break;
+      case 'CIRCLE': case 'ARC': x0=e.cx-e.r;x1=e.cx+e.r;y0=e.cy-e.r;y1=e.cy+e.r; break;
+      case 'ELLIPSE':{const R=Math.hypot(e.mx,e.my);x0=e.cx-R;x1=e.cx+R;y0=e.cy-R;y1=e.cy+R;break;}
+      case 'POINT': case 'TEXT': x0=x1=e.x;y0=y1=e.y; break;
+      case 'POLYLINE':{const v=e.vertices||[];if(!v.length)continue;x0=x1=v[0].x;y0=y1=v[0].y;for(const q of v){if(q.x<x0)x0=q.x;if(q.x>x1)x1=q.x;if(q.y<y0)y0=q.y;if(q.y>y1)y1=q.y;}break;}
+      case 'SOLID':{const v=e.pts||[];if(!v.length)continue;x0=x1=v[0].x;y0=y1=v[0].y;for(const q of v){if(q.x<x0)x0=q.x;if(q.x>x1)x1=q.x;if(q.y<y0)y0=q.y;if(q.y>y1)y1=q.y;}break;}
+      default: continue;                               // HATCH / loại khác: bỏ qua chạm
+    }
+    const pad = (e.type==='TEXT') ? Math.max(tol,(e.h||10)*1.3) : tol;
+    if(w.x<x0-pad||w.x>x1+pad||w.y<y0-pad||w.y>y1+pad) continue;
+    let d=Infinity;
+    switch(e.type){
+      case 'LINE': d=distToSeg(w,{x:e.x1,y:e.y1},{x:e.x2,y:e.y2}); break;
+      case 'POLYLINE': d=polyDist(w,e.vertices||[],e.closed); break;
+      case 'SOLID': d=polyDist(w,e.pts||[],true); break;
+      case 'CIRCLE': d=Math.abs(Math.hypot(w.x-e.cx,w.y-e.cy)-e.r); break;
+      case 'ARC': d=polyDist(w,smpArc(e.cx,e.cy,e.r,e.a1,e.a2),false); break;
+      case 'ELLIPSE': d=polyDist(w,smpEllipse(e),false); break;
+      case 'TEXT':{ if(!e.text){d=Infinity;break;} const dd=Math.hypot(w.x-e.x,w.y-e.y), rad=Math.max(tol,(e.h||10)*1.3); d= dd<=rad? dd*0.6 : Infinity; break; }
+      case 'POINT': d=Math.hypot(w.x-e.x,w.y-e.y); break;
+    }
+    if(d<bd){bd=d;best=i;}
+  }
+  return best;
+}
+function icoSVG(k){ const m={
+  line:'<path d="M4 20L20 4"/>', poly:'<path d="M4 14l5-8 5 5 6-7"/>', circle:'<circle cx="12" cy="12" r="8"/>',
+  arc:'<path d="M4 18a13 13 0 0 1 16-9"/>', text:'<path d="M5 6h14M12 6v13"/>', point:'<circle cx="12" cy="12" r="3"/>',
+  solid:'<path d="M5 5h14v14H5z"/>', hatch:'<path d="M5 5h14v14H5z"/><path d="M6 11l5-5M6 17l11-11M11 19l8-8"/>',
+  img:'<path d="M4 5h16v14H4z"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4 4 3 3-2 4 3"/>'
+}; return '<svg viewBox="0 0 24 24">'+(m[k]||m.poly)+'</svg>'; }
+function objInfo(e){
+  const F=formatDist;
+  switch(e.type){
+    case 'LINE': return {icon:'line',title:'Đường thẳng',detail:'Dài '+F(Math.hypot(e.x2-e.x1,e.y2-e.y1))};
+    case 'POLYLINE':{
+      if(e._img) return {icon:'img',title:'Ảnh tham chiếu',detail:''};
+      const v=e.vertices||[], per=perimeter(v,e.closed);
+      if(e.closed&&v.length>2) return {icon:'poly',title:'Đa tuyến kín',detail:'Chu vi '+F(per)+' · S '+formatArea(Math.abs(shoelace(v)))+' · '+v.length+' đỉnh'};
+      return {icon:'poly',title:'Đa tuyến',detail:'Dài '+F(per)+' · '+v.length+' đỉnh'};
+    }
+    case 'CIRCLE': return {icon:'circle',title:'Đường tròn',detail:'R '+F(e.r)+' · Ø '+F(e.r*2)+' · S '+formatArea(Math.PI*e.r*e.r)};
+    case 'ARC':{ let sw=e.a2-e.a1; while(sw<0)sw+=360; while(sw>360)sw-=360; return {icon:'arc',title:'Cung tròn',detail:'R '+F(e.r)+' · Góc '+sw.toFixed(1)+'° · Dài '+F(Math.PI*e.r*sw/180)}; }
+    case 'ELLIPSE': return {icon:'circle',title:'Elip',detail:'Bán trục '+F(Math.hypot(e.mx,e.my))+' · tỉ lệ '+(e.ratio||1).toFixed(2)};
+    case 'TEXT':{ const t=e.text||''; return {icon:'text',title:'Chữ',detail:'“'+(t.length>44?t.slice(0,44)+'…':t)+'” · cao '+F(e.h||0)}; }
+    case 'POINT': return {icon:'point',title:'Điểm',detail:'X '+e.x.toFixed(2)+' · Y '+e.y.toFixed(2)};
+    case 'SOLID': return {icon:'solid',title:'Mảng đặc',detail:'S '+formatArea(Math.abs(shoelace(e.pts||[])))};
+    case 'HATCH': return {icon:'hatch',title:'Mặt cắt / tô',detail:''};
+    default: return {icon:'poly',title:e.type||'Đối tượng',detail:''};
+  }
+}
+function showObjectInfo(i){
+  infoIdx=i; const e=entities[i]; if(!e){hideObjectInfo();return;} const info=objInfo(e);
+  document.getElementById('icIco').innerHTML=icoSVG(info.icon);
+  document.getElementById('icTitle').textContent=info.title;
+  const lay='Lớp '+(e.layer||'0');
+  document.getElementById('icDetail').textContent=info.detail?(lay+' · '+info.detail):lay;
+  document.getElementById('infoCard').classList.add('show'); draw();
+}
+function hideObjectInfo(){ if(infoIdx<0) return; infoIdx=-1; document.getElementById('infoCard').classList.remove('show'); draw(); }
+function drawInfoHighlight(){
+  if(infoIdx<0||mode!=='pan') return; const e=entities[infoIdx]; if(!e||hiddenUserLayers.has(e.layer)) return;
+  ctx.save(); const acc=getCSS('--accent');
+  ctx.strokeStyle=acc; ctx.fillStyle=acc; ctx.lineWidth=2.6; ctx.setLineDash([]); ctx.shadowColor=acc; ctx.shadowBlur=9; ctx.lineJoin='round'; ctx.lineCap='round';
+  if(e.type==='HATCH'){ for(const lp of (e.loops||[])) strokePts(lp,true); }
+  else { const c=e.col; e.col=acc; drawEntity(e); e.col=c; }
+  ctx.restore();
+}
+
+/* ---- BẢNG LỚP (ẩn/hiện) ---- */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function buildLayerList(){
+  const seen=new Map();
+  for(const e of entities){ const nm=e.layer||'0'; if(seen.has(nm)) continue;
+    let hex; const aci=LAYER_COLORS[nm];
+    if(aci>=1&&aci<=255) hex='#'+((ACI_RGB[aci]||0x9fb3c8)>>>0).toString(16).padStart(6,'0');
+    else hex=e.col||getCSS('--entity');
+    seen.set(nm,hex);
+  }
+  layerList=[...seen.entries()].map(([name,hex])=>({name,hex})).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}));
+}
+const EYE_ON='<svg class="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF='<svg class="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M3 3l18 18"/></svg>';
+function renderLayerList(){
+  const box=document.getElementById('layerList'); box.innerHTML='';
+  if(!layerList.length){ box.innerHTML='<div style="color:var(--ink-dim);font-size:12.5px;padding:10px">Không có lớp.</div>'; return; }
+  for(const L of layerList){
+    const off=hiddenUserLayers.has(L.name);
+    const row=document.createElement('button'); row.type='button'; row.className='layer-row'+(off?' off':'');
+    row.innerHTML='<span class="sw" style="background:'+L.hex+'"></span><span class="nm">'+escapeHtml(L.name)+'</span>'+(off?EYE_OFF:EYE_ON);
+    row.addEventListener('click',()=>{ if(hiddenUserLayers.has(L.name)) hiddenUserLayers.delete(L.name); else hiddenUserLayers.add(L.name); renderLayerList(); draw(); });
+    box.appendChild(row);
+  }
 }
 function selectMeasure(i){ selected={kind:'m',i}; updateHint(); draw(); toast('Đã chọn phép đo · bấm Xoá để xoá'); }
 function editAnnotation(i){ selected={kind:'n',i}; editingIdx=i; showNoteModal(); }
@@ -1424,8 +1613,15 @@ function endPointer(e){
   if(wasPick) commitPick();                       // chốt điểm / chọn / sửa
   else if(wasMark) finishMark();                  // hoàn tất hình đánh dấu
   else if(mode==='measure' && !moved) confirmDimPoint();   // chạm bất kỳ = xác nhận điểm tại tâm ngắm
-  else if(mode==='pan' && tapHit && tapHit.kind==='ann') editAnnotation(tapHit.i);   // chạm hình đánh dấu = sửa
-  else if(mode==='pan' && !moved && !tapHit && selected){ selected=null; draw(); }   // chạm chỗ trống = bỏ chọn
+  else if(mode==='pan' && !moved){
+    if(tapHit && tapHit.kind==='ann'){ editAnnotation(tapHit.i); }   // chạm hình đánh dấu = sửa
+    else {
+      const hi=pickEntity(downPt);
+      if(hi>=0){ if(selected) selected=null; showObjectInfo(hi); }    // chạm đối tượng = xem thông tin
+      else if(infoIdx>=0){ hideObjectInfo(); }                        // chạm chỗ trống = đóng thẻ thông tin
+      else if(selected){ selected=null; draw(); }                     // hoặc bỏ chọn
+    }
+  }
   downHit=null;
   if(pointers.size===0){ hoverWorld=null; if(!picking) draw(); }
 }
@@ -1445,7 +1641,7 @@ subRow.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',()=>{
   subRow.querySelectorAll('.pill').forEach(x=>x.classList.toggle('active',x===b));
   updateHint();
 }));
-const dimRow=document.getElementById('dimRow'), confirmRow=document.getElementById('confirmRow'), dimConfirmBtn=document.getElementById('dimConfirm');
+const dimRow=document.getElementById('dimRow'), confirmRow=document.getElementById('confirmRow'), dimConfirmBtn=document.getElementById('dimConfirm'), dimDoneBtn=document.getElementById('dimDone');
 dimRow.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',()=>{
   dimType=b.dataset.dim; measureTemp=[];
   dimRow.querySelectorAll('.pill').forEach(x=>x.classList.toggle('active',x===b));
@@ -1453,8 +1649,22 @@ dimRow.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',()=>{
 }));
 function updateMeasureUI(){
   const need=dimNeeds(dimType);
-  dimConfirmBtn.textContent=`Bắt điểm ${Math.min(measureTemp.length+1,need)}/${need}`;
+  if(dimType==='area'){
+    dimConfirmBtn.textContent=`Thêm đỉnh (${measureTemp.length})`;
+    dimDoneBtn.style.display=measureTemp.length>=3?'block':'none';
+  } else {
+    dimConfirmBtn.textContent=`Bắt điểm ${Math.min(measureTemp.length+1,need)}/${need}`;
+    dimDoneBtn.style.display='none';
+  }
   updateHint();
+}
+function finishArea(){
+  if(dimType==='area'&&measureTemp.length>=3){
+    const m={kind:'area',pts:measureTemp.slice()}; measurements.push(m);
+    selected={kind:'m',i:measurements.length-1}; showVal(dimValue(m));
+    measureTemp=[]; saveOverlay();
+  }
+  updateMeasureUI(); draw();
 }
 function confirmDimPoint(){
   if(mode!=='measure'||!entities.length) return;
@@ -1470,6 +1680,7 @@ function confirmDimPoint(){
 function undoDimPoint(){ if(measureTemp.length){ measureTemp.pop(); updateMeasureUI(); draw(); } }
 document.getElementById('dimConfirm').addEventListener('click',confirmDimPoint);
 document.getElementById('dimUndo').addEventListener('click',undoDimPoint);
+document.getElementById('dimDone').addEventListener('click',finishArea);
 function updateHint(){
   let t='';
   if(mode==='pan'){
@@ -1477,7 +1688,10 @@ function updateHint(){
       ? 'Kéo nền để di chuyển · chạm đối tượng để sửa · kéo đầu mút để chỉnh điểm'
       : 'Kéo để di chuyển · chụm 2 ngón để phóng to';
   }
-  else if(mode==='measure'){ const need=dimNeeds(dimType); t=`Đo ${DIM_LABEL[dimType]||''}: kéo đưa điểm vào tâm ngắm rồi chạm màn hình để bắt điểm (${measureTemp.length}/${need})`; }
+  else if(mode==='measure'){
+    if(dimType==='area'){ t=`Đo diện tích: đưa từng đỉnh vào tâm ngắm rồi chạm để thêm; có ≥3 đỉnh thì bấm "Đóng vùng" (đang ${measureTemp.length} đỉnh)`; }
+    else { const need=dimNeeds(dimType); t=`Đo ${DIM_LABEL[dimType]||''}: kéo đưa điểm vào tâm ngắm rồi chạm màn hình để bắt điểm (${measureTemp.length}/${need})`; }
+  }
   else if(mode==='note'){
     t = noteSub==='pin'   ? 'Ghim: giữ & rê chọn vị trí, nhấc tay để ghim'
       : noteSub==='circle'? 'Khoanh tròn: kéo từ tâm ra để bao quanh vùng'
@@ -1489,6 +1703,7 @@ function updateHint(){
 function showVal(s){valEl.textContent=s;valEl.classList.add('show');}
 function setMode(m){
   cancelPick(); mark=null; selected=null;
+  if(infoIdx>=0){ infoIdx=-1; document.getElementById('infoCard').classList.remove('show'); }
   mode=m; measureTemp=[]; hoverWorld=null; centerSnap=null;
   document.querySelectorAll('.tool[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
   subRow.classList.toggle('show', m==='note');
@@ -1529,7 +1744,7 @@ function loadOverlay(){
   let data; try{ data=JSON.parse(raw); }catch(_){ return; }
   const num=v=>typeof v==='number'&&isFinite(v), okPt=p=>p&&num(p.x)&&num(p.y);
   const ms=Array.isArray(data&&data.m)?data.m:[], as=Array.isArray(data&&data.a)?data.a:[];
-  measurements = ms.map(migrateMeas).filter(m=>m&&Array.isArray(m.pts)&&m.pts.length>=2&&m.pts.every(okPt))
+  measurements = ms.map(migrateMeas).filter(m=>{ if(!m||!Array.isArray(m.pts)||!m.pts.every(okPt)) return false; const need=(m.kind==='area'||m.kind==='angular')?3:2; return m.pts.length>=need; })
                    .map(m=>({kind:m.kind||'aligned',pts:m.pts.map(p=>({x:+p.x,y:+p.y}))}));
   annotations = as.map(o=>{
     if(!o||typeof o!=='object') return null;
@@ -1550,6 +1765,7 @@ function loadDXF(text,srcName){
     if(!entities.length){toast('Không tìm thấy thực thể vẽ nào trong file.');return;}
     measurements=[]; annotations=[]; measureTemp=[]; hoverWorld=null;
     buildSnap(); empty.classList.add('hidden');
+    hiddenUserLayers.clear(); infoIdx=-1; buildLayerList(); document.getElementById('ctools').classList.add('show');
     setMode('pan'); fitView();
     valEl.classList.remove('show');
     toast(`Đã tải ${entities.length} đối tượng${UNIT[insunits]?` · đơn vị: ${UNIT[insunits]}`:''}`);
@@ -1698,7 +1914,9 @@ async function loadDWG(arrayBuffer, srcName){
     if(!built.entities.length){ toast('DWG đọc được nhưng chưa có đối tượng 2D nào được hỗ trợ.'); return; }
     entities=built.entities; insunits=built.insunits;
     measurements=[]; annotations=[]; measureTemp=[]; hoverWorld=null;
-    buildSnap(); empty.classList.add('hidden'); setMode('pan'); fitView(); valEl.classList.remove('show');
+    buildSnap(); empty.classList.add('hidden');
+    hiddenUserLayers.clear(); infoIdx=-1; buildLayerList(); document.getElementById('ctools').classList.add('show');
+    setMode('pan'); fitView(); valEl.classList.remove('show');
     toast(`Đã đọc DWG: ${entities.length} đối tượng${UNIT[insunits]?` · đơn vị: ${UNIT[insunits]}`:''}`);
     currentKey=key; loadOverlay();   // khôi phục đo/ghi chú đã lưu cho file này
   }catch(err){
@@ -1757,6 +1975,15 @@ document.getElementById('clearMeasure').addEventListener('click',()=>{measuremen
 document.getElementById('clearNotes').addEventListener('click',()=>{annotations=[];selected=null;saveOverlay();draw();closeModal(clearOverlay);toast('Đã xoá các ghi chú');});
 document.getElementById('clearAll').addEventListener('click',()=>{measurements=[];annotations=[];measureTemp=[];selected=null;saveOverlay();valEl.classList.remove('show');draw();closeModal(clearOverlay);toast('Đã xoá hết');});
 [noteOverlay,clearOverlay].forEach(o=>o.addEventListener('click',e=>{if(e.target===o){closeModal(o);resetNote();}}));
+
+/* ---- Bảng Lớp + thẻ thông tin đối tượng ---- */
+const layerOverlay=document.getElementById('layerOverlay');
+document.getElementById('layerBtn').addEventListener('click',()=>{ if(!entities.length)return; buildLayerList(); renderLayerList(); openModal(layerOverlay); });
+document.getElementById('layerClose').addEventListener('click',()=>closeModal(layerOverlay));
+document.getElementById('layerAllOn').addEventListener('click',()=>{ hiddenUserLayers.clear(); renderLayerList(); draw(); });
+document.getElementById('layerAllOff').addEventListener('click',()=>{ for(const L of layerList) hiddenUserLayers.add(L.name); renderLayerList(); draw(); });
+layerOverlay.addEventListener('click',e=>{ if(e.target===layerOverlay) closeModal(layerOverlay); });
+document.getElementById('icClose').addEventListener('click',hideObjectInfo);
 
 // toast
 let toastT;
