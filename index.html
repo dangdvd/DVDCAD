@@ -795,7 +795,7 @@ let mode='pan';
 let measurements=[], measureTemp=[], hoverWorld=null;
 let annotations=[], pendingNote=null;
 // chọn điểm bằng kính lúp
-let picking=false, pickScreen=null, pickSnap=null, loupeOn=false, loupeHold=null;
+let picking=false, pickScreen=null, pickSnap=null, loupeOn=false, loupeHold=null, activePickId=null;
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
@@ -1042,7 +1042,7 @@ function movePick(p){
   draw();
   if(loupeOn) renderLoupe();
 }
-function cancelPick(){ hideLoupe(); picking=false; pickSnap=null; }
+function cancelPick(){ hideLoupe(); picking=false; pickSnap=null; activePickId=null; }
 function commitPick(){
   if(!picking) return;
   const sn=pickSnap; hideLoupe(); picking=false; pickSnap=null;
@@ -1089,18 +1089,17 @@ function renderLoupe(){
 }
 
 cv.addEventListener('pointerdown',e=>{
-  cv.setPointerCapture(e.pointerId);
   const p=loc(e); pointers.set(e.pointerId,p);
   if(pointers.size===1){
     downPt=p;lastPanPt=p;moved=false;
-    if((mode==='measure'||mode==='note') && entities.length) startPick(p);
+    if((mode==='measure'||mode==='note') && entities.length){ startPick(p); activePickId=e.pointerId; }
   }
   else if(pointers.size===2){
     cancelPick();   // 2 ngón = di chuyển/zoom, không chọn điểm
     const a=[...pointers.values()];lastPinchDist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);lastCenter={x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};
   }
 });
-cv.addEventListener('pointermove',e=>{
+window.addEventListener('pointermove',e=>{
   if(!pointers.has(e.pointerId))return;
   const p=loc(e); pointers.set(e.pointerId,p);
   if(pointers.size>=2){
@@ -1112,17 +1111,18 @@ cv.addEventListener('pointermove',e=>{
   if(Math.hypot(p.x-downPt.x,p.y-downPt.y)>6) moved=true;
   if(mode==='pan'){view.offsetX+=p.x-lastPanPt.x;view.offsetY+=p.y-lastPanPt.y;lastPanPt=p;draw();}
   else if(picking){ movePick(p); }
-});
+},{passive:false});
 function endPointer(e){
+  if(!pointers.has(e.pointerId) && e.pointerId!==activePickId) return;
+  const wasPick = picking && e.pointerId===activePickId;
+  if(wasPick) activePickId=null;
   pointers.delete(e.pointerId);
   if(pointers.size<2){lastPinchDist=null;lastCenter=null;}
-  if(pointers.size===0){
-    if(picking) commitPick();
-    hoverWorld=null; draw();
-  }
+  if(wasPick) commitPick();          // chốt điểm khi nhấc đúng ngón đang chọn (không phụ thuộc đếm ngón)
+  if(pointers.size===0){ hoverWorld=null; draw(); }
 }
-cv.addEventListener('pointerup',endPointer);
-cv.addEventListener('pointercancel',endPointer);
+window.addEventListener('pointerup',endPointer);
+window.addEventListener('pointercancel',endPointer);
 cv.addEventListener('wheel',e=>{e.preventDefault();const p=loc(e);applyZoom(e.deltaY<0?1.12:1/1.12,p.x,p.y);draw();},{passive:false});
 
 function handleTap(p){
