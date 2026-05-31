@@ -1345,8 +1345,15 @@ function draw(){
   drawPickCursor();
   drawMeasureCursor();
 }
-// iOS đôi khi không repaint canvas sau lệnh vẽ từ thao tác chạm nút -> tạo lại buffer để ép vẽ lại
-function forceRedraw(){ if(cv.width){ const w=cv.width, h=cv.height; cv.width=w; cv.height=h; } draw(); }
+// iOS Safari đôi khi KHÔNG hiển thị canvas đã vẽ nếu lệnh vẽ đến từ thao tác chạm nút (không phải chạm trực tiếp canvas).
+// Cách ép: tạo lại bitmap rồi đổi opacity cực nhỏ -> buộc trình duyệt hợp nhất lại layer & vẽ lên màn hình.
+let _vpFlip=false;
+function forceRedraw(){
+  if(cv.width){ cv.width = cv.width; }          // tạo lại bitmap canvas
+  draw();
+  _vpFlip = !_vpFlip;
+  cv.style.opacity = _vpFlip ? '0.999' : '1';   // nudge -> flush paint (iOS)
+}
 
 /* =========================================================================
    5) TƯƠNG TÁC (kéo, chụm zoom, chạm)
