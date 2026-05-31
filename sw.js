@@ -4,7 +4,7 @@
    - Bộ giải mã DWG (libredwg-web.js ~8.8MB + .wasm ~6.3MB) được lưu cache
      ngay lần đầu mở một file .dwg khi có mạng -> các lần sau dùng offline được.
    Đổi số phiên bản CACHE bên dưới mỗi khi cập nhật file để buộc làm mới. */
-const CACHE = 'dvdcad-v1';
+const CACHE = 'dvdcad-v2';
 const CORE = [
   './',
   './index.html',

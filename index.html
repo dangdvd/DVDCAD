@@ -293,6 +293,25 @@
 /* =========================================================================
    1) DXF PARSER  — đọc các thực thể 2D phổ biến từ file DXF (text)
    ========================================================================= */
+/* ============================================================
+   MÀU theo ACI (AutoCAD Color Index) + theo layer
+   colorIndex: 256 = BYLAYER, 0 = BYBLOCK, 1..255 = màu ACI cụ thể
+   ============================================================ */
+const ACI_RGB=[0x000000,0xFF0000,0xFFFF00,0x00FF00,0x00FFFF,0x0000FF,0xFF00FF,0xFFFFFF,0x808080,0xC0C0C0,0xFF0000,0xFF7F7F,0xA50000,0xA55252,0x7F0000,0x7F3F3F,0x4C0000,0x4C2626,0x260000,0x261313,0xFF3F00,0xFF9F7F,0xA52900,0xA56752,0x7F1F00,0x7F4F3F,0x4C1300,0x4C2F26,0x260900,0x261713,0xFF7F00,0xFFBF7F,0xA55200,0xA57C52,0x7F3F00,0x7F5F3F,0x4C2600,0x4C3926,0x261300,0x261C13,0xFFBF00,0xFFDF7F,0xA57C00,0xA59152,0x7F5F00,0x7F6F3F,0x4C3900,0x4C4226,0x261C00,0x262113,0xFFFF00,0xFFFF7F,0xA5A500,0xA5A552,0x7F7F00,0x7F7F3F,0x4C4C00,0x4C4C26,0x262600,0x262613,0xBFFF00,0xDFFF7F,0x7CA500,0x91A552,0x5F7F00,0x6F7F3F,0x394C00,0x424C26,0x1C2600,0x212613,0x7FFF00,0xBFFF7F,0x52A500,0x7CA552,0x3F7F00,0x5F7F3F,0x264C00,0x394C26,0x132600,0x1C2613,0x3FFF00,0x9FFF7F,0x29A500,0x67A552,0x1F7F00,0x4F7F3F,0x134C00,0x2F4C26,0x092600,0x172613,0x00FF00,0x7FFF7F,0x00A500,0x52A552,0x007F00,0x3F7F3F,0x004C00,0x264C26,0x002600,0x132613,0x00FF3F,0x7FFF9F,0x00A529,0x52A567,0x007F1F,0x3F7F4F,0x004C13,0x264C2F,0x002609,0x135817,0x00FF7F,0x7FFFBF,0x00A552,0x52A57C,0x007F3F,0x3F7F5F,0x004C26,0x264C39,0x002613,0x13581C,0x00FFBF,0x7FFFDF,0x00A57C,0x52A591,0x007F5F,0x3F7F6F,0x004C39,0x264C42,0x00261C,0x135858,0x00FFFF,0x7FFFFF,0x00A5A5,0x52A5A5,0x007F7F,0x3F7F7F,0x004C4C,0x264C4C,0x002626,0x135858,0x00BFFF,0x7FDFFF,0x007CA5,0x5291A5,0x005F7F,0x3F6F7F,0x00394C,0x26427E,0x001C26,0x135858,0x007FFF,0x7FBFFF,0x0052A5,0x527CA5,0x003F7F,0x3F5F7F,0x00264C,0x26397E,0x001326,0x131C58,0x003FFF,0x7F9FFF,0x0029A5,0x5267A5,0x001F7F,0x3F4F7F,0x00134C,0x262F7E,0x000926,0x131758,0x0000FF,0x7F7FFF,0x0000A5,0x5252A5,0x00007F,0x3F3F7F,0x00004C,0x26267E,0x000026,0x131358,0x3F00FF,0x9F7FFF,0x2900A5,0x6752A5,0x1F007F,0x4F3F7F,0x13004C,0x2F267E,0x090026,0x171358,0x7F00FF,0xBF7FFF,0x5200A5,0x7C52A5,0x3F007F,0x5F3F7F,0x26004C,0x39267E,0x130026,0x1C1358,0xBF00FF,0xDF7FFF,0x7C00A5,0x9152A5,0x5F007F,0x6F3F7F,0x39004C,0x42264C,0x1C0026,0x581358,0xFF00FF,0xFF7FFF,0xA500A5,0xA552A5,0x7F007F,0x7F3F7F,0x4C004C,0x4C264C,0x260026,0x581358,0xFF00BF,0xFF7FDF,0xA5007C,0xA55291,0x7F005F,0x7F3F6F,0x4C0039,0x4C2642,0x26001C,0x581358,0xFF007F,0xFF7FBF,0xA50052,0xA5527C,0x7F003F,0x7F3F5F,0x4C0026,0x4C2639,0x260013,0x58131C,0xFF003F,0xFF7F9F,0xA50029,0xA55267,0x7F001F,0x7F3F4F,0x4C0013,0x4C262F,0x260009,0x581317,0x000000,0x656565,0x666666,0x999999,0xCCCCCC,0xFFFFFF];
+let LAYER_COLORS={}, HIDDEN_LAYERS=new Set();
+function rgbHex(n){ n=(n>>>0)&0xFFFFFF; return '#'+n.toString(16).padStart(6,'0'); }
+function aciHex(aci){ const i=(aci>=0&&aci<=255)?aci:7; const v=ACI_RGB[i]; return rgbHex(v!=null?v:0xFFFFFF); }
+function layerAci(name){ const v=LAYER_COLORS[name]; return (v>=1&&v<=255)?v:7; }
+// aci: chỉ số màu của thực thể; ctxAci: màu kế thừa từ INSERT (cho BYBLOCK)
+function resolveColor(aci, layer, ctxAci){
+  let a;
+  if(aci>=1&&aci<=255) a=aci;                              // màu cụ thể
+  else if(aci===0) a=(ctxAci!=null?ctxAci:layerAci(layer)); // BYBLOCK
+  else a=layerAci(layer);                                   // BYLAYER (256/undefined)
+  return aciHex(a);
+}
+function hexA(h,al){ let s=String(h).replace('#',''); if(s.length===3) s=s.split('').map(c=>c+c).join(''); const n=parseInt(s,16)||0; return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${al})`; }
+
 function parseDXF(text){
   const lines = text.split(/\r\n|\r|\n/);
   const pairs = [];
@@ -356,6 +375,8 @@ function parseDXF(text){
         return (verts&&verts.length>=2)?{type:'POLYLINE',layer,vertices:verts,closed:(flag&1)===1}:null;
       }
       case 'HATCH':{ const loops=dxfHatchLoops(g); return loops.length?{type:'HATCH',layer,loops,solid:(num(g,70)===1)}:null; }
+      case 'LEADER':{ const xs=all(g,10),ys=all(g,20),v=[]; for(let k=0;k<Math.min(xs.length,ys.length);k++) v.push({x:xs[k],y:ys[k]}); return v.length>=2?{type:'POLYLINE',layer,vertices:v,closed:false}:null; }
+      case 'ATTRIB':{ if(((num(g,70)||0)&1)===1) return null; const s=str(g,1)||''; return s?{type:'TEXT',layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:s,rot:num(g,50)||0}:null; }
       default: return null;
     }
   }
@@ -379,12 +400,12 @@ function parseDXF(text){
           let k=j+1; while(k<end && pairs[k].code!==0) k++; j=k;
         }
         const plClosed=((num(header,70)||0)&1)===1;
-        out.push({type:'POLYLINE',layer:str(header,8)||'0',vertices:expandPolyline(verts,plClosed),closed:false});
+        out.push({type:'POLYLINE',layer:str(header,8)||'0',vertices:expandPolyline(verts,plClosed),closed:false,aci:num(header,62)});
         i=j;
       } else {
         let j=i+1; const g=[];
         while(j<end && pairs[j].code!==0){ g.push(pairs[j]); j++; }
-        const e=build(type,g); if(e) out.push(e);
+        const e=build(type,g); if(e){ if(e.aci===undefined) e.aci=num(g,62); out.push(e); }
         i=j;
       }
     }
@@ -423,6 +444,28 @@ function parseDXF(text){
   // ENTITIES (model space)
   const [es,ee]=sectionRange('ENTITIES');
   const entities = es>=0 ? readEntities(es,ee) : readEntities(0,pairs.length);
+
+  // LAYER table -> màu theo layer (code 62: âm = layer tắt; code 70 bit1 = đóng băng)
+  const layerColors={}; const hidden=new Set();
+  {
+    let i=0;
+    for(; i<pairs.length; i++){
+      if(pairs[i].code===2 && pairs[i].value.trim()==='LAYER' && i>0 && pairs[i-1].code===0 && pairs[i-1].value.trim()==='TABLE') break;
+    }
+    if(i<pairs.length){
+      let j=i+1;
+      while(j<pairs.length && !(pairs[j].code===0 && pairs[j].value.trim()==='ENDTAB')){
+        if(pairs[j].code===0 && pairs[j].value.trim()==='LAYER'){
+          let k=j+1; const g=[];
+          while(k<pairs.length && pairs[k].code!==0){ g.push(pairs[k]); k++; }
+          const nm=str(g,2); const col=num(g,62); const fl=num(g,70)||0;
+          if(nm){ layerColors[nm]=(col!=null?Math.abs(col):7); if((col!=null&&col<0)||((fl&1)===1)) hidden.add(nm); }
+          j=k;
+        } else j++;
+      }
+    }
+  }
+  LAYER_COLORS=layerColors; HIDDEN_LAYERS=hidden;
 
   return {entities, blocks, insunits};
 }
@@ -466,28 +509,32 @@ function transformPrim(e,M){
     default: return null;
   }
 }
-function explodeInto(list,blocks,M,out,depth){
+function explodeInto(list,blocks,M,out,depth,ctxAci){
   if(depth>12) return;
   for(const e of list){
     if(out.length>200000) return;
+    if((e.layer||'').toLowerCase()==='defpoints') continue; // điểm dựng hình của dimension -> bỏ
+    if(HIDDEN_LAYERS.has(e.layer)) continue;                // layer tắt/đóng băng -> ẩn như AutoCAD
     if(e.type==='INSERT'){
       const blk=blocks[e.name]; if(!blk) continue;
+      // màu kế thừa cho con BYBLOCK = màu của chính INSERT
+      const insAci=(e.aci>=1&&e.aci<=255)?e.aci:(e.aci===0?(ctxAci!=null?ctxAci:7):layerAci(e.layer));
       const t=(e.rot||0)*Math.PI/180, cosT=Math.cos(t), sinT=Math.sin(t);
       const cols=Math.max(1,e.cols||1), rows=Math.max(1,e.rows||1);
       for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
         const ox=c*(e.csp||0), oy=r*(e.rsp||0);
         const cell=Object.assign({},e,{ix:(e.ix||0)+(cosT*ox - sinT*oy), iy:(e.iy||0)+(sinT*ox + cosT*oy)});
-        explodeInto(blk.entities, blocks, mMul(M, insertMatrix(cell, blk.base)), out, depth+1);
+        explodeInto(blk.entities, blocks, mMul(M, insertMatrix(cell, blk.base)), out, depth+1, insAci);
         if(out.length>200000) return;
       }
     } else {
-      if((e.layer||'').toLowerCase()==='defpoints') continue; // điểm dựng hình của dimension -> bỏ
-      const t=transformPrim(e,M); if(t) out.push(t);
+      const t=transformPrim(e,M);
+      if(t){ const col=(e.rgb!=null)?rgbHex(e.rgb):resolveColor(e.aci,e.layer,ctxAci); out.push(Object.assign({},t,{col})); }
     }
   }
 }
 // Trả về danh sách hình gốc đã khai triển hết INSERT/DIMENSION
-function resolveBlocks(entities, blocks){ const out=[]; explodeInto(entities, blocks||{}, M_ID, out, 0); return out; }
+function resolveBlocks(entities, blocks){ const out=[]; explodeInto(entities, blocks||{}, M_ID, out, 0, undefined); return out; }
 
 /* ============================================================
    SPLINE: dựng đường cong -> danh sách điểm
@@ -758,15 +805,17 @@ function drawGrid(){
   ctx.restore();
 }
 function drawEntity(e){
+  const col=e.col||getCSS('--entity');
+  ctx.strokeStyle=col;
   switch(e.type){
     case 'LINE':{const a=toScreen(e.x1,e.y1),b=toScreen(e.x2,e.y2);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();break;}
     case 'CIRCLE':{const p=[];for(let i=0;i<=64;i++){const t=i/64*2*Math.PI;p.push({x:e.cx+Math.cos(t)*e.r,y:e.cy+Math.sin(t)*e.r});}strokePts(p,false);break;}
     case 'ARC':{let a1=e.a1*Math.PI/180,a2=e.a2*Math.PI/180;if(a2<a1)a2+=2*Math.PI;const n=Math.max(8,Math.ceil((a2-a1)/(Math.PI/48)));const p=[];for(let i=0;i<=n;i++){const t=a1+(a2-a1)*i/n;p.push({x:e.cx+Math.cos(t)*e.r,y:e.cy+Math.sin(t)*e.r});}strokePts(p,false);break;}
     case 'ELLIPSE':{const Mx=e.mx,My=e.my,mx=-e.my*e.ratio,my=e.mx*e.ratio;let p1=e.p1,p2=e.p2;if(p2<=p1)p2+=2*Math.PI;const n=72,p=[];for(let i=0;i<=n;i++){const t=p1+(p2-p1)*i/n;p.push({x:e.cx+Math.cos(t)*Mx+Math.sin(t)*mx,y:e.cy+Math.cos(t)*My+Math.sin(t)*my});}strokePts(p,false);break;}
     case 'POLYLINE': strokePts(e.vertices,e.closed); break;
-    case 'SOLID':{const pts=e.pts;if(pts.length>=3){const o=pts.length===4?[pts[0],pts[1],pts[3],pts[2]]:pts;ctx.save();ctx.fillStyle='rgba(159,179,200,.12)';ctx.beginPath();const a=toScreen(o[0].x,o[0].y);ctx.moveTo(a.x,a.y);for(let k=1;k<o.length;k++){const q=toScreen(o[k].x,o[k].y);ctx.lineTo(q.x,q.y);}ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}break;}
-    case 'POINT':{const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=getCSS('--entity');ctx.beginPath();ctx.arc(p.x,p.y,2,0,2*Math.PI);ctx.fill();ctx.restore();break;}
-    case 'TEXT':{const size=e.h*view.scale;if(size<4||!e.text)break;const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle='#cdd6e3';ctx.font=`${Math.min(size,200)}px system-ui,sans-serif`;ctx.textBaseline='alphabetic';ctx.translate(p.x,p.y);if(e.rot)ctx.rotate(-e.rot*Math.PI/180);ctx.fillText(e.text,0,0);ctx.restore();break;}
+    case 'SOLID':{const pts=e.pts;if(pts.length>=3){const o=pts.length===4?[pts[0],pts[1],pts[3],pts[2]]:pts;ctx.save();ctx.fillStyle=hexA(col,.2);ctx.beginPath();const a=toScreen(o[0].x,o[0].y);ctx.moveTo(a.x,a.y);for(let k=1;k<o.length;k++){const q=toScreen(o[k].x,o[k].y);ctx.lineTo(q.x,q.y);}ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}break;}
+    case 'POINT':{const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;ctx.beginPath();ctx.arc(p.x,p.y,2,0,2*Math.PI);ctx.fill();ctx.restore();break;}
+    case 'TEXT':{const size=e.h*view.scale;if(size<3||!e.text)break;const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;ctx.font=`${Math.min(size,200)}px system-ui,sans-serif`;ctx.textBaseline='alphabetic';ctx.translate(p.x,p.y);if(e.rot)ctx.rotate(-e.rot*Math.PI/180);ctx.fillText(e.text,0,0);ctx.restore();break;}
   }
 }
 function drawMeasurements(){
@@ -825,10 +874,11 @@ function drawHatch(e){
     for(let k=1;k<lp.length;k++){ const p=toScreen(lp[k].x,lp[k].y); ctx.lineTo(p.x,p.y); }
     ctx.closePath();
   }
-  // tô mờ (đặc hơn nếu solid), even-odd để chừa lỗ
-  ctx.fillStyle = e.solid ? 'rgba(159,179,200,.22)' : 'rgba(159,179,200,.12)';
+  // tô mờ theo màu layer/đối tượng (đặc hơn nếu solid), even-odd để chừa lỗ
+  const col=e.col||getCSS('--entity');
+  ctx.fillStyle = hexA(col, e.solid?0.25:0.14);
   ctx.fill('evenodd');
-  ctx.lineWidth=1; ctx.strokeStyle='rgba(159,179,200,.35)'; ctx.stroke();
+  ctx.lineWidth=1; ctx.strokeStyle=hexA(col,0.4); ctx.stroke();
   ctx.restore();
 }
 function draw(){
@@ -840,7 +890,8 @@ function draw(){
   // lượt 1: tô nền HATCH (nằm dưới)
   for(const e of entities) if(e.type==='HATCH') drawHatch(e);
   // lượt 2: các nét vẽ
-  ctx.lineWidth=1.15; ctx.strokeStyle=getCSS('--entity'); ctx.lineJoin='round'; ctx.lineCap='round';
+  // lượt 2: các nét vẽ (mỗi đối tượng tự đặt màu theo layer)
+  ctx.lineWidth=1.15; ctx.lineJoin='round'; ctx.lineCap='round';
   for(const e of entities) if(e.type!=='HATCH') drawEntity(e);
   drawMeasurements();
   drawAnnotations();
@@ -958,7 +1009,7 @@ function dwgEntity(e){
     case 'ELLIPSE': return (e.center&&e.majorAxisEndPoint)?{type:'ELLIPSE',layer,cx:e.center.x,cy:e.center.y,mx:e.majorAxisEndPoint.x,my:e.majorAxisEndPoint.y,ratio:e.axisRatio??1,p1:e.startAngle??0,p2:e.endAngle??(2*Math.PI)}:null;
     case 'POINT': return e.position?{type:'POINT',layer,x:e.position.x,y:e.position.y}:null;
     case 'LWPOLYLINE': case 'POLYLINE2D': case 'POLYLINE3D': { const raw=(e.vertices||[]).map(p=>({x:p.x,y:p.y,bulge:p.bulge||0})).filter(p=>isFinite(p.x)&&isFinite(p.y)); if(!raw.length) return null; const verts=expandPolyline(raw, ((e.flag||0)&1)===1); return verts.length>=2?{type:'POLYLINE',layer,vertices:verts,closed:false}:null; }
-    case 'TEXT': return e.startPoint?{type:'TEXT',layer,x:e.startPoint.x,y:e.startPoint.y,h:e.height||10,text:e.text||'',rot:deg(e.rotation||0)}:null;
+    case 'TEXT': return e.startPoint?{type:'TEXT',layer,x:e.startPoint.x,y:e.startPoint.y,h:e.textHeight||e.height||10,text:e.text||'',rot:deg(e.rotation||0)}:null;
     case 'MTEXT': { if(!e.insertionPoint) return null; const t=(e.text||'').replace(/\\P/g,' ').replace(/\\[A-Za-z][^;]*;/g,'').replace(/[{}]/g,''); return {type:'TEXT',layer,x:e.insertionPoint.x,y:e.insertionPoint.y,h:e.textHeight||10,text:t,rot:0}; }
     case 'SOLID': case '3DFACE': { const c=[e.corner1,e.corner2,e.corner3,e.corner4||e.corner3].filter(Boolean).map(p=>({x:p.x,y:p.y})); return c.length>=3?{type:'SOLID',layer,pts:c}:null; }
     case 'INSERT': return e.name?{type:'INSERT',layer,name:e.name,ix:(e.insertionPoint?e.insertionPoint.x:0),iy:(e.insertionPoint?e.insertionPoint.y:0),sx:(e.xScale??1),sy:(e.yScale??1),rot:deg(e.rotation||0),cols:e.columnCount||1,rows:e.rowCount||1,csp:e.columnSpacing||0,rsp:e.rowSpacing||0}:null;
@@ -969,12 +1020,46 @@ function dwgEntity(e){
       return (verts&&verts.length>=2)?{type:'POLYLINE',layer,vertices:verts,closed:cl}:null;
     }
     case 'HATCH':{ const loops=dwgHatchLoops(e); return loops.length?{type:'HATCH',layer,loops,solid:(e.solidFill===1)}:null; }
+    case 'LEADER':{ const v=(e.vertices||[]).map(p=>({x:p.x,y:p.y})).filter(p=>isFinite(p.x)&&isFinite(p.y)); return v.length>=2?{type:'POLYLINE',layer,vertices:v,closed:false}:null; }
+    case 'OLE2FRAME':{ const a=e.leftUpPoint,b=e.rightDownPoint; return (a&&b)?{type:'POLYLINE',layer,closed:true,vertices:[{x:a.x,y:a.y},{x:b.x,y:a.y},{x:b.x,y:b.y},{x:a.x,y:b.y}]}:null; }
     default: return null;   // các loại khác hiện bỏ qua
   }
 }
-function dwgList(arr){ const o=[]; for(const e of (arr||[])){ const c=dwgEntity(e); if(c) o.push(c); } return o; }
+// ATTRIB (giá trị thuộc tính của khối, vd: chữ trong khung tên) -> TEXT
+function dwgAttrib(at){
+  if(((at.flags||0)&1)===1) return null;       // bit1 = ẩn
+  const tb=at.text||{}; const sp=tb.startPoint; const s=(tb.text||'').toString();
+  if(!sp||!s.trim()) return null;
+  return {type:'TEXT',layer:at.layer||'0',x:sp.x,y:sp.y,h:tb.textHeight||10,text:s,rot:(tb.rotation||0)*180/Math.PI};
+}
+function dwgList(arr){
+  const o=[];
+  for(const e of (arr||[])){
+    const c=dwgEntity(e);
+    if(c){
+      c.aci=e.colorIndex;
+      if(typeof e.color==='number' && e.color!==16777215 && (e.colorIndex==null)) c.rgb=e.color; // true-color hiếm
+      o.push(c);
+    }
+    if(e.type==='INSERT' && e.attribs && e.attribs.length){   // chữ thuộc tính đi kèm INSERT (WCS)
+      for(const at of e.attribs){ const t=dwgAttrib(at); if(t){ t.aci=(at.colorIndex!=null?at.colorIndex:e.colorIndex); o.push(t); } }
+    }
+  }
+  return o;
+}
+// map màu theo layer (DWG): tên -> ACI; layer tắt/đóng băng -> ẩn
+function buildLayerColors(db){
+  LAYER_COLORS={}; HIDDEN_LAYERS=new Set();
+  const ls=(db.tables&&db.tables.LAYER&&db.tables.LAYER.entries)||[];
+  for(const L of ls){
+    if(L.name==null) continue;
+    LAYER_COLORS[L.name]=(typeof L.colorIndex==='number'?Math.abs(L.colorIndex):7);
+    if(L.off||L.frozen) HIDDEN_LAYERS.add(L.name);
+  }
+}
 // Dựng bản đồ block + model space từ DwgDatabase, rồi khai triển INSERT/DIMENSION
 function dwgBuild(db){
+  buildLayerColors(db);
   const blocks={};
   const recs=(db.tables&&db.tables.BLOCK_RECORD&&db.tables.BLOCK_RECORD.entries)||[];
   for(const r of recs){ if(r.name) blocks[r.name]={base:r.basePoint||{x:0,y:0}, entities:dwgList(r.entities)}; }
