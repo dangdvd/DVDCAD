@@ -28,7 +28,8 @@
     --note:#ff7a85;       /* san hô — ghi chú */
     --shadow:0 10px 40px rgba(0,0,0,.5);
   }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  input,textarea{-webkit-user-select:text;user-select:text}
   html,body{height:100%;margin:0}
   body{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
@@ -1124,6 +1125,8 @@ function endPointer(e){
 window.addEventListener('pointerup',endPointer);
 window.addEventListener('pointercancel',endPointer);
 cv.addEventListener('wheel',e=>{e.preventDefault();const p=loc(e);applyZoom(e.deltaY<0?1.12:1/1.12,p.x,p.y);draw();},{passive:false});
+cv.addEventListener('contextmenu',e=>e.preventDefault());   // chặn menu khi giữ lâu (iOS)
+cv.addEventListener('selectstart',e=>e.preventDefault());   // chặn bôi chọn khi giữ lâu
 
 function handleTap(p){
   if(!entities.length)return;
