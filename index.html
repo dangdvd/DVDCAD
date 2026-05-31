@@ -1170,7 +1170,7 @@ function commitPick(){
   } else if(t.kind==='pin'){
     if(!wasMoved) editAnnotation(t.i);                                   // chạm = sửa ghi chú
   }
-  draw();
+  saveOverlay(); draw();
 }
 /* ---- chọn / sửa / xoá đối tượng đã đặt ---- */
 function distToSeg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,L=dx*dx+dy*dy; if(L<1e-9)return Math.hypot(p.x-a.x,p.y-a.y); let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/L; t=Math.max(0,Math.min(1,t)); return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));}
@@ -1200,7 +1200,7 @@ function deleteSelected(){
   if(!selected) return false;
   if(selected.kind==='m'){ measurements.splice(selected.i,1); toast('Đã xoá phép đo'); }
   else { annotations.splice(selected.i,1); toast('Đã xoá ghi chú'); }
-  selected=null; draw(); return true;
+  selected=null; saveOverlay(); draw(); return true;
 }
 /* ---- hoàn tất một hình đánh dấu vừa vẽ ---- */
 function finishMark(){
@@ -1214,7 +1214,7 @@ function finishMark(){
       if(pts.length>=2) ann={type:'freehand',pts};
     }
   }
-  if(ann){ annotations.push(ann); editingIdx=annotations.length-1; selected={kind:'n',i:editingIdx}; showNoteModal(); }
+  if(ann){ annotations.push(ann); saveOverlay(); editingIdx=annotations.length-1; selected={kind:'n',i:editingIdx}; showNoteModal(); }
   else draw();
 }
 function renderLoupe(){
@@ -1348,7 +1348,45 @@ document.getElementById('zoomOut').addEventListener('click',()=>{applyZoom(1/1.2
 
 // load file
 const empty=document.getElementById('empty');
-function loadDXF(text){
+/* ---- Tự lưu & khôi phục phép đo / ghi chú theo từng bản vẽ (localStorage) ----
+   Khoá = mã băm nội dung file → mở đúng file đó là hiện lại; file khác có khoá khác. */
+let currentKey=null;
+function _mix(h,b){ h^=b; h=(h*0x01000193)>>>0; return h; }
+function _fnvStr(s){ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ const c=s.charCodeAt(i); h=_mix(h,c&0xff); h=_mix(h,(c>>8)&0xff); } return h>>>0; }
+function _fnvBytes(u8){ let h=0x811c9dc5; const n=u8.length, step=Math.max(1,Math.floor(n/65536)); for(let i=0;i<n;i+=step) h=_mix(h,u8[i]); h=_mix(h,n&0xff); h=_mix(h,(n>>8)&0xff); h=_mix(h,(n>>16)&0xff); return h>>>0; }
+function drawingKey(raw,name){
+  const h=(typeof raw==='string')?_fnvStr(raw):_fnvBytes(raw);
+  const ln=raw.length>>>0;
+  return 'dvdcad:ov:'+h.toString(16)+'-'+ln.toString(16)+(name?('-'+_fnvStr(name).toString(16)):'');
+}
+function saveOverlay(){
+  if(!currentKey) return;
+  try{
+    if(!measurements.length && !annotations.length){ localStorage.removeItem(currentKey); return; }
+    localStorage.setItem(currentKey, JSON.stringify({v:1,m:measurements,a:annotations}));
+  }catch(_){}
+}
+function loadOverlay(){
+  if(!currentKey) return;
+  let raw; try{ raw=localStorage.getItem(currentKey); }catch(_){ return; }
+  if(!raw) return;
+  let data; try{ data=JSON.parse(raw); }catch(_){ return; }
+  const num=v=>typeof v==='number'&&isFinite(v), okPt=p=>p&&num(p.x)&&num(p.y);
+  const ms=Array.isArray(data&&data.m)?data.m:[], as=Array.isArray(data&&data.a)?data.a:[];
+  measurements = ms.filter(o=>o&&okPt(o.a)&&okPt(o.b)).map(o=>({a:{x:+o.a.x,y:+o.a.y},b:{x:+o.b.x,y:+o.b.y}}));
+  annotations = as.map(o=>{
+    if(!o||typeof o!=='object') return null;
+    const t=o.type||'pin';
+    if(t==='circle')   return (okPt({x:o.cx,y:o.cy})&&num(o.r))?{type:'circle',cx:+o.cx,cy:+o.cy,r:+o.r,text:o.text||''}:null;
+    if(t==='cloud')    return (num(o.x1)&&num(o.y1)&&num(o.x2)&&num(o.y2))?{type:'cloud',x1:+o.x1,y1:+o.y1,x2:+o.x2,y2:+o.y2,text:o.text||''}:null;
+    if(t==='freehand'){ const p=Array.isArray(o.pts)?o.pts.filter(okPt).map(q=>({x:+q.x,y:+q.y})):[]; return p.length>=2?{type:'freehand',pts:p,text:o.text||''}:null; }
+    return okPt(o)?{type:'pin',x:+o.x,y:+o.y,text:o.text||''}:null;
+  }).filter(Boolean);
+  selected=null; draw();
+  const nm=measurements.length, na=annotations.length;
+  if(nm||na) toast(`Đã khôi phục ${nm} phép đo · ${na} ghi chú đã lưu`);
+}
+function loadDXF(text,srcName){
   try{
     const r=parseDXF(text);
     entities=mergeText(resolveBlocks(r.entities, r.blocks)); insunits=r.insunits;
@@ -1358,6 +1396,7 @@ function loadDXF(text){
     setMode('pan'); fitView();
     valEl.classList.remove('show');
     toast(`Đã tải ${entities.length} đối tượng${UNIT[insunits]?` · đơn vị: ${UNIT[insunits]}`:''}`);
+    currentKey=drawingKey(text,srcName||''); loadOverlay();   // khôi phục đo/ghi chú đã lưu cho file này
   }catch(err){ toast('Lỗi đọc file DXF. File có thể không hợp lệ.'); console.error(err); }
 }
 // ---- DWG support: LibreDWG (WebAssembly), nạp khi cần (lazy) ----
@@ -1486,7 +1525,8 @@ function dwgBuild(db){
   const model=dwgList(db.entities);
   return { entities: mergeText(resolveBlocks(model, blocks)), insunits:(db.header&&db.header.INSUNITS)||0 };
 }
-async function loadDWG(arrayBuffer){
+async function loadDWG(arrayBuffer, srcName){
+  const key=drawingKey(new Uint8Array(arrayBuffer), srcName||'');   // băm trước khi WASM dùng tới buffer
   try{
     const lib=await getLibreDwg();
     const ptr=lib.dwg_read_data(arrayBuffer,_DwgType.DWG);
@@ -1499,6 +1539,7 @@ async function loadDWG(arrayBuffer){
     measurements=[]; annotations=[]; measureTemp=[]; hoverWorld=null;
     buildSnap(); empty.classList.add('hidden'); setMode('pan'); fitView(); valEl.classList.remove('show');
     toast(`Đã đọc DWG: ${entities.length} đối tượng${UNIT[insunits]?` · đơn vị: ${UNIT[insunits]}`:''}`);
+    currentKey=key; loadOverlay();   // khôi phục đo/ghi chú đã lưu cho file này
   }catch(err){
     console.error(err);
     toast('Lỗi giải mã DWG. Có thể do phiên bản chưa hỗ trợ, hoặc cần mạng lần đầu để tải bộ giải mã.');
@@ -1509,10 +1550,10 @@ document.getElementById('fileInput').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f)return;
   const reader=new FileReader();
   if(f.name.toLowerCase().endsWith('.dwg')){
-    reader.onload=()=>loadDWG(reader.result);
+    reader.onload=()=>loadDWG(reader.result,f.name);
     reader.readAsArrayBuffer(f);
   } else {
-    reader.onload=()=>loadDXF(reader.result);
+    reader.onload=()=>loadDXF(reader.result,f.name);
     reader.readAsText(f);
   }
   e.target.value='';
@@ -1537,11 +1578,11 @@ function commitNote(){
   const t=noteInput.value.trim();
   if(editingIdx>=0){ annotations[editingIdx].text=t; }            // sửa: cho phép để trống (chỉ còn hình)
   else if(pendingNote && t){ annotations.push({type:'pin',x:pendingNote.x,y:pendingNote.y,text:t}); }
-  resetNote(); closeModal(noteOverlay); draw();
+  saveOverlay(); resetNote(); closeModal(noteOverlay); draw();
 }
 function deleteNote(){
   if(editingIdx>=0){ annotations.splice(editingIdx,1); selected=null; toast('Đã xoá ghi chú'); }
-  resetNote(); closeModal(noteOverlay); draw();
+  saveOverlay(); resetNote(); closeModal(noteOverlay); draw();
 }
 noteOkBtn.addEventListener('click',commitNote);
 noteDelete.addEventListener('click',deleteNote);
@@ -1551,9 +1592,9 @@ noteInput.addEventListener('keydown',e=>{if(e.key==='Enter')commitNote();});
 const clearOverlay=document.getElementById('clearOverlay');
 document.getElementById('t-clear').addEventListener('click',()=>{ if(deleteSelected())return; if(entities.length)openModal(clearOverlay); });
 document.getElementById('clearCancel').addEventListener('click',()=>closeModal(clearOverlay));
-document.getElementById('clearMeasure').addEventListener('click',()=>{measurements=[];measureTemp=[];selected=null;valEl.classList.remove('show');draw();closeModal(clearOverlay);toast('Đã xoá các phép đo');});
-document.getElementById('clearNotes').addEventListener('click',()=>{annotations=[];selected=null;draw();closeModal(clearOverlay);toast('Đã xoá các ghi chú');});
-document.getElementById('clearAll').addEventListener('click',()=>{measurements=[];annotations=[];measureTemp=[];selected=null;valEl.classList.remove('show');draw();closeModal(clearOverlay);toast('Đã xoá hết');});
+document.getElementById('clearMeasure').addEventListener('click',()=>{measurements=[];measureTemp=[];selected=null;saveOverlay();valEl.classList.remove('show');draw();closeModal(clearOverlay);toast('Đã xoá các phép đo');});
+document.getElementById('clearNotes').addEventListener('click',()=>{annotations=[];selected=null;saveOverlay();draw();closeModal(clearOverlay);toast('Đã xoá các ghi chú');});
+document.getElementById('clearAll').addEventListener('click',()=>{measurements=[];annotations=[];measureTemp=[];selected=null;saveOverlay();valEl.classList.remove('show');draw();closeModal(clearOverlay);toast('Đã xoá hết');});
 [noteOverlay,clearOverlay].forEach(o=>o.addEventListener('click',e=>{if(e.target===o){closeModal(o);resetNote();}}));
 
 // toast
@@ -1731,7 +1772,7 @@ PHONG NGU
 ENDSEC
 0
 EOF`;
-function loadSample(){loadDXF(SAMPLE);}
+function loadSample(){loadDXF(SAMPLE,'__sample__');}
 document.getElementById('sampleBtn').addEventListener('click',loadSample);
 document.getElementById('sampleBtn2').addEventListener('click',loadSample);
 
