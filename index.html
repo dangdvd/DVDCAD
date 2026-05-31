@@ -240,6 +240,7 @@
   .layer-row:active{transform:scale(.99)}
   .layer-row .sw{width:14px;height:14px;border-radius:3px;flex:0 0 auto;border:1px solid rgba(255,255,255,.25)}
   .layer-row .nm{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .layer-row .cnt{flex:0 0 auto;font-size:11px;color:var(--ink-faint);font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
   .layer-row .eye{width:20px;height:20px;flex:0 0 auto;stroke:currentColor;stroke-width:1.8;fill:none;color:var(--accent)}
   .layer-row .eye .slash{display:none}
   .layer-row.off .eye .slash{display:block}
@@ -398,7 +399,7 @@
   <div class="overlay" id="layerOverlay">
     <div class="modal">
       <h3>Lớp (Layers)</h3>
-      <p>Chạm để ẩn/hiện từng lớp. Phép đo &amp; ghi chú không bị ảnh hưởng.</p>
+      <p>Chạm để ẩn/hiện từng lớp (sắp theo số đối tượng, nhiều nhất ở trên). Cuộn để xem hết.</p>
       <div id="layerDbg" style="font-size:11px;color:var(--ink-faint);margin:-2px 0 10px"></div>
       <div class="layer-actions">
         <button id="layerAllOn">Hiện tất cả</button>
@@ -1494,20 +1495,23 @@ function drawInfoHighlight(){
 /* ---- BẢNG LỚP (ẩn/hiện) ---- */
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function buildLayerList(){
-  const seen=new Map();
-  for(const e of entities){ const nm=e.layer||'0'; if(seen.has(nm)) continue;
-    let hex; const aci=LAYER_COLORS[nm];
-    if(aci>=1&&aci<=255) hex='#'+((ACI_RGB[aci]||0x9fb3c8)>>>0).toString(16).padStart(6,'0');
-    else hex=e.col||getCSS('--entity');
-    seen.set(nm,hex);
+  const seen=new Map();                       // name -> {hex,count}
+  for(const e of entities){ const nm=e.layer||'0';
+    let rec=seen.get(nm);
+    if(!rec){ let hex; const aci=LAYER_COLORS[nm];
+      if(aci>=1&&aci<=255) hex='#'+((ACI_RGB[aci]||0x9fb3c8)>>>0).toString(16).padStart(6,'0');
+      else hex=e.col||getCSS('--entity');
+      rec={hex,count:0}; seen.set(nm,rec); }
+    rec.count++;
   }
-  layerList=[...seen.entries()].map(([name,hex])=>({name,hex})).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}));
+  layerList=[...seen.entries()].map(([name,r])=>({name,hex:r.hex,count:r.count}))
+    .sort((a,b)=> b.count-a.count || a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}));   // lớp nhiều nét lên đầu
 }
 const EYE_SVG='<svg class="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle class="pupil" cx="12" cy="12" r="3"/><path class="slash" d="M3 3l18 18"/></svg>';
 function layerDbgUpdate(){
   const el=document.getElementById('layerDbg'); if(!el) return;
   let drawn=0; for(const e of entities) if(!hiddenUserLayers.has(e.layer||'0')) drawn++;
-  el.textContent='Đang ẩn '+hiddenUserLayers.size+' lớp · vẽ '+drawn+'/'+entities.length+' đối tượng';
+  el.textContent='Đang ẩn '+hiddenUserLayers.size+' lớp · còn hiện '+drawn+'/'+entities.length+' đối tượng';
 }
 function renderLayerList(){
   const box=document.getElementById('layerList'); box.innerHTML='';
@@ -1515,7 +1519,7 @@ function renderLayerList(){
   for(const L of layerList){
     const row=document.createElement('button'); row.type='button';
     row.className='layer-row'+(hiddenUserLayers.has(L.name)?' off':'');
-    row.innerHTML='<span class="sw" style="background:'+L.hex+'"></span><span class="nm">'+escapeHtml(L.name)+'</span>'+EYE_SVG;
+    row.innerHTML='<span class="sw" style="background:'+L.hex+'"></span><span class="nm">'+escapeHtml(L.name)+'</span><span class="cnt">'+L.count+'</span>'+EYE_SVG;
     // chỉ đổi class của chính dòng này (không dựng lại danh sách) → tránh "chạm ma" trên iOS
     row.addEventListener('click',()=>{
       if(hiddenUserLayers.has(L.name)){ hiddenUserLayers.delete(L.name); row.classList.remove('off'); }
