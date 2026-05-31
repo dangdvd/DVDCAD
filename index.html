@@ -484,6 +484,8 @@ function parseDXF(text){
       case 'HATCH':{ const loops=dxfHatchLoops(g); return loops.length?{type:'HATCH',layer,loops,solid:(num(g,70)===1)}:null; }
       case 'LEADER':{ const xs=all(g,10),ys=all(g,20),v=[]; for(let k=0;k<Math.min(xs.length,ys.length);k++) v.push({x:xs[k],y:ys[k]}); return v.length>=2?{type:'POLYLINE',layer,vertices:v,closed:false}:null; }
       case 'ATTRIB':{ if(((num(g,70)||0)&1)===1) return null; const s=decodeCAD(str(g,1)||''); return s?{type:'TEXT',layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:s,rot:num(g,50)||0}:null; }
+      case 'XLINE': case 'RAY':{ const x=num(g,10),y=num(g,20),dx=num(g,11),dy=num(g,21); return (isFinite(x)&&isFinite(y)&&(dx||dy))?{type:'XLINE',layer,x,y,dx,dy,ray:(type==='RAY')}:null; }
+      case 'IMAGE':{ const px=num(g,10),py=num(g,20),ux=num(g,11),uy=num(g,21),vx=num(g,12),vy=num(g,22),w=num(g,13),h=num(g,23); if(![px,py,ux,uy,vx,vy,w,h].every(isFinite)) return null; return {type:'POLYLINE',layer,closed:true,_img:true,vertices:[{x:px,y:py},{x:px+ux*w,y:py+uy*w},{x:px+ux*w+vx*h,y:py+uy*w+vy*h},{x:px+vx*h,y:py+vy*h}]}; }
       default: return null;
     }
   }
@@ -605,7 +607,7 @@ function transformPrim(e,M){
   const L=e.layer;
   switch(e.type){
     case 'LINE':{const a=mApply(M,e.x1,e.y1),b=mApply(M,e.x2,e.y2);return {type:'LINE',layer:L,x1:a.x,y1:a.y,x2:b.x,y2:b.y};}
-    case 'POLYLINE': return {type:'POLYLINE',layer:L,closed:e.closed,vertices:e.vertices.map(p=>mApply(M,p.x,p.y))};
+    case 'POLYLINE': return {type:'POLYLINE',layer:L,closed:e.closed,vertices:e.vertices.map(p=>mApply(M,p.x,p.y)),_img:e._img};
     case 'POINT':{const a=mApply(M,e.x,e.y);return {type:'POINT',layer:L,x:a.x,y:a.y};}
     case 'SOLID': return {type:'SOLID',layer:L,pts:e.pts.map(p=>mApply(M,p.x,p.y))};
     case 'TEXT':{const a=mApply(M,e.x,e.y),ys=Math.hypot(M.c,M.d)||1,rotAdd=Math.atan2(M.b,M.a)*180/Math.PI;return {type:'TEXT',layer:L,x:a.x,y:a.y,h:(e.h||10)*ys,text:e.text,rot:(e.rot||0)+rotAdd};}
@@ -613,6 +615,7 @@ function transformPrim(e,M){
     case 'ARC': return mIsId(M)?e:{type:'POLYLINE',layer:L,closed:false,vertices:smpArc(e.cx,e.cy,e.r,e.a1,e.a2).map(p=>mApply(M,p.x,p.y))};
     case 'ELLIPSE': return mIsId(M)?e:{type:'POLYLINE',layer:L,closed:false,vertices:smpEllipse(e).map(p=>mApply(M,p.x,p.y))};
     case 'HATCH': return {type:'HATCH',layer:L,solid:e.solid,loops:e.loops.map(lp=>lp.map(p=>mApply(M,p.x,p.y)))};
+    case 'XLINE':{ const a=mApply(M,e.x,e.y), dx=M.a*e.dx+M.c*e.dy, dy=M.b*e.dx+M.d*e.dy; return (dx||dy)?{type:'XLINE',layer:L,x:a.x,y:a.y,dx,dy,ray:e.ray}:null; }
     default: return null;
   }
 }
@@ -940,6 +943,13 @@ function drawGrid(){
   for(let y=y0;y<=y1+1e-6;y+=spacing){const a=toScreen(x0,y),b=toScreen(x1,y);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
   ctx.restore();
 }
+function clipInfiniteLine(px,py,dx,dy,Wd,Hd,ray){   // cắt đường (vô hạn / nửa-vô hạn) vào khung [0,Wd]x[0,Hd]
+  let t0=ray?0:-1e9, t1=1e9;
+  const lim=(a,b)=>{ if(Math.abs(a)<1e-12) return b>=0; const t=-b/a; if(a>0){ if(t>t0)t0=t; } else { if(t<t1)t1=t; } return true; };
+  if(!lim(dx,px)||!lim(-dx,Wd-px)||!lim(dy,py)||!lim(-dy,Hd-py)) return null;
+  if(t1<t0) return null;
+  return {x1:px+t0*dx,y1:py+t0*dy,x2:px+t1*dx,y2:py+t1*dy};
+}
 function drawEntity(e){
   const col=e.col||getCSS('--entity');
   ctx.strokeStyle=col;
@@ -948,10 +958,16 @@ function drawEntity(e){
     case 'CIRCLE':{const p=[];for(let i=0;i<=64;i++){const t=i/64*2*Math.PI;p.push({x:e.cx+Math.cos(t)*e.r,y:e.cy+Math.sin(t)*e.r});}strokePts(p,false);break;}
     case 'ARC':{let a1=e.a1*Math.PI/180,a2=e.a2*Math.PI/180;if(a2<a1)a2+=2*Math.PI;const n=Math.max(8,Math.ceil((a2-a1)/(Math.PI/48)));const p=[];for(let i=0;i<=n;i++){const t=a1+(a2-a1)*i/n;p.push({x:e.cx+Math.cos(t)*e.r,y:e.cy+Math.sin(t)*e.r});}strokePts(p,false);break;}
     case 'ELLIPSE':{const Mx=e.mx,My=e.my,mx=-e.my*e.ratio,my=e.mx*e.ratio;let p1=e.p1,p2=e.p2;if(p2<=p1)p2+=2*Math.PI;const n=72,p=[];for(let i=0;i<=n;i++){const t=p1+(p2-p1)*i/n;p.push({x:e.cx+Math.cos(t)*Mx+Math.sin(t)*mx,y:e.cy+Math.cos(t)*My+Math.sin(t)*my});}strokePts(p,false);break;}
-    case 'POLYLINE': strokePts(e.vertices,e.closed); break;
+    case 'POLYLINE':
+      if(e._img){ const v=e.vertices; ctx.save();ctx.setLineDash([7,5]);strokePts(v,true);
+        if(v.length>=4){const a=toScreen(v[0].x,v[0].y),b=toScreen(v[2].x,v[2].y),c2=toScreen(v[1].x,v[1].y),d=toScreen(v[3].x,v[3].y);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.moveTo(c2.x,c2.y);ctx.lineTo(d.x,d.y);ctx.stroke();}
+        ctx.restore(); }
+      else strokePts(e.vertices,e.closed);
+      break;
     case 'SOLID':{const pts=e.pts;if(pts.length>=3){const o=pts.length===4?[pts[0],pts[1],pts[3],pts[2]]:pts;ctx.save();ctx.fillStyle=hexA(col,.2);ctx.beginPath();const a=toScreen(o[0].x,o[0].y);ctx.moveTo(a.x,a.y);for(let k=1;k<o.length;k++){const q=toScreen(o[k].x,o[k].y);ctx.lineTo(q.x,q.y);}ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}break;}
     case 'POINT':{const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;ctx.beginPath();ctx.arc(p.x,p.y,2,0,2*Math.PI);ctx.fill();ctx.restore();break;}
     case 'TEXT':{const size=e.h*view.scale;if(size<3||!e.text)break;const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;ctx.font=`${Math.min(size,200)}px -apple-system,system-ui,"Segoe UI",Roboto,Arial,"Noto Sans","Helvetica Neue",sans-serif`;ctx.textBaseline='alphabetic';ctx.translate(p.x,p.y);if(e.rot)ctx.rotate(-e.rot*Math.PI/180);ctx.fillText(e.text,0,0);ctx.restore();break;}
+    case 'XLINE':{const P=toScreen(e.x,e.y);const s=clipInfiniteLine(P.x,P.y,e.dx,-e.dy,W(),H(),e.ray);if(s){ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();}break;}
   }
 }
 function drawMeasurements(){
@@ -1432,7 +1448,11 @@ function dwgEntity(e){
     case 'HATCH':{ const loops=dwgHatchLoops(e); return loops.length?{type:'HATCH',layer,loops,solid:(e.solidFill===1)}:null; }
     case 'LEADER':{ const v=(e.vertices||[]).map(p=>({x:p.x,y:p.y})).filter(p=>isFinite(p.x)&&isFinite(p.y)); return v.length>=2?{type:'POLYLINE',layer,vertices:v,closed:false}:null; }
     case 'OLE2FRAME':{ const a=e.leftUpPoint,b=e.rightDownPoint; return (a&&b)?{type:'POLYLINE',layer,closed:true,vertices:[{x:a.x,y:a.y},{x:b.x,y:a.y},{x:b.x,y:b.y},{x:a.x,y:b.y}]}:null; }
-    default: return null;   // các loại khác hiện bỏ qua
+    case 'ATTRIB':{ if(e.isVisible===false||((e.flags||0)&1)) return null; const tx=e.text; if(!tx||!tx.startPoint||!tx.text) return null; return {type:'TEXT',layer,x:tx.startPoint.x,y:tx.startPoint.y,h:tx.textHeight||tx.height||10,text:decodeCAD(tx.text),rot:deg(tx.rotation||0)}; }
+    case 'XLINE':{ const p=e.firstPoint,d=e.unitDirection; return (p&&d&&(d.x||d.y))?{type:'XLINE',layer,x:p.x,y:p.y,dx:d.x,dy:d.y}:null; }
+    case 'RAY':{ const p=e.firstPoint,d=e.unitDirection; return (p&&d&&(d.x||d.y))?{type:'XLINE',layer,x:p.x,y:p.y,dx:d.x,dy:d.y,ray:true}:null; }
+    case 'IMAGE':{ const p=e.position,u=e.uPixel,v=e.vPixel,s=e.imageSize; if(!(p&&u&&v&&s)) return null; const w=s.x,h=s.y; return {type:'POLYLINE',layer,closed:true,_img:true,vertices:[{x:p.x,y:p.y},{x:p.x+u.x*w,y:p.y+u.y*w},{x:p.x+u.x*w+v.x*h,y:p.y+u.y*w+v.y*h},{x:p.x+v.x*h,y:p.y+v.y*h}]}; }
+    default: return null;   // các loại khác hiện bỏ qua (VIEWPORT, ATTDEF…)
   }
 }
 // ATTRIB (giá trị thuộc tính của khối, vd: chữ trong khung tên) -> TEXT
