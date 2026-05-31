@@ -419,6 +419,11 @@ function decodeCAD(s){
   return t;
 }
 
+/* Ánh xạ căn lề chữ AutoCAD → canvas (textAlign / textBaseline) */
+function tAlignH(h){ return (h===1||h===4)?'center':(h===2?'right':'left'); }            // 0 trái,1 giữa,2 phải,4 middle
+function tBaseV(h,v){ if(h===4) return 'middle'; return v===3?'top':v===2?'middle':v===1?'bottom':'alphabetic'; } // v:0 baseline,1 đáy,2 giữa,3 đỉnh
+function mtAlign(ap){ const c=(((ap||1)-1)%3); return c===1?'center':(c===2?'right':'left'); } // MTEXT attachment 1-9
+function mtBase(ap){ const r=Math.floor((((ap||1)-1))/3); return r===0?'top':(r===1?'middle':'alphabetic'); }
 function parseDXF(text){
   const lines = text.split(/\r\n|\r|\n/);
   const pairs = [];
@@ -448,11 +453,11 @@ function parseDXF(text){
       case 'ARC': return {type,layer,cx:num(g,10),cy:num(g,20),r:num(g,40),a1:num(g,50),a2:num(g,51)};
       case 'ELLIPSE': return {type,layer,cx:num(g,10),cy:num(g,20),mx:num(g,11),my:num(g,21),ratio:num(g,40)??1,p1:num(g,41)??0,p2:num(g,42)??(2*Math.PI)};
       case 'POINT': return {type,layer,x:num(g,10),y:num(g,20)};
-      case 'TEXT': return {type,layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:decodeCAD(str(g,1)||''),rot:num(g,50)||0};
+      case 'TEXT':{ const ha=num(g,72)||0, va=num(g,73)||0, alt=num(g,11); const useAlt=!(ha===0&&va===0)&&alt!=null&&isFinite(alt); const x=useAlt?alt:num(g,10), y=useAlt?num(g,21):num(g,20); return {type,layer,x,y,h:num(g,40)||10,text:decodeCAD(str(g,1)||''),rot:num(g,50)||0,ha:tAlignH(ha),va:tBaseV(ha,va)}; }
       case 'MTEXT':{
         let t=''; for(const it of g){ if(it.code===3) t+=it.value; else if(it.code===1) t+=it.value; }
-        t=decodeCAD(t);
-        return {type:'TEXT',layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:t,rot:0};
+        t=decodeCAD(t); const ap=num(g,71)||1;
+        return {type:'TEXT',layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:t,rot:num(g,50)||0,ha:mtAlign(ap),va:mtBase(ap)};
       }
       case 'LWPOLYLINE':{
         const closed=((num(g,70)||0)&1)===1, v=[];
@@ -483,7 +488,7 @@ function parseDXF(text){
       }
       case 'HATCH':{ const loops=dxfHatchLoops(g); return loops.length?{type:'HATCH',layer,loops,solid:(num(g,70)===1)}:null; }
       case 'LEADER':{ const xs=all(g,10),ys=all(g,20),v=[]; for(let k=0;k<Math.min(xs.length,ys.length);k++) v.push({x:xs[k],y:ys[k]}); return v.length>=2?{type:'POLYLINE',layer,vertices:v,closed:false}:null; }
-      case 'ATTRIB':{ if(((num(g,70)||0)&1)===1) return null; const s=decodeCAD(str(g,1)||''); return s?{type:'TEXT',layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:s,rot:num(g,50)||0}:null; }
+      case 'ATTRIB':{ if(((num(g,70)||0)&1)===1) return null; const s=decodeCAD(str(g,1)||''); if(!s) return null; const ha=num(g,72)||0, va=num(g,74)||0, alt=num(g,11); const useAlt=!(ha===0&&va===0)&&alt!=null&&isFinite(alt); const x=useAlt?alt:num(g,10), y=useAlt?num(g,21):num(g,20); return {type:'TEXT',layer,x,y,h:num(g,40)||10,text:s,rot:num(g,50)||0,ha:tAlignH(ha),va:tBaseV(ha,va)}; }
       case 'XLINE': case 'RAY':{ const x=num(g,10),y=num(g,20),dx=num(g,11),dy=num(g,21); return (isFinite(x)&&isFinite(y)&&(dx||dy))?{type:'XLINE',layer,x,y,dx,dy,ray:(type==='RAY')}:null; }
       case 'IMAGE':{ const px=num(g,10),py=num(g,20),ux=num(g,11),uy=num(g,21),vx=num(g,12),vy=num(g,22),w=num(g,13),h=num(g,23); if(![px,py,ux,uy,vx,vy,w,h].every(isFinite)) return null; return {type:'POLYLINE',layer,closed:true,_img:true,vertices:[{x:px,y:py},{x:px+ux*w,y:py+uy*w},{x:px+ux*w+vx*h,y:py+uy*w+vy*h},{x:px+vx*h,y:py+vy*h}]}; }
       default: return null;
@@ -610,7 +615,7 @@ function transformPrim(e,M){
     case 'POLYLINE': return {type:'POLYLINE',layer:L,closed:e.closed,vertices:e.vertices.map(p=>mApply(M,p.x,p.y)),_img:e._img};
     case 'POINT':{const a=mApply(M,e.x,e.y);return {type:'POINT',layer:L,x:a.x,y:a.y};}
     case 'SOLID': return {type:'SOLID',layer:L,pts:e.pts.map(p=>mApply(M,p.x,p.y))};
-    case 'TEXT':{const a=mApply(M,e.x,e.y),ys=Math.hypot(M.c,M.d)||1,rotAdd=Math.atan2(M.b,M.a)*180/Math.PI;return {type:'TEXT',layer:L,x:a.x,y:a.y,h:(e.h||10)*ys,text:e.text,rot:(e.rot||0)+rotAdd};}
+    case 'TEXT':{const a=mApply(M,e.x,e.y),ys=Math.hypot(M.c,M.d)||1,rotAdd=Math.atan2(M.b,M.a)*180/Math.PI;return {type:'TEXT',layer:L,x:a.x,y:a.y,h:(e.h||10)*ys,text:e.text,rot:(e.rot||0)+rotAdd,ha:e.ha,va:e.va};}
     case 'CIRCLE': return mIsId(M)?e:{type:'POLYLINE',layer:L,closed:true,vertices:smpCircle(e.cx,e.cy,e.r).map(p=>mApply(M,p.x,p.y))};
     case 'ARC': return mIsId(M)?e:{type:'POLYLINE',layer:L,closed:false,vertices:smpArc(e.cx,e.cy,e.r,e.a1,e.a2).map(p=>mApply(M,p.x,p.y))};
     case 'ELLIPSE': return mIsId(M)?e:{type:'POLYLINE',layer:L,closed:false,vertices:smpEllipse(e).map(p=>mApply(M,p.x,p.y))};
@@ -966,7 +971,7 @@ function drawEntity(e){
       break;
     case 'SOLID':{const pts=e.pts;if(pts.length>=3){const o=pts.length===4?[pts[0],pts[1],pts[3],pts[2]]:pts;ctx.save();ctx.fillStyle=hexA(col,.2);ctx.beginPath();const a=toScreen(o[0].x,o[0].y);ctx.moveTo(a.x,a.y);for(let k=1;k<o.length;k++){const q=toScreen(o[k].x,o[k].y);ctx.lineTo(q.x,q.y);}ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}break;}
     case 'POINT':{const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;ctx.beginPath();ctx.arc(p.x,p.y,2,0,2*Math.PI);ctx.fill();ctx.restore();break;}
-    case 'TEXT':{const size=e.h*view.scale;if(size<3||!e.text)break;const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;ctx.font=`${Math.min(size,200)}px -apple-system,system-ui,"Segoe UI",Roboto,Arial,"Noto Sans","Helvetica Neue",sans-serif`;ctx.textBaseline='alphabetic';ctx.translate(p.x,p.y);if(e.rot)ctx.rotate(-e.rot*Math.PI/180);ctx.fillText(e.text,0,0);ctx.restore();break;}
+    case 'TEXT':{const size=e.h*view.scale;if(size<3||!e.text)break;const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;ctx.font=`${Math.min(size,200)}px -apple-system,system-ui,"Segoe UI",Roboto,Arial,"Noto Sans","Helvetica Neue",sans-serif`;ctx.textAlign=e.ha||'left';ctx.textBaseline=e.va||'alphabetic';ctx.translate(p.x,p.y);if(e.rot)ctx.rotate(-e.rot*Math.PI/180);ctx.fillText(e.text,0,0);ctx.restore();break;}
     case 'XLINE':{const P=toScreen(e.x,e.y);const s=clipInfiniteLine(P.x,P.y,e.dx,-e.dy,W(),H(),e.ray);if(s){ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();}break;}
   }
 }
@@ -1435,8 +1440,8 @@ function dwgEntity(e){
     case 'ELLIPSE': return (e.center&&e.majorAxisEndPoint)?{type:'ELLIPSE',layer,cx:e.center.x,cy:e.center.y,mx:e.majorAxisEndPoint.x,my:e.majorAxisEndPoint.y,ratio:e.axisRatio??1,p1:e.startAngle??0,p2:e.endAngle??(2*Math.PI)}:null;
     case 'POINT': return e.position?{type:'POINT',layer,x:e.position.x,y:e.position.y}:null;
     case 'LWPOLYLINE': case 'POLYLINE2D': case 'POLYLINE3D': { const raw=(e.vertices||[]).map(p=>({x:p.x,y:p.y,bulge:p.bulge||0})).filter(p=>isFinite(p.x)&&isFinite(p.y)); if(!raw.length) return null; const verts=expandPolyline(raw, ((e.flag||0)&1)===1); return verts.length>=2?{type:'POLYLINE',layer,vertices:verts,closed:false}:null; }
-    case 'TEXT': return e.startPoint?{type:'TEXT',layer,x:e.startPoint.x,y:e.startPoint.y,h:e.textHeight||e.height||10,text:decodeCAD(e.text||''),rot:deg(e.rotation||0)}:null;
-    case 'MTEXT': { if(!e.insertionPoint) return null; const t=decodeCAD(e.text||''); return {type:'TEXT',layer,x:e.insertionPoint.x,y:e.insertionPoint.y,h:e.textHeight||10,text:t,rot:0}; }
+    case 'TEXT':{ if(!e.startPoint) return null; const ha=e.halign||0, va=e.valign||0, a=((ha===0&&va===0)||!e.endPoint)?e.startPoint:e.endPoint; return {type:'TEXT',layer,x:a.x,y:a.y,h:e.textHeight||e.height||10,text:decodeCAD(e.text||''),rot:deg(e.rotation||0),ha:tAlignH(ha),va:tBaseV(ha,va)}; }
+    case 'MTEXT': { if(!e.insertionPoint) return null; const ap=e.attachmentPoint||1, t=decodeCAD(e.text||''); return {type:'TEXT',layer,x:e.insertionPoint.x,y:e.insertionPoint.y,h:e.textHeight||10,text:t,rot:deg(e.rotation||0),ha:mtAlign(ap),va:mtBase(ap)}; }
     case 'SOLID': case '3DFACE': { const c=[e.corner1,e.corner2,e.corner3,e.corner4||e.corner3].filter(Boolean).map(p=>({x:p.x,y:p.y})); return c.length>=3?{type:'SOLID',layer,pts:c}:null; }
     case 'INSERT': return e.name?{type:'INSERT',layer,name:e.name,ix:(e.insertionPoint?e.insertionPoint.x:0),iy:(e.insertionPoint?e.insertionPoint.y:0),sx:(e.xScale??1),sy:(e.yScale??1),rot:deg(e.rotation||0),cols:e.columnCount||1,rows:e.rowCount||1,csp:e.columnSpacing||0,rsp:e.rowSpacing||0}:null;
     case 'DIMENSION': return e.name?{type:'INSERT',layer,name:e.name,ix:0,iy:0,sx:1,sy:1,rot:0,cols:1,rows:1,csp:0,rsp:0,_dim:true}:null;
@@ -1448,7 +1453,7 @@ function dwgEntity(e){
     case 'HATCH':{ const loops=dwgHatchLoops(e); return loops.length?{type:'HATCH',layer,loops,solid:(e.solidFill===1)}:null; }
     case 'LEADER':{ const v=(e.vertices||[]).map(p=>({x:p.x,y:p.y})).filter(p=>isFinite(p.x)&&isFinite(p.y)); return v.length>=2?{type:'POLYLINE',layer,vertices:v,closed:false}:null; }
     case 'OLE2FRAME':{ const a=e.leftUpPoint,b=e.rightDownPoint; return (a&&b)?{type:'POLYLINE',layer,closed:true,vertices:[{x:a.x,y:a.y},{x:b.x,y:a.y},{x:b.x,y:b.y},{x:a.x,y:b.y}]}:null; }
-    case 'ATTRIB':{ if(e.isVisible===false||((e.flags||0)&1)) return null; const tx=e.text; if(!tx||!tx.startPoint||!tx.text) return null; return {type:'TEXT',layer,x:tx.startPoint.x,y:tx.startPoint.y,h:tx.textHeight||tx.height||10,text:decodeCAD(tx.text),rot:deg(tx.rotation||0)}; }
+    case 'ATTRIB':{ if(e.isVisible===false||((e.flags||0)&1)) return null; const tx=e.text; if(!tx||!tx.startPoint||!tx.text) return null; const ha=tx.halign||0, va=tx.valign||0, a=((ha===0&&va===0)||!tx.endPoint)?tx.startPoint:tx.endPoint; return {type:'TEXT',layer,x:a.x,y:a.y,h:tx.textHeight||tx.height||10,text:decodeCAD(tx.text),rot:deg(tx.rotation||0),ha:tAlignH(ha),va:tBaseV(ha,va)}; }
     case 'XLINE':{ const p=e.firstPoint,d=e.unitDirection; return (p&&d&&(d.x||d.y))?{type:'XLINE',layer,x:p.x,y:p.y,dx:d.x,dy:d.y}:null; }
     case 'RAY':{ const p=e.firstPoint,d=e.unitDirection; return (p&&d&&(d.x||d.y))?{type:'XLINE',layer,x:p.x,y:p.y,dx:d.x,dy:d.y,ray:true}:null; }
     case 'IMAGE':{ const p=e.position,u=e.uPixel,v=e.vPixel,s=e.imageSize; if(!(p&&u&&v&&s)) return null; const w=s.x,h=s.y; return {type:'POLYLINE',layer,closed:true,_img:true,vertices:[{x:p.x,y:p.y},{x:p.x+u.x*w,y:p.y+u.y*w},{x:p.x+u.x*w+v.x*h,y:p.y+u.y*w+v.y*h},{x:p.x+v.x*h,y:p.y+v.y*h}]}; }
