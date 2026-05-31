@@ -3,8 +3,9 @@
    - App shell (HTML/icon/manifest) được nạp sẵn khi cài đặt -> mở offline tức thì.
    - Bộ giải mã DWG (libredwg-web.js ~8.8MB + .wasm ~6.3MB) được lưu cache
      ngay lần đầu mở một file .dwg khi có mạng -> các lần sau dùng offline được.
-   Đổi số phiên bản CACHE bên dưới mỗi khi cập nhật file để buộc làm mới. */
-const CACHE = 'dvdcad-v2';
+   Đổi số phiên bản CACHE bên dưới mỗi khi cập nhật file để buộc làm mới.
+   HTML dùng network-first: có mạng luôn lấy bản mới nhất, mất mạng mới dùng cache. */
+const CACHE = 'dvdcad-v3';
 const CORE = [
   './',
   './index.html',
@@ -34,6 +35,26 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return; // bỏ qua tài nguyên khác origin
 
+  const isHTML = req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
+
+  if (isHTML) {
+    // NETWORK-FIRST cho HTML: luôn ưu tiên bản mới nhất khi có mạng
+    e.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      try {
+        const res = await fetch(req);
+        if (res && res.ok) cache.put(req, res.clone());
+        return res;
+      } catch (err) {
+        const hit = (await cache.match(req)) || (await cache.match('./index.html')) || (await cache.match('./'));
+        if (hit) return hit;
+        throw err;
+      }
+    })());
+    return;
+  }
+
+  // CÁC TÀI NGUYÊN KHÁC (wasm/js/icon...): cache-first cho nhanh + offline
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const hit = await cache.match(req);
@@ -43,10 +64,6 @@ self.addEventListener('fetch', (e) => {
       if (res && res.ok) cache.put(req, res.clone()); // lưu lại cho lần sau (gồm cả file DWG decoder)
       return res;
     } catch (err) {
-      if (req.mode === 'navigate') {
-        const fallback = await cache.match('./index.html');
-        if (fallback) return fallback;
-      }
       throw err;
     }
   })());
