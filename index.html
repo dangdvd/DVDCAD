@@ -845,7 +845,7 @@ const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 const loupe=document.getElementById('loupe'), lctx=loupe.getContext('2d');
 const LOUPE_SIZE=132, LOUPE_ZOOM=3.2;
 let entities=[], insunits=0, bounds={minX:0,minY:0,maxX:100,maxY:100};
-let snapPts=[], snapSegs=[];
+let snapPts=[], snapSegs=[], snapGrid=null;
 let view={scale:1,offsetX:0,offsetY:0};
 let mode='pan';
 let measurements=[], measureTemp=[], hoverWorld=null;
@@ -928,27 +928,53 @@ function buildSnap(){
       case 'SOLID':{ const p=e.pts||[]; p.forEach(q=>snapPts.push({x:q.x,y:q.y})); for(let i=0;i<p.length;i++) seg(p[i],p[(i+1)%p.length]); break; }
     }
   }
+  buildSnapGrid();
+}
+function buildSnapGrid(){
+  snapGrid=null;
+  const n=snapPts.length;
+  if(n<=2500) return;                 // bản vẽ nhỏ: quét thẳng đủ nhanh
+  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+  for(const p of snapPts){ if(p.x<minx)minx=p.x; if(p.y<miny)miny=p.y; if(p.x>maxx)maxx=p.x; if(p.y>maxy)maxy=p.y; }
+  if(!isFinite(minx)) return;
+  const span=Math.max(maxx-minx,maxy-miny,1e-6);
+  const cells=Math.max(16,Math.min(420,Math.round(Math.sqrt(n/2))));
+  const cs=span/cells;
+  const G={x0:minx,y0:miny,cs, pts:new Map(), segs:new Map()};
+  const put=(map,ix,iy,i)=>{ const k=ix+','+iy; let a=map.get(k); if(!a){a=[];map.set(k,a);} if(a[a.length-1]!==i) a.push(i); };
+  for(let i=0;i<snapPts.length;i++){ put(G.pts, Math.floor((snapPts[i].x-minx)/cs), Math.floor((snapPts[i].y-miny)/cs), i); }
+  for(let i=0;i<snapSegs.length;i++){
+    const g=snapSegs[i];
+    const ax=Math.floor((g[0]-minx)/cs), ay=Math.floor((g[1]-miny)/cs), bx=Math.floor((g[2]-minx)/cs), by=Math.floor((g[3]-miny)/cs);
+    let steps=Math.max(Math.abs(bx-ax),Math.abs(by-ay)); if(steps>420)steps=420;
+    if(steps===0){ put(G.segs,ax,ay,i); continue; }
+    for(let s=0;s<=steps;s++){ const t=s/steps; put(G.segs, Math.floor((g[0]+(g[2]-g[0])*t-minx)/cs), Math.floor((g[1]+(g[3]-g[1])*t-miny)/cs), i); }
+  }
+  snapGrid=G;
+}
+function gridQuery(map, wx, wy, r){    // trả mảng chỉ số ứng viên, hoặc 'skip' nếu zoom quá xa
+  const G=snapGrid, cs=G.cs;
+  const ix0=Math.floor((wx-r-G.x0)/cs), ix1=Math.floor((wx+r-G.x0)/cs);
+  const iy0=Math.floor((wy-r-G.y0)/cs), iy1=Math.floor((wy+r-G.y0)/cs);
+  if((ix1-ix0+1)*(iy1-iy0+1) > 1500) return 'skip';   // quá nhiều ô → bỏ bắt điểm cho mượt
+  const out=[], seen=new Set();
+  for(let ix=ix0;ix<=ix1;ix++) for(let iy=iy0;iy<=iy1;iy++){ const a=map.get(ix+','+iy); if(a) for(const i of a){ if(!seen.has(i)){seen.add(i);out.push(i);} } }
+  return out;
 }
 function snap(world, screen){
+  const sc=view.scale, ox=view.offsetX, oy=view.offsetY;
+  let ptIdx=null, segIdx=null;                       // null = quét tất cả; mảng = ứng viên; 'skip' = bỏ
+  if(snapGrid){ ptIdx=gridQuery(snapGrid.pts, world.x, world.y, 16/sc); segIdx=gridQuery(snapGrid.segs, world.x, world.y, 13/sc); }
   // ưu tiên 1: điểm đặc trưng (đầu mút, trung điểm, tâm, 1/4 đường tròn)
   let best=null, bd=16;
-  for(const s of snapPts){
-    const sx=s.x*view.scale+view.offsetX, sy=-s.y*view.scale+view.offsetY;
-    const dd=Math.hypot(sx-screen.x,sy-screen.y);
-    if(dd<bd){bd=dd;best=s;}
-  }
+  const scanPt=i=>{ const s=snapPts[i]; const sx=s.x*sc+ox, sy=-s.y*sc+oy; const dd=Math.hypot(sx-screen.x,sy-screen.y); if(dd<bd){bd=dd;best=s;} };
+  if(ptIdx==='skip'){} else if(ptIdx){ for(const i of ptIdx) scanPt(i); } else { for(let i=0;i<snapPts.length;i++) scanPt(i); }
   if(best) return {x:best.x,y:best.y,snapped:true,kind:'pt'};
   // ưu tiên 2: bắt lên cạnh gần nhất (chiếu vuông góc)
-  if(snapSegs.length && snapSegs.length<120000){
+  if(snapSegs.length && (snapGrid || snapSegs.length<120000)){
     let eb=13, ept=null;
-    const ox=view.offsetX, oy=view.offsetY, sc=view.scale;
-    for(const g of snapSegs){
-      const ax=g[0]*sc+ox, ay=-g[1]*sc+oy, bx=g[2]*sc+ox, by=-g[3]*sc+oy;
-      const dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy; if(L2<1e-6) continue;
-      let t=((screen.x-ax)*dx+(screen.y-ay)*dy)/L2; if(t<0)t=0; else if(t>1)t=1;
-      const px=ax+t*dx, py=ay+t*dy, dd=Math.hypot(px-screen.x,py-screen.y);
-      if(dd<eb){eb=dd; ept={sx:px,sy:py};}
-    }
+    const scanSeg=g=>{ const ax=g[0]*sc+ox, ay=-g[1]*sc+oy, bx=g[2]*sc+ox, by=-g[3]*sc+oy; const dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy; if(L2<1e-6) return; let t=((screen.x-ax)*dx+(screen.y-ay)*dy)/L2; if(t<0)t=0; else if(t>1)t=1; const px=ax+t*dx, py=ay+t*dy, dd=Math.hypot(px-screen.x,py-screen.y); if(dd<eb){eb=dd; ept={sx:px,sy:py};} };
+    if(segIdx==='skip'){} else if(segIdx){ for(const i of segIdx) scanSeg(snapSegs[i]); } else { for(const g of snapSegs) scanSeg(g); }
     if(ept){ const w=toWorld(ept.sx,ept.sy); return {x:w.x,y:w.y,snapped:true,kind:'edge'}; }
   }
   return {x:world.x,y:world.y,snapped:false};
