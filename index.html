@@ -73,6 +73,9 @@
     background:radial-gradient(120% 100% at 50% 0%,transparent 55%,rgba(0,0,0,.45) 100%);
   }
   canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  #loupe{position:absolute;width:132px;height:132px;border-radius:50%;overflow:hidden;
+    border:2.5px solid rgba(255,255,255,.55);box-shadow:0 8px 24px rgba(0,0,0,.55);
+    inset:auto;pointer-events:none;display:none;z-index:60;background:var(--bg-canvas)}
 
   /* zoom controls */
   .zoom{
@@ -206,6 +209,7 @@
   <!-- CANVAS STAGE -->
   <div class="stage">
     <canvas id="cv"></canvas>
+    <canvas id="loupe" aria-hidden="true"></canvas>
 
     <div class="readout">
       <span class="hint" id="hint">Mở file .dxf/.dwg hoặc bấm "Mẫu"</span>
@@ -782,12 +786,16 @@ function dxfHatchLoops(g){
    2) TRẠNG THÁI & TIỆN ÍCH
    ========================================================================= */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const loupe=document.getElementById('loupe'), lctx=loupe.getContext('2d');
+const LOUPE_SIZE=132, LOUPE_ZOOM=3.2;
 let entities=[], insunits=0, bounds={minX:0,minY:0,maxX:100,maxY:100};
-let snapPts=[];
+let snapPts=[], snapSegs=[];
 let view={scale:1,offsetX:0,offsetY:0};
 let mode='pan';
 let measurements=[], measureTemp=[], hoverWorld=null;
 let annotations=[], pendingNote=null;
+// chọn điểm bằng kính lúp
+let picking=false, pickScreen=null, pickSnap=null, loupeOn=false, loupeHold=null;
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
@@ -823,24 +831,42 @@ function computeBounds(){
   bounds = isFinite(a) ? {minX:a,minY:b,maxX:c,maxY:d} : {minX:0,minY:0,maxX:100,maxY:100};
 }
 function buildSnap(){
-  snapPts=[];
+  snapPts=[]; snapSegs=[];
+  const seg=(p1,p2)=>{ if(!p1||!p2)return; snapSegs.push([p1.x,p1.y,p2.x,p2.y]); snapPts.push({x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2}); }; // kèm trung điểm
   for(const e of entities){
     switch(e.type){
-      case 'LINE': snapPts.push({x:e.x1,y:e.y1},{x:e.x2,y:e.y2}); break;
-      case 'CIRCLE': case 'ARC': case 'ELLIPSE': snapPts.push({x:e.cx,y:e.cy}); break;
+      case 'LINE': snapPts.push({x:e.x1,y:e.y1},{x:e.x2,y:e.y2}); seg({x:e.x1,y:e.y1},{x:e.x2,y:e.y2}); break;
+      case 'CIRCLE': snapPts.push({x:e.cx,y:e.cy},{x:e.cx+e.r,y:e.cy},{x:e.cx-e.r,y:e.cy},{x:e.cx,y:e.cy+e.r},{x:e.cx,y:e.cy-e.r}); break;
+      case 'ARC': case 'ELLIPSE': snapPts.push({x:e.cx,y:e.cy}); break;
       case 'POINT': case 'TEXT': snapPts.push({x:e.x,y:e.y}); break;
-      case 'POLYLINE': (e.vertices||[]).forEach(p=>snapPts.push({x:p.x,y:p.y})); break;
-      case 'SOLID': (e.pts||[]).forEach(p=>snapPts.push({x:p.x,y:p.y})); break;
+      case 'POLYLINE':{ const v=e.vertices||[]; for(let i=0;i<v.length;i++){ snapPts.push({x:v[i].x,y:v[i].y}); if(i<v.length-1) seg(v[i],v[i+1]); } if(e.closed&&v.length>2) seg(v[v.length-1],v[0]); break; }
+      case 'SOLID':{ const p=e.pts||[]; p.forEach(q=>snapPts.push({x:q.x,y:q.y})); for(let i=0;i<p.length;i++) seg(p[i],p[(i+1)%p.length]); break; }
     }
   }
 }
 function snap(world, screen){
-  let best=null, bd=15; // ngưỡng bắt điểm (px)
+  // ưu tiên 1: điểm đặc trưng (đầu mút, trung điểm, tâm, 1/4 đường tròn)
+  let best=null, bd=16;
   for(const s of snapPts){
-    const sc=toScreen(s.x,s.y), dd=Math.hypot(sc.x-screen.x,sc.y-screen.y);
+    const sx=s.x*view.scale+view.offsetX, sy=-s.y*view.scale+view.offsetY;
+    const dd=Math.hypot(sx-screen.x,sy-screen.y);
     if(dd<bd){bd=dd;best=s;}
   }
-  return best ? {x:best.x,y:best.y,snapped:true} : {x:world.x,y:world.y,snapped:false};
+  if(best) return {x:best.x,y:best.y,snapped:true,kind:'pt'};
+  // ưu tiên 2: bắt lên cạnh gần nhất (chiếu vuông góc)
+  if(snapSegs.length && snapSegs.length<120000){
+    let eb=13, ept=null;
+    const ox=view.offsetX, oy=view.offsetY, sc=view.scale;
+    for(const g of snapSegs){
+      const ax=g[0]*sc+ox, ay=-g[1]*sc+oy, bx=g[2]*sc+ox, by=-g[3]*sc+oy;
+      const dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy; if(L2<1e-6) continue;
+      let t=((screen.x-ax)*dx+(screen.y-ay)*dy)/L2; if(t<0)t=0; else if(t>1)t=1;
+      const px=ax+t*dx, py=ay+t*dy, dd=Math.hypot(px-screen.x,py-screen.y);
+      if(dd<eb){eb=dd; ept={sx:px,sy:py};}
+    }
+    if(ept){ const w=toWorld(ept.sx,ept.sy); return {x:w.x,y:w.y,snapped:true,kind:'edge'}; }
+  }
+  return {x:world.x,y:world.y,snapped:false};
 }
 function fitView(){
   computeBounds();
@@ -917,13 +943,27 @@ function drawMeasurements(){
     const P=toScreen(measureTemp[0].x,measureTemp[0].y);
     ctx.fillStyle=getCSS('--measure');ctx.beginPath();ctx.arc(P.x,P.y,4.5,0,2*Math.PI);ctx.fill();
     if(hoverWorld) seg(measureTemp[0],hoverWorld,true);
-    if(hoverWorld&&hoverWorld.snapped) drawSnapMarker(toScreen(hoverWorld.x,hoverWorld.y));
+    if(hoverWorld&&hoverWorld.snapped) drawSnapMarker(toScreen(hoverWorld.x,hoverWorld.y),hoverWorld.kind);
   }
   ctx.restore();
 }
-function drawSnapMarker(P){
-  ctx.save();ctx.strokeStyle=getCSS('--accent');ctx.lineWidth=1.6;ctx.setLineDash([]);
-  ctx.strokeRect(P.x-6,P.y-6,12,12);ctx.restore();
+function drawSnapMarker(P,kind){
+  ctx.save();ctx.strokeStyle=getCSS('--accent');ctx.lineWidth=1.8;ctx.setLineDash([]);
+  if(kind==='edge'){ ctx.beginPath();ctx.moveTo(P.x,P.y-7);ctx.lineTo(P.x+7,P.y+5);ctx.lineTo(P.x-7,P.y+5);ctx.closePath();ctx.stroke(); }
+  else { ctx.strokeRect(P.x-6,P.y-6,12,12); }
+  ctx.restore();
+}
+function drawPickCursor(){
+  if(!picking||!pickSnap) return;
+  const P=toScreen(pickSnap.x,pickSnap.y);
+  ctx.save();
+  ctx.strokeStyle=pickSnap.snapped?getCSS('--accent'):'rgba(255,255,255,.85)';ctx.lineWidth=1.4;ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(P.x-13,P.y);ctx.lineTo(P.x-4,P.y);ctx.moveTo(P.x+4,P.y);ctx.lineTo(P.x+13,P.y);
+  ctx.moveTo(P.x,P.y-13);ctx.lineTo(P.x,P.y-4);ctx.moveTo(P.x,P.y+4);ctx.lineTo(P.x,P.y+13);
+  ctx.stroke();
+  if(pickSnap.snapped) drawSnapMarker(P,pickSnap.kind);
+  ctx.restore();
 }
 function drawAnnotations(){
   ctx.save();ctx.font="600 12px system-ui,sans-serif";ctx.textBaseline='middle';
@@ -974,6 +1014,7 @@ function draw(){
   for(const e of entities) if(e.type!=='HATCH') drawEntity(e);
   drawMeasurements();
   drawAnnotations();
+  drawPickCursor();
 }
 
 /* =========================================================================
@@ -985,11 +1026,79 @@ let downPt=null,lastPanPt=null,moved=false,lastPinchDist=null,lastCenter=null;
 function loc(e){const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
 function applyZoom(f,cx,cy){const w=toWorld(cx,cy);view.scale=clamp(view.scale*f,1e-9,1e12);view.offsetX=cx-w.x*view.scale;view.offsetY=cy+w.y*view.scale;}
 
+/* ---- chọn điểm với kính lúp phóng to (đo / ghi chú) ---- */
+function hideLoupe(){ if(loupeHold){clearTimeout(loupeHold);loupeHold=null;} loupeOn=false; loupe.style.display='none'; }
+function startPick(p){
+  picking=true; pickScreen=p; pickSnap=snap(toWorld(p.x,p.y),p);
+  if(mode==='measure'&&measureTemp.length===1) hoverWorld=pickSnap;
+  loupeOn=false; if(loupeHold)clearTimeout(loupeHold);
+  loupeHold=setTimeout(()=>{ if(picking){ loupeOn=true; renderLoupe(); } },130); // giữ lâu thì hiện kính lúp
+  draw();
+}
+function movePick(p){
+  pickScreen=p; pickSnap=snap(toWorld(p.x,p.y),p);
+  if(mode==='measure'&&measureTemp.length===1) hoverWorld=pickSnap;
+  if(!loupeOn && moved) loupeOn=true;   // kéo là hiện kính lúp ngay
+  draw();
+  if(loupeOn) renderLoupe();
+}
+function cancelPick(){ hideLoupe(); picking=false; pickSnap=null; }
+function commitPick(){
+  if(!picking) return;
+  const sn=pickSnap; hideLoupe(); picking=false; pickSnap=null;
+  if(!sn){ draw(); return; }
+  if(mode==='measure'){
+    measureTemp.push({x:sn.x,y:sn.y});
+    if(measureTemp.length===2){
+      measurements.push({a:measureTemp[0],b:measureTemp[1]});
+      showVal(formatDist(dist(measureTemp[0],measureTemp[1])));
+      measureTemp=[]; hoverWorld=null;
+    }
+    updateHint();
+  } else if(mode==='note'){
+    pendingNote={x:sn.x,y:sn.y};
+    openModal(noteOverlay); setTimeout(()=>noteInput.focus(),60);
+  }
+  draw();
+}
+function renderLoupe(){
+  if(!loupeOn||!pickSnap) return;
+  const dpr=window.devicePixelRatio||1, size=LOUPE_SIZE, Z=LOUPE_ZOOM, r=size/2;
+  if(loupe.width!==Math.round(size*dpr)){ loupe.width=Math.round(size*dpr); loupe.height=Math.round(size*dpr); }
+  loupe.style.display='block';
+  let lx=clamp(pickScreen.x,r,W()-r);
+  let ly=pickScreen.y-94; if(ly<r+2) ly=pickScreen.y+94; ly=clamp(ly,r,H()-r);
+  loupe.style.left=(lx-r)+'px'; loupe.style.top=(ly-r)+'px';
+  const S=toScreen(pickSnap.x,pickSnap.y), half=(size/Z)/2;
+  lctx.setTransform(dpr,0,0,dpr,0,0);
+  lctx.clearRect(0,0,size,size);
+  lctx.fillStyle=getCSS('--bg-canvas')||'#0b0e14'; lctx.fillRect(0,0,size,size);
+  lctx.imageSmoothingEnabled=true;
+  lctx.drawImage(cv,(S.x-half)*dpr,(S.y-half)*dpr,(size/Z)*dpr,(size/Z)*dpr,0,0,size,size);
+  const c=size/2, acc=getCSS('--accent');
+  lctx.strokeStyle=pickSnap.snapped?acc:'rgba(255,255,255,.7)'; lctx.lineWidth=1;
+  lctx.beginPath();
+  lctx.moveTo(c-16,c);lctx.lineTo(c-5,c);lctx.moveTo(c+5,c);lctx.lineTo(c+16,c);
+  lctx.moveTo(c,c-16);lctx.lineTo(c,c-5);lctx.moveTo(c,c+5);lctx.lineTo(c,c+16);
+  lctx.stroke();
+  if(pickSnap.snapped){
+    lctx.strokeStyle=acc; lctx.lineWidth=1.6;
+    if(pickSnap.kind==='edge'){ lctx.beginPath();lctx.moveTo(c,c-6);lctx.lineTo(c+6,c+5);lctx.lineTo(c-6,c+5);lctx.closePath();lctx.stroke(); }
+    else lctx.strokeRect(c-5,c-5,10,10);
+  } else { lctx.fillStyle='rgba(255,255,255,.85)'; lctx.beginPath();lctx.arc(c,c,2,0,2*Math.PI);lctx.fill(); }
+}
+
 cv.addEventListener('pointerdown',e=>{
   cv.setPointerCapture(e.pointerId);
   const p=loc(e); pointers.set(e.pointerId,p);
-  if(pointers.size===1){downPt=p;lastPanPt=p;moved=false;}
-  else if(pointers.size===2){const a=[...pointers.values()];lastPinchDist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);lastCenter={x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};}
+  if(pointers.size===1){
+    downPt=p;lastPanPt=p;moved=false;
+    if((mode==='measure'||mode==='note') && entities.length) startPick(p);
+  }
+  else if(pointers.size===2){
+    cancelPick();   // 2 ngón = di chuyển/zoom, không chọn điểm
+    const a=[...pointers.values()];lastPinchDist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);lastCenter={x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};
+  }
 });
 cv.addEventListener('pointermove',e=>{
   if(!pointers.has(e.pointerId))return;
@@ -1002,14 +1111,15 @@ cv.addEventListener('pointermove',e=>{
   }
   if(Math.hypot(p.x-downPt.x,p.y-downPt.y)>6) moved=true;
   if(mode==='pan'){view.offsetX+=p.x-lastPanPt.x;view.offsetY+=p.y-lastPanPt.y;lastPanPt=p;draw();}
-  else if(mode==='measure'&&measureTemp.length===1){const w=toWorld(p.x,p.y);hoverWorld=snap(w,p);draw();}
+  else if(picking){ movePick(p); }
 });
 function endPointer(e){
-  const wasMoved=moved, had=pointers.size;
   pointers.delete(e.pointerId);
   if(pointers.size<2){lastPinchDist=null;lastCenter=null;}
-  if(pointers.size===0 && had===1 && !wasMoved) handleTap(loc(e));
-  if(pointers.size===0){hoverWorld=null;draw();}
+  if(pointers.size===0){
+    if(picking) commitPick();
+    hoverWorld=null; draw();
+  }
 }
 cv.addEventListener('pointerup',endPointer);
 cv.addEventListener('pointercancel',endPointer);
@@ -1039,12 +1149,13 @@ const hintEl=document.getElementById('hint'), valEl=document.getElementById('val
 function updateHint(){
   let t='';
   if(mode==='pan') t='Kéo để di chuyển · chụm 2 ngón để phóng to';
-  else if(mode==='measure') t = measureTemp.length===0 ? 'Đo: chạm điểm thứ nhất' : 'Đo: chạm điểm thứ hai';
-  else if(mode==='note') t='Ghi chú: chạm vị trí cần ghim';
+  else if(mode==='measure') t = (measureTemp.length===0 ? 'Đo: giữ & rê để bắt điểm đầu' : 'Đo: giữ & rê để bắt điểm cuối') + ' · 2 ngón để di chuyển';
+  else if(mode==='note') t='Ghi chú: giữ & rê chọn vị trí, nhấc tay để ghim';
   hintEl.textContent=t;
 }
 function showVal(s){valEl.textContent=s;valEl.classList.add('show');}
 function setMode(m){
+  cancelPick();
   mode=m; measureTemp=[]; hoverWorld=null;
   document.querySelectorAll('.tool[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
   updateHint(); draw();
