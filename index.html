@@ -399,6 +399,7 @@
     <div class="modal">
       <h3>Lớp (Layers)</h3>
       <p>Chạm để ẩn/hiện từng lớp. Phép đo &amp; ghi chú không bị ảnh hưởng.</p>
+      <div id="layerDbg" style="font-size:11px;color:var(--ink-faint);margin:-2px 0 10px"></div>
       <div class="layer-actions">
         <button id="layerAllOn">Hiện tất cả</button>
         <button id="layerAllOff">Ẩn tất cả</button>
@@ -1343,6 +1344,8 @@ function draw(){
   drawPickCursor();
   drawMeasureCursor();
 }
+// iOS đôi khi không repaint canvas sau lệnh vẽ từ thao tác chạm nút -> tạo lại buffer để ép vẽ lại
+function forceRedraw(){ if(cv.width){ const w=cv.width, h=cv.height; cv.width=w; cv.height=h; } draw(); }
 
 /* =========================================================================
    5) TƯƠNG TÁC (kéo, chụm zoom, chạm)
@@ -1501,6 +1504,11 @@ function buildLayerList(){
   layerList=[...seen.entries()].map(([name,hex])=>({name,hex})).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}));
 }
 const EYE_SVG='<svg class="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle class="pupil" cx="12" cy="12" r="3"/><path class="slash" d="M3 3l18 18"/></svg>';
+function layerDbgUpdate(){
+  const el=document.getElementById('layerDbg'); if(!el) return;
+  let drawn=0; for(const e of entities) if(!hiddenUserLayers.has(e.layer||'0')) drawn++;
+  el.textContent='Đang ẩn '+hiddenUserLayers.size+' lớp · vẽ '+drawn+'/'+entities.length+' đối tượng';
+}
 function renderLayerList(){
   const box=document.getElementById('layerList'); box.innerHTML='';
   if(!layerList.length){ box.innerHTML='<div style="color:var(--ink-dim);font-size:12.5px;padding:10px">Không có lớp.</div>'; return; }
@@ -1512,7 +1520,7 @@ function renderLayerList(){
     row.addEventListener('click',()=>{
       if(hiddenUserLayers.has(L.name)){ hiddenUserLayers.delete(L.name); row.classList.remove('off'); }
       else { hiddenUserLayers.add(L.name); row.classList.add('off'); }
-      draw();
+      forceRedraw(); layerDbgUpdate();
     });
     box.appendChild(row);
   }
@@ -1985,11 +1993,11 @@ document.getElementById('clearAll').addEventListener('click',()=>{measurements=[
 
 /* ---- Bảng Lớp + thẻ thông tin đối tượng ---- */
 const layerOverlay=document.getElementById('layerOverlay');
-document.getElementById('layerBtn').addEventListener('click',()=>{ if(!entities.length)return; buildLayerList(); renderLayerList(); openModal(layerOverlay); });
-document.getElementById('layerClose').addEventListener('click',()=>{ closeModal(layerOverlay); requestAnimationFrame(draw); });
-document.getElementById('layerAllOn').addEventListener('click',()=>{ hiddenUserLayers.clear(); renderLayerList(); draw(); });
-document.getElementById('layerAllOff').addEventListener('click',()=>{ for(const L of layerList) hiddenUserLayers.add(L.name); renderLayerList(); draw(); });
-layerOverlay.addEventListener('click',e=>{ if(e.target===layerOverlay){ closeModal(layerOverlay); requestAnimationFrame(draw); } });
+document.getElementById('layerBtn').addEventListener('click',()=>{ if(!entities.length)return; buildLayerList(); renderLayerList(); layerDbgUpdate(); openModal(layerOverlay); });
+document.getElementById('layerClose').addEventListener('click',()=>{ closeModal(layerOverlay); requestAnimationFrame(forceRedraw); });
+document.getElementById('layerAllOn').addEventListener('click',()=>{ hiddenUserLayers.clear(); renderLayerList(); forceRedraw(); layerDbgUpdate(); });
+document.getElementById('layerAllOff').addEventListener('click',()=>{ for(const L of layerList) hiddenUserLayers.add(L.name); renderLayerList(); forceRedraw(); layerDbgUpdate(); });
+layerOverlay.addEventListener('click',e=>{ if(e.target===layerOverlay){ closeModal(layerOverlay); requestAnimationFrame(forceRedraw); } });
 document.getElementById('icClose').addEventListener('click',hideObjectInfo);
 
 // toast
