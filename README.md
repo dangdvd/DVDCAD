@@ -19,12 +19,12 @@ Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn 
 
 ### Cách A — GitHub Pages (khuyên dùng)
 
-1. Tạo tài khoản GitHub, tạo repo mới (ví dụ tên `cadxem`), để **Public**.
+1. Tạo tài khoản GitHub, tạo repo mới (ví dụ `DVDCAD`), để **Public**.
 1. Tải toàn bộ file trong thư mục này lên repo (nút **Add file → Upload files**), commit.
 1. Vào **Settings → Pages**. Mục *Build and deployment*: chọn **Deploy from a branch**, branch `main`, thư mục `/ (root)`. Lưu.
-1. Đợi ~1 phút, GitHub cho địa chỉ dạng `https://<tên-bạn>.github.io/cadxem/`. Mở địa chỉ này bằng **Safari trên iPhone**.
+1. Đợi ~1 phút, GitHub cho địa chỉ dạng `https://dangdvd.github.io/DVDCAD/`. Mở địa chỉ này bằng **Safari trên iPhone**.
 
-> Vì app chạy trong thư mục con (`/cadxem/`), mọi đường dẫn đã để **tương đối** (`./…`) nên hoạt động đúng.
+> Vì app chạy trong thư mục con (`/DVDCAD/`), mọi đường dẫn đã để **tương đối** (`./…`) nên hoạt động đúng.
 
 ### Cách B — Netlify (kéo–thả, không cần Git)
 
@@ -68,8 +68,8 @@ File được đọc **ngay trên máy**, không tải lên máy chủ nào.
 
 ## Cập nhật app
 
-Nếu bạn sửa file rồi upload lại mà máy vẫn hiện bản cũ: mở `sw.js`, đổi `const CACHE = 'cadxem-v1'`
-thành `'cadxem-v2'` (tăng số), upload lại. Service worker sẽ xoá cache cũ và nạp bản mới.
+Nếu bạn sửa file rồi upload lại mà máy vẫn hiện bản cũ: mở `sw.js`, đổi `const CACHE = 'dvdcad-v1'`
+thành `'dvdcad-v2'` (tăng số), upload lại. Service worker sẽ xoá cache cũ và nạp bản mới.
 
 ## Giấy phép
 

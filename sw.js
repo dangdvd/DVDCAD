@@ -1,10 +1,10 @@
-/* CAD Xem — Service Worker
+/* DVDCAD — Service Worker
    Chiến lược: cache-first cho mọi tài nguyên cùng origin.
    - App shell (HTML/icon/manifest) được nạp sẵn khi cài đặt -> mở offline tức thì.
    - Bộ giải mã DWG (libredwg-web.js ~8.8MB + .wasm ~6.3MB) được lưu cache
      ngay lần đầu mở một file .dwg khi có mạng -> các lần sau dùng offline được.
    Đổi số phiên bản CACHE bên dưới mỗi khi cập nhật file để buộc làm mới. */
-const CACHE = 'cadxem-v3';
+const CACHE = 'dvdcad-v1';
 const CORE = [
   './',
   './index.html',
