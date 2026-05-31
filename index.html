@@ -934,7 +934,7 @@ const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 const loupe=document.getElementById('loupe'), lctx=loupe.getContext('2d');
 const LOUPE_SIZE=132, LOUPE_ZOOM=3.2;
 let entities=[], insunits=0, bounds={minX:0,minY:0,maxX:100,maxY:100};
-let snapPts=[], snapSegs=[], snapGrid=null;
+let snapPts=[], snapSegs=[], snapGrid=null, snapDirty=false;
 let view={scale:1,offsetX:0,offsetY:0};
 let mode='pan';
 let measurements=[], measureTemp=[], hoverWorld=null;
@@ -1005,7 +1005,8 @@ function entBBox(e){            // hộp bao của 1 đối tượng (world) —
     case 'LINE': x0=Math.min(e.x1,e.x2);x1=Math.max(e.x1,e.x2);y0=Math.min(e.y1,e.y2);y1=Math.max(e.y1,e.y2); break;
     case 'CIRCLE': case 'ARC': x0=e.cx-e.r;x1=e.cx+e.r;y0=e.cy-e.r;y1=e.cy+e.r; break;
     case 'ELLIPSE':{const R=Math.hypot(e.mx,e.my);x0=e.cx-R;x1=e.cx+R;y0=e.cy-R;y1=e.cy+R;break;}
-    case 'POINT': case 'TEXT': x0=x1=e.x;y0=y1=e.y; break;
+    case 'POINT': x0=x1=e.x;y0=y1=e.y; break;
+    case 'TEXT':{ const h=e.h||10, n=([...(e.text||'')].length)||1; const w=n*h*0.62; x0=e.x; x1=e.x+w; y0=e.y; y1=e.y+h; break; }
     case 'POLYLINE':{const v=e.vertices||[];if(!v.length)return null;x0=x1=v[0].x;y0=y1=v[0].y;for(const q of v){if(q.x<x0)x0=q.x;if(q.x>x1)x1=q.x;if(q.y<y0)y0=q.y;if(q.y>y1)y1=q.y;}break;}
     case 'SOLID':{const v=e.pts||[];if(!v.length)return null;x0=x1=v[0].x;y0=y1=v[0].y;for(const q of v){if(q.x<x0)x0=q.x;if(q.x>x1)x1=q.x;if(q.y<y0)y0=q.y;if(q.y>y1)y1=q.y;}break;}
     case 'HATCH':{let f=false;x0=y0=Infinity;x1=y1=-Infinity;for(const lp of (e.loops||[]))for(const q of lp){f=true;if(q.x<x0)x0=q.x;if(q.x>x1)x1=q.x;if(q.y<y0)y0=q.y;if(q.y>y1)y1=q.y;}if(!f)return null;break;}
@@ -1076,7 +1077,10 @@ function gridQuery(map, wx, wy, r){    // trả mảng chỉ số ứng viên, h
   for(let ix=ix0;ix<=ix1;ix++) for(let iy=iy0;iy<=iy1;iy++){ const a=map.get(ix+','+iy); if(a) for(const i of a){ if(!seen.has(i)){seen.add(i);out.push(i);} } }
   return out;
 }
+function invalidateSnap(){ snapDirty=true; snapPts=[]; snapSegs=[]; snapGrid=null; }  // xoá điểm bắt cũ, dựng lại khi cần
+function ensureSnap(){ if(snapDirty){ buildSnap(); snapDirty=false; } }   // dựng điểm bắt khi cần (hoãn để mở nhanh)
 function snap(world, screen){
+  ensureSnap();
   const sc=view.scale, ox=view.offsetX, oy=view.offsetY;
   let ptIdx=null, segIdx=null;                       // null = quét tất cả; mảng = ứng viên; 'skip' = bỏ
   if(snapGrid){ ptIdx=gridQuery(snapGrid.pts, world.x, world.y, 16/sc); segIdx=gridQuery(snapGrid.segs, world.x, world.y, 13/sc); }
@@ -1363,21 +1367,48 @@ function drawHatch(e){
   ctx.lineWidth=1; ctx.strokeStyle=hexA(col,0.4); ctx.stroke();
   ctx.restore();
 }
+/* ---- Tăng tốc: ảnh nền (bg) để pan/zoom trượt ảnh đã vẽ; culling + LOD để vẽ ít đi ---- */
+let bg=null,bgCtx=null,bgView={scale:1,offsetX:0,offsetY:0},bgValid=false,_lastDrawn=0;
+const FULL_REDRAW_MAX=14000;     // <= ngần này nét đang vẽ thì vẽ lại đầy đủ mỗi khung; nhiều hơn thì trượt ảnh
+function snapshotBg(){
+  if(!bg){ bg=document.createElement('canvas'); bgCtx=bg.getContext('2d'); }
+  if(bg.width!==cv.width||bg.height!==cv.height){ bg.width=cv.width; bg.height=cv.height; }
+  bgCtx.setTransform(1,0,0,1,0,0); bgCtx.clearRect(0,0,bg.width,bg.height); bgCtx.drawImage(cv,0,0);
+  bgView.scale=view.scale; bgView.offsetX=view.offsetX; bgView.offsetY=view.offsetY; bgValid=true;
+}
 function draw(){
   const dpr=window.devicePixelRatio||1;
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,W(),H());
-  if(!entities.length) return;
+  if(!entities.length){ _lastDrawn=0; bgValid=false; return; }
   drawGrid();
   const hideL=hiddenUserLayers;
+  // vùng nhìn thấy (world) + lề + ngưỡng LOD (nét nhỏ hơn ~0.5px thì bỏ)
+  const tl=toWorld(0,0), br=toWorld(W(),H());
+  const vMinX=Math.min(tl.x,br.x), vMaxX=Math.max(tl.x,br.x), vMinY=Math.min(tl.y,br.y), vMaxY=Math.max(tl.y,br.y);
+  const mX=(vMaxX-vMinX)*0.06+1e-6, mY=(vMaxY-vMinY)*0.06+1e-6;
+  const cMinX=vMinX-mX, cMaxX=vMaxX+mX, cMinY=vMinY-mY, cMaxY=vMaxY+mY, lodW=0.5/view.scale, useLOD=entities.length>8000;
+  let drawn=0;
+  const vis=(e)=>{
+    let bb=e._bb; if(bb===undefined) bb=e._bb=entBBox(e)||null;
+    if(!bb) return true;                                                       // XLINE/loại không rõ hộp bao -> luôn vẽ
+    if(bb.x1<cMinX||bb.x0>cMaxX||bb.y1<cMinY||bb.y0>cMaxY) return false;        // ngoài màn hình -> bỏ
+    if(useLOD && e.type!=='POINT' && (bb.x1-bb.x0)<lodW && (bb.y1-bb.y0)<lodW) return false; // bản vẽ nặng: nét quá nhỏ -> bỏ
+    return true;
+  };
   _clipCur=null;
   // lượt 1: tô nền HATCH (nằm dưới)
-  for(const e of entities) if(e.type==='HATCH' && !hideL.has(e.layer||'0')){ applyClip(e.clip||null); drawHatch(e); }
+  for(const e of entities) if(e.type==='HATCH' && !hideL.has(e.layer||'0') && vis(e)){ applyClip(e.clip||null); drawHatch(e); drawn++; }
   applyClip(null);
   // lượt 2: các nét vẽ (mỗi đối tượng tự đặt màu theo layer)
   ctx.lineWidth=1.15; ctx.lineJoin='round'; ctx.lineCap='round';
-  for(const e of entities) if(e.type!=='HATCH' && !hideL.has(e.layer||'0')){ applyClip(e.clip||null); drawEntity(e); }
+  for(const e of entities) if(e.type!=='HATCH' && !hideL.has(e.layer||'0') && vis(e)){ applyClip(e.clip||null); drawEntity(e); drawn++; }
   applyClip(null);
+  _lastDrawn=drawn;
+  snapshotBg();        // chụp lớp bản vẽ (chưa có lớp phủ) để trượt khi pan/zoom
+  drawOverlays();
+}
+function drawOverlays(){
   drawViewportFrames();
   drawInfoHighlight();
   drawMeasurements();
@@ -1386,6 +1417,19 @@ function draw(){
   drawPickCursor();
   drawMeasureCursor();
 }
+// pan/zoom mượt: trượt + co giãn ảnh nền đã vẽ, rồi vẽ lại lớp phủ (không vẽ lại toàn bộ nét)
+function drawFast(){
+  if(!bgValid || !entities.length){ draw(); return; }
+  const dpr=window.devicePixelRatio||1, s=view.scale/bgView.scale;
+  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.imageSmoothingEnabled=true;
+  ctx.setTransform(s,0,0,s, dpr*(view.offsetX-s*bgView.offsetX), dpr*(view.offsetY-s*bgView.offsetY));
+  ctx.drawImage(bg,0,0);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  drawOverlays();
+}
+// chọn cách vẽ khi đang kéo/zoom: nét ít thì vẽ lại đầy đủ (sắc nét), nét nhiều thì trượt ảnh (mượt)
+function gestureDraw(){ if(bgValid && _lastDrawn>FULL_REDRAW_MAX) drawFast(); else draw(); }
 // cắt theo khung nhìn (paper layout): chỉ vẽ phần nội dung model nằm trong hình chữ nhật khung nhìn
 let _clipCur=null;
 function applyClip(c){
@@ -1634,7 +1678,7 @@ function switchLayout(i){
       measurements=[]; annotations=[]; measureTemp=[]; hoverWorld=null; selected=null; infoIdx=-1;
       document.getElementById('infoCard').classList.remove('show');
       hiddenUserLayers.clear();
-      buildSnap(); buildLayerList();
+      invalidateSnap(); buildLayerList();
       setMode('pan'); fitView(); loadOverlay();
       updateLayoutBtn(); renderLayoutList();
       if(L.isModel){ toast('Mô hình (Model) · '+entities.length+' đối tượng'); }
@@ -1650,7 +1694,7 @@ function switchLayout(i){
     console.error('switchLayout error', err);
     toast('Không mở được layout này — đã quay về Model.');
     try{ currentLayout=Math.max(0,dwgLayouts.findIndex(x=>x.isModel)); entities=modelEntities; currentKey=baseKey;
-         hiddenUserLayers.clear(); infoIdx=-1; buildSnap(); buildLayerList(); setMode('pan'); fitView();
+         hiddenUserLayers.clear(); infoIdx=-1; invalidateSnap(); buildLayerList(); setMode('pan'); fitView();
          updateLayoutBtn(); renderLayoutList(); }catch(_){}
   }finally{
     closeModal(layoutOverlay);
@@ -1734,14 +1778,14 @@ window.addEventListener('pointermove',e=>{
   if(pointers.size>=2){
     const a=[...pointers.values()];
     const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y), c={x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};
-    if(lastPinchDist!=null&&lastCenter){const w=toWorld(lastCenter.x,lastCenter.y);view.scale=clamp(view.scale*(d/lastPinchDist),1e-9,1e12);view.offsetX=c.x-w.x*view.scale;view.offsetY=c.y+w.y*view.scale;draw();}
+    if(lastPinchDist!=null&&lastCenter){const w=toWorld(lastCenter.x,lastCenter.y);view.scale=clamp(view.scale*(d/lastPinchDist),1e-9,1e12);view.offsetX=c.x-w.x*view.scale;view.offsetY=c.y+w.y*view.scale;gestureDraw();}
     lastPinchDist=d;lastCenter=c;moved=true;return;
   }
   if(pinchActive) return;     // còn ngón sót sau khi chụm → bỏ qua, không kéo (tránh nhảy khi thả)
   if(Math.hypot(p.x-downPt.x,p.y-downPt.y)>6) moved=true;
   if(picking){ movePick(p); }
   else if(mark){ const w=toWorld(p.x,p.y); if(mark.sub==='free') mark.pts.push({x:w.x,y:w.y}); else { mark.bx=w.x; mark.by=w.y; } draw(); }
-  else if(mode==='pan'||mode==='measure'){ view.offsetX+=p.x-lastPanPt.x;view.offsetY+=p.y-lastPanPt.y;lastPanPt=p;draw(); }
+  else if(mode==='pan'||mode==='measure'){ view.offsetX+=p.x-lastPanPt.x;view.offsetY+=p.y-lastPanPt.y;lastPanPt=p;gestureDraw(); }
 },{passive:false});
 function endPointer(e){
   if(!pointers.has(e.pointerId) && e.pointerId!==activePickId) return;
@@ -1857,6 +1901,7 @@ function setMode(m){
   dimRow.classList.toggle('show', m==='measure');
   confirmRow.classList.toggle('show', m==='measure');
   if(m==='measure') updateMeasureUI();
+  if((m==='measure'||m==='note') && snapDirty){ ensureSnap(); }   // dựng điểm bắt sẵn khi vào Đo/Ghi chú
   updateHint(); draw();
 }
 document.querySelectorAll('.tool[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
@@ -1912,7 +1957,7 @@ function loadDXF(text,srcName){
     if(!entities.length){toast('Không tìm thấy thực thể vẽ nào trong file.');return;}
     modelEntities=entities; dwgLayouts=[]; currentLayout=0; baseKey=drawingKey(text,srcName||'');
     measurements=[]; annotations=[]; measureTemp=[]; hoverWorld=null;
-    buildSnap(); empty.classList.add('hidden');
+    invalidateSnap(); empty.classList.add('hidden');
     hiddenUserLayers.clear(); infoIdx=-1; buildLayerList(); document.getElementById('ctools').classList.add('show');
     updateLayoutBtn(); renderLayoutList();
     setMode('pan'); fitView();
@@ -2119,7 +2164,7 @@ async function loadDWG(arrayBuffer, srcName){
     baseKey=key;
     currentLayout=Math.max(0, dwgLayouts.findIndex(L=>L.isModel));   // bắt đầu ở Model
     measurements=[]; annotations=[]; measureTemp=[]; hoverWorld=null;
-    buildSnap(); empty.classList.add('hidden');
+    invalidateSnap(); empty.classList.add('hidden');
     hiddenUserLayers.clear(); infoIdx=-1; buildLayerList(); document.getElementById('ctools').classList.add('show');
     updateLayoutBtn(); renderLayoutList();
     setMode('pan'); fitView(); valEl.classList.remove('show');
