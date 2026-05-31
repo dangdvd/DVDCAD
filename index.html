@@ -189,6 +189,16 @@
   }
   .subrow .pill.active{color:#0b0e14;background:var(--note);border-color:var(--note)}
   .subrow .pill:active{transform:scale(.97)}
+  #dimRow .pill.active{background:var(--measure);border-color:var(--measure);color:#1a1205}
+  .confirmrow{
+    display:none;gap:10px;padding:0 12px 10px;flex:0 0 auto;
+    background:linear-gradient(0deg,var(--panel) 0%,rgba(17,21,29,.92) 100%);
+  }
+  .confirmrow.show{display:flex}
+  .confirmrow button{font-family:inherit;font-weight:700;font-size:15px;border-radius:12px;border:1px solid var(--line);cursor:pointer;padding:13px 16px}
+  .confirmrow .cr-undo{background:var(--panel-2);color:var(--ink-dim);flex:0 0 auto;min-width:92px}
+  .confirmrow .cr-ok{flex:1;background:linear-gradient(135deg,var(--measure),#d99a20);color:#1a1205;border-color:transparent}
+  .confirmrow button:active{transform:scale(.98)}
   .sheet-item:active{transform:scale(.98)}
 
   /* toast */
@@ -255,6 +265,20 @@
     <button class="pill" data-sub="circle">Khoanh tròn</button>
     <button class="pill" data-sub="cloud">Khoanh mây</button>
     <button class="pill" data-sub="free">Vẽ tay</button>
+  </div>
+
+  <!-- DIM TYPE PICKER + nút bắt điểm (hiện khi ở chế độ Đo) -->
+  <div class="subrow" id="dimRow">
+    <button class="pill active" data-dim="aligned">Chéo</button>
+    <button class="pill" data-dim="horizontal">Ngang</button>
+    <button class="pill" data-dim="vertical">Dọc</button>
+    <button class="pill" data-dim="radius">Bán kính</button>
+    <button class="pill" data-dim="diameter">Đường kính</button>
+    <button class="pill" data-dim="angular">Góc</button>
+  </div>
+  <div class="confirmrow" id="confirmRow">
+    <button class="cr-undo" id="dimUndo">↶ Lùi</button>
+    <button class="cr-ok" id="dimConfirm">Bắt điểm 1/2</button>
   </div>
 
   <!-- BOTTOM TOOLBAR -->
@@ -825,6 +849,8 @@ let snapPts=[], snapSegs=[];
 let view={scale:1,offsetX:0,offsetY:0};
 let mode='pan';
 let measurements=[], measureTemp=[], hoverWorld=null;
+let dimType='aligned';   // aligned|horizontal|vertical|radius|diameter|angular
+let centerSnap=null;     // điểm bắt được tại tâm ngắm (chế độ Đo)
 let annotations=[], pendingNote=null;
 // chọn điểm bằng kính lúp
 // chọn điểm với kính lúp; sửa/đánh dấu
@@ -849,6 +875,26 @@ function formatDist(d){
   const v = d>=1000 ? d.toFixed(0) : d>=100 ? d.toFixed(1) : d.toFixed(2);
   return u ? `${v} ${u}` : v;
 }
+function formatAngle(deg){ return (deg>=100?deg.toFixed(1):deg.toFixed(2))+'°'; }
+function angleAt(v,a,b){ let g=Math.atan2(a.y-v.y,a.x-v.x)-Math.atan2(b.y-v.y,b.x-v.x); g=Math.abs(g); if(g>Math.PI) g=2*Math.PI-g; return g*180/Math.PI; }
+function dimNeeds(kind){ return kind==='angular'?3:2; }
+function dimValue(m){
+  const p=m.pts;
+  switch(m.kind){
+    case 'horizontal': return formatDist(Math.abs(p[1].x-p[0].x));
+    case 'vertical':   return formatDist(Math.abs(p[1].y-p[0].y));
+    case 'radius':     return 'R '+formatDist(dist(p[0],p[1]));
+    case 'diameter':   return 'Ø '+formatDist(dist(p[0],p[1]));
+    case 'angular':    return p.length>=3?formatAngle(angleAt(p[0],p[1],p[2])):'';
+    default:           return formatDist(dist(p[0],p[1]));   // aligned (chéo)
+  }
+}
+function migrateMeas(m){              // chấp nhận cả định dạng cũ {a,b}
+  if(m&&Array.isArray(m.pts)) return {kind:m.kind||'aligned',pts:m.pts};
+  if(m&&m.a&&m.b) return {kind:'aligned',pts:[m.a,m.b]};
+  return null;
+}
+const DIM_LABEL={aligned:'Chéo',horizontal:'Ngang',vertical:'Dọc',radius:'Bán kính',diameter:'Đường kính',angular:'Góc'};
 
 /* =========================================================================
    3) PHẠM VI, SNAP, FIT VIEW
@@ -975,35 +1021,77 @@ function drawEntity(e){
     case 'XLINE':{const P=toScreen(e.x,e.y);const s=clipInfiniteLine(P.x,P.y,e.dx,-e.dy,W(),H(),e.ray);if(s){ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();}break;}
   }
 }
-function drawMeasurements(){
-  ctx.save();
-  ctx.lineWidth=1.6; ctx.font="600 12px ui-monospace,Menlo,monospace";
-  const seg=(a,b,active)=>{
-    const A=toScreen(a.x,a.y),B=toScreen(b.x,b.y);
-    ctx.strokeStyle=getCSS('--measure'); ctx.fillStyle=getCSS('--measure');
-    if(active){ctx.setLineDash([6,5]);}else{ctx.setLineDash([]);}
-    ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.setLineDash([]);
-    [A,B].forEach(P=>{ctx.beginPath();ctx.arc(P.x,P.y,3.5,0,2*Math.PI);ctx.fill();ctx.strokeStyle='#1a1205';ctx.lineWidth=1.4;ctx.stroke();ctx.lineWidth=1.6;});
-    const label=formatDist(dist(a,b)), m={x:(A.x+B.x)/2,y:(A.y+B.y)/2};
-    const tw=ctx.measureText(label).width;
-    ctx.fillStyle='rgba(11,14,20,.9)';roundRect(m.x-tw/2-7,m.y-22,tw+14,18,5);ctx.fill();
-    ctx.fillStyle=getCSS('--measure');ctx.textBaseline='middle';ctx.textAlign='center';
-    ctx.fillText(label,m.x,m.y-12);ctx.textAlign='left';
-  };
-  for(let i=0;i<measurements.length;i++){
-    seg(measurements[i].a,measurements[i].b,false);
-    if(selected&&selected.kind==='m'&&selected.i===i){
-      ctx.strokeStyle=getCSS('--accent');ctx.lineWidth=2;ctx.setLineDash([]);
-      for(const h of ['a','b']){const P=toScreen(measurements[i][h].x,measurements[i][h].y);ctx.beginPath();ctx.arc(P.x,P.y,8,0,2*Math.PI);ctx.stroke();}
-      ctx.lineWidth=1.6;
+function dimArrow(P,ang){ const s=8; ctx.beginPath(); ctx.moveTo(P.x,P.y); ctx.lineTo(P.x-s*Math.cos(ang-0.38),P.y-s*Math.sin(ang-0.38)); ctx.moveTo(P.x,P.y); ctx.lineTo(P.x-s*Math.cos(ang+0.38),P.y-s*Math.sin(ang+0.38)); ctx.stroke(); }
+function dimLabel(sx,sy,text,color){ if(!text) return; ctx.font="600 12px ui-monospace,Menlo,monospace"; const tw=ctx.measureText(text).width; ctx.fillStyle='rgba(11,14,20,.9)'; roundRect(sx-tw/2-7,sy-9,tw+14,18,5); ctx.fill(); ctx.fillStyle=color; ctx.textBaseline='middle'; ctx.textAlign='center'; ctx.fillText(text,sx,sy); ctx.textAlign='left'; }
+function drawOneDim(m,color){
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=1.7; ctx.setLineDash([]);
+  const p=m.pts.map(q=>toScreen(q.x,q.y)), k=m.kind||'aligned';
+  if(k==='aligned'||k==='radius'||k==='diameter'){
+    const A=p[0],B=p[1], ang=Math.atan2(B.y-A.y,B.x-A.x);
+    ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();
+    if(k==='radius') dimArrow(B,ang); else { dimArrow(A,ang+Math.PI); dimArrow(B,ang); }
+    dimLabel((A.x+B.x)/2,(A.y+B.y)/2-12,dimValue(m),color);
+  } else if(k==='horizontal'){
+    const A=p[0],B=p[1], dy=Math.max(A.y,B.y)+26;
+    ctx.save();ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(A.x,dy);ctx.moveTo(B.x,B.y);ctx.lineTo(B.x,dy);ctx.stroke();ctx.restore();
+    ctx.beginPath();ctx.moveTo(A.x,dy);ctx.lineTo(B.x,dy);ctx.stroke();
+    dimArrow({x:A.x,y:dy},A.x<=B.x?Math.PI:0); dimArrow({x:B.x,y:dy},B.x<A.x?Math.PI:0);
+    dimLabel((A.x+B.x)/2,dy-11,dimValue(m),color);
+  } else if(k==='vertical'){
+    const A=p[0],B=p[1], dx=Math.max(A.x,B.x)+26;
+    ctx.save();ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(dx,A.y);ctx.moveTo(B.x,B.y);ctx.lineTo(dx,B.y);ctx.stroke();ctx.restore();
+    ctx.beginPath();ctx.moveTo(dx,A.y);ctx.lineTo(dx,B.y);ctx.stroke();
+    dimArrow({x:dx,y:A.y},A.y<=B.y?-Math.PI/2:Math.PI/2); dimArrow({x:dx,y:B.y},B.y<A.y?-Math.PI/2:Math.PI/2);
+    dimLabel(dx,(A.y+B.y)/2,dimValue(m),color);
+  } else if(k==='angular'){
+    const V=p[0];
+    ctx.beginPath(); for(let q=1;q<p.length;q++){ctx.moveTo(V.x,V.y);ctx.lineTo(p[q].x,p[q].y);} ctx.stroke();
+    if(p.length>=3){
+      let a1=Math.atan2(p[1].y-V.y,p[1].x-V.x), a2=Math.atan2(p[2].y-V.y,p[2].x-V.x);
+      let diff=a2-a1; while(diff<=-Math.PI)diff+=2*Math.PI; while(diff>Math.PI)diff-=2*Math.PI;
+      const R=46; ctx.beginPath();ctx.arc(V.x,V.y,R,a1,a1+diff,diff<0);ctx.stroke();
+      const ma=a1+diff/2; dimLabel(V.x+Math.cos(ma)*(R+16),V.y+Math.sin(ma)*(R+16),dimValue(m),color);
     }
   }
-  if(measureTemp.length===1){
-    const P=toScreen(measureTemp[0].x,measureTemp[0].y);
-    ctx.fillStyle=getCSS('--measure');ctx.beginPath();ctx.arc(P.x,P.y,4.5,0,2*Math.PI);ctx.fill();
-    if(hoverWorld) seg(measureTemp[0],hoverWorld,true);
-    if(hoverWorld&&hoverWorld.snapped) drawSnapMarker(toScreen(hoverWorld.x,hoverWorld.y),hoverWorld.kind);
+  ctx.fillStyle=color; for(const P of p){ctx.beginPath();ctx.arc(P.x,P.y,3.2,0,2*Math.PI);ctx.fill();}
+}
+function drawMeasurements(){
+  ctx.save(); ctx.lineWidth=1.7;
+  const measure=getCSS('--measure'), acc=getCSS('--accent');
+  for(let i=0;i<measurements.length;i++){
+    const sel=(selected&&selected.kind==='m'&&selected.i===i);
+    drawOneDim(measurements[i], sel?acc:measure);
+    if(sel){ ctx.strokeStyle=acc;ctx.lineWidth=2;ctx.setLineDash([]); for(const q of measurements[i].pts){const P=toScreen(q.x,q.y);ctx.beginPath();ctx.arc(P.x,P.y,8,0,2*Math.PI);ctx.stroke();} }
   }
+  ctx.restore();
+}
+function drawMeasureCursor(){
+  if(mode!=='measure'||!entities.length) return;
+  const cx=W()/2, cy=H()/2;
+  centerSnap = snap(toWorld(cx,cy),{x:cx,y:cy});
+  const S=toScreen(centerSnap.x,centerSnap.y);
+  const measure=getCSS('--measure'), acc=getCSS('--accent');
+  ctx.save();
+  // xem trước dim đang dựng (nét đứt qua tâm ngắm)
+  if(measureTemp.length){
+    const scr=measureTemp.map(q=>toScreen(q.x,q.y));
+    ctx.strokeStyle=measure; ctx.fillStyle=measure; ctx.lineWidth=1.6; ctx.setLineDash([6,5]);
+    ctx.beginPath();
+    if(dimType==='angular'){ const V=scr[0]; for(let q=1;q<scr.length;q++){ctx.moveTo(V.x,V.y);ctx.lineTo(scr[q].x,scr[q].y);} ctx.moveTo(V.x,V.y);ctx.lineTo(S.x,S.y); }
+    else { ctx.moveTo(scr[0].x,scr[0].y); for(let q=1;q<scr.length;q++)ctx.lineTo(scr[q].x,scr[q].y); ctx.lineTo(S.x,S.y); }
+    ctx.stroke(); ctx.setLineDash([]);
+    const tmp={kind:dimType,pts:[...measureTemp,{x:centerSnap.x,y:centerSnap.y}]};
+    dimLabel(S.x,S.y-18,dimValue(tmp),measure);
+    for(const P of scr){ctx.beginPath();ctx.arc(P.x,P.y,4,0,2*Math.PI);ctx.fill();}
+  }
+  if(centerSnap.snapped) drawSnapMarker(S,centerSnap.kind);
+  // tâm ngắm cố định
+  ctx.strokeStyle=centerSnap.snapped?acc:'rgba(255,255,255,.92)'; ctx.lineWidth=1.6; ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(cx,cy,13,0,2*Math.PI);ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx-22,cy);ctx.lineTo(cx-7,cy);ctx.moveTo(cx+7,cy);ctx.lineTo(cx+22,cy);
+  ctx.moveTo(cx,cy-22);ctx.lineTo(cx,cy-7);ctx.moveTo(cx,cy+7);ctx.lineTo(cx,cy+22);
+  ctx.stroke();
   ctx.restore();
 }
 function annType(i){ const a=annotations[i]; return (a&&a.type)||'pin'; }
@@ -1137,6 +1225,7 @@ function draw(){
   drawAnnotations();
   drawMarkupPreview();
   drawPickCursor();
+  drawMeasureCursor();
 }
 
 /* =========================================================================
@@ -1160,9 +1249,8 @@ function startPick(p,target){
 function movePick(p){
   pickScreen=p; pickSnap=snap(toWorld(p.x,p.y),p);
   const t=pickTarget;
-  if(t.kind==='new-measure'){ if(measureTemp.length===1) hoverWorld=pickSnap; }
-  else if(moved){                       // chỉ dời khi thật sự kéo (chạm tại chỗ = chọn)
-    if(t.kind==='mEnd') measurements[t.i][t.h]={x:pickSnap.x,y:pickSnap.y};
+  if(moved){                       // chỉ dời khi thật sự kéo (chạm tại chỗ = chọn)
+    if(t.kind==='mEnd') measurements[t.i].pts[t.h]={x:pickSnap.x,y:pickSnap.y};
     else if(t.kind==='pin'){ const a=annotations[t.i]; a.x=pickSnap.x; a.y=pickSnap.y; }
   }
   if(!loupeOn && moved) loupeOn=true;   // kéo là hiện kính lúp ngay
@@ -1175,19 +1263,11 @@ function commitPick(){
   const sn=pickSnap, t=pickTarget, wasMoved=moved;
   hideLoupe(); picking=false; pickSnap=null; pickTarget=null;
   if(!sn){ draw(); return; }
-  if(t.kind==='new-measure'){
-    measureTemp.push({x:sn.x,y:sn.y});
-    if(measureTemp.length===2){
-      measurements.push({a:measureTemp[0],b:measureTemp[1]});
-      showVal(formatDist(dist(measureTemp[0],measureTemp[1])));
-      measureTemp=[]; hoverWorld=null;
-    }
-    updateHint();
-  } else if(t.kind==='new-pin'){
+  if(t.kind==='new-pin'){
     pendingNote={x:sn.x,y:sn.y}; editingIdx=-1; showNoteModal();
   } else if(t.kind==='mEnd'){
     if(!wasMoved) selectMeasure(t.i);                                    // chạm = chọn phép đo
-    else { selected={kind:'m',i:t.i}; showVal(formatDist(dist(measurements[t.i].a,measurements[t.i].b))); }
+    else { selected={kind:'m',i:t.i}; showVal(dimValue(measurements[t.i])); }
   } else if(t.kind==='pin'){
     if(!wasMoved) editAnnotation(t.i);                                   // chạm = sửa ghi chú
   }
@@ -1197,10 +1277,10 @@ function commitPick(){
 function distToSeg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,L=dx*dx+dy*dy; if(L<1e-9)return Math.hypot(p.x-a.x,p.y-a.y); let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/L; t=Math.max(0,Math.min(1,t)); return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));}
 function hitHandle(screen){
   const TH=22; let best=null, bd=TH;
-  for(let i=0;i<measurements.length;i++) for(const h of ['a','b']){
-    const P=toScreen(measurements[i][h].x,measurements[i][h].y);
+  for(let i=0;i<measurements.length;i++){ const pts=measurements[i].pts||[]; for(let h=0;h<pts.length;h++){
+    const P=toScreen(pts[h].x,pts[h].y);
     const d=Math.hypot(P.x-screen.x,P.y-screen.y); if(d<bd){bd=d;best={kind:'mEnd',i,h};}
-  }
+  } }
   for(let i=0;i<annotations.length;i++){ if((annotations[i].type||'pin')!=='pin') continue;
     const P=toScreen(annotations[i].x,annotations[i].y);
     const d=Math.hypot(P.x-screen.x,P.y-screen.y); if(d<bd){bd=d;best={kind:'ann',i};}
@@ -1270,16 +1350,16 @@ cv.addEventListener('pointerdown',e=>{
   if(pointers.size===1){
     downPt=p;lastPanPt=p;moved=false;downHit=null;
     if(!entities.length) return;
-    if(mode==='measure'){ startPick(p,{kind:'new-measure'}); activePickId=e.pointerId; }
-    else if(mode==='note'){
+    if(mode==='note'){
       if(noteSub==='pin'){ startPick(p,{kind:'new-pin'}); activePickId=e.pointerId; }
       else { const w=toWorld(p.x,p.y); mark={sub:noteSub,ax:w.x,ay:w.y,bx:w.x,by:w.y,pts:[{x:w.x,y:w.y}]}; activePickId=e.pointerId; draw(); }
     }
-    else { // pan: thử cầm tay cầm (đầu mút đo / ghim) để kéo-sửa
+    else if(mode==='pan'){ // kéo nền / cầm đầu mút đo / ghim để sửa
       const hit=hitHandle(p); downHit=hit;
       if(hit&&hit.kind==='mEnd'){ startPick(p,{kind:'mEnd',i:hit.i,h:hit.h}); activePickId=e.pointerId; }
       else if(hit&&hit.kind==='ann'&&annType(hit.i)==='pin'){ startPick(p,{kind:'pin',i:hit.i}); activePickId=e.pointerId; }
     }
+    // mode==='measure': chỉ kéo/zoom đưa điểm vào tâm ngắm; bắt điểm bằng nút "Bắt điểm"
   }
   else if(pointers.size===2){
     pinchActive=true; cancelPick(); mark=null;       // 2 ngón = di chuyển/zoom
@@ -1299,7 +1379,7 @@ window.addEventListener('pointermove',e=>{
   if(Math.hypot(p.x-downPt.x,p.y-downPt.y)>6) moved=true;
   if(picking){ movePick(p); }
   else if(mark){ const w=toWorld(p.x,p.y); if(mark.sub==='free') mark.pts.push({x:w.x,y:w.y}); else { mark.bx=w.x; mark.by=w.y; } draw(); }
-  else if(mode==='pan'){ view.offsetX+=p.x-lastPanPt.x;view.offsetY+=p.y-lastPanPt.y;lastPanPt=p;draw(); }
+  else if(mode==='pan'||mode==='measure'){ view.offsetX+=p.x-lastPanPt.x;view.offsetY+=p.y-lastPanPt.y;lastPanPt=p;draw(); }
 },{passive:false});
 function endPointer(e){
   if(!pointers.has(e.pointerId) && e.pointerId!==activePickId) return;
@@ -1338,6 +1418,31 @@ subRow.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',()=>{
   subRow.querySelectorAll('.pill').forEach(x=>x.classList.toggle('active',x===b));
   updateHint();
 }));
+const dimRow=document.getElementById('dimRow'), confirmRow=document.getElementById('confirmRow'), dimConfirmBtn=document.getElementById('dimConfirm');
+dimRow.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',()=>{
+  dimType=b.dataset.dim; measureTemp=[];
+  dimRow.querySelectorAll('.pill').forEach(x=>x.classList.toggle('active',x===b));
+  updateMeasureUI(); draw();
+}));
+function updateMeasureUI(){
+  const need=dimNeeds(dimType);
+  dimConfirmBtn.textContent=`Bắt điểm ${Math.min(measureTemp.length+1,need)}/${need}`;
+  updateHint();
+}
+function confirmDimPoint(){
+  if(mode!=='measure'||!entities.length) return;
+  const sn=centerSnap||snap(toWorld(W()/2,H()/2),{x:W()/2,y:H()/2});
+  measureTemp.push({x:sn.x,y:sn.y});
+  if(measureTemp.length>=dimNeeds(dimType)){
+    const m={kind:dimType,pts:measureTemp.slice()}; measurements.push(m);
+    selected={kind:'m',i:measurements.length-1}; showVal(dimValue(m));
+    measureTemp=[]; saveOverlay();
+  }
+  updateMeasureUI(); draw();
+}
+function undoDimPoint(){ if(measureTemp.length){ measureTemp.pop(); updateMeasureUI(); draw(); } }
+document.getElementById('dimConfirm').addEventListener('click',confirmDimPoint);
+document.getElementById('dimUndo').addEventListener('click',undoDimPoint);
 function updateHint(){
   let t='';
   if(mode==='pan'){
@@ -1345,7 +1450,7 @@ function updateHint(){
       ? 'Kéo nền để di chuyển · chạm đối tượng để sửa · kéo đầu mút để chỉnh điểm'
       : 'Kéo để di chuyển · chụm 2 ngón để phóng to';
   }
-  else if(mode==='measure') t=(measureTemp.length===0?'Đo: giữ & rê để bắt điểm đầu':'Đo: giữ & rê để bắt điểm cuối')+' · 2 ngón để di chuyển';
+  else if(mode==='measure'){ const need=dimNeeds(dimType); t=`Đo ${DIM_LABEL[dimType]||''}: kéo bản vẽ đưa điểm vào tâm ngắm rồi bấm “Bắt điểm” (${measureTemp.length}/${need})`; }
   else if(mode==='note'){
     t = noteSub==='pin'   ? 'Ghim: giữ & rê chọn vị trí, nhấc tay để ghim'
       : noteSub==='circle'? 'Khoanh tròn: kéo từ tâm ra để bao quanh vùng'
@@ -1357,9 +1462,12 @@ function updateHint(){
 function showVal(s){valEl.textContent=s;valEl.classList.add('show');}
 function setMode(m){
   cancelPick(); mark=null; selected=null;
-  mode=m; measureTemp=[]; hoverWorld=null;
+  mode=m; measureTemp=[]; hoverWorld=null; centerSnap=null;
   document.querySelectorAll('.tool[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
   subRow.classList.toggle('show', m==='note');
+  dimRow.classList.toggle('show', m==='measure');
+  confirmRow.classList.toggle('show', m==='measure');
+  if(m==='measure') updateMeasureUI();
   updateHint(); draw();
 }
 document.querySelectorAll('.tool[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
@@ -1394,7 +1502,8 @@ function loadOverlay(){
   let data; try{ data=JSON.parse(raw); }catch(_){ return; }
   const num=v=>typeof v==='number'&&isFinite(v), okPt=p=>p&&num(p.x)&&num(p.y);
   const ms=Array.isArray(data&&data.m)?data.m:[], as=Array.isArray(data&&data.a)?data.a:[];
-  measurements = ms.filter(o=>o&&okPt(o.a)&&okPt(o.b)).map(o=>({a:{x:+o.a.x,y:+o.a.y},b:{x:+o.b.x,y:+o.b.y}}));
+  measurements = ms.map(migrateMeas).filter(m=>m&&Array.isArray(m.pts)&&m.pts.length>=2&&m.pts.every(okPt))
+                   .map(m=>({kind:m.kind||'aligned',pts:m.pts.map(p=>({x:+p.x,y:+p.y}))}));
   annotations = as.map(o=>{
     if(!o||typeof o!=='object') return null;
     const t=o.type||'pin';
