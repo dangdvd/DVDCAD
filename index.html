@@ -241,6 +241,9 @@
   .layer-row .sw{width:14px;height:14px;border-radius:3px;flex:0 0 auto;border:1px solid rgba(255,255,255,.25)}
   .layer-row .nm{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .layer-row .eye{width:20px;height:20px;flex:0 0 auto;stroke:currentColor;stroke-width:1.8;fill:none;color:var(--accent)}
+  .layer-row .eye .slash{display:none}
+  .layer-row.off .eye .slash{display:block}
+  .layer-row.off .eye .pupil{display:none}
   .layer-row.off{opacity:.55}
   .layer-row.off .nm{text-decoration:line-through}
   .layer-row.off .eye{color:var(--ink-faint)}
@@ -1497,16 +1500,20 @@ function buildLayerList(){
   }
   layerList=[...seen.entries()].map(([name,hex])=>({name,hex})).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'}));
 }
-const EYE_ON='<svg class="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
-const EYE_OFF='<svg class="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><path d="M3 3l18 18"/></svg>';
+const EYE_SVG='<svg class="eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle class="pupil" cx="12" cy="12" r="3"/><path class="slash" d="M3 3l18 18"/></svg>';
 function renderLayerList(){
   const box=document.getElementById('layerList'); box.innerHTML='';
   if(!layerList.length){ box.innerHTML='<div style="color:var(--ink-dim);font-size:12.5px;padding:10px">Không có lớp.</div>'; return; }
   for(const L of layerList){
-    const off=hiddenUserLayers.has(L.name);
-    const row=document.createElement('button'); row.type='button'; row.className='layer-row'+(off?' off':'');
-    row.innerHTML='<span class="sw" style="background:'+L.hex+'"></span><span class="nm">'+escapeHtml(L.name)+'</span>'+(off?EYE_OFF:EYE_ON);
-    row.addEventListener('click',()=>{ if(hiddenUserLayers.has(L.name)) hiddenUserLayers.delete(L.name); else hiddenUserLayers.add(L.name); renderLayerList(); draw(); });
+    const row=document.createElement('button'); row.type='button';
+    row.className='layer-row'+(hiddenUserLayers.has(L.name)?' off':'');
+    row.innerHTML='<span class="sw" style="background:'+L.hex+'"></span><span class="nm">'+escapeHtml(L.name)+'</span>'+EYE_SVG;
+    // chỉ đổi class của chính dòng này (không dựng lại danh sách) → tránh "chạm ma" trên iOS
+    row.addEventListener('click',()=>{
+      if(hiddenUserLayers.has(L.name)){ hiddenUserLayers.delete(L.name); row.classList.remove('off'); }
+      else { hiddenUserLayers.add(L.name); row.classList.add('off'); }
+      draw();
+    });
     box.appendChild(row);
   }
 }
