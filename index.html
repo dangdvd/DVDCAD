@@ -2176,10 +2176,19 @@ new ResizeObserver(resize).observe(cv);
 window.addEventListener('orientationchange',()=>setTimeout(resize,250));
 resize(); updateHint();
 
-/* ---- PWA: đăng ký service worker để cài đặt + chạy offline ---- */
+/* ---- PWA: đăng ký service worker + TỰ CẬP NHẬT khi có bản mới ---- */
 if('serviceWorker' in navigator){
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(reloaded||!hadController) return;     // bỏ qua lần cài đặt đầu tiên
+    reloaded=true; location.reload();         // có bản mới -> nạp lại để dùng ngay
+  });
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('SW không đăng ký được:',err));
+    navigator.serviceWorker.register('./sw.js').then(reg=>{
+      reg.update();                                            // kiểm tra cập nhật ngay
+      document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') reg.update(); }); // và mỗi lần mở lại app
+    }).catch(err=>console.warn('SW không đăng ký được:',err));
   });
 }
 </script>
