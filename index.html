@@ -1332,10 +1332,10 @@ function draw(){
   drawGrid();
   const hideL=hiddenUserLayers;
   // lượt 1: tô nền HATCH (nằm dưới)
-  for(const e of entities) if(e.type==='HATCH' && !hideL.has(e.layer)) drawHatch(e);
+  for(const e of entities) if(e.type==='HATCH' && !hideL.has(e.layer||'0')) drawHatch(e);
   // lượt 2: các nét vẽ (mỗi đối tượng tự đặt màu theo layer)
   ctx.lineWidth=1.15; ctx.lineJoin='round'; ctx.lineCap='round';
-  for(const e of entities) if(e.type!=='HATCH' && !hideL.has(e.layer)) drawEntity(e);
+  for(const e of entities) if(e.type!=='HATCH' && !hideL.has(e.layer||'0')) drawEntity(e);
   drawInfoHighlight();
   drawMeasurements();
   drawAnnotations();
@@ -1416,7 +1416,7 @@ function polyDist(w,v,closed){ let d=Infinity; for(let i=1;i<v.length;i++){const
 function pickEntity(screen){
   const w=toWorld(screen.x,screen.y), tol=12/view.scale; let best=-1, bd=tol;
   for(let i=0;i<entities.length;i++){
-    const e=entities[i]; if(hiddenUserLayers.has(e.layer)) continue;
+    const e=entities[i]; if(hiddenUserLayers.has(e.layer||'0')) continue;
     let x0,y0,x1,y1;                                  // hộp bao -> loại nhanh
     switch(e.type){
       case 'LINE': x0=Math.min(e.x1,e.x2);x1=Math.max(e.x1,e.x2);y0=Math.min(e.y1,e.y2);y1=Math.max(e.y1,e.y2); break;
@@ -1480,7 +1480,7 @@ function showObjectInfo(i){
 }
 function hideObjectInfo(){ if(infoIdx<0) return; infoIdx=-1; document.getElementById('infoCard').classList.remove('show'); draw(); }
 function drawInfoHighlight(){
-  if(infoIdx<0||mode!=='pan') return; const e=entities[infoIdx]; if(!e||hiddenUserLayers.has(e.layer)) return;
+  if(infoIdx<0||mode!=='pan') return; const e=entities[infoIdx]; if(!e||hiddenUserLayers.has(e.layer||'0')) return;
   ctx.save(); const acc=getCSS('--accent');
   ctx.strokeStyle=acc; ctx.fillStyle=acc; ctx.lineWidth=2.6; ctx.setLineDash([]); ctx.shadowColor=acc; ctx.shadowBlur=9; ctx.lineJoin='round'; ctx.lineCap='round';
   if(e.type==='HATCH'){ for(const lp of (e.loops||[])) strokePts(lp,true); }
