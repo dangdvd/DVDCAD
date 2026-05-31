@@ -312,6 +312,32 @@ function resolveColor(aci, layer, ctxAci){
 }
 function hexA(h,al){ let s=String(h).replace('#',''); if(s.length===3) s=s.split('').map(c=>c+c).join(''); const n=parseInt(s,16)||0; return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${al})`; }
 
+/* ============================================================
+   Giải mã chuỗi chữ AutoCAD: \U+XXXX (Unicode), %%d/%%c/%%p,
+   và lược bỏ mã định dạng MTEXT (\f \H \C \A \P {…}). Chuẩn hoá NFC.
+   ============================================================ */
+function decodeCAD(s){
+  if(s==null) return '';
+  let t=String(s);
+  // Unicode escapes \U+XXXX (4-6 hex) & \M+nXXXX -> ký tự (gồm dấu kết hợp)
+  t=t.replace(/\\U\+([0-9A-Fa-f]{4,6})/g,(_,h)=>{try{return String.fromCodePoint(parseInt(h,16));}catch(e){return '';}});
+  t=t.replace(/\\M\+[0-9A-Fa-f]([0-9A-Fa-f]{4})/g,(_,h)=>{try{return String.fromCodePoint(parseInt(h,16));}catch(e){return '';}});
+  // ngắt dòng/đoạn & khoảng trắng không ngắt -> khoảng trắng (giữ 1 dòng)
+  t=t.replace(/\\P/g,' ').replace(/\\X/g,' ').replace(/\\~/g,' ');
+  // mã định dạng MTEXT có dấu ';' (\fArial..; \H..; \C..; \A..; \W..; \Q..; \T..; \p..)
+  t=t.replace(/\\[A-Za-z][^\\;]*;/g,'');
+  // toggle MTEXT không dấu ';' (\L \l \O \o \K \k)
+  t=t.replace(/\\[LlOoKk]/g,'');
+  // ký tự thoát: \\ -> \ ; \{ \} -> { }
+  t=t.replace(/\\\\/g,'\\').replace(/\\([{}])/g,'$1');
+  // bỏ ngoặc nhóm MTEXT còn lại
+  t=t.replace(/[{}]/g,'');
+  // mã %% của dòng TEXT: %%d=° %%c=Ø(đường kính) %%p=± ; bỏ %%u/%%o ; %%nnn=mã ASCII
+  t=t.replace(/%%[Dd]/g,'\u00B0').replace(/%%[Cc]/g,'\u00D8').replace(/%%[Pp]/g,'\u00B1').replace(/%%[UuOo]/g,'').replace(/%%%/g,'%').replace(/%%(\d{3})/g,(_,n)=>String.fromCharCode(parseInt(n,10)));
+  try{ t=t.normalize('NFC'); }catch(e){}
+  return t;
+}
+
 function parseDXF(text){
   const lines = text.split(/\r\n|\r|\n/);
   const pairs = [];
@@ -341,10 +367,10 @@ function parseDXF(text){
       case 'ARC': return {type,layer,cx:num(g,10),cy:num(g,20),r:num(g,40),a1:num(g,50),a2:num(g,51)};
       case 'ELLIPSE': return {type,layer,cx:num(g,10),cy:num(g,20),mx:num(g,11),my:num(g,21),ratio:num(g,40)??1,p1:num(g,41)??0,p2:num(g,42)??(2*Math.PI)};
       case 'POINT': return {type,layer,x:num(g,10),y:num(g,20)};
-      case 'TEXT': return {type,layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:str(g,1)||'',rot:num(g,50)||0};
+      case 'TEXT': return {type,layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:decodeCAD(str(g,1)||''),rot:num(g,50)||0};
       case 'MTEXT':{
         let t=''; for(const it of g){ if(it.code===3) t+=it.value; else if(it.code===1) t+=it.value; }
-        t=t.replace(/\\P/g,' ').replace(/\\[A-Za-z][^;]*;/g,'').replace(/[{}]/g,'');
+        t=decodeCAD(t);
         return {type:'TEXT',layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:t,rot:0};
       }
       case 'LWPOLYLINE':{
@@ -376,7 +402,7 @@ function parseDXF(text){
       }
       case 'HATCH':{ const loops=dxfHatchLoops(g); return loops.length?{type:'HATCH',layer,loops,solid:(num(g,70)===1)}:null; }
       case 'LEADER':{ const xs=all(g,10),ys=all(g,20),v=[]; for(let k=0;k<Math.min(xs.length,ys.length);k++) v.push({x:xs[k],y:ys[k]}); return v.length>=2?{type:'POLYLINE',layer,vertices:v,closed:false}:null; }
-      case 'ATTRIB':{ if(((num(g,70)||0)&1)===1) return null; const s=str(g,1)||''; return s?{type:'TEXT',layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:s,rot:num(g,50)||0}:null; }
+      case 'ATTRIB':{ if(((num(g,70)||0)&1)===1) return null; const s=decodeCAD(str(g,1)||''); return s?{type:'TEXT',layer,x:num(g,10),y:num(g,20),h:num(g,40)||10,text:s,rot:num(g,50)||0}:null; }
       default: return null;
     }
   }
@@ -815,7 +841,7 @@ function drawEntity(e){
     case 'POLYLINE': strokePts(e.vertices,e.closed); break;
     case 'SOLID':{const pts=e.pts;if(pts.length>=3){const o=pts.length===4?[pts[0],pts[1],pts[3],pts[2]]:pts;ctx.save();ctx.fillStyle=hexA(col,.2);ctx.beginPath();const a=toScreen(o[0].x,o[0].y);ctx.moveTo(a.x,a.y);for(let k=1;k<o.length;k++){const q=toScreen(o[k].x,o[k].y);ctx.lineTo(q.x,q.y);}ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}break;}
     case 'POINT':{const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;ctx.beginPath();ctx.arc(p.x,p.y,2,0,2*Math.PI);ctx.fill();ctx.restore();break;}
-    case 'TEXT':{const size=e.h*view.scale;if(size<3||!e.text)break;const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;ctx.font=`${Math.min(size,200)}px system-ui,sans-serif`;ctx.textBaseline='alphabetic';ctx.translate(p.x,p.y);if(e.rot)ctx.rotate(-e.rot*Math.PI/180);ctx.fillText(e.text,0,0);ctx.restore();break;}
+    case 'TEXT':{const size=e.h*view.scale;if(size<3||!e.text)break;const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;ctx.font=`${Math.min(size,200)}px -apple-system,system-ui,"Segoe UI",Roboto,Arial,"Noto Sans","Helvetica Neue",sans-serif`;ctx.textBaseline='alphabetic';ctx.translate(p.x,p.y);if(e.rot)ctx.rotate(-e.rot*Math.PI/180);ctx.fillText(e.text,0,0);ctx.restore();break;}
   }
 }
 function drawMeasurements(){
@@ -1009,8 +1035,8 @@ function dwgEntity(e){
     case 'ELLIPSE': return (e.center&&e.majorAxisEndPoint)?{type:'ELLIPSE',layer,cx:e.center.x,cy:e.center.y,mx:e.majorAxisEndPoint.x,my:e.majorAxisEndPoint.y,ratio:e.axisRatio??1,p1:e.startAngle??0,p2:e.endAngle??(2*Math.PI)}:null;
     case 'POINT': return e.position?{type:'POINT',layer,x:e.position.x,y:e.position.y}:null;
     case 'LWPOLYLINE': case 'POLYLINE2D': case 'POLYLINE3D': { const raw=(e.vertices||[]).map(p=>({x:p.x,y:p.y,bulge:p.bulge||0})).filter(p=>isFinite(p.x)&&isFinite(p.y)); if(!raw.length) return null; const verts=expandPolyline(raw, ((e.flag||0)&1)===1); return verts.length>=2?{type:'POLYLINE',layer,vertices:verts,closed:false}:null; }
-    case 'TEXT': return e.startPoint?{type:'TEXT',layer,x:e.startPoint.x,y:e.startPoint.y,h:e.textHeight||e.height||10,text:e.text||'',rot:deg(e.rotation||0)}:null;
-    case 'MTEXT': { if(!e.insertionPoint) return null; const t=(e.text||'').replace(/\\P/g,' ').replace(/\\[A-Za-z][^;]*;/g,'').replace(/[{}]/g,''); return {type:'TEXT',layer,x:e.insertionPoint.x,y:e.insertionPoint.y,h:e.textHeight||10,text:t,rot:0}; }
+    case 'TEXT': return e.startPoint?{type:'TEXT',layer,x:e.startPoint.x,y:e.startPoint.y,h:e.textHeight||e.height||10,text:decodeCAD(e.text||''),rot:deg(e.rotation||0)}:null;
+    case 'MTEXT': { if(!e.insertionPoint) return null; const t=decodeCAD(e.text||''); return {type:'TEXT',layer,x:e.insertionPoint.x,y:e.insertionPoint.y,h:e.textHeight||10,text:t,rot:0}; }
     case 'SOLID': case '3DFACE': { const c=[e.corner1,e.corner2,e.corner3,e.corner4||e.corner3].filter(Boolean).map(p=>({x:p.x,y:p.y})); return c.length>=3?{type:'SOLID',layer,pts:c}:null; }
     case 'INSERT': return e.name?{type:'INSERT',layer,name:e.name,ix:(e.insertionPoint?e.insertionPoint.x:0),iy:(e.insertionPoint?e.insertionPoint.y:0),sx:(e.xScale??1),sy:(e.yScale??1),rot:deg(e.rotation||0),cols:e.columnCount||1,rows:e.rowCount||1,csp:e.columnSpacing||0,rsp:e.rowSpacing||0}:null;
     case 'DIMENSION': return e.name?{type:'INSERT',layer,name:e.name,ix:0,iy:0,sx:1,sy:1,rot:0,cols:1,rows:1,csp:0,rsp:0,_dim:true}:null;
@@ -1028,7 +1054,7 @@ function dwgEntity(e){
 // ATTRIB (giá trị thuộc tính của khối, vd: chữ trong khung tên) -> TEXT
 function dwgAttrib(at){
   if(((at.flags||0)&1)===1) return null;       // bit1 = ẩn
-  const tb=at.text||{}; const sp=tb.startPoint; const s=(tb.text||'').toString();
+  const tb=at.text||{}; const sp=tb.startPoint; const s=decodeCAD(tb.text||'');
   if(!sp||!s.trim()) return null;
   return {type:'TEXT',layer:at.layer||'0',x:sp.x,y:sp.y,h:tb.textHeight||10,text:s,rot:(tb.rotation||0)*180/Math.PI};
 }

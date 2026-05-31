@@ -5,7 +5,7 @@
      ngay lần đầu mở một file .dwg khi có mạng -> các lần sau dùng offline được.
    Đổi số phiên bản CACHE bên dưới mỗi khi cập nhật file để buộc làm mới.
    HTML dùng network-first: có mạng luôn lấy bản mới nhất, mất mạng mới dùng cache. */
-const CACHE = 'dvdcad-v3';
+const CACHE = 'dvdcad-v4';
 const CORE = [
   './',
   './index.html',
@@ -38,12 +38,12 @@ self.addEventListener('fetch', (e) => {
   const isHTML = req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
 
   if (isHTML) {
-    // NETWORK-FIRST cho HTML: luôn ưu tiên bản mới nhất khi có mạng
+    // NETWORK-FIRST cho HTML: luôn lấy bản mới nhất, bỏ qua cả HTTP cache
     e.respondWith((async () => {
       const cache = await caches.open(CACHE);
       try {
-        const res = await fetch(req);
-        if (res && res.ok) cache.put(req, res.clone());
+        const res = await fetch(req.url, { cache: 'no-store' });
+        if (res && res.ok) cache.put('./index.html', res.clone());
         return res;
       } catch (err) {
         const hit = (await cache.match(req)) || (await cache.match('./index.html')) || (await cache.match('./'));
