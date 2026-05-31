@@ -175,6 +175,20 @@
   }
   .sheet-item svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.8;fill:none}
   .sheet-item.danger{color:var(--note)}
+  .modal-actions .danger{background:transparent;color:var(--note);border-color:rgba(255,122,133,.45)}
+  .subrow{
+    display:none;justify-content:center;flex-wrap:wrap;gap:8px;
+    padding:8px 12px;background:linear-gradient(0deg,var(--panel) 0%,rgba(17,21,29,.92) 100%);
+    border-top:1px solid var(--line);flex:0 0 auto;z-index:11;
+  }
+  .subrow.show{display:flex}
+  .subrow .pill{
+    background:var(--panel-2);color:var(--ink-dim);
+    border:1px solid var(--line);border-radius:999px;padding:9px 15px;
+    font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
+  }
+  .subrow .pill.active{color:#0b0e14;background:var(--note);border-color:var(--note)}
+  .subrow .pill:active{transform:scale(.97)}
   .sheet-item:active{transform:scale(.98)}
 
   /* toast */
@@ -235,6 +249,14 @@
     </div>
   </div>
 
+  <!-- NOTE SUB-TYPE PICKER (hiện khi ở chế độ Ghi chú) -->
+  <div class="subrow" id="subRow">
+    <button class="pill active" data-sub="pin">Ghim</button>
+    <button class="pill" data-sub="circle">Khoanh tròn</button>
+    <button class="pill" data-sub="cloud">Khoanh mây</button>
+    <button class="pill" data-sub="free">Vẽ tay</button>
+  </div>
+
   <!-- BOTTOM TOOLBAR -->
   <nav class="toolbar">
     <button class="tool active" data-mode="pan" id="t-pan">
@@ -262,10 +284,11 @@
   <!-- NOTE MODAL -->
   <div class="overlay" id="noteOverlay">
     <div class="modal">
-      <h3>Thêm ghi chú</h3>
-      <p>Ghi chú sẽ được ghim tại điểm bạn vừa chạm trên bản vẽ.</p>
+      <h3 id="noteTitle">Thêm ghi chú</h3>
+      <p>Nhập nội dung chú thích (có thể để trống nếu chỉ cần đánh dấu vùng).</p>
       <input type="text" id="noteInput" placeholder="Nhập nội dung ghi chú…" autocomplete="off">
       <div class="modal-actions">
+        <button class="btn-ghost danger" id="noteDelete" style="display:none">Xoá</button>
         <button class="btn-ghost" id="noteCancel">Huỷ</button>
         <button class="btn-solid" id="noteOk">Thêm ghim</button>
       </div>
@@ -796,7 +819,14 @@ let mode='pan';
 let measurements=[], measureTemp=[], hoverWorld=null;
 let annotations=[], pendingNote=null;
 // chọn điểm bằng kính lúp
+// chọn điểm với kính lúp; sửa/đánh dấu
 let picking=false, pickScreen=null, pickSnap=null, loupeOn=false, loupeHold=null, activePickId=null;
+let pickTarget=null;        // {kind:'new-measure'|'new-pin'|'mEnd'|'pin', i?, h?}
+let selected=null;          // {kind:'m'|'n', i}
+let editingIdx=-1;          // chỉ số ghi chú đang sửa (-1 = thêm ghim mới)
+let noteSub='pin';          // 'pin' | 'circle' | 'cloud' | 'free'
+let mark=null;              // bản nháp đánh dấu đang vẽ
+let downHit=null;           // đối tượng chạm trúng lúc nhấn (để chọn khi chạm)
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
@@ -939,12 +969,96 @@ function drawMeasurements(){
     ctx.fillStyle=getCSS('--measure');ctx.textBaseline='middle';ctx.textAlign='center';
     ctx.fillText(label,m.x,m.y-12);ctx.textAlign='left';
   };
-  measurements.forEach(mm=>seg(mm.a,mm.b,false));
+  for(let i=0;i<measurements.length;i++){
+    seg(measurements[i].a,measurements[i].b,false);
+    if(selected&&selected.kind==='m'&&selected.i===i){
+      ctx.strokeStyle=getCSS('--accent');ctx.lineWidth=2;ctx.setLineDash([]);
+      for(const h of ['a','b']){const P=toScreen(measurements[i][h].x,measurements[i][h].y);ctx.beginPath();ctx.arc(P.x,P.y,8,0,2*Math.PI);ctx.stroke();}
+      ctx.lineWidth=1.6;
+    }
+  }
   if(measureTemp.length===1){
     const P=toScreen(measureTemp[0].x,measureTemp[0].y);
     ctx.fillStyle=getCSS('--measure');ctx.beginPath();ctx.arc(P.x,P.y,4.5,0,2*Math.PI);ctx.fill();
     if(hoverWorld) seg(measureTemp[0],hoverWorld,true);
     if(hoverWorld&&hoverWorld.snapped) drawSnapMarker(toScreen(hoverWorld.x,hoverWorld.y),hoverWorld.kind);
+  }
+  ctx.restore();
+}
+function annType(i){ const a=annotations[i]; return (a&&a.type)||'pin'; }
+function annHandle(a){
+  const t=a.type||'pin';
+  if(t==='circle') return {x:a.cx,y:a.cy};
+  if(t==='cloud') return {x:(a.x1+a.x2)/2,y:(a.y1+a.y2)/2};
+  if(t==='freehand'&&a.pts&&a.pts.length) return a.pts[0];
+  return {x:a.x,y:a.y};
+}
+function noteLabel(sx,sy,text){
+  if(!text) return;
+  const tw=ctx.measureText(text).width;
+  ctx.fillStyle='rgba(11,14,20,.92)';roundRect(sx,sy-11,tw+14,22,6);ctx.fill();
+  ctx.strokeStyle=getCSS('--note');ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#ffe3e5';ctx.fillText(text,sx+7,sy);
+}
+function drawCloud(A,B,color,w){            // khoanh mây: ellipse có vảy gợn sóng
+  const cx=(A.x+B.x)/2, cy=(A.y+B.y)/2, rx=Math.abs(B.x-A.x)/2, ry=Math.abs(B.y-A.y)/2;
+  if(rx<3||ry<3) return;
+  const per=Math.PI*(3*(rx+ry)-Math.sqrt(Math.max(0,(3*rx+ry)*(rx+3*ry))));
+  const n=Math.max(8,Math.round(per/16));
+  ctx.strokeStyle=color; ctx.lineWidth=w; ctx.setLineDash([]);
+  ctx.beginPath();
+  for(let k=0;k<n;k++){
+    const t0=k/n*2*Math.PI, t1=(k+1)/n*2*Math.PI;
+    const p0={x:cx+rx*Math.cos(t0),y:cy+ry*Math.sin(t0)};
+    const p1={x:cx+rx*Math.cos(t1),y:cy+ry*Math.sin(t1)};
+    const mx=(p0.x+p1.x)/2, my=(p0.y+p1.y)/2, r=Math.hypot(p1.x-p0.x,p1.y-p0.y)/2;
+    const a0=Math.atan2(p0.y-my,p0.x-mx), a1=Math.atan2(p1.y-my,p1.x-mx);
+    const apex=Math.atan2(my-cy,mx-cx);
+    const span=((a1-a0)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+    const rel=((apex-a0)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+    if(k===0) ctx.moveTo(p0.x,p0.y);
+    ctx.arc(mx,my,r,a0,a1, rel>span);    // cung phình ra ngoài
+  }
+  ctx.stroke();
+}
+function drawAnnotations(){
+  ctx.save();ctx.font="600 12px system-ui,sans-serif";ctx.textBaseline='middle';
+  const note=getCSS('--note'), acc=getCSS('--accent');
+  for(let i=0;i<annotations.length;i++){
+    const a=annotations[i], t=a.type||'pin', sel=(selected&&selected.kind==='n'&&selected.i===i);
+    const lw=sel?2.6:1.8;
+    ctx.strokeStyle=note; ctx.fillStyle=note; ctx.setLineDash([]);
+    if(t==='pin'){
+      const P=toScreen(a.x,a.y);
+      ctx.beginPath();ctx.arc(P.x,P.y,5.5,0,2*Math.PI);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.6;ctx.stroke();
+      noteLabel(P.x+10,P.y,a.text);
+    } else if(t==='circle'){
+      const C=toScreen(a.cx,a.cy), R=Math.max(2,a.r*view.scale);
+      ctx.lineWidth=lw;ctx.beginPath();ctx.arc(C.x,C.y,R,0,2*Math.PI);ctx.stroke();
+      noteLabel(C.x+R+4,C.y-R,a.text);
+    } else if(t==='cloud'){
+      const A=toScreen(a.x1,a.y1),B=toScreen(a.x2,a.y2);
+      drawCloud(A,B,note,lw);
+      noteLabel(Math.max(A.x,B.x)+4,Math.min(A.y,B.y),a.text);
+    } else if(t==='freehand'){
+      const p=a.pts||[];
+      if(p.length){ ctx.lineWidth=lw;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();const s=toScreen(p[0].x,p[0].y);ctx.moveTo(s.x,s.y);for(let k=1;k<p.length;k++){const q=toScreen(p[k].x,p[k].y);ctx.lineTo(q.x,q.y);}ctx.stroke(); noteLabel(s.x+8,s.y,a.text); }
+    }
+    if(sel){ const hp=annHandle(a), P=toScreen(hp.x,hp.y); ctx.strokeStyle=acc;ctx.lineWidth=1.8;ctx.beginPath();ctx.arc(P.x,P.y,8,0,2*Math.PI);ctx.stroke(); }
+  }
+  ctx.restore();
+}
+function drawMarkupPreview(){
+  if(!mark) return;
+  ctx.save(); const note=getCSS('--note'); ctx.strokeStyle=note; ctx.setLineDash([5,4]); ctx.lineWidth=1.8;
+  if(mark.sub==='circle'){
+    const C=toScreen(mark.ax,mark.ay), R=Math.hypot(toScreen(mark.bx,mark.by).x-C.x,toScreen(mark.bx,mark.by).y-C.y);
+    ctx.beginPath();ctx.arc(C.x,C.y,R,0,2*Math.PI);ctx.stroke();
+  } else if(mark.sub==='cloud'){
+    ctx.setLineDash([]); drawCloud(toScreen(mark.ax,mark.ay),toScreen(mark.bx,mark.by),note,1.8);
+  } else if(mark.sub==='free'){
+    const p=mark.pts||[]; if(p.length){ctx.setLineDash([]);ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();const s=toScreen(p[0].x,p[0].y);ctx.moveTo(s.x,s.y);for(let k=1;k<p.length;k++){const q=toScreen(p[k].x,p[k].y);ctx.lineTo(q.x,q.y);}ctx.stroke();}
   }
   ctx.restore();
 }
@@ -964,21 +1078,6 @@ function drawPickCursor(){
   ctx.moveTo(P.x,P.y-13);ctx.lineTo(P.x,P.y-4);ctx.moveTo(P.x,P.y+4);ctx.lineTo(P.x,P.y+13);
   ctx.stroke();
   if(pickSnap.snapped) drawSnapMarker(P,pickSnap.kind);
-  ctx.restore();
-}
-function drawAnnotations(){
-  ctx.save();ctx.font="600 12px system-ui,sans-serif";ctx.textBaseline='middle';
-  for(const a of annotations){
-    const P=toScreen(a.x,a.y);
-    // ghim
-    ctx.fillStyle=getCSS('--note');ctx.beginPath();ctx.arc(P.x,P.y,5.5,0,2*Math.PI);ctx.fill();
-    ctx.strokeStyle='#fff';ctx.lineWidth=1.6;ctx.stroke();
-    // nhãn
-    const tw=ctx.measureText(a.text).width;
-    ctx.fillStyle='rgba(11,14,20,.92)';roundRect(P.x+10,P.y-11,tw+14,22,6);ctx.fill();
-    ctx.strokeStyle=getCSS('--note');ctx.lineWidth=1;ctx.stroke();
-    ctx.fillStyle='#ffe3e5';ctx.fillText(a.text,P.x+17,P.y);
-  }
   ctx.restore();
 }
 function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
@@ -1015,6 +1114,7 @@ function draw(){
   for(const e of entities) if(e.type!=='HATCH') drawEntity(e);
   drawMeasurements();
   drawAnnotations();
+  drawMarkupPreview();
   drawPickCursor();
 }
 
@@ -1029,26 +1129,32 @@ function applyZoom(f,cx,cy){const w=toWorld(cx,cy);view.scale=clamp(view.scale*f
 
 /* ---- chọn điểm với kính lúp phóng to (đo / ghi chú) ---- */
 function hideLoupe(){ if(loupeHold){clearTimeout(loupeHold);loupeHold=null;} loupeOn=false; loupe.style.display='none'; }
-function startPick(p){
-  picking=true; pickScreen=p; pickSnap=snap(toWorld(p.x,p.y),p);
-  if(mode==='measure'&&measureTemp.length===1) hoverWorld=pickSnap;
+function startPick(p,target){
+  picking=true; pickTarget=target||{kind:'new-measure'}; pickScreen=p; pickSnap=snap(toWorld(p.x,p.y),p);
+  if(pickTarget.kind==='new-measure'&&measureTemp.length===1) hoverWorld=pickSnap;
   loupeOn=false; if(loupeHold)clearTimeout(loupeHold);
   loupeHold=setTimeout(()=>{ if(picking){ loupeOn=true; renderLoupe(); } },130); // giữ lâu thì hiện kính lúp
   draw();
 }
 function movePick(p){
   pickScreen=p; pickSnap=snap(toWorld(p.x,p.y),p);
-  if(mode==='measure'&&measureTemp.length===1) hoverWorld=pickSnap;
+  const t=pickTarget;
+  if(t.kind==='new-measure'){ if(measureTemp.length===1) hoverWorld=pickSnap; }
+  else if(moved){                       // chỉ dời khi thật sự kéo (chạm tại chỗ = chọn)
+    if(t.kind==='mEnd') measurements[t.i][t.h]={x:pickSnap.x,y:pickSnap.y};
+    else if(t.kind==='pin'){ const a=annotations[t.i]; a.x=pickSnap.x; a.y=pickSnap.y; }
+  }
   if(!loupeOn && moved) loupeOn=true;   // kéo là hiện kính lúp ngay
   draw();
   if(loupeOn) renderLoupe();
 }
-function cancelPick(){ hideLoupe(); picking=false; pickSnap=null; activePickId=null; }
+function cancelPick(){ hideLoupe(); picking=false; pickSnap=null; pickTarget=null; activePickId=null; }
 function commitPick(){
   if(!picking) return;
-  const sn=pickSnap; hideLoupe(); picking=false; pickSnap=null;
+  const sn=pickSnap, t=pickTarget, wasMoved=moved;
+  hideLoupe(); picking=false; pickSnap=null; pickTarget=null;
   if(!sn){ draw(); return; }
-  if(mode==='measure'){
+  if(t.kind==='new-measure'){
     measureTemp.push({x:sn.x,y:sn.y});
     if(measureTemp.length===2){
       measurements.push({a:measureTemp[0],b:measureTemp[1]});
@@ -1056,11 +1162,60 @@ function commitPick(){
       measureTemp=[]; hoverWorld=null;
     }
     updateHint();
-  } else if(mode==='note'){
-    pendingNote={x:sn.x,y:sn.y};
-    openModal(noteOverlay); setTimeout(()=>noteInput.focus(),60);
+  } else if(t.kind==='new-pin'){
+    pendingNote={x:sn.x,y:sn.y}; editingIdx=-1; showNoteModal();
+  } else if(t.kind==='mEnd'){
+    if(!wasMoved) selectMeasure(t.i);                                    // chạm = chọn phép đo
+    else { selected={kind:'m',i:t.i}; showVal(formatDist(dist(measurements[t.i].a,measurements[t.i].b))); }
+  } else if(t.kind==='pin'){
+    if(!wasMoved) editAnnotation(t.i);                                   // chạm = sửa ghi chú
   }
   draw();
+}
+/* ---- chọn / sửa / xoá đối tượng đã đặt ---- */
+function distToSeg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,L=dx*dx+dy*dy; if(L<1e-9)return Math.hypot(p.x-a.x,p.y-a.y); let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/L; t=Math.max(0,Math.min(1,t)); return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));}
+function hitHandle(screen){
+  const TH=22; let best=null, bd=TH;
+  for(let i=0;i<measurements.length;i++) for(const h of ['a','b']){
+    const P=toScreen(measurements[i][h].x,measurements[i][h].y);
+    const d=Math.hypot(P.x-screen.x,P.y-screen.y); if(d<bd){bd=d;best={kind:'mEnd',i,h};}
+  }
+  for(let i=0;i<annotations.length;i++){ if((annotations[i].type||'pin')!=='pin') continue;
+    const P=toScreen(annotations[i].x,annotations[i].y);
+    const d=Math.hypot(P.x-screen.x,P.y-screen.y); if(d<bd){bd=d;best={kind:'ann',i};}
+  }
+  if(best) return best;                          // ưu tiên kéo đầu mút đo / ghim
+  const w=toWorld(screen.x,screen.y), s=view.scale; // rồi mới xét chạm vào hình đánh dấu
+  for(let i=annotations.length-1;i>=0;i--){
+    const a=annotations[i], t=a.type||'pin';
+    if(t==='circle'){ if(Math.abs(Math.hypot(w.x-a.cx,w.y-a.cy)-a.r)*s<16) return {kind:'ann',i}; }
+    else if(t==='cloud'){ const x0=Math.min(a.x1,a.x2),x1=Math.max(a.x1,a.x2),y0=Math.min(a.y1,a.y2),y1=Math.max(a.y1,a.y2),mg=12/s; if(w.x>=x0-mg&&w.x<=x1+mg&&w.y>=y0-mg&&w.y<=y1+mg) return {kind:'ann',i}; }
+    else if(t==='freehand'){ const p=a.pts||[]; for(let k=1;k<p.length;k++) if(distToSeg(w,p[k-1],p[k])*s<13) return {kind:'ann',i}; }
+  }
+  return null;
+}
+function selectMeasure(i){ selected={kind:'m',i}; updateHint(); draw(); toast('Đã chọn phép đo · bấm Xoá để xoá'); }
+function editAnnotation(i){ selected={kind:'n',i}; editingIdx=i; showNoteModal(); }
+function deleteSelected(){
+  if(!selected) return false;
+  if(selected.kind==='m'){ measurements.splice(selected.i,1); toast('Đã xoá phép đo'); }
+  else { annotations.splice(selected.i,1); toast('Đã xoá ghi chú'); }
+  selected=null; draw(); return true;
+}
+/* ---- hoàn tất một hình đánh dấu vừa vẽ ---- */
+function finishMark(){
+  const m=mark; mark=null;
+  let ann=null;
+  if(m){
+    if(m.sub==='circle'){ const r=Math.hypot(m.bx-m.ax,m.by-m.ay); if(r*view.scale>6) ann={type:'circle',cx:m.ax,cy:m.ay,r}; }
+    else if(m.sub==='cloud'){ if(Math.abs(m.bx-m.ax)*view.scale>10&&Math.abs(m.by-m.ay)*view.scale>10) ann={type:'cloud',x1:m.ax,y1:m.ay,x2:m.bx,y2:m.by}; }
+    else if(m.sub==='free'){
+      const pts=[m.pts[0]]; for(let k=1;k<m.pts.length;k++){const a=pts[pts.length-1],b=m.pts[k]; if(Math.hypot(b.x-a.x,b.y-a.y)*view.scale>2) pts.push(b);}
+      if(pts.length>=2) ann={type:'freehand',pts};
+    }
+  }
+  if(ann){ annotations.push(ann); editingIdx=annotations.length-1; selected={kind:'n',i:editingIdx}; showNoteModal(); }
+  else draw();
 }
 function renderLoupe(){
   if(!loupeOn||!pickSnap) return;
@@ -1092,11 +1247,21 @@ function renderLoupe(){
 cv.addEventListener('pointerdown',e=>{
   const p=loc(e); pointers.set(e.pointerId,p);
   if(pointers.size===1){
-    downPt=p;lastPanPt=p;moved=false;
-    if((mode==='measure'||mode==='note') && entities.length){ startPick(p); activePickId=e.pointerId; }
+    downPt=p;lastPanPt=p;moved=false;downHit=null;
+    if(!entities.length) return;
+    if(mode==='measure'){ startPick(p,{kind:'new-measure'}); activePickId=e.pointerId; }
+    else if(mode==='note'){
+      if(noteSub==='pin'){ startPick(p,{kind:'new-pin'}); activePickId=e.pointerId; }
+      else { const w=toWorld(p.x,p.y); mark={sub:noteSub,ax:w.x,ay:w.y,bx:w.x,by:w.y,pts:[{x:w.x,y:w.y}]}; activePickId=e.pointerId; draw(); }
+    }
+    else { // pan: thử cầm tay cầm (đầu mút đo / ghim) để kéo-sửa
+      const hit=hitHandle(p); downHit=hit;
+      if(hit&&hit.kind==='mEnd'){ startPick(p,{kind:'mEnd',i:hit.i,h:hit.h}); activePickId=e.pointerId; }
+      else if(hit&&hit.kind==='ann'&&annType(hit.i)==='pin'){ startPick(p,{kind:'pin',i:hit.i}); activePickId=e.pointerId; }
+    }
   }
   else if(pointers.size===2){
-    cancelPick();   // 2 ngón = di chuyển/zoom, không chọn điểm
+    cancelPick(); mark=null;       // 2 ngón = di chuyển/zoom
     const a=[...pointers.values()];lastPinchDist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);lastCenter={x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};
   }
 });
@@ -1110,17 +1275,24 @@ window.addEventListener('pointermove',e=>{
     lastPinchDist=d;lastCenter=c;moved=true;return;
   }
   if(Math.hypot(p.x-downPt.x,p.y-downPt.y)>6) moved=true;
-  if(mode==='pan'){view.offsetX+=p.x-lastPanPt.x;view.offsetY+=p.y-lastPanPt.y;lastPanPt=p;draw();}
-  else if(picking){ movePick(p); }
+  if(picking){ movePick(p); }
+  else if(mark){ const w=toWorld(p.x,p.y); if(mark.sub==='free') mark.pts.push({x:w.x,y:w.y}); else { mark.bx=w.x; mark.by=w.y; } draw(); }
+  else if(mode==='pan'){ view.offsetX+=p.x-lastPanPt.x;view.offsetY+=p.y-lastPanPt.y;lastPanPt=p;draw(); }
 },{passive:false});
 function endPointer(e){
   if(!pointers.has(e.pointerId) && e.pointerId!==activePickId) return;
   const wasPick = picking && e.pointerId===activePickId;
-  if(wasPick) activePickId=null;
+  const wasMark = mark && e.pointerId===activePickId;
+  const tapHit = (!moved) ? downHit : null;
+  if(e.pointerId===activePickId) activePickId=null;
   pointers.delete(e.pointerId);
   if(pointers.size<2){lastPinchDist=null;lastCenter=null;}
-  if(wasPick) commitPick();          // chốt điểm khi nhấc đúng ngón đang chọn (không phụ thuộc đếm ngón)
-  if(pointers.size===0){ hoverWorld=null; draw(); }
+  if(wasPick) commitPick();                       // chốt điểm / chọn / sửa
+  else if(wasMark) finishMark();                  // hoàn tất hình đánh dấu
+  else if(mode==='pan' && tapHit && tapHit.kind==='ann') editAnnotation(tapHit.i);   // chạm hình đánh dấu = sửa
+  else if(mode==='pan' && !moved && !tapHit && selected){ selected=null; draw(); }   // chạm chỗ trống = bỏ chọn
+  downHit=null;
+  if(pointers.size===0){ hoverWorld=null; if(!picking) draw(); }
 }
 window.addEventListener('pointerup',endPointer);
 window.addEventListener('pointercancel',endPointer);
@@ -1128,39 +1300,38 @@ cv.addEventListener('wheel',e=>{e.preventDefault();const p=loc(e);applyZoom(e.de
 cv.addEventListener('contextmenu',e=>e.preventDefault());   // chặn menu khi giữ lâu (iOS)
 cv.addEventListener('selectstart',e=>e.preventDefault());   // chặn bôi chọn khi giữ lâu
 
-function handleTap(p){
-  if(!entities.length)return;
-  const w=toWorld(p.x,p.y), sn=snap(w,p);
-  if(mode==='measure'){
-    measureTemp.push({x:sn.x,y:sn.y});
-    if(measureTemp.length===2){
-      measurements.push({a:measureTemp[0],b:measureTemp[1]});
-      showVal(formatDist(dist(measureTemp[0],measureTemp[1])));
-      measureTemp=[]; hoverWorld=null;
-    }
-    updateHint(); draw();
-  } else if(mode==='note'){
-    pendingNote={x:sn.x,y:sn.y};
-    openModal(noteOverlay); setTimeout(()=>noteInput.focus(),60);
-  }
-}
-
 /* =========================================================================
    6) UI
    ========================================================================= */
 const hintEl=document.getElementById('hint'), valEl=document.getElementById('val');
+const subRow=document.getElementById('subRow');
+subRow.querySelectorAll('.pill').forEach(b=>b.addEventListener('click',()=>{
+  noteSub=b.dataset.sub;
+  subRow.querySelectorAll('.pill').forEach(x=>x.classList.toggle('active',x===b));
+  updateHint();
+}));
 function updateHint(){
   let t='';
-  if(mode==='pan') t='Kéo để di chuyển · chụm 2 ngón để phóng to';
-  else if(mode==='measure') t = (measureTemp.length===0 ? 'Đo: giữ & rê để bắt điểm đầu' : 'Đo: giữ & rê để bắt điểm cuối') + ' · 2 ngón để di chuyển';
-  else if(mode==='note') t='Ghi chú: giữ & rê chọn vị trí, nhấc tay để ghim';
+  if(mode==='pan'){
+    t=(measurements.length||annotations.length)
+      ? 'Kéo nền để di chuyển · chạm đối tượng để sửa · kéo đầu mút để chỉnh điểm'
+      : 'Kéo để di chuyển · chụm 2 ngón để phóng to';
+  }
+  else if(mode==='measure') t=(measureTemp.length===0?'Đo: giữ & rê để bắt điểm đầu':'Đo: giữ & rê để bắt điểm cuối')+' · 2 ngón để di chuyển';
+  else if(mode==='note'){
+    t = noteSub==='pin'   ? 'Ghim: giữ & rê chọn vị trí, nhấc tay để ghim'
+      : noteSub==='circle'? 'Khoanh tròn: kéo từ tâm ra để bao quanh vùng'
+      : noteSub==='cloud' ? 'Khoanh mây: kéo một khung quanh vùng cần chú ý'
+      :                     'Vẽ tay: rê ngón để vẽ đường khoanh vùng';
+  }
   hintEl.textContent=t;
 }
 function showVal(s){valEl.textContent=s;valEl.classList.add('show');}
 function setMode(m){
-  cancelPick();
+  cancelPick(); mark=null; selected=null;
   mode=m; measureTemp=[]; hoverWorld=null;
   document.querySelectorAll('.tool[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
+  subRow.classList.toggle('show', m==='note');
   updateHint(); draw();
 }
 document.querySelectorAll('.tool[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
@@ -1340,27 +1511,43 @@ document.getElementById('fileInput').addEventListener('change',e=>{
   e.target.value='';
 });
 
-// note modal
+// note modal (thêm / sửa / xoá)
 const noteOverlay=document.getElementById('noteOverlay'), noteInput=document.getElementById('noteInput');
+const noteTitle=document.getElementById('noteTitle'), noteDelete=document.getElementById('noteDelete'), noteOkBtn=document.getElementById('noteOk');
 function openModal(o){o.classList.add('show');}
 function closeModal(o){o.classList.remove('show');}
-document.getElementById('noteCancel').addEventListener('click',()=>{pendingNote=null;noteInput.value='';closeModal(noteOverlay);});
+function resetNote(){ pendingNote=null; editingIdx=-1; noteInput.value=''; }
+function showNoteModal(){
+  const editing=editingIdx>=0;
+  noteTitle.textContent=editing?'Sửa ghi chú':'Thêm ghi chú';
+  noteInput.value=editing?(annotations[editingIdx].text||''):'';
+  noteDelete.style.display=editing?'block':'none';
+  noteOkBtn.textContent=editing?'Lưu':'Thêm ghim';
+  openModal(noteOverlay); draw(); setTimeout(()=>noteInput.focus(),60);
+}
+document.getElementById('noteCancel').addEventListener('click',()=>{resetNote();closeModal(noteOverlay);draw();});
 function commitNote(){
   const t=noteInput.value.trim();
-  if(t&&pendingNote){annotations.push({x:pendingNote.x,y:pendingNote.y,text:t});draw();}
-  pendingNote=null;noteInput.value='';closeModal(noteOverlay);
+  if(editingIdx>=0){ annotations[editingIdx].text=t; }            // sửa: cho phép để trống (chỉ còn hình)
+  else if(pendingNote && t){ annotations.push({type:'pin',x:pendingNote.x,y:pendingNote.y,text:t}); }
+  resetNote(); closeModal(noteOverlay); draw();
 }
-document.getElementById('noteOk').addEventListener('click',commitNote);
+function deleteNote(){
+  if(editingIdx>=0){ annotations.splice(editingIdx,1); selected=null; toast('Đã xoá ghi chú'); }
+  resetNote(); closeModal(noteOverlay); draw();
+}
+noteOkBtn.addEventListener('click',commitNote);
+noteDelete.addEventListener('click',deleteNote);
 noteInput.addEventListener('keydown',e=>{if(e.key==='Enter')commitNote();});
 
 // clear sheet
 const clearOverlay=document.getElementById('clearOverlay');
-document.getElementById('t-clear').addEventListener('click',()=>{if(entities.length)openModal(clearOverlay);});
+document.getElementById('t-clear').addEventListener('click',()=>{ if(deleteSelected())return; if(entities.length)openModal(clearOverlay); });
 document.getElementById('clearCancel').addEventListener('click',()=>closeModal(clearOverlay));
-document.getElementById('clearMeasure').addEventListener('click',()=>{measurements=[];measureTemp=[];valEl.classList.remove('show');draw();closeModal(clearOverlay);toast('Đã xoá các phép đo');});
-document.getElementById('clearNotes').addEventListener('click',()=>{annotations=[];draw();closeModal(clearOverlay);toast('Đã xoá các ghi chú');});
-document.getElementById('clearAll').addEventListener('click',()=>{measurements=[];annotations=[];measureTemp=[];valEl.classList.remove('show');draw();closeModal(clearOverlay);toast('Đã xoá hết');});
-[noteOverlay,clearOverlay].forEach(o=>o.addEventListener('click',e=>{if(e.target===o){closeModal(o);pendingNote=null;noteInput.value='';}}));
+document.getElementById('clearMeasure').addEventListener('click',()=>{measurements=[];measureTemp=[];selected=null;valEl.classList.remove('show');draw();closeModal(clearOverlay);toast('Đã xoá các phép đo');});
+document.getElementById('clearNotes').addEventListener('click',()=>{annotations=[];selected=null;draw();closeModal(clearOverlay);toast('Đã xoá các ghi chú');});
+document.getElementById('clearAll').addEventListener('click',()=>{measurements=[];annotations=[];measureTemp=[];selected=null;valEl.classList.remove('show');draw();closeModal(clearOverlay);toast('Đã xoá hết');});
+[noteOverlay,clearOverlay].forEach(o=>o.addEventListener('click',e=>{if(e.target===o){closeModal(o);resetNote();}}));
 
 // toast
 let toastT;
