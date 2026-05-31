@@ -1122,7 +1122,7 @@ function draw(){
    5) TƯƠNG TÁC (kéo, chụm zoom, chạm)
    ========================================================================= */
 const pointers=new Map();
-let downPt=null,lastPanPt=null,moved=false,lastPinchDist=null,lastCenter=null;
+let downPt=null,lastPanPt=null,moved=false,lastPinchDist=null,lastCenter=null,pinchActive=false;
 
 function loc(e){const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
 function applyZoom(f,cx,cy){const w=toWorld(cx,cy);view.scale=clamp(view.scale*f,1e-9,1e12);view.offsetX=cx-w.x*view.scale;view.offsetY=cy+w.y*view.scale;}
@@ -1261,7 +1261,7 @@ cv.addEventListener('pointerdown',e=>{
     }
   }
   else if(pointers.size===2){
-    cancelPick(); mark=null;       // 2 ngón = di chuyển/zoom
+    pinchActive=true; cancelPick(); mark=null;       // 2 ngón = di chuyển/zoom
     const a=[...pointers.values()];lastPinchDist=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);lastCenter={x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};
   }
 });
@@ -1274,6 +1274,7 @@ window.addEventListener('pointermove',e=>{
     if(lastPinchDist!=null&&lastCenter){const w=toWorld(lastCenter.x,lastCenter.y);view.scale=clamp(view.scale*(d/lastPinchDist),1e-9,1e12);view.offsetX=c.x-w.x*view.scale;view.offsetY=c.y+w.y*view.scale;draw();}
     lastPinchDist=d;lastCenter=c;moved=true;return;
   }
+  if(pinchActive) return;     // còn ngón sót sau khi chụm → bỏ qua, không kéo (tránh nhảy khi thả)
   if(Math.hypot(p.x-downPt.x,p.y-downPt.y)>6) moved=true;
   if(picking){ movePick(p); }
   else if(mark){ const w=toWorld(p.x,p.y); if(mark.sub==='free') mark.pts.push({x:w.x,y:w.y}); else { mark.bx=w.x; mark.by=w.y; } draw(); }
@@ -1287,6 +1288,12 @@ function endPointer(e){
   if(e.pointerId===activePickId) activePickId=null;
   pointers.delete(e.pointerId);
   if(pointers.size<2){lastPinchDist=null;lastCenter=null;}
+  if(pinchActive){                                   // đang chụm 2 ngón
+    if(pointers.size===0) pinchActive=false;         // nhấc hết ngón mới thoát chụm
+    downHit=null;
+    if(pointers.size===0){ hoverWorld=null; draw(); }
+    return;                                          // không chốt/chọn cho lần nhấc trong lúc chụm
+  }
   if(wasPick) commitPick();                       // chốt điểm / chọn / sửa
   else if(wasMark) finishMark();                  // hoàn tất hình đánh dấu
   else if(mode==='pan' && tapHit && tapHit.kind==='ann') editAnnotation(tapHit.i);   // chạm hình đánh dấu = sửa
