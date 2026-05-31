@@ -316,12 +316,47 @@ function hexA(h,al){ let s=String(h).replace('#',''); if(s.length===3) s=s.split
    Giải mã chuỗi chữ AutoCAD: \U+XXXX (Unicode), %%d/%%c/%%p,
    và lược bỏ mã định dạng MTEXT (\f \H \C \A \P {…}). Chuẩn hoá NFC.
    ============================================================ */
+/* ---- VNI-Windows / TCVN font cũ -> Unicode (chỉ áp dụng cho run dùng font đó) ---- */
+const _VNI_TONE={ a:'áàảãạ','ă':'ắằẳẵặ','â':'ấầẩẫậ',e:'éèẻẽẹ','ê':'ếềểễệ',i:'íìỉĩị',o:'óòỏõọ','ô':'ốồổỗộ','ơ':'ớờởỡợ',u:'úùủũụ','ư':'ứừửữự',y:'ýỳỷỹỵ',
+  A:'ÁÀẢÃẠ','Ă':'ẮẰẲẴẶ','Â':'ẤẦẨẪẬ',E:'ÉÈẺẼẸ','Ê':'ẾỀỂỄỆ',I:'ÍÌỈĨỊ',O:'ÓÒỎÕỌ','Ô':'ỐỒỔỖỘ','Ơ':'ỚỜỞỠỢ',U:'ÚÙỦŨỤ','Ư':'ỨỪỬỮỰ',Y:'ÝỲỶỸỴ' };
+const _VNI_SHAPE={ circ:{a:'â',e:'ê',o:'ô',A:'Â',E:'Ê',O:'Ô'}, breve:{a:'ă',A:'Ă'} };
+function _vniShape(b,sh){ const m=_VNI_SHAPE[sh]; return (m&&m[b])?m[b]:b; }
+function _vniTone(v,t){ const r=_VNI_TONE[v]; return r?r[t]:null; }
+function _vniST(prev,sh,t){ const s=_vniShape(prev,sh); if(t<0) return (s!==prev)?s:null; return _vniTone(s,t)||null; }
+const _VNI_BASE={ '\u00F6':'ư','\u00D6':'Ư' };  // ö Ö -> ư Ư
+const _VNI_COMB={
+  '\u00E2':p=>_vniST(p,'circ',-1),'\u00C2':p=>_vniST(p,'circ',-1),
+  '\u00E1':p=>_vniST(p,'circ',0),'\u00C1':p=>_vniST(p,'circ',0),
+  '\u00E0':p=>_vniST(p,'circ',1),'\u00C0':p=>_vniST(p,'circ',1),
+  '\u00E3':p=>_vniST(p,'circ',3),'\u00C3':p=>_vniST(p,'circ',3),
+  '\u00E4':p=>_vniST(p,'circ',4),'\u00C4':p=>_vniST(p,'circ',4),
+  '\u00E5':p=>_vniST(p,'circ',2),'\u00C5':p=>_vniST(p,'circ',2),
+  '\u00E9':p=>_vniST(p,'breve',0),'\u00C9':p=>_vniST(p,'breve',0),
+  '\u00E8':p=>_vniST(p,'breve',1),'\u00C8':p=>_vniST(p,'breve',1),
+  '\u00EB':p=>_vniST(p,'breve',4),'\u00CB':p=>_vniST(p,'breve',4),
+  '\u00EA':p=>_vniST(p,'breve',-1),'\u00CA':p=>_vniST(p,'breve',-1),
+  '\u00D8':p=>_vniTone(p,1),'\u00F8':p=>_vniTone(p,1),
+  '\u00EF':p=>_vniTone(p,4),'\u00CF':p=>_vniTone(p,4)
+};
+function vniDecode(s){
+  const out=[];
+  for(const ch of s){
+    if(_VNI_BASE[ch]!==undefined){ out.push(_VNI_BASE[ch]); continue; }
+    const f=_VNI_COMB[ch];
+    if(f && out.length){ const r=f(out[out.length-1]); if(r){ out[out.length-1]=r; continue; } }
+    out.push(ch);
+  }
+  return out.join('');
+}
+
 function decodeCAD(s){
   if(s==null) return '';
   let t=String(s);
-  // Unicode escapes \U+XXXX (4-6 hex) & \M+nXXXX -> ký tự (gồm dấu kết hợp)
-  t=t.replace(/\\U\+([0-9A-Fa-f]{4,6})/g,(_,h)=>{try{return String.fromCodePoint(parseInt(h,16));}catch(e){return '';}});
+  // Unicode escapes \U+XXXX (đúng 4 hex của AutoCAD) & \M+nXXXX -> ký tự (gồm dấu kết hợp)
+  t=t.replace(/\\U\+([0-9A-Fa-f]{4})/g,(_,h)=>{try{return String.fromCodePoint(parseInt(h,16));}catch(e){return '';}});
   t=t.replace(/\\M\+[0-9A-Fa-f]([0-9A-Fa-f]{4})/g,(_,h)=>{try{return String.fromCodePoint(parseInt(h,16));}catch(e){return '';}});
+  // các đoạn dùng font VNI/TCVN/ABC cũ -> chuyển sang Unicode (chỉ trong phạm vi run đó)
+  t=t.replace(/\\f([^;\\]*);([^\\{}]*)/g,(m,font,body)=> /VNI|\.Vn|TCVN|ABC/i.test(font) ? ('\\f'+font+';'+vniDecode(body)) : m);
   // ngắt dòng/đoạn & khoảng trắng không ngắt -> khoảng trắng (giữ 1 dòng)
   t=t.replace(/\\P/g,' ').replace(/\\X/g,' ').replace(/\\~/g,' ');
   // mã định dạng MTEXT có dấu ';' (\fArial..; \H..; \C..; \A..; \W..; \Q..; \T..; \p..)
