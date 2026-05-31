@@ -1059,7 +1059,7 @@ const empty=document.getElementById('empty');
 function loadDXF(text){
   try{
     const r=parseDXF(text);
-    entities=resolveBlocks(r.entities, r.blocks); insunits=r.insunits;
+    entities=mergeText(resolveBlocks(r.entities, r.blocks)); insunits=r.insunits;
     if(!entities.length){toast('Không tìm thấy thực thể vẽ nào trong file.');return;}
     measurements=[]; annotations=[]; measureTemp=[]; hoverWorld=null;
     buildSnap(); empty.classList.add('hidden');
@@ -1137,13 +1137,62 @@ function buildLayerColors(db){
   }
 }
 // Dựng bản đồ block + model space từ DwgDatabase, rồi khai triển INSERT/DIMENSION
+/* Gộp các mảnh chữ cùng dòng (bản vẽ Việt cũ hay tách nguyên âm có dấu thành TEXT riêng).
+   Chỉ gộp chữ NGANG, cùng layer, cùng baseline y, cùng cỡ chữ, X nối sát nhau. */
+function buildRunText(run){
+  if(run.length===1) return run[0].text;
+  const L=e=>Math.max([...e.text].length,1);
+  const h=run[0].h||10;
+  const adv=[];
+  for(let i=0;i<run.length-1;i++){ const dx=run[i+1].x-run[i].x; if(dx>0) adv.push(dx/L(run[i])); }
+  adv.sort((a,b)=>a-b);
+  let cw=adv.length?adv[Math.floor(adv.length/2)]:h*0.6;   // bề rộng/ký tự font gốc (tự ước lượng)
+  cw=Math.min(Math.max(cw,h*0.35),h*1.2);
+  let txt=run[0].text;
+  for(let i=1;i<run.length;i++){
+    const extra=(run[i].x-run[i-1].x)-L(run[i-1])*cw;      // advance dôi ra -> có khoảng trắng thật
+    const sp=(extra>cw*0.55 && !/\s$/.test(txt) && !/^\s/.test(run[i].text))?' ':'';
+    txt+=sp+run[i].text;
+  }
+  return txt;
+}
+function mergeText(ents){
+  const texts=[], others=[];
+  for(const e of ents){ if(e&&e.type==='TEXT'&&e.text!=null) texts.push(e); else others.push(e); }
+  const norm=r=>((r||0)%360+360)%360;
+  const isH=e=>{const r=norm(e.rot);return r<1||r>359;};
+  const horiz=texts.filter(isH), rots=texts.filter(e=>!isH(e));
+  const groups=new Map();
+  for(const e of horiz){ const h=e.h||10; const k=(e.layer||'')+'|'+Math.round(e.y/(h*0.35));
+    if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(e); }
+  const out=[];
+  for(const arr of groups.values()){
+    arr.sort((a,b)=>a.x-b.x);
+    let i=0;
+    while(i<arr.length){
+      const run=[arr[i]]; let j=i+1;
+      while(j<arr.length){
+        const prev=run[run.length-1], cur=arr[j], h=prev.h||10;
+        if(Math.abs((cur.h||10)-h)>h*0.25) break;                 // khác cỡ chữ
+        if(Math.abs(cur.y-prev.y)>h*0.4) break;                   // khác baseline
+        const dx=cur.x-prev.x; if(dx<-h*0.3) break;               // lùi quá nhiều
+        if(dx/Math.max([...prev.text].length,1)>h*1.6) break;     // hở quá lớn -> nhãn khác
+        if(/[0-9]$/.test(prev.text)&&/^[0-9]/.test(cur.text)) break; // không nối số với số
+        run.push(cur); j++;
+      }
+      out.push(run.length>1?Object.assign({},run[0],{text:buildRunText(run)}):run[0]);
+      i=j;
+    }
+  }
+  return others.concat(rots,out);
+}
 function dwgBuild(db){
   buildLayerColors(db);
   const blocks={};
   const recs=(db.tables&&db.tables.BLOCK_RECORD&&db.tables.BLOCK_RECORD.entries)||[];
   for(const r of recs){ if(r.name) blocks[r.name]={base:r.basePoint||{x:0,y:0}, entities:dwgList(r.entities)}; }
   const model=dwgList(db.entities);
-  return { entities: resolveBlocks(model, blocks), insunits:(db.header&&db.header.INSUNITS)||0 };
+  return { entities: mergeText(resolveBlocks(model, blocks)), insunits:(db.header&&db.header.INSUNITS)||0 };
 }
 async function loadDWG(arrayBuffer){
   try{
