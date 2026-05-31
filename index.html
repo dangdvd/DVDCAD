@@ -1632,7 +1632,14 @@ function switchLayout(i){
     buildSnap(); buildLayerList();
     setMode('pan'); fitView(); loadOverlay();
     updateLayoutBtn(); renderLayoutList();
-    toast((L.isModel?'Mô hình (Model)':('Layout: '+L.name))+' · '+entities.length+' đối tượng');
+    if(L.isModel){ toast('Mô hình (Model) · '+entities.length+' đối tượng'); }
+    else {
+      const vpContent=entities.filter(e=>e.clip).length, nVp=(L.paper&&L.paper.viewports.length)||0;
+      if(nVp>0 && vpContent < Math.max(15, modelEntities.length*0.02))
+        toast('Layout: '+L.name+' — khung nhìn đang trỏ vào vùng trống (bản vẽ nằm xa khung). File lưu hướng nhìn chưa khớp nội dung.');
+      else
+        toast('Layout: '+L.name+' · '+nVp+' khung nhìn · '+entities.length+' đối tượng');
+    }
   }
   closeModal(layoutOverlay);
   requestAnimationFrame(forceRedraw);               // ép iOS vẽ lại lên màn hình
