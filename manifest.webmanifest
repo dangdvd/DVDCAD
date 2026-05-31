@@ -1,6 +1,6 @@
 {
-  "name": "CAD Xem — Trình xem DWG/DXF",
-  "short_name": "CAD Xem",
+  "name": "DVDCAD — Trình xem DWG/DXF",
+  "short_name": "DVDCAD",
   "description": "Xem bản vẽ DWG/DXF, đo khoảng cách và thêm ghi chú. Hoạt động offline.",
   "lang": "vi",
   "dir": "ltr",
