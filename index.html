@@ -1166,6 +1166,18 @@ function drawEntity(e){
     case 'XLINE':{const P=toScreen(e.x,e.y);const s=clipInfiniteLine(P.x,P.y,e.dx,-e.dy,W(),H(),e.ray);if(s){ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();}break;}
   }
 }
+// Gộp nét theo màu: thêm hình của 1 nét vào path hiện tại (không stroke)
+const BATCH_TYPES=new Set(['LINE','POLYLINE','CIRCLE','ARC','ELLIPSE']);
+function batchable(e){ return BATCH_TYPES.has(e.type) && !e._img && !e.clip; }
+function addPath(e){
+  switch(e.type){
+    case 'LINE':{const a=toScreen(e.x1,e.y1),b=toScreen(e.x2,e.y2);ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);break;}
+    case 'POLYLINE':{const v=e.vertices;if(!v||!v.length)break;const p0=toScreen(v[0].x,v[0].y);ctx.moveTo(p0.x,p0.y);for(let k=1;k<v.length;k++){const p=toScreen(v[k].x,v[k].y);ctx.lineTo(p.x,p.y);}if(e.closed){const pc=toScreen(v[0].x,v[0].y);ctx.lineTo(pc.x,pc.y);}break;}
+    case 'CIRCLE':{const n=64;for(let i=0;i<=n;i++){const t=i/n*2*Math.PI,p=toScreen(e.cx+Math.cos(t)*e.r,e.cy+Math.sin(t)*e.r);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);}break;}
+    case 'ARC':{let a1=e.a1*Math.PI/180,a2=e.a2*Math.PI/180;if(a2<a1)a2+=2*Math.PI;const n=Math.max(8,Math.ceil((a2-a1)/(Math.PI/48)));for(let i=0;i<=n;i++){const t=a1+(a2-a1)*i/n,p=toScreen(e.cx+Math.cos(t)*e.r,e.cy+Math.sin(t)*e.r);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);}break;}
+    case 'ELLIPSE':{const Mx=e.mx,My=e.my,mx=-e.my*e.ratio,my=e.mx*e.ratio;let p1=e.p1,p2=e.p2;if(p2<=p1)p2+=2*Math.PI;const n=72;for(let i=0;i<=n;i++){const t=p1+(p2-p1)*i/n,p=toScreen(e.cx+Math.cos(t)*Mx+Math.sin(t)*mx,e.cy+Math.cos(t)*My+Math.sin(t)*my);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);}break;}
+  }
+}
 function dimArrow(P,ang){ const s=8; ctx.beginPath(); ctx.moveTo(P.x,P.y); ctx.lineTo(P.x-s*Math.cos(ang-0.38),P.y-s*Math.sin(ang-0.38)); ctx.moveTo(P.x,P.y); ctx.lineTo(P.x-s*Math.cos(ang+0.38),P.y-s*Math.sin(ang+0.38)); ctx.stroke(); }
 function dimLabel(sx,sy,text,color){ if(!text) return; ctx.font="600 12px ui-monospace,Menlo,monospace"; const tw=ctx.measureText(text).width; ctx.fillStyle='rgba(11,14,20,.9)'; roundRect(sx-tw/2-7,sy-9,tw+14,18,5); ctx.fill(); ctx.fillStyle=color; ctx.textBaseline='middle'; ctx.textAlign='center'; ctx.fillText(text,sx,sy); ctx.textAlign='left'; }
 function drawOneDim(m,color){
@@ -1400,9 +1412,25 @@ function draw(){
   // lượt 1: tô nền HATCH (nằm dưới)
   for(const e of entities) if(e.type==='HATCH' && !hideL.has(e.layer||'0') && vis(e)){ applyClip(e.clip||null); drawHatch(e); drawn++; }
   applyClip(null);
-  // lượt 2: các nét vẽ (mỗi đối tượng tự đặt màu theo layer)
+  // lượt 2: các nét vẽ — gộp các nét đơn liền nhau cùng màu thành 1 lần stroke (giữ nguyên thứ tự vẽ)
   ctx.lineWidth=1.15; ctx.lineJoin='round'; ctx.lineCap='round';
-  for(const e of entities) if(e.type!=='HATCH' && !hideL.has(e.layer||'0') && vis(e)){ applyClip(e.clip||null); drawEntity(e); drawn++; }
+  const entCss=getCSS('--entity');
+  let curCol=null, open=false;
+  const flush=()=>{ if(open){ ctx.stroke(); open=false; } };
+  for(const e of entities){
+    if(e.type==='HATCH' || hideL.has(e.layer||'0') || !vis(e)) continue;
+    if(batchable(e)){
+      if(_clipCur) applyClip(null);                         // nét gộp không cắt khung nhìn
+      const c=e.col||entCss;
+      if(c!==curCol){ flush(); ctx.strokeStyle=c; curCol=c; }
+      if(!open){ ctx.beginPath(); open=true; }
+      addPath(e); drawn++;
+    } else {
+      flush(); curCol=null;                                 // ngắt mạch gộp để vẽ riêng (chữ, điểm, mảng đặc, ảnh, khung nhìn…)
+      applyClip(e.clip||null); drawEntity(e); drawn++;
+    }
+  }
+  flush();
   applyClip(null);
   _lastDrawn=drawn;
   snapshotBg();        // chụp lớp bản vẽ (chưa có lớp phủ) để trượt khi pan/zoom
@@ -1985,7 +2013,7 @@ function dwgEntity(e){
     case 'ARC': return e.center?{type:'ARC',layer,cx:e.center.x,cy:e.center.y,r:e.radius,a1:deg(e.startAngle||0),a2:deg(e.endAngle||0)}:null;
     case 'ELLIPSE': return (e.center&&e.majorAxisEndPoint)?{type:'ELLIPSE',layer,cx:e.center.x,cy:e.center.y,mx:e.majorAxisEndPoint.x,my:e.majorAxisEndPoint.y,ratio:e.axisRatio??1,p1:e.startAngle??0,p2:e.endAngle??(2*Math.PI)}:null;
     case 'POINT': return e.position?{type:'POINT',layer,x:e.position.x,y:e.position.y}:null;
-    case 'LWPOLYLINE': case 'POLYLINE2D': case 'POLYLINE3D': { const raw=(e.vertices||[]).map(p=>({x:p.x,y:p.y,bulge:p.bulge||0})).filter(p=>isFinite(p.x)&&isFinite(p.y)); if(!raw.length) return null; const verts=expandPolyline(raw, ((e.flag||0)&1)===1); return verts.length>=2?{type:'POLYLINE',layer,vertices:verts,closed:false}:null; }
+    case 'LWPOLYLINE': case 'POLYLINE2D': case 'POLYLINE3D': { const raw=(e.vertices||[]).map(p=>({x:p.x,y:p.y,bulge:p.bulge||0})).filter(p=>isFinite(p.x)&&isFinite(p.y)); if(!raw.length) return null; const fl=e.flag||0; const cl=(fl&512)!==0 || (fl&1)!==0; const verts=expandPolyline(raw, cl); return verts.length>=2?{type:'POLYLINE',layer,vertices:verts,closed:cl}:null; }
     case 'TEXT':{ if(!e.startPoint) return null; const ha=e.halign||0, va=e.valign||0, a=((ha===0&&va===0)||!e.endPoint)?e.startPoint:e.endPoint; return {type:'TEXT',layer,x:a.x,y:a.y,h:e.textHeight||e.height||10,text:decodeCAD(e.text||''),rot:deg(e.rotation||0),ha:tAlignH(ha),va:tBaseV(ha,va)}; }
     case 'MTEXT': { if(!e.insertionPoint) return null; const ap=e.attachmentPoint||1, t=decodeCAD(e.text||''); return {type:'TEXT',layer,x:e.insertionPoint.x,y:e.insertionPoint.y,h:e.textHeight||10,text:t,rot:deg(e.rotation||0),ha:mtAlign(ap),va:mtBase(ap)}; }
     case 'SOLID': case '3DFACE': { const c=[e.corner1,e.corner2,e.corner3,e.corner4||e.corner3].filter(Boolean).map(p=>({x:p.x,y:p.y})); return c.length>=3?{type:'SOLID',layer,pts:c}:null; }
