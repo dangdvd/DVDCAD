@@ -4070,15 +4070,15 @@ function toast(msg){const el=document.getElementById('toast');el.textContent=msg
 
 /* =========================================================================
 async function loadSample(){
-  try{
-    const res=await fetch('./sample.dwg');
-    if(!res||!res.ok) throw new Error('HTTP '+(res?res.status:'?'));
-    const ab=await res.arrayBuffer();
-    await loadDWG(ab, 'Floor_Plan_Sample.dwg');
-  }catch(err){
-    console.error(err);
-    toast('Không tải được bản vẽ mẫu — lần đầu cần kết nối mạng để tải. '+((err&&err.message)||''));
-  }
+  showVal('Đang tải bản vẽ mẫu…');
+  let res;
+  try{ res=await fetch('./sample.dwg'); }
+  catch(e){ valEl.classList.remove('show'); toast('Mất mạng — không tải được bản vẽ mẫu (lần đầu cần có mạng).'); return; }
+  if(!res.ok){ valEl.classList.remove('show'); toast('Thiếu file "sample.dwg" trên máy chủ (mã '+res.status+'). Hãy tải sample.dwg lên repo, cùng thư mục với index.html.'); return; }
+  let ab; try{ ab=await res.arrayBuffer(); }catch(e){ valEl.classList.remove('show'); toast('Lỗi đọc bản vẽ mẫu.'); return; }
+  if(!ab||ab.byteLength<100){ valEl.classList.remove('show'); toast('File sample.dwg không hợp lệ (rỗng).'); return; }
+  try{ await loadDWG(ab, 'Floor_Plan_Sample.dwg'); }
+  catch(e){ console.error(e); valEl.classList.remove('show'); toast('Lỗi mở bản vẽ mẫu.'); }
 }
 document.getElementById('sampleBtn').addEventListener('click',loadSample);
 document.getElementById('sampleBtn2').addEventListener('click',loadSample);
