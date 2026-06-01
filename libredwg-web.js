@@ -6115,12 +6115,22 @@ class LibreEntityConverter {
     const num_bulges = libredwg.dwg_dynapi_entity_value(entity, "num_bulges").data;
     const bulges_ptr = libredwg.dwg_dynapi_entity_value(entity, "bulges").data;
     const bulges = libredwg.dwg_ptr_to_double_array(bulges_ptr, num_bulges);
+    let widths = [];
+    try {
+      const num_widths = libredwg.dwg_dynapi_entity_value(entity, "num_widths").data;
+      if (num_widths > 0) {
+        const widths_ptr = libredwg.dwg_dynapi_entity_value(entity, "widths").data;
+        widths = libredwg.dwg_ptr_to_double_array(widths_ptr, num_widths * 2);
+      }
+    } catch (e) { widths = []; }
     points.forEach((point, index) => {
       vertices.push({
         id: index,
         x: point.x,
         y: point.y,
-        bulge: bulges.length > index ? bulges[index] : 0
+        bulge: bulges.length > index ? bulges[index] : 0,
+        startWidth: widths.length > index * 2 ? widths[index * 2] : 0,
+        endWidth: widths.length > index * 2 + 1 ? widths[index * 2 + 1] : 0
       });
     });
     return {
