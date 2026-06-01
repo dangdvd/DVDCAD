@@ -5,7 +5,7 @@
      ngay lần đầu mở một file .dwg khi có mạng -> các lần sau dùng offline được.
    Đổi số phiên bản CACHE bên dưới mỗi khi cập nhật file để buộc làm mới.
    HTML dùng network-first: có mạng luôn lấy bản mới nhất, mất mạng mới dùng cache. */
-const CACHE = 'dvdcad-v1c';
+const CACHE = 'dvdcad-v1d';
 const CORE = [
   './',
   './index.html',
@@ -13,7 +13,8 @@ const CORE = [
   './icon-192.png',
   './icon-512.png',
   './icon-512-maskable.png',
-  './apple-touch-icon-180.png'
+  './apple-touch-icon-180.png',
+  './sample.dxf'
 ];
 
 self.addEventListener('install', (e) => {
