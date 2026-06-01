@@ -1193,6 +1193,7 @@ function dwgHatchLoops(e){
     let path;
     if(p.vertices) path={polyline:true,closed:p.isClosed,vertices:p.vertices.map(v=>({x:v.x,y:v.y,bulge:v.bulge||0}))};
     else { const edges=[]; for(const ed of (p.edges||[])){
+      if(!ed) continue;   // bỏ qua đường biên rỗng/hỏng (tránh crash khi đọc HATCH)
       if(ed.type===1&&ed.start&&ed.end) edges.push({kind:'line',start:{x:ed.start.x,y:ed.start.y},end:{x:ed.end.x,y:ed.end.y}});
       else if(ed.type===2&&ed.center) edges.push({kind:'arc',cx:ed.center.x,cy:ed.center.y,r:ed.radius,a0:ed.startAngle*RAD2DEG,a1:ed.endAngle*RAD2DEG,ccw:ed.isCCW!==false});
       else if(ed.type===3&&ed.center&&ed.end) edges.push({kind:'ellipse',cx:ed.center.x,cy:ed.center.y,mx:ed.end.x,my:ed.end.y,ratio:(ed.lengthOfMinorAxis!=null?ed.lengthOfMinorAxis:1),a0:ed.startAngle*RAD2DEG,a1:ed.endAngle*RAD2DEG,ccw:ed.isCCW!==false});
@@ -2930,6 +2931,8 @@ function dwgAttrib(at){
 function dwgList(arr){
   const o=[];
   for(const e of (arr||[])){
+    if(!e) continue;
+    try{
     const c=dwgEntity(e);
     if(c){
       c.aci=e.colorIndex;
@@ -2941,6 +2944,7 @@ function dwgList(arr){
     if(e.type==='INSERT' && e.attribs && e.attribs.length){   // chữ thuộc tính đi kèm INSERT (WCS)
       for(const at of e.attribs){ const t=dwgAttrib(at); if(t){ t.aci=(at.colorIndex!=null?at.colorIndex:e.colorIndex); o.push(t); } }
     }
+    }catch(_){ /* bỏ qua 1 đối tượng hỏng, không làm chết cả bản vẽ */ }
   }
   return o;
 }
@@ -4072,13 +4076,12 @@ function toast(msg){const el=document.getElementById('toast');el.textContent=msg
 async function loadSample(){
   showVal('Đang tải bản vẽ mẫu…');
   let res;
-  try{ res=await fetch('./sample.dwg'); }
+  try{ res=await fetch('./sample.dxf'); }
   catch(e){ valEl.classList.remove('show'); toast('Mất mạng — không tải được bản vẽ mẫu (lần đầu cần có mạng).'); return; }
-  if(!res.ok){ valEl.classList.remove('show'); toast('Thiếu file "sample.dwg" trên máy chủ (mã '+res.status+'). Hãy tải sample.dwg lên repo, cùng thư mục với index.html.'); return; }
-  let ab; try{ ab=await res.arrayBuffer(); }catch(e){ valEl.classList.remove('show'); toast('Lỗi đọc bản vẽ mẫu.'); return; }
-  if(!ab||ab.byteLength<100){ valEl.classList.remove('show'); toast('File sample.dwg không hợp lệ (rỗng).'); return; }
-  try{ await loadDWG(ab, 'Floor_Plan_Sample.dwg'); }
-  catch(e){ console.error(e); valEl.classList.remove('show'); toast('Lỗi mở bản vẽ mẫu.'); }
+  if(!res.ok){ valEl.classList.remove('show'); toast('Thiếu file "sample.dxf" trên máy chủ (mã '+res.status+'). Hãy tải sample.dxf lên repo, cùng thư mục với index.html.'); return; }
+  let txt; try{ txt=await res.text(); }catch(e){ valEl.classList.remove('show'); toast('Lỗi đọc bản vẽ mẫu.'); return; }
+  if(!txt || txt.length<50){ valEl.classList.remove('show'); toast('File sample.dxf rỗng/không hợp lệ.'); return; }
+  loadDXF(txt, 'Floor_Plan_Sample.dxf');   // bộ đọc DXF của app — không cần WASM
 }
 document.getElementById('sampleBtn').addEventListener('click',loadSample);
 document.getElementById('sampleBtn2').addEventListener('click',loadSample);
