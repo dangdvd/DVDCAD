@@ -273,7 +273,7 @@
     for(;;){
       const r = await A.getEnt('Chọn chữ cần sửa', { filter: e => e.type === 'TEXT' }); if(!r.ent) return;
       const e = r.ent; const s = await askText({ title: 'Sửa chữ', value: String(e.text || '') }); if(s == null || !s.trim()) continue;
-      const w = copyOf(e); w.text = s; A.commit({ rep: [[e, w]] });
+      const w = copyOf(e); w.text = s; if(w.dimd) w.dimd.ov = (w.dimv != null && s === dimFmtOf(w)) ? null : s; A.commit({ rep: [[e, w]] });
     }
   });
 
@@ -428,6 +428,8 @@
   function inBox(p, b){ return p.x >= b.minx && p.x <= b.maxx && p.y >= b.miny && p.y <= b.maxy; }
   function stretchEnt(w, box, dx, dy){
     const mv = p => { if(inBox(p, box)){ p.x += dx; p.y += dy; } };
+    if(w.dimd){ const d = w.dimd; const Lin = d.L && inBox(d.L, box); for(const k of ['p1', 'p2', 'c', 'V']) if(d[k]) mv(d[k]); if(d.L && (Lin || inBox({ x: w.x, y: w.y }, box))){ d.L.x += dx; d.L.y += dy; } return; }
+    if(w.bip){ if(inBox(w.bip, box)) translateEnt(w, dx, dy); return; }   // khối: chỉ dời khi điểm chèn nằm trong khung (như AutoCAD)
     switch(w.type){
       case 'LINE': { const a = { x: w.x1, y: w.y1 }, b = { x: w.x2, y: w.y2 }; mv(a); mv(b); w.x1 = a.x; w.y1 = a.y; w.x2 = b.x; w.y2 = b.y; break; }
       case 'POLYLINE': for(const p of w.vertices) mv(p); delete w.wq; break;
@@ -445,6 +447,7 @@
     const r = await A.getSel('Chọn đối tượng cần kéo giãn bằng khung cắt (kéo phải → trái)', { wantWindow: true, pre: false });
     const box = r.window ? r.window.box : null; let sel = r.sel || []; if(!sel.length){ log('Không có đối tượng.'); return; }
     selHL(sel);
+    { const dimG = new Set(sel.filter(e => e.dimd).map(e => e.grp)); if(dimG.size) sel = sel.filter(e => !(e.grp && dimG.has(e.grp) && !e.dimd)); }   // kích thước: chỉ kéo điểm định nghĩa rồi dựng lại
     let b = await basePoint(); let base, to;
     if(b.none || b.kw === 'D'){ const d = await A.getPoint('Chỉ định độ dời dx,dy'); if(!d.pt) return; base = { x: 0, y: 0 }; to = d.pt; }
     else { base = b.pt; const r2 = await A.getPoint('Chỉ định điểm thứ hai', { base, preview: (g, p) => g.xform(sel, w => box ? stretchEnt(w, box, p.x - base.x, p.y - base.y) : translateEnt(w, p.x - base.x, p.y - base.y)) }); if(!r2.pt) return; to = r2.pt; }
@@ -698,7 +701,7 @@
     const s = await A.getSel('Chọn đối tượng cần phá'); const sel = s.sel || []; if(!sel.length) return;
     const rep = [], add = [], del = []; let n = 0;
     for(const e of sel){
-      if(e.grp){ const w = copyOf(e); delete w.grp; delete w.blk; delete w.dimv; rep.push([e, w]); n++; continue; }
+      if(e.grp){ const w = copyOf(e); delete w.grp; delete w.blk; delete w.dimv; delete w.dimd; delete w.bip; rep.push([e, w]); n++; continue; }
       if(e.type === 'POLYLINE'){ const V = e.vertices || []; const segs = []; const m = e.closed ? V.length : V.length - 1; for(let i = 0; i < m; i++){ const a = V[i], b = V[(i + 1) % V.length]; if(dist(a, b) < 1e-12) continue; segs.push({ type: 'LINE', layer: e.layer, col: e.col, bl: e.bl, x1: a.x, y1: a.y, x2: b.x, y2: b.y }); } if(segs.length){ segs.forEach(x => { if(x.bl === undefined) delete x.bl; }); rep.push([e, segs[0]]); add.push(...segs.slice(1)); n++; } continue; }
       if(e.type === 'HATCH'){ const loops = (e.loops || []).filter(l => l.length >= 2).map(l => ({ type: 'POLYLINE', layer: e.layer, col: e.col, vertices: l.map(p => ({ x: p.x, y: p.y })), closed: true })); if(loops.length){ rep.push([e, loops[0]]); add.push(...loops.slice(1)); n++; } continue; }
     }
@@ -776,12 +779,13 @@
   plain(['DSETTINGS', 'DS', 'OSNAP', 'OS', 'SE'], 'Cài đặt bắt điểm / polar / lưới / nhập động', () => { if(A.openDrafting) A.openDrafting(); });
   plain(['UNITS', 'UN'], 'Đơn vị & tỉ lệ đo', () => { const b = document.getElementById('displayBtn'); if(b) b.click(); setTimeout(() => { const c = document.getElementById('openCalib'); if(c) c.click(); }, 30); });
   plain(['CLOSE'], 'Đóng bản vẽ', () => { if(confirm('Đóng bản vẽ? (thay đổi đã tự lưu trên máy)')) location.href = location.pathname; });
-  cmd(['MATCHPROP', 'MA', 'PAINTER'], 'Sao chép thuộc tính (lớp, màu, cao chữ, mẫu hatch)', async () => {
+  const NOLT = { TEXT: 1, HATCH: 1, SOLID: 1, POINT: 1 };
+  cmd(['MATCHPROP', 'MA', 'PAINTER'], 'Sao chép thuộc tính (lớp, màu, kiểu nét, bề rộng, cao chữ, mẫu hatch)', async () => {
     const r = await A.getEnt('Chọn đối tượng nguồn'); if(!r.ent) return; const src = r.ent; hl([src]);
     log('Nguồn: lớp ' + (src.layer || '0') + ', màu ' + (src.bl ? 'ByLayer' : src.col));
     for(;;){
       const s = await A.getSel('Chọn đối tượng đích (Enter để xong)', { pre: false }); const sel = (s.sel || []).filter(e => e !== src); if(!sel.length) break;
-      A.commit({ rep: transformAll(sel, w => { w.layer = src.layer || '0'; if(src.bl){ w.bl = 1; w.col = A.layerHex(w.layer); } else { delete w.bl; w.col = src.col; } if(w.type === 'TEXT' && src.type === 'TEXT') w.h = src.h; if(w.type === 'HATCH' && src.type === 'HATCH'){ w.pat = src.pat; w.psc = src.psc; w.pang = src.pang; w.solid = src.solid; } }) }, 'Đã áp thuộc tính cho ' + sel.length + ' đối tượng');
+      A.commit({ rep: transformAll(sel, w => { w.layer = src.layer || '0'; if(src.bl){ w.bl = 1; w.col = A.layerHex(w.layer); } else { delete w.bl; w.col = src.col; } if(w.type === 'TEXT' && src.type === 'TEXT') w.h = src.h; if(src.lw > 0) w.lw = src.lw; else delete w.lw; if(!NOLT[w.type]){ if(src.lt && !NOLT[src.type]) w.lt = src.lt; else if(!NOLT[src.type]) delete w.lt; if(src.lts) w.lts = src.lts; else delete w.lts; } if(w.type === 'HATCH' && src.type === 'HATCH'){ w.pat = src.pat; w.psc = src.psc; w.pang = src.pang; w.solid = src.solid; } }) }, 'Đã áp thuộc tính cho ' + sel.length + ' đối tượng');
     }
     hl([]);
   });
@@ -864,6 +868,7 @@
   dsLoad();
   function dimTxt(){ if(!(DS.txt > 0)){ DS.txt = +defaultTextH().toPrecision(3); dsSave(); } return DS.txt; }
   function dimFmt(v){ const x = v * (DS.lfac || 1); return (DS.prefix || '') + x.toFixed(Math.max(0, Math.min(6, DS.dec | 0))) + (DS.suffix || ''); }
+  function dimFmtOf(w){ try{ return withStyle(w.dimd && w.dimd.s, () => dimFmt(w.dimv)); }catch(_){ return ''; } }
   const readable = deg => { deg = ((deg % 360) + 360) % 360; if(deg > 90 && deg <= 270) deg -= 180; return deg; };
   function arrowAt(tip, dirx, diry, t, out){   // dir = hướng từ trong ra đầu mũi tên
     const s = t * DS.asz;
@@ -871,12 +876,52 @@
     else if(DS.arrow === 'dot'){ out.push({ type: 'CIRCLE', cx: tip.x, cy: tip.y, r: s / 5 }); }
     else { const bx = tip.x - dirx * s, by = tip.y - diry * s, nx = -diry * s / 6, ny = dirx * s / 6; out.push({ type: 'SOLID', pts: [{ x: tip.x, y: tip.y }, { x: bx + nx, y: by + ny }, { x: bx - nx, y: by - ny }, { x: bx - nx, y: by - ny }] }); }
   }
-  function finishDim(ents, value, kindName){
+  const DS_KEYS = ['txt', 'arrow', 'dec', 'lfac', 'exo', 'exe', 'gap', 'asz', 'dli', 'suffix', 'prefix'];
+  function styleSnap(){ const o = {}; for(const k of DS_KEYS) o[k] = DS[k]; o.txt = dimTxt(); return o; }
+  function withStyle(sn, fn){ if(!sn) return fn(); const sv = {}; for(const k of DS_KEYS) sv[k] = DS[k]; try{ Object.assign(DS, sn); return fn(); } finally { Object.assign(DS, sv); } }
+  function finishDim(ents, value, kindName, def){
     const gid = A.newGroupId('D'); const lay = DS.layer && A.layerNames().includes(DS.layer) ? DS.layer : null;
-    return ents.map(e => { A.newProps(e); if(lay){ e.layer = lay; if(e.bl) e.col = A.layerHex(lay); } e.grp = gid; e.blk = '*DIM ' + kindName; if(e.type === 'TEXT') e.dimv = value; return e; });
+    return ents.map(e => { A.newProps(e); delete e.lt; delete e.lts; if(lay){ e.layer = lay; if(e.bl) e.col = A.layerHex(lay); } e.grp = gid; e.blk = '*DIM ' + kindName; if(e.type === 'TEXT'){ e.dimv = value; if(def) e.dimd = Object.assign({}, def, { s: styleSnap() }); } return e; });
   }
+  // dựng lại hình của 1 kích thước từ định nghĩa (giữ kiểu dim lúc tạo) — dùng khi kéo grip / di chuyển / kéo giãn
+  function dimBuild(d){
+    return withStyle(d.s, () => {
+      if(d.k === 'lin'){ const r = dimLinearEnts(d.p1, d.p2, d.L, d.phi, d.ov, d.tx); return r ? { ents: r.ents, val: r.meas, kind: 'thẳng' } : null; }
+      if(d.k === 'rad' || d.k === 'dia'){ const r = dimRadEnts({ cx: d.c.x, cy: d.c.y, r: d.r }, d.L, d.k === 'dia', d.ov); return { ents: r.ents, val: r.val, kind: d.k === 'dia' ? 'đường kính' : 'bán kính' }; }
+      if(d.k === 'ang'){ const r = dimAngEnts(d.V, d.d1, d.d2, d.L, d.ov); return r ? { ents: r.ents, val: r.val, kind: 'góc' } : null; }
+      return null;
+    });
+  }
+  A.dimBuild = dimBuild;
+  // tạo các đối tượng mới thay cho nhóm kích thước, giữ lớp/màu/nhóm của chữ kích thước w
+  A.dimRegenFrom = function(w){
+    const r = dimBuild(w.dimd); if(!r) return null;
+    return r.ents.map(e => { e.layer = w.layer || '0'; if(w.bl){ e.bl = 1; e.col = A.layerHex(e.layer); } else e.col = w.col; if(w.lw > 0 && e.lw == null) e.lw = w.lw; e.grp = w.grp; e.blk = w.blk || ('*DIM ' + r.kind); if(e.type === 'TEXT'){ e.dimv = r.val; e.dimd = JSON.parse(JSON.stringify(w.dimd)); } return e; });
+  };
+  // các điểm nắm của kích thước (như AutoCAD: gốc đường gióng, đường kích thước, chữ)
+  A.dimGrips = function(t){
+    const d = t.dimd; if(!d) return [];
+    if(d.k === 'lin'){ const r = withStyle(d.s, () => dimLinearEnts(d.p1, d.p2, d.L, d.phi, d.ov, d.tx)); const g = [{ x: d.p1.x, y: d.p1.y, r: 'dp1' }, { x: d.p2.x, y: d.p2.y, r: 'dp2' }]; if(r){ g.push({ x: r.a.x, y: r.a.y, r: 'dl' }, { x: r.b.x, y: r.b.y, r: 'dl' }); } g.push({ x: t.x, y: t.y, r: 'dt' }); return g; }
+    if(d.k === 'rad' || d.k === 'dia') return [{ x: d.c.x, y: d.c.y, r: 'dc' }, { x: d.L.x, y: d.L.y, r: 'dl' }, { x: t.x, y: t.y, r: 'dt' }];
+    if(d.k === 'ang') return [{ x: d.V.x, y: d.V.y, r: 'dc' }, { x: d.L.x, y: d.L.y, r: 'dl' }, { x: t.x, y: t.y, r: 'dt' }];
+    return [];
+  };
+  // kéo 1 điểm nắm của kích thước -> định nghĩa mới
+  A.dimApplyGrip = function(d, role, from, to){
+    const dx = to.x - from.x, dy = to.y - from.y;
+    if(role === 'dp1') d.p1 = { x: to.x, y: to.y };
+    else if(role === 'dp2') d.p2 = { x: to.x, y: to.y };
+    else if(role === 'dl'){ d.L = { x: d.L.x + dx, y: d.L.y + dy }; }
+    else if(role === 'dc'){ if(d.c) d.c = { x: d.c.x + dx, y: d.c.y + dy }; if(d.V) d.V = { x: d.V.x + dx, y: d.V.y + dy }; d.L = { x: d.L.x + dx, y: d.L.y + dy }; }
+    else if(role === 'dt'){
+      if(d.k === 'lin'){ const phi = d.phi * D2R, ux = Math.cos(phi), uy = Math.sin(phi); const nL = { x: d.L.x + dx, y: d.L.y + dy };
+        const along = dx * ux + dy * uy; d.tx = (d.tx || 0) + along; d.L = nL; }
+      else d.L = { x: d.L.x + dx, y: d.L.y + dy };
+    }
+    return d;
+  };
   // kích thước thẳng xoay góc phi (độ): đo theo phương phi, đường kích thước đi qua L
-  function dimLinearEnts(p1, p2, L, phiDeg, overrideText){
+  function dimLinearEnts(p1, p2, L, phiDeg, overrideText, tx){
     const t = dimTxt(); const phi = phiDeg * D2R, ux = Math.cos(phi), uy = Math.sin(phi), nx = -uy, ny = ux;
     const d1 = (L.x - p1.x) * nx + (L.y - p1.y) * ny, d2 = (L.x - p2.x) * nx + (L.y - p2.y) * ny;
     const a = { x: p1.x + nx * d1, y: p1.y + ny * d1 }, b = { x: p2.x + nx * d2, y: p2.y + ny * d2 };
@@ -889,8 +934,13 @@
     out.push({ type: 'LINE', x1: a.x - dux * ov, y1: a.y - duy * ov, x2: b.x + dux * ov, y2: b.y + duy * ov });
     arrowAt(a, -dux, -duy, t, out); arrowAt(b, dux, duy, t, out);
     const rot = readable(Math.atan2(duy, dux) * R2D), r = rot * D2R, upx = -Math.sin(r), upy = Math.cos(r);
-    const mid = { x: (a.x + b.x) / 2 + upx * t * DS.gap, y: (a.y + b.y) / 2 + upy * t * DS.gap };
     const txt = overrideText || dimFmt(meas);
+    const sh = tx || 0, cx = (a.x + b.x) / 2 + ux * sh, cy = (a.y + b.y) / 2 + uy * sh;
+    const mid = { x: cx + upx * t * DS.gap, y: cy + upy * t * DS.gap };
+    if(sh && Math.abs(sh) > dl / 2){   // chữ dời ra ngoài: kéo dài đường kích thước tới dưới chữ
+      const sg = Math.sign(sh); const end = ((b.x - a.x) * ux + (b.y - a.y) * uy) * sg > 0 ? b : a; const tw = t * 0.62 * String(txt).length / 2 + t * 0.4;
+      out.push({ type: 'LINE', x1: end.x, y1: end.y, x2: cx + ux * sg * tw, y2: cy + uy * sg * tw });
+    }
     out.push({ type: 'TEXT', x: mid.x, y: mid.y, h: t, rot, text: txt, ha: 'center', va: 'alphabetic' });
     return { ents: out, meas, txt, a, b };
   }
@@ -926,7 +976,7 @@
       if(r.kw === 'R'){ const a = await A.getAngle('Chỉ định góc đường kích thước', { def: 0 }); rotFixed = a.num != null ? a.num : 0; forced = null; continue; }
       if(!r.pt) return;
       const phi = phiOf(r.pt); const d = dimLinearEnts(o.p1, o.p2, r.pt, phi, txtOv); if(!d){ log('Hai điểm trùng nhau theo phương đo.'); return; }
-      A.commit({ add: finishDim(d.ents, d.meas, aligned ? 'chéo' : 'thẳng') });
+      A.commit({ add: finishDim(d.ents, d.meas, aligned ? 'chéo' : 'thẳng', { k: 'lin', p1: o.p1, p2: o.p2, L: r.pt, phi, ov: txtOv || null }) });
       log('Kích thước = ' + d.txt);
       lastDim = { p1: o.p1, p2: o.p2, L: r.pt, phi, base: o.p1, off: 0 };
       return;
@@ -944,14 +994,14 @@
       if(!r.pt) return;
       const from = baseline ? prev.base : prev.p2; const L = baseline ? shiftL(prev, t) : prev.L;
       const d = dimLinearEnts(from, r.pt, L, prev.phi); if(!d){ log('Điểm trùng phương đo.'); continue; }
-      A.commit({ add: finishDim(d.ents, d.meas, baseline ? 'cơ sở' : 'liên tục') }); log('Kích thước = ' + d.txt);
+      A.commit({ add: finishDim(d.ents, d.meas, baseline ? 'cơ sở' : 'liên tục', { k: 'lin', p1: from, p2: r.pt, L, phi: prev.phi, ov: null }) }); log('Kích thước = ' + d.txt);
       prev = { p1: from, p2: r.pt, L, phi: prev.phi, base: prev.base }; lastDim = prev;
     }
   }
   function shiftL(prev, t){ const phi = prev.phi * D2R, nx = -Math.sin(phi), ny = Math.cos(phi); const s = ((prev.L.x - prev.base.x) * nx + (prev.L.y - prev.base.y) * ny) >= 0 ? 1 : -1; return { x: prev.L.x + nx * s * t * DS.dli, y: prev.L.y + ny * s * t * DS.dli }; }
   cmd(['DIMCONTINUE', 'DCO', 'DIMCONT'], 'Kích thước nối tiếp chuỗi', () => dimChain(false));
   cmd(['DIMBASELINE', 'DBA', 'DIMBASE'], 'Kích thước cùng gốc (bậc thang)', () => dimChain(true));
-  function dimRadEnts(e, L, dia){
+  function dimRadEnts(e, L, dia, ov){
     const t = dimTxt(); let ux = L.x - e.cx, uy = L.y - e.cy; const dl = Math.hypot(ux, uy) || 1; ux /= dl; uy /= dl;
     const edge = { x: e.cx + ux * e.r, y: e.cy + uy * e.r }, out = [];
     if(dia){ const o = { x: e.cx - ux * e.r, y: e.cy - uy * e.r }; out.push({ type: 'LINE', x1: o.x, y1: o.y, x2: edge.x, y2: edge.y }); const sv = DS.arrow; if(DS.arrow === 'tick') DS.arrow = 'arrow'; arrowAt(edge, ux, uy, t, out); arrowAt(o, -ux, -uy, t, out); DS.arrow = sv; }
@@ -959,18 +1009,18 @@
     if(dl > e.r) out.push({ type: 'LINE', x1: edge.x, y1: edge.y, x2: L.x, y2: L.y });
     const rot = readable(Math.atan2(uy, ux) * R2D), r = rot * D2R, upx = -Math.sin(r), upy = Math.cos(r);
     const at = dl > e.r ? { x: (edge.x + L.x) / 2, y: (edge.y + L.y) / 2 } : { x: (e.cx + edge.x) / 2, y: (e.cy + edge.y) / 2 };
-    const val = dia ? 2 * e.r : e.r; const txt = (dia ? 'Ø' : 'R') + dimFmt(val);
+    const val = dia ? 2 * e.r : e.r; const txt = ov || ((dia ? 'Ø' : 'R') + dimFmt(val));
     out.push({ type: 'TEXT', x: at.x + upx * t * DS.gap, y: at.y + upy * t * DS.gap, h: t, rot, text: txt, ha: 'center', va: 'alphabetic' });
     return { ents: out, val, txt };
   }
   async function dimRadCmd(dia){
     const s = await A.getEnt(dia ? 'Chọn đường tròn hoặc cung' : 'Chọn cung hoặc đường tròn', { filter: e => e.type === 'CIRCLE' || e.type === 'ARC' }); if(!s.ent) return; const e = s.ent; hl([e]);
     const r = await A.getPoint('Chỉ định vị trí đường kích thước', { rubber: false, preview: (g, p) => g.ents(dimRadEnts(e, p, dia).ents) }); hl([]); if(!r.pt) return;
-    const d = dimRadEnts(e, r.pt, dia); A.commit({ add: finishDim(d.ents, d.val, dia ? 'đường kính' : 'bán kính') }); log('Kích thước = ' + d.txt);
+    const d = dimRadEnts(e, r.pt, dia); A.commit({ add: finishDim(d.ents, d.val, dia ? 'đường kính' : 'bán kính', { k: dia ? 'dia' : 'rad', c: { x: e.cx, y: e.cy }, r: e.r, L: r.pt, ov: null }) }); log('Kích thước = ' + d.txt);
   }
   cmd(['DIMRADIUS', 'DRA', 'DIMRAD'], 'Kích thước bán kính', () => dimRadCmd(false));
   cmd(['DIMDIAMETER', 'DDI', 'DIMDIA'], 'Kích thước đường kính', () => dimRadCmd(true));
-  function dimAngEnts(V, d1, d2, L){
+  function dimAngEnts(V, d1, d2, L, ov){
     const t = dimTxt(); const R = Math.max(dist(V, L), t);
     const aL = ang(V, L); const cand = [];
     for(const r1 of [d1, d1 + Math.PI]) for(const r2 of [d2, d2 + Math.PI]){ const sw = G.norm(r2 - r1); if(sw < 1e-9 || sw > Math.PI) continue; if(G.norm(aL - r1) <= sw) cand.push({ a1: r1, sw }); }
@@ -980,7 +1030,7 @@
     const sv = DS.arrow; if(DS.arrow === 'tick') DS.arrow = 'arrow';
     arrowAt(p1, Math.sin(c.a1), -Math.cos(c.a1), t, out); arrowAt(p2, -Math.sin(c.a1 + c.sw), Math.cos(c.a1 + c.sw), t, out); DS.arrow = sv;
     const am = c.a1 + c.sw / 2, mid = { x: V.x + (R + t * DS.gap) * Math.cos(am), y: V.y + (R + t * DS.gap) * Math.sin(am) };
-    const deg = c.sw * R2D; const txt = deg.toFixed(Math.max(0, DS.dec | 0)) + '°';
+    const deg = c.sw * R2D; const txt = ov || (deg.toFixed(Math.max(0, DS.dec | 0)) + '°');
     out.push({ type: 'TEXT', x: mid.x, y: mid.y, h: t, rot: readable(am * R2D - 90), text: txt, ha: 'center', va: 'alphabetic' });
     return { ents: out, val: deg, txt };
   }
@@ -990,7 +1040,7 @@
     const V = lineIntersect(a.ent, b.ent); if(!V){ hl([]); log('Hai đường song song.'); return; }
     const d1 = Math.atan2(a.ent.y2 - a.ent.y1, a.ent.x2 - a.ent.x1), d2 = Math.atan2(b.ent.y2 - b.ent.y1, b.ent.x2 - b.ent.x1);
     const r = await A.getPoint('Chỉ định vị trí cung kích thước', { rubber: false, preview: (g, p) => { const d = dimAngEnts(V, d1, d2, p); if(d) g.ents(d.ents); } }); hl([]); if(!r.pt) return;
-    const d = dimAngEnts(V, d1, d2, r.pt); if(!d) return; A.commit({ add: finishDim(d.ents, d.val, 'góc') }); log('Góc = ' + d.txt);
+    const d = dimAngEnts(V, d1, d2, r.pt); if(!d) return; A.commit({ add: finishDim(d.ents, d.val, 'góc', { k: 'ang', V, d1, d2, L: r.pt, ov: null }) }); log('Góc = ' + d.txt);
   });
   DVDCmd.register(['DIMSTYLE', 'D', 'DST', 'DDIM'], 'Kiểu kích thước (cao chữ, mũi tên, số lẻ…)', () => openDimStyle());
   function openDimStyle(){
@@ -1261,10 +1311,10 @@
     const B = blockPrims(name, src); if(!B) return [];
     const gid = A.newGroupId('B'); const lay = A.LS.cur || '0'; const l0 = A.layerHex('0');
     const out = [];
-    for(const p of B.prims){ if(out.length > 50000) break; const w = deep(p); delete w.userAdded; delete w.grp;
+    for(const p of B.prims){ if(out.length > 50000) break; const w = deep(p); delete w.userAdded; delete w.grp; delete w.bip; delete w.dimd;
       translateEnt(w, -B.base.x, -B.base.y); if(sc !== 1) scaleEnt(w, sc, { x: 0, y: 0 }); if(rotDeg) rotateEnt(w, rotDeg, { x: 0, y: 0 }); translateEnt(w, ins.x, ins.y);
       if(!w.layer || w.layer === '0'){ w.layer = lay; if(!w.col || String(w.col).toLowerCase() === String(l0).toLowerCase() || w.bl){ w.col = A.layerHex(lay); w.bl = 1; } }
-      w.grp = gid; w.blk = name; out.push(w); }
+      w.grp = gid; w.blk = name; w.bip = { x: ins.x, y: ins.y }; out.push(w); }
     return out;
   }
   A.instBlock = instBlock;
@@ -1328,7 +1378,7 @@
   });
   cmd(['UNGROUP', 'UG'], 'Bỏ nhóm', async () => {
     const s = await A.getSel('Chọn nhóm'); const sel = (s.sel || []).filter(e => e.grp); if(!sel.length){ log('Không có nhóm nào.'); return; }
-    A.commit({ rep: transformAll(sel, w => { delete w.grp; delete w.blk; }) }, 'Đã bỏ nhóm');
+    A.commit({ rep: transformAll(sel, w => { delete w.grp; delete w.blk; delete w.dimd; delete w.bip; }) }, 'Đã bỏ nhóm');
   });
   const CLIP = 'dvd:clip';
   function putClip(sel, base){ try{ localStorage.setItem(CLIP, JSON.stringify({ base, ents: sel.map(e => serializeEnt(e)), t: Date.now(), src: currentName })); log('Đã sao chép ' + sel.length + ' đối tượng vào bộ nhớ tạm'); return true; }catch(_){ say('Bộ nhớ tạm đầy — chọn ít đối tượng hơn.'); return false; } }
@@ -1408,12 +1458,17 @@
     const layers = new Set(A.layerNames()); for(const e of ents) layers.add(String(e.layer || '0'));
     let ext = bboxOf(ents) || { x0: 0, y0: 0, x1: 100, y1: 100 };
     P(0, 'SECTION'); P(2, 'HEADER'); P(9, '$ACADVER'); P(1, 'AC1009'); if(insunits){ P(9, '$INSUNITS'); P(70, insunits); }
-    P(9, '$EXTMIN'); P(10, ext.x0); P(20, ext.y0); P(9, '$EXTMAX'); P(10, ext.x1); P(20, ext.y1); P(9, '$CLAYER'); P(8, A.LS.cur || '0'); P(0, 'ENDSEC');
+    P(9, '$EXTMIN'); P(10, ext.x0); P(20, ext.y0); P(9, '$EXTMAX'); P(10, ext.x1); P(20, ext.y1); P(9, '$CLAYER'); P(8, A.LS.cur || '0'); P(9, '$LTSCALE'); P(40, LTSCALE || 1); P(9, '$CELTSCALE'); P(40, A.LS.celts || 1); P(0, 'ENDSEC');
     P(0, 'SECTION'); P(2, 'TABLES');
-    P(0, 'TABLE'); P(2, 'LTYPE'); P(70, 1); P(0, 'LTYPE'); P(2, 'CONTINUOUS'); P(70, 0); P(3, 'Solid line'); P(72, 65); P(73, 0); P(40, 0); P(0, 'ENDTAB');
+    const ltUsed = new Set(); for(const ly of layers){ const v = A.layerLT(ly); if(v && v !== 'CONTINUOUS') ltUsed.add(v); } for(const e of ents) if(e.lt && !/^(CONTINUOUS|BYBLOCK|BYLAYER)$/.test(e.lt)) ltUsed.add(e.lt);
+    const ltDefs = [...ltUsed].map(n => { const d = A.ltDefOf(n); return d && d.pat && d.pat.length ? { n, d } : null; }).filter(Boolean);
+    const ltOk = new Set(ltDefs.map(x => x.n));
+    P(0, 'TABLE'); P(2, 'LTYPE'); P(70, 1 + ltDefs.length); P(0, 'LTYPE'); P(2, 'CONTINUOUS'); P(70, 0); P(3, 'Solid line'); P(72, 65); P(73, 0); P(40, 0);
+    for(const { n, d } of ltDefs){ P(0, 'LTYPE'); P(2, dxfStr(n)); P(70, 0); P(3, dxfStr(d.desc || n)); P(72, 65); P(73, d.pat.length); P(40, d.pat.reduce((a, b) => a + Math.abs(b), 0)); for(const v of d.pat) P(49, v); }
+    P(0, 'ENDTAB');
     P(0, 'TABLE'); P(2, 'LAYER'); P(70, layers.size);
     A.lsSync();
-    for(const ly of layers){ const aci = aciNear(A.layerHex(ly)); let fl = 0; if(A.LS.frozen.has(ly)) fl |= 1; if(A.LS.locked.has(ly)) fl |= 4; P(0, 'LAYER'); P(2, dxfStr(ly)); P(70, fl); P(62, A.LS.off.has(ly) ? -aci : aci); P(6, 'CONTINUOUS'); }
+    for(const ly of layers){ const aci = aciNear(A.layerHex(ly)); let fl = 0; if(A.LS.frozen.has(ly)) fl |= 1; if(A.LS.locked.has(ly)) fl |= 4; P(0, 'LAYER'); P(2, dxfStr(ly)); P(70, fl); P(62, A.LS.off.has(ly) ? -aci : aci); const llt = A.layerLT(ly); P(6, ltOk.has(llt) ? dxfStr(llt) : 'CONTINUOUS'); }
     P(0, 'ENDTAB');
     P(0, 'TABLE'); P(2, 'STYLE'); P(70, 1); P(0, 'STYLE'); P(2, 'STANDARD'); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'arial.ttf'); P(4, ''); P(0, 'ENDTAB');
     P(0, 'ENDSEC');
@@ -1423,7 +1478,8 @@
       const ly = dxfStr(String(e.layer || '0'));
       const byL = e.bl || String(e.col || '').toLowerCase() === String(A.layerHex(e.layer || '0')).toLowerCase();
       const aci = byL ? 256 : aciNear(e.col || '#ffffff');
-      const head = t => { P(0, t); P(8, ly); if(aci !== 256) P(62, aci); };
+      const elt = e.lt && (ltOk.has(e.lt) || e.lt === 'CONTINUOUS' || e.lt === 'BYBLOCK') ? dxfStr(e.lt) : null;
+      const head = t => { P(0, t); P(8, ly); if(elt && e.type !== 'HATCH' && e.type !== 'TEXT') P(6, elt); if(aci !== 256) P(62, aci); };
       const poly = (verts, closed) => { if(verts.length < 2) return; head('POLYLINE'); P(66, 1); P(70, closed ? 1 : 0); P(10, 0); P(20, 0); P(30, 0); for(const v of verts){ P(0, 'VERTEX'); P(8, ly); P(10, v.x); P(20, v.y); P(30, 0); } P(0, 'SEQEND'); P(8, ly); };
       switch(e.type){
         case 'LINE': head('LINE'); P(10, e.x1); P(20, e.y1); P(30, 0); P(11, e.x2); P(21, e.y2); P(31, 0); break;

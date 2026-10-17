@@ -103,7 +103,19 @@
     LAYOUT: '<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4"/><rect x="8" y="10" width="8" height="7"/>',
     EXPORT: '<path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/>',
     TOOLS: '<path d="M14 6l4-4 4 4-4 4zM3 21l9-9M8 3l3 3-5 5-3-3z"/>',
-    BHAND: '<path d="M4 4l7 16 2-7 7-2z"/>'
+    BHAND: '<path d="M4 4l7 16 2-7 7-2z"/>',
+    LTYPE: '<path d="M3 6h5M11 6h3M17 6h4" /><path d="M3 12h9M15 12h1M19 12h2"/><path d="M3 18h2M8 18h2M13 18h2M18 18h2"/>',
+    LINETYPE: '<path d="M3 6h5M11 6h3M17 6h4" /><path d="M3 12h9M15 12h1M19 12h2"/><path d="M3 18h2M8 18h2M13 18h2M18 18h2"/>',
+    LTSCALE: '<path d="M3 8h4M10 8h4M17 8h4"/><path d="M3 16h8M14 16h7"/><path d="M12 10v4M10 12.5l2 2 2-2"/>',
+    LWEIGHT: '<path d="M3 6h18" stroke-width="1"/><path d="M3 12h18" stroke-width="2.5"/><path d="M3 18h18" stroke-width="4"/>',
+    QSELECT: '<path d="M4 4h16l-6 8v6l-4 2v-8z"/>',
+    DRAWORDER: '<rect x="3" y="3" width="11" height="11"/><rect x="10" y="10" width="11" height="11" fill="currentColor" fill-opacity=".35"/>',
+    MLEADER: '<path d="M3 21l8-8h10"/><path d="M3 21l1.5-4.5L7.5 19.5z" fill="currentColor"/><path d="M13 9h8M13 5h8"/>',
+    QLEADER: '<path d="M3 21l8-8h10"/><path d="M3 21l1.5-4.5L7.5 19.5z" fill="currentColor"/><path d="M13 9h8M13 5h8"/>',
+    ALIGN: '<rect x="3" y="12" width="7" height="7"/><path d="M14 4l6 6-5 5-6-6z" stroke-dasharray="2 2"/><path d="M10 12l4-3"/>',
+    DIMEDIT: '<path d="M3 5v10M21 5v10M3 11h18"/><path d="M14 20l6-6 2 2-6 6h-2z"/>',
+    ISOLATE: '<circle cx="12" cy="12" r="4"/><path d="M3 12h3M18 12h3M12 3v3M12 18v3"/>',
+    PICKSTYLE: '<rect x="3" y="3" width="18" height="18" stroke-dasharray="3 2"/><path d="M8 8l7 9 1-4 4-1z"/>'
   };
   const ico = (k, cls) => '<svg class="' + (cls || 'ic') + '" viewBox="0 0 24 24">' + (I[k] || I.TOOLS) + '</svg>';
   A.ICONS = I; A.ico = ico;
@@ -180,6 +192,8 @@
   .ac-ctl{display:flex;flex-direction:column;gap:4px;padding:2px 2px;min-width:200px}
   .ac-ctl select,.ac-laybtn{height:24px;background:#262b34;color:#e6eaf0;border:1px solid #4a5363;border-radius:3px;font:12px system-ui,sans-serif;padding:0 6px;cursor:pointer;width:100%}
   .ac-laybtn{display:flex;align-items:center;gap:6px;text-align:left}
+  .ac-p3{gap:3px}
+  .ac-p3 select{height:22px;font-size:11.5px}
   .ac-laybtn .sw,.ac-lrow .sw{width:12px;height:12px;border:1px solid rgba(255,255,255,.4);flex:0 0 auto}
   .ac-laybtn .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ac-laybtn .ic{width:14px;height:14px}
@@ -251,6 +265,9 @@
   .lm-tbl .off{color:#6c7686}
   .lm-tbl .sw{display:inline-block;width:14px;height:14px;border:1px solid rgba(255,255,255,.45);vertical-align:middle;cursor:pointer}
   .lm-tbl .nm{cursor:pointer;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+  .lm-tbl .lk{cursor:pointer;color:#cfd6e0;border-bottom:1px dotted #6c7686}
+  .lm-tbl .lk:hover{color:#fff}
+  .lm-tbl canvas{display:block;position:static !important;width:140px;height:14px}
   .aci-grid{display:grid;grid-template-columns:repeat(24,14px);gap:1px;margin:6px 0}
   .aci-grid button{width:14px;height:14px;border:1px solid rgba(0,0,0,.4);padding:0;cursor:pointer}
   .aci-grid button:hover{outline:2px solid #fff;z-index:1}
@@ -283,12 +300,12 @@
       { pri: 0, title: 'Vẽ', items: [big('LINE', 'Line\nĐường'), big('PLINE', 'Polyline\nĐa tuyến'), big('CIRCLE', 'Circle\nTròn', { menu: [['CIRCLE', 'Tâm, bán kính'], ['CIRCLE|2P', '2 điểm'], ['CIRCLE|3P', '3 điểm']] }), big('ARC', 'Arc\nCung', { menu: [['ARC', '3 điểm'], ['ARC|C', 'Tâm, đầu, cuối']] }),
         col(sm('RECTANG', 'Chữ nhật'), sm('POLYGON', 'Đa giác'), sm('ELLIPSE', 'Elip')), col(sm('HATCH', 'Hatch'), sm('SPLINE', 'Spline'), sm('XLINE', 'Đường dựng')), col(sm('POINT', 'Điểm'), sm('REVCLOUD', 'Mây'), sm('DIVIDE', 'Chia đều'))] },
       { pri: 0, title: 'Sửa', items: [col(sm('MOVE', 'Move'), sm('ROTATE', 'Rotate'), sm('TRIM', 'Trim')), col(sm('COPY', 'Copy'), sm('MIRROR', 'Mirror'), sm('FILLET', 'Fillet')), col(sm('STRETCH', 'Stretch'), sm('SCALE', 'Scale'), sm('ARRAY', 'Array')),
-        col(sm('ERASE', 'Erase'), sm('EXPLODE', 'Explode'), sm('OFFSET', 'Offset')), col(sm('EXTEND', 'Extend'), sm('BREAK', 'Break'), sm('MODMORE', 'Thêm ▾', { icon: 'TOOLS', menu: [['CHAMFER', 'Chamfer — vát góc'], ['JOIN', 'Join — nối'], ['LENGTHEN', 'Lengthen — đổi dài'], ['BREAKATPOINT', 'Break at point — tách tại điểm'], ['MATCHPROP', 'Match Properties — sao thuộc tính'], ['DIVIDE', 'Divide — chia đều'], ['MEASURE', 'Measure — đặt điểm theo khoảng'], ['DDEDIT', 'Sửa chữ']] }))] },
-      { pri: 5, title: 'Chú thích', items: [big('TEXT', 'Text\nChữ', { menu: [['TEXT', 'Chữ 1 dòng'], ['MTEXT', 'Chữ nhiều dòng']] }), big('DIMLINEAR', 'Dimension\nKích thước', { menu: [['DIMLINEAR', 'Ngang / dọc'], ['DIMALIGNED', 'Chéo'], ['DIMANGULAR', 'Góc'], ['DIMRADIUS', 'Bán kính'], ['DIMDIAMETER', 'Đường kính'], ['DIMCONTINUE', 'Nối tiếp'], ['DIMBASELINE', 'Cùng gốc']] }), col(sm('DIMCONTINUE', 'Nối tiếp'), sm('DIMBASELINE', 'Cùng gốc'), sm('DIMSTYLE', 'Kiểu Dim'))] },
+        col(sm('ERASE', 'Erase'), sm('EXPLODE', 'Explode'), sm('OFFSET', 'Offset')), col(sm('EXTEND', 'Extend'), sm('BREAK', 'Break'), sm('MODMORE', 'Thêm ▾', { icon: 'TOOLS', menu: [['CHAMFER', 'Chamfer — vát góc'], ['JOIN', 'Join — nối'], ['LENGTHEN', 'Lengthen — đổi dài'], ['BREAKATPOINT', 'Break at point — tách tại điểm'], ['MATCHPROP', 'Match Properties — sao thuộc tính'], ['ALIGN', 'Align — căn chỉnh theo 2 điểm'], ['DIVIDE', 'Divide — chia đều'], ['MEASURE', 'Measure — đặt điểm theo khoảng'], ['DDEDIT', 'Sửa chữ']] }))] },
+      { pri: 7, title: 'Chú thích', items: [big('TEXT', 'Text\nChữ', { menu: [['TEXT', 'Chữ 1 dòng'], ['MTEXT', 'Chữ nhiều dòng']] }), big('DIMLINEAR', 'Dimension\nKích thước', { menu: [['DIMLINEAR', 'Ngang / dọc'], ['DIMALIGNED', 'Chéo'], ['DIMANGULAR', 'Góc'], ['DIMRADIUS', 'Bán kính'], ['DIMDIAMETER', 'Đường kính'], ['DIMCONTINUE', 'Nối tiếp'], ['DIMBASELINE', 'Cùng gốc']] }), col(sm('MLEADER', 'Leader'), sm('DIMCONTINUE', 'Nối tiếp'), sm('DIMSTYLE', 'Kiểu Dim'))] },
       { pri: 6, title: 'Lớp', items: [big('LAYER', 'Layer\nProperties'), { t: 'ctl', kind: 'layer' }] },
       { pri: 8, title: 'Khối', items: [big('INSERT', 'Insert\nChèn'), col(sm('BLOCK', 'Tạo khối'), sm('GROUP', 'Nhóm'), sm('UNGROUP', 'Bỏ nhóm'))] },
-      { pri: 7, title: 'Thuộc tính', items: [big('MATCHPROP', 'Match\nProperties'), { t: 'ctl', kind: 'color' }] },
-      { pri: 9, title: 'Tiện ích', items: [big('DIST', 'Measure\nĐo', { menu: [['DIST', 'Khoảng cách'], ['AREA', 'Diện tích'], ['ID', 'Toạ độ điểm'], ['LIST', 'Liệt kê đối tượng'], ['DO', 'Đo nhanh (đánh dấu)']] })] },
+      { pri: 4, title: 'Thuộc tính', items: [big('MATCHPROP', 'Match\nProperties'), { t: 'ctl', kind: 'props3' }] },
+      { pri: 9, title: 'Tiện ích', items: [big('DIST', 'Measure\nĐo', { menu: [['DIST', 'Khoảng cách'], ['AREA', 'Diện tích'], ['ID', 'Toạ độ điểm'], ['LIST', 'Liệt kê đối tượng'], ['DO', 'Đo nhanh (đánh dấu)']] }), col(sm('QSELECT', 'Quick Select'), sm('SELECTSIMILAR', 'Chọn tương tự', { icon: 'QSELECT' }), sm('ID', 'Toạ độ điểm'))] },
       { pri: 10, title: 'Clipboard', items: [big('PASTECLIP', 'Paste\nDán'), col(sm('COPYCLIP', 'Copy'), sm('CUTCLIP', 'Cut'), sm('COPYBASE', 'Copy gốc'))] }
     ] },
     insert: { name: 'Chèn', panels: [
@@ -299,12 +316,13 @@
     annotate: { name: 'Chú thích', panels: [
       { title: 'Chữ', items: [big('MTEXT', 'Multiline\nText'), col(sm('TEXT', 'Chữ 1 dòng'), sm('DDEDIT', 'Sửa chữ', { icon: 'TEXT' }), sm('FIND', 'Tìm chữ'))] },
       { title: 'Kích thước', items: [big('DIMLINEAR', 'Linear\nNgang/dọc'), col(sm('DIMALIGNED', 'Chéo'), sm('DIMANGULAR', 'Góc'), sm('DIMRADIUS', 'Bán kính')), col(sm('DIMDIAMETER', 'Đường kính'), sm('DIMCONTINUE', 'Nối tiếp'), sm('DIMBASELINE', 'Cùng gốc')), big('DIMSTYLE', 'Dim\nStyle')] },
+      { title: 'Ghi chú dẫn', items: [big('MLEADER', 'Multileader\nGhi chú dẫn'), col(sm('QLEADER', 'Dẫn nhiều đoạn'))] },
       { title: 'Hatch', items: [big('HATCH', 'Hatch\nTô vật liệu'), col(sm('HATCHSET', 'Mẫu & tỉ lệ', { icon: 'SETTINGS' }))] },
       { title: 'Đánh dấu (không sửa file)', items: [big('DO', 'Quick\nĐo nhanh', { icon: 'MEASURE' }), big('NOTE', 'Markup\nGhi chú', { icon: 'NOTE' }), big('REVCLOUD', 'Revcloud\nMây')] }
     ] },
     view: { name: 'Hiển thị', panels: [
       { title: 'Điều hướng', items: [big('ZE', 'Extents\nVừa bản vẽ'), big('ZW', 'Window\nKhung'), col(sm('ZIN', 'Phóng to'), sm('ZOUT', 'Thu nhỏ'), sm('ZP', 'Khung trước')), col(sm('ROTVIEW', 'Xoay 90°'), sm('ROTRESET', 'Về hướng gốc', { icon: 'ROTVIEW' }), sm('BOOKMARK', 'Vị trí đã lưu'))] },
-      { title: 'Hiển thị', items: [col(sm('TGRID', 'Lưới', { icon: 'GRID', tog: 'grid' }), sm('TLWT', 'Bề rộng nét', { icon: 'LWT' }), sm('TBG', 'Nền trắng/tối', { icon: 'BG' })), big('DISPLAY', 'Display\nTuỳ chọn', { icon: 'SETTINGS' })] },
+      { title: 'Hiển thị', items: [col(sm('TGRID', 'Lưới', { icon: 'GRID', tog: 'grid' }), sm('TLWT', 'Bề rộng nét', { icon: 'LWT' }), sm('TBG', 'Nền trắng/tối', { icon: 'BG' })), col(sm('LINETYPE', 'Kiểu nét', { icon: 'LTYPE' }), sm('LTSCALE', 'Tỉ lệ nét', { icon: 'LTYPE' }), sm('LWEIGHT', 'Bề rộng nét…', { icon: 'LWT' })), big('DISPLAY', 'Display\nTuỳ chọn', { icon: 'SETTINGS' })] },
       { title: 'Bảng', items: [big('PROPERTIES', 'Properties\nThuộc tính', { icon: 'PROPS' }), col(sm('LAYER', 'Lớp'), sm('CMDLINE', 'Dòng lệnh'), sm('HISTORY', 'Lịch sử lệnh'))] },
       { title: 'Layout', items: [big('LAYOUTS', 'Layouts\nKhung in', { icon: 'LAYOUT' }), big('CLEAN', 'Clean\nToàn màn hình')] }
     ] },
@@ -335,7 +353,7 @@
     CALIB: () => { click('displayBtn'); setTimeout(() => click('openCalib'), 20); }, COUNT: () => { click('displayBtn'); setTimeout(() => click('openCount'), 20); },
     DOPEN: () => window.DVDCloud && DVDCloud.openFromDrive(), DUP: () => window.DVDCloud && DVDCloud.uploadCurrentToDrive(), DSAVE: () => window.DVDCloud && DVDCloud.saveDxfToDrive(),
     COLLAB: () => window.DVDCloud && (DVDCloud.state.collab ? DVDCloud.stopCollab() : DVDCloud.enableCollab()), DSET: () => window.DVDCloud && DVDCloud.openSettings(),
-    BLOCKLIB: () => openBlockLib(), LAYER: () => openLayerManager(), NEW: () => A.newDrawing()
+    BLOCKLIB: () => openBlockLib(), LAYER: () => openLayerManager(), NEW: () => A.newDrawing(), LINETYPE: () => openLinetypes(), LWEIGHT: () => openLweight()
   };
   const doCmd = c => { if(ACT[c]) ACT[c](); else run(c.split('|')[0]); };
   A.doCmd = doCmd;
@@ -402,7 +420,7 @@
   }
   function panelMenu(i, el){
     const P = RIB[curTab].panels[i]; const items = [];
-    const add = it => { if(it.t === 'col') return it.items.forEach(add); if(it.t === 'ctl'){ if(it.kind === 'layer') ['LAYER', 'LAYMCUR', 'LAYISO', 'LAYUNISO', 'LAYON', 'LAYTHW'].forEach(c => items.push({ t: c === 'LAYER' ? 'Quản lý lớp' : (DVDCmd.commands.find(x => x.k[0] === c) || { d: c }).d, ic: 'LAYER', fn: () => doCmd(c) })); else items.push({ t: 'Bảng thuộc tính', ic: 'PROPS', fn: () => doCmd('PROPERTIES') }); return; }
+    const add = it => { if(it.t === 'col') return it.items.forEach(add); if(it.t === 'ctl'){ if(it.kind === 'layer') ['LAYER', 'LAYMCUR', 'LAYISO', 'LAYUNISO', 'LAYON', 'LAYTHW'].forEach(c => items.push({ t: c === 'LAYER' ? 'Quản lý lớp' : (DVDCmd.commands.find(x => x.k[0] === c) || { d: c }).d, ic: 'LAYER', fn: () => doCmd(c) })); else { items.push({ t: 'Bảng thuộc tính', ic: 'PROPS', fn: () => doCmd('PROPERTIES') }); if(it.kind === 'props3'){ items.push({ t: 'Quản lý kiểu nét (LINETYPE)', ic: 'LTYPE', fn: () => doCmd('LINETYPE') }); items.push({ t: 'Bề rộng nét (LWEIGHT)', ic: 'LWT', fn: () => doCmd('LWEIGHT') }); } } return; }
       if(it.menu){ it.menu.forEach(([c, t]) => items.push({ t, ic: c.split('|')[0], fn: () => doCmd(c) })); return; }
       items.push({ t: String(it.label || it.cmd).replace('\n', ' — '), ic: it.icon || it.cmd.split('|')[0], fn: () => doCmd(it.cmd) }); };
     P.items.forEach(add); const r = el.getBoundingClientRect(); menu(r.left, r.bottom + 2, items);
@@ -422,21 +440,47 @@
   function ctlHTML(kind){
     if(kind === 'layer') return '<div class="ac-ctl"><button class="ac-laybtn" id="acLayBtn" title="Lớp hiện hành — bấm để chọn / bật tắt"><span class="sw"></span><span class="nm">0</span>▾</button><div style="display:flex;gap:2px">' + [['LAYMCUR', 'Lấy lớp của đối tượng làm hiện hành', 'BHAND'], ['LAYISO', 'Cô lập lớp', 'ZW'], ['LAYUNISO', 'Bỏ cô lập', 'ZE'], ['LAYOFF', 'Tắt lớp (bấm đối tượng)', 'BG'], ['LAYFRZ', 'Đóng băng lớp', 'SETTINGS'], ['LAYLCK', 'Khoá lớp', 'BLOCK'], ['LAYON', 'Bật tất cả lớp', 'LAYER'], ['LAYTHW', 'Rã băng tất cả', 'SYNC']].map(([c, t, i]) => '<button class="ac-rbtn" data-c="' + c + '" title="' + t + '" style="padding:0 4px">' + ico(i) + '</button>').join('') + '</div></div>';
     if(kind === 'color') return '<div class="ac-ctl" style="min-width:170px"><select id="acColSel" title="Màu cho đối tượng mới / đang chọn"></select><button class="ac-rbtn" data-c="PROPERTIES" title="Bảng thuộc tính (Ctrl+1)">' + ico('PROPS') + '<span>Bảng thuộc tính</span></button></div>';
+    if(kind === 'props3') return '<div class="ac-ctl ac-p3" style="min-width:150px;max-width:170px"><select id="acColSel" title="Màu — đối tượng mới / đang chọn"></select><select id="acLwSel" title="Bề rộng nét — đối tượng mới / đang chọn"></select><select id="acLtSel" title="Kiểu nét — đối tượng mới / đang chọn"></select></div>';
     return '';
   }
   function syncCtl(){
     const lb = $('acLayBtn'); if(lb){ const n = A.LS.cur || '0'; lb.querySelector('.nm').textContent = n; lb.querySelector('.sw').style.background = A.layerHex(n); lb.onclick = () => { const r = lb.getBoundingClientRect(); layerDrop(r.left, r.bottom + 2); }; }
-    const cs = $('acColSel'); if(cs){ const sel = A.LS.color; const COLS = [['BYLAYER', '■ ByLayer'], ['#ff0000', '■ Đỏ'], ['#ffff00', '■ Vàng'], ['#00ff00', '■ Xanh lá'], ['#00ffff', '■ Lục lam'], ['#0000ff', '■ Xanh dương'], ['#ff00ff', '■ Tím'], ['#ffffff', '■ Trắng'], ['#808080', '■ Xám'], ['#ff7f00', '■ Cam']];
-      let h = COLS.map(([v, t]) => '<option value="' + v + '"' + (v === sel ? ' selected' : '') + '>' + t + '</option>').join(''); if(!COLS.some(c => c[0] === sel)) h += '<option value="' + esc(sel) + '" selected>■ ' + esc(sel) + '</option>'; h += '<option value="PICK">Chọn màu…</option>'; cs.innerHTML = h;
-      cs.onchange = () => { const v = cs.value; const apply = c => { if(selEnts.size){ const rep = [...selEnts].map(e => { const w = _deepEnt(e); delete w.userAdded; if(c === 'BYLAYER'){ w.bl = 1; w.col = A.layerHex(w.layer || '0'); } else { delete w.bl; w.col = c; } return [e, w]; }); A.commit({ rep }); selEnts.clear(); for(const [, w] of rep) selEnts.add(w); refreshPanSel(); } else A.setCurColor(c); syncCtl(); };
-        if(v === 'PICK') aciPicker(cs.getBoundingClientRect(), c => apply(c)); else apply(v); }; }
+    syncColor(); syncP3();
     document.querySelectorAll('[data-tog]').forEach(b => b.classList.toggle('on', !!SET[b.dataset.tog]));
   }
+  function syncColor(){
+    const cs = $('acColSel'); if(cs){ const sel = A.LS.color; const COLS = [['BYLAYER', '■ ByLayer'], ['#ff0000', '■ Đỏ'], ['#ffff00', '■ Vàng'], ['#00ff00', '■ Xanh lá'], ['#00ffff', '■ Lục lam'], ['#0000ff', '■ Xanh dương'], ['#ff00ff', '■ Tím'], ['#ffffff', '■ Trắng'], ['#808080', '■ Xám'], ['#ff7f00', '■ Cam']];
+      let h = COLS.map(([v, t]) => '<option value="' + v + '"' + (v === sel ? ' selected' : '') + '>' + t + '</option>').join(''); if(!COLS.some(c => c[0] === sel)) h += '<option value="' + esc(sel) + '" selected>■ ' + esc(sel) + '</option>'; h += '<option value="PICK">Chọn màu…</option>'; cs.innerHTML = h;
+      if(selEnts.size){ const cl = new Set([...selEnts].slice(0, 3000).map(e => e.bl ? 'BYLAYER' : String(e.col || '').toLowerCase())); const v = cl.size === 1 ? [...cl][0] : ''; if(v && ![...cs.options].some(o => o.value === v)){ const o = document.createElement('option'); o.value = v; o.textContent = '■ ' + v; cs.insertBefore(o, cs.lastChild); } if(!v){ const o = document.createElement('option'); o.value = '*'; o.textContent = '*nhiều*'; cs.insertBefore(o, cs.firstChild); } cs.value = v || '*'; }
+      cs.onchange = () => { const v = cs.value; if(v === '*') return; const apply = c => { if(selEnts.size){ const rep = [...selEnts].map(e => { const w = _deepEnt(e); delete w.userAdded; if(c === 'BYLAYER'){ w.bl = 1; w.col = A.layerHex(w.layer || '0'); } else { delete w.bl; w.col = c; } return [e, w]; }); A.commit({ rep }); selEnts.clear(); for(const [, w] of rep) selEnts.add(w); refreshPanSel(); } else A.setCurColor(c); syncCtl(); };
+        if(v === 'PICK') aciPicker(cs.getBoundingClientRect(), c => apply(c)); else apply(v); }; }
+  }
+  // ---- ô Bề rộng nét / Kiểu nét trên ribbon (như AutoCAD: phản ánh đối tượng đang chọn) ----
+  const NOLT = { TEXT: 1, HATCH: 1, SOLID: 1, POINT: 1 };
+  function applyToSel(fn, msg){ const rep = [...selEnts].filter(e => !A.isLocked(e)).map(e => { const w = _deepEnt(e); delete w.userAdded; fn(w); return [e, w]; }); if(!rep.length) return; A.commit({ rep }, msg); selEnts.clear(); for(const [, w] of rep) selEnts.add(w); refreshPanSel(); }
+  A.applyToSel = applyToSel;
+  function syncP3(){
+    const ls = $('acLtSel'), ws = $('acLwSel'); const S = selEnts.size ? [...selEnts].slice(0, 3000) : null;
+    if(ls){ const names = ['BYLAYER', 'BYBLOCK'].concat(A.ltNames()); let cur = A.LS.lt || 'BYLAYER';
+      if(S){ const v = new Set(S.filter(e => !NOLT[e.type]).map(e => e.lt || 'BYLAYER')); cur = v.size === 1 ? [...v][0] : '*'; }
+      if(cur !== '*' && !names.includes(cur)) names.push(cur);
+      ls.innerHTML = (cur === '*' ? '<option value="*">*nhiều*</option>' : '') + names.map(n => '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + (n === 'BYLAYER' ? '— ByLayer' : n === 'BYBLOCK' ? '— ByBlock' : n === 'CONTINUOUS' ? '——— Continuous' : '- - - ' + esc(n)) + '</option>').join('') + '<option value="OTHER">Khác… (tải kiểu nét)</option>';
+      ls.value = cur;
+      ls.onchange = () => { const v = ls.value; if(v === '*') return; if(v === 'OTHER'){ syncP3(); openLinetypes(); return; }
+        if(selEnts.size){ if(!/^(BYLAYER|BYBLOCK|CONTINUOUS)$/.test(v) && !LTYPES[v]) A.loadLT(v); applyToSel(w => { if(NOLT[w.type]) return; if(v === 'BYLAYER') delete w.lt; else w.lt = v; }, 'Đã đổi kiểu nét'); }
+        else A.setCurLT(v); syncP3(); try{ DVDCmd.refreshPalette(true); }catch(_){} }; }
+    if(ws){ const L = A.LW_LIST.filter(v => v > 0); let cur = A.LS.lw > 0 ? A.LS.lw : 'BYLAYER';
+      if(S){ const v = new Set(S.map(e => e.lw > 0 ? e.lw : 'BYLAYER')); cur = v.size === 1 ? [...v][0] : '*'; }
+      ws.innerHTML = (cur === '*' ? '<option value="*">*nhiều*</option>' : '') + '<option value="BYLAYER">— ByLayer</option>' + L.map(v => '<option value="' + v + '">' + lwBar(v) + ' ' + (v / 100).toFixed(2) + ' mm</option>').join('');
+      ws.value = String(cur);
+      ws.onchange = () => { const v = ws.value; if(v === '*') return; if(selEnts.size) applyToSel(w => { if(v === 'BYLAYER') delete w.lw; else w.lw = +v; }, 'Đã đổi bề rộng nét'); else A.setCurLW(v); syncP3(); try{ DVDCmd.refreshPalette(true); }catch(_){} }; }
+  }
+  const lwBar = v => v >= 100 ? '▬▬' : v >= 50 ? '━━' : v >= 30 ? '──' : '──';
   A.onLayers = () => { syncCtl(); if(lmRoot) renderLM(); };
   A.onSelChange = () => {
     // chọn đối tượng -> hiện lớp của chúng trên ribbon (như AutoCAD)
     const lb = $('acLayBtn'); if(!lb) return;
-    if(selEnts.size){ const ly = new Set([...selEnts].slice(0, 2000).map(e => e.layer || '0')); const n = ly.size === 1 ? [...ly][0] : '*nhiều lớp*'; lb.querySelector('.nm').textContent = n; lb.querySelector('.sw').style.background = ly.size === 1 ? A.layerHex(n) : 'transparent'; }
+    if(selEnts.size){ const ly = new Set([...selEnts].slice(0, 2000).map(e => e.layer || '0')); const n = ly.size === 1 ? [...ly][0] : '*nhiều lớp*'; lb.querySelector('.nm').textContent = n; lb.querySelector('.sw').style.background = ly.size === 1 ? A.layerHex(n) : 'transparent'; syncColor(); syncP3(); }
     else syncCtl();
   };
   // QAT + nút phải
@@ -512,7 +556,7 @@
     if(!A.hasDoc()){ say('Mở bản vẽ trước.'); return; }
     A.lsSync();
     const d = A.dialog({ title: 'Quản lý lớp (Layer Properties)', wide: true, okText: 'Đóng', noCancel: true, html:
-      '<div class="lm-bar"><button data-a="new">' + ico('LAYER') + 'Lớp mới</button><button data-a="cur">✓ Đặt hiện hành</button><button data-a="del">✕ Xoá</button><button data-a="allon">Bật tất cả</button><button data-a="thaw">Rã băng tất cả</button><button data-a="unlock">Mở khoá tất cả</button><input placeholder="Lọc tên lớp…" data-a="find"></div><div class="lm-tbl"><table><thead><tr><th>HH</th><th>Tên lớp</th><th>Bật</th><th>Băng</th><th>Khoá</th><th>Màu</th><th style="text-align:right">Số nét</th></tr></thead><tbody></tbody></table></div><p style="margin:8px 0 0">Bấm đúp tên = đặt hiện hành · bấm ô màu để đổi màu lớp (đối tượng ByLayer đổi theo) · lớp khoá không chọn/sửa được.</p>',
+      '<div class="lm-bar"><button data-a="new">' + ico('LAYER') + 'Lớp mới</button><button data-a="cur">✓ Đặt hiện hành</button><button data-a="del">✕ Xoá</button><button data-a="allon">Bật tất cả</button><button data-a="thaw">Rã băng tất cả</button><button data-a="unlock">Mở khoá tất cả</button><input placeholder="Lọc tên lớp…" data-a="find"></div><div class="lm-tbl"><table><thead><tr><th>HH</th><th>Tên lớp</th><th>Bật</th><th>Băng</th><th>Khoá</th><th>Màu</th><th>Kiểu nét</th><th>Bề rộng</th><th style="text-align:right">Số nét</th></tr></thead><tbody></tbody></table></div><p style="margin:8px 0 0">Bấm đúp tên = đặt hiện hành · bấm ô màu / kiểu nét / bề rộng để đổi (đối tượng ByLayer đổi theo) · lớp khoá không chọn/sửa được.</p>',
       ok: () => { lmRoot = null; }, onOpen: root => { lmRoot = root; } });
     let selName = A.LS.cur;
     const root = d.root;
@@ -526,6 +570,8 @@
     root.querySelector('[data-a="find"]').addEventListener('input', e => { lmFilter = e.target.value.trim().toLowerCase(); renderLM(selName); });
     root.querySelector('tbody').addEventListener('click', e => { const tr = e.target.closest('tr[data-n]'); if(!tr) return; const n = tr.dataset.n; selName = n; const t = e.target.closest('[data-f]');
       if(t){ const f = t.dataset.f; if(f === 'col'){ aciPicker(t.getBoundingClientRect(), c => { if(c === 'BYLAYER') return; A.setLayerColor(n, c); renderLM(selName); }); return; }
+        if(f === 'lt'){ const r = t.getBoundingClientRect(); ltMenu(r, A.layerLT(n), v => { A.setLayerLT(n, v); renderLM(selName); }, false); return; }
+        if(f === 'lw'){ const r = t.getBoundingClientRect(); menu(r.left, r.bottom + 2, [{ t: 'Mặc định', fn: () => { A.setLayerLW(n, 0); renderLM(selName); } }].concat(A.LW_LIST.filter(v => v > 0).map(v => ({ t: (v / 100).toFixed(2) + ' mm', fn: () => { A.setLayerLW(n, v); renderLM(selName); } })))); return; }
         const set = f === 'off' ? A.LS.off : f === 'frozen' ? A.LS.frozen : A.LS.locked; A.setLayerFlag(n, f, !set.has(n)); }
       renderLM(selName); });
     root.querySelector('tbody').addEventListener('dblclick', async e => { const tr = e.target.closest('tr[data-n]'); if(!tr) return; const n = tr.dataset.n;
@@ -538,9 +584,72 @@
     const cnt = {}; for(const e of modelEntities) cnt[e.layer || '0'] = (cnt[e.layer || '0'] || 0) + 1;
     const rows = A.layerNames().filter(n => !lmFilter || n.toLowerCase().includes(lmFilter));
     tb.innerHTML = rows.map(n => { const off = A.LS.off.has(n), fz = A.LS.frozen.has(n), lk = A.LS.locked.has(n); const aci = A.aciNear ? A.aciNear(A.layerHex(n)) : '';
-      return '<tr data-n="' + esc(n) + '" class="' + (n === A.LS.cur ? 'cur' : '') + '" style="' + (n === selName ? 'outline:1px solid #3d9ae8' : '') + '"><td>' + (n === A.LS.cur ? '<b style="color:#7ee787">✓</b>' : '') + '</td><td class="nm' + (off || fz ? ' off' : '') + '">' + esc(n) + '</td><td><button class="tg" data-f="off">' + svg(BULB(!off)) + '</button></td><td><button class="tg" data-f="frozen">' + svg(SUN(fz)) + '</button></td><td><button class="tg" data-f="locked">' + svg(LOCK(lk)) + '</button></td><td><span class="sw" data-f="col" style="background:' + esc(A.layerHex(n)) + '"></span> <span style="color:#8f99a8">' + aci + '</span></td><td style="text-align:right;color:#aab3c0">' + (cnt[n] || 0) + '</td></tr>'; }).join('');
+      return '<tr data-n="' + esc(n) + '" class="' + (n === A.LS.cur ? 'cur' : '') + '" style="' + (n === selName ? 'outline:1px solid #3d9ae8' : '') + '"><td>' + (n === A.LS.cur ? '<b style="color:#7ee787">✓</b>' : '') + '</td><td class="nm' + (off || fz ? ' off' : '') + '">' + esc(n) + '</td><td><button class="tg" data-f="off">' + svg(BULB(!off)) + '</button></td><td><button class="tg" data-f="frozen">' + svg(SUN(fz)) + '</button></td><td><button class="tg" data-f="locked">' + svg(LOCK(lk)) + '</button></td><td><span class="sw" data-f="col" style="background:' + esc(A.layerHex(n)) + '"></span> <span style="color:#8f99a8">' + aci + '</span></td><td><span class="lk" data-f="lt">' + esc(A.layerLT(n) === 'CONTINUOUS' ? 'Continuous' : A.layerLT(n)) + '</span></td><td><span class="lk" data-f="lw">' + (A.layerLW(n) > 0 ? (A.layerLW(n) / 100).toFixed(2) + ' mm' : 'Mặc định') + '</span></td><td style="text-align:right;color:#aab3c0">' + (cnt[n] || 0) + '</td></tr>'; }).join('');
   }
   A.openLayerManager = openLayerManager;
+
+  /* ---------------- kiểu nét (LINETYPE) ---------------- */
+  // vẽ mẫu nét lên canvas nhỏ (bỏ qua tỉ lệ thật: co để thấy rõ mẫu)
+  function ltPreview(cnv, pat, color){
+    const g = cnv.getContext('2d'); const w = cnv.width, h = cnv.height; g.clearRect(0, 0, w, h); g.strokeStyle = color || '#e6eaf0'; g.lineWidth = 1.6; g.lineCap = 'round';
+    const tot = (pat || []).reduce((a, b) => a + Math.abs(b), 0);
+    if(!pat || !pat.length || !(tot > 0)){ g.beginPath(); g.moveTo(2, h / 2); g.lineTo(w - 2, h / 2); g.stroke(); return; }
+    const k = Math.max(w / 2.6, 30) / tot; let x = 2, i = 0, guard = 0;
+    while(x < w - 2 && guard++ < 500){ const v = pat[i % pat.length]; const L = Math.abs(v) * k; if(v >= 0){ g.beginPath(); g.moveTo(x, h / 2); g.lineTo(Math.min(w - 2, x + Math.max(L, 0.01)), h / 2); g.stroke(); } x += L; i++; }
+  }
+  A.ltPreview = ltPreview;
+  function ltLabel(n){ return n === 'BYLAYER' ? 'ByLayer' : n === 'BYBLOCK' ? 'ByBlock' : n === 'CONTINUOUS' ? 'Continuous' : n; }
+  function ltMenu(rect, cur, cb, withBy){
+    const names = (withBy ? ['BYLAYER', 'BYBLOCK'] : []).concat(A.ltNames());
+    const items = names.map(n => ({ t: (n === cur ? '✓ ' : '   ') + ltLabel(n), fn: () => cb(n) }));
+    items.push({ sep: 1 }, { t: 'Tải thêm kiểu nét…', ic: 'LTYPE', fn: () => loadLtDialog(list => { if(list.length) cb(list[0]); }) });
+    menu(rect.left, rect.bottom + 2, items);
+  }
+  function loadLtDialog(done){
+    const all = Object.keys(STD_LT_ISO).filter(n => !LTYPES[n]);
+    if(!all.length){ say('Đã tải đủ các kiểu nét chuẩn.'); if(done) done([]); return; }
+    A.dialog({ title: 'Tải kiểu nét (acadiso.lin)', wide: true, okText: 'Tải', html: '<div class="lm-tbl"><table><thead><tr><th></th><th>Kiểu nét</th><th>Hình dạng</th><th>Mô tả</th></tr></thead><tbody>' + all.map(n => '<tr data-n="' + n + '"><td><input type="checkbox" data-n="' + n + '"></td><td>' + n + '</td><td><canvas width="140" height="14" data-n="' + n + '"></canvas></td><td style="color:#aab3c0">' + esc(STD_LT_ISO[n].d) + '</td></tr>').join('') + '</tbody></table></div>',
+      onOpen: root => { root.querySelectorAll('canvas[data-n]').forEach(c => ltPreview(c, STD_LT_ISO[c.dataset.n].p)); root.querySelector('tbody').addEventListener('click', e => { const tr = e.target.closest('tr[data-n]'); if(!tr || e.target.type === 'checkbox') return; const cb = tr.querySelector('input'); cb.checked = !cb.checked; }); },
+      ok: root => { const list = [...root.querySelectorAll('input[type=checkbox]:checked')].map(i => i.dataset.n); for(const n of list) A.loadLT(n); if(list.length) say('Đã tải ' + list.length + ' kiểu nét.'); if(done) done(list); } });
+  }
+  let ltRoot = null;
+  function openLinetypes(){
+    let sel = A.LS.lt || 'BYLAYER';
+    const d = A.dialog({ title: 'Quản lý kiểu nét (Linetype Manager)', wide: true, okText: 'Đóng', noCancel: true,
+      html: '<div class="lm-bar"><button data-a="load">' + ico('LTYPE') + 'Tải…</button><button data-a="cur">✓ Đặt hiện hành</button><button data-a="del">✕ Xoá</button></div><div class="lm-tbl"><table><thead><tr><th>HH</th><th>Kiểu nét</th><th>Hình dạng</th><th>Mô tả</th><th style="text-align:right">Dùng</th></tr></thead><tbody></tbody></table></div>' +
+        '<label class="dvd-frow"><span>Tỉ lệ toàn cục (LTSCALE)</span><span class="v"><input id="ltG" inputmode="decimal" style="width:110px"></span></label><label class="dvd-frow"><span>Tỉ lệ cho đối tượng mới (CELTSCALE)</span><span class="v"><input id="ltC" inputmode="decimal" style="width:110px"></span></label>' +
+        '<p style="margin:6px 0 0">Nét đứt hiện theo <b>tỉ lệ toàn cục × tỉ lệ riêng của đối tượng</b>. Bản vẽ mm tỉ lệ 1:100 thường đặt LTSCALE khoảng 50–100. Kiểu nét được lưu khi xuất DXF.</p>',
+      ok: root => { const g = +String(root.querySelector('#ltG').value).replace(',', '.'), c = +String(root.querySelector('#ltC').value).replace(',', '.'); if(g > 0 && g !== LTSCALE) A.setLTScale(g); if(c > 0) A.setCELTS(c); ltRoot = null; syncCtl(); try{ DVDCmd.refreshPalette(true); }catch(_){} },
+      onOpen: root => { ltRoot = root; } });
+    const root = d.root;
+    root.querySelector('#ltG').value = +(+LTSCALE).toPrecision(6); root.querySelector('#ltC').value = +(+(A.LS.celts || 1)).toPrecision(6);
+    const render = () => {
+      const used = {}; for(const e of modelEntities){ if(e.lt) used[e.lt] = (used[e.lt] || 0) + 1; } for(const v of Object.values(LAYER_LT)) if(v) used[v] = (used[v] || 0) + 0;
+      const names = ['BYLAYER', 'BYBLOCK'].concat(A.ltNames());
+      root.querySelector('tbody').innerHTML = names.map(n => { const df = /^(BYLAYER|BYBLOCK)$/.test(n) ? null : A.ltDefOf(n);
+        return '<tr data-n="' + esc(n) + '" class="' + (n === (A.LS.lt || 'BYLAYER') ? 'cur' : '') + '" style="' + (n === sel ? 'outline:1px solid #3d9ae8' : '') + '"><td>' + (n === (A.LS.lt || 'BYLAYER') ? '<b style="color:#7ee787">✓</b>' : '') + '</td><td>' + esc(ltLabel(n)) + '</td><td>' + (df ? '<canvas width="140" height="14" data-n="' + esc(n) + '"></canvas>' : '') + '</td><td style="color:#aab3c0">' + esc(df ? (df.desc || '') : '') + '</td><td style="text-align:right;color:#aab3c0">' + (used[n] || '') + '</td></tr>'; }).join('');
+      root.querySelectorAll('canvas[data-n]').forEach(c => { const df = A.ltDefOf(c.dataset.n); ltPreview(c, df ? df.pat : []); });
+    };
+    render();
+    root.querySelector('tbody').addEventListener('click', e => { const tr = e.target.closest('tr[data-n]'); if(!tr) return; sel = tr.dataset.n; render(); });
+    root.querySelector('tbody').addEventListener('dblclick', e => { const tr = e.target.closest('tr[data-n]'); if(!tr) return; A.setCurLT(tr.dataset.n); sel = tr.dataset.n; render(); syncCtl(); });
+    root.querySelector('.lm-bar').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if(!b) return; const a = b.dataset.a;
+      if(a === 'load') loadLtDialog(() => render());
+      if(a === 'cur'){ A.setCurLT(sel); render(); syncCtl(); }
+      if(a === 'del'){ if(/^(BYLAYER|BYBLOCK|CONTINUOUS)$/.test(sel)){ say('Không xoá được ' + ltLabel(sel) + '.'); return; }
+        if(modelEntities.some(x => x.lt === sel) || Object.values(LAYER_LT).includes(sel) || A.LS.lt === sel){ say('Kiểu nét đang được dùng — không xoá được.'); return; }
+        delete LTYPES[sel]; delete A.LS.ltd[sel]; A.lsSave(); sel = 'BYLAYER'; render(); } });
+  }
+  A.openLinetypes = openLinetypes;
+  function openLweight(){
+    const L = A.LW_LIST.filter(v => v > 0);
+    A.dialog({ title: 'Bề rộng nét (Lineweight Settings)', html:
+      '<label class="dvd-frow"><span>Hiện bề rộng nét (LWT)</span><span class="v"><input type="checkbox" id="lwShow"' + (showLW ? ' checked' : '') + '></span></label>' +
+      '<label class="dvd-frow"><span>Bề rộng cho đối tượng mới</span><span class="v"><select id="lwCur"><option value="BYLAYER">ByLayer</option>' + L.map(v => '<option value="' + v + '"' + (A.LS.lw === v ? ' selected' : '') + '>' + (v / 100).toFixed(2) + ' mm</option>').join('') + '</select></span></label>' +
+      '<p style="margin:6px 0 0">Bề rộng được hiển thị theo tỉ lệ in thật (mm trên giấy) khi bật LWT. Đổi bề rộng của lớp trong <b>Quản lý lớp</b>.</p>',
+      ok: root => { const on = root.querySelector('#lwShow').checked; if(on !== !!showLW){ showLW = on; try{ syncDisplayToggles(); }catch(_){} draw(); } A.setCurLW(root.querySelector('#lwCur').value); syncCtl(); setTimeout(syncSB, 30); } });
+  }
+  A.openLweight = openLweight;
 
   /* ---------------- thư viện khối ---------------- */
   function openBlockLib(){
@@ -560,11 +669,11 @@
       switch(t){ case 'end': g.rect(P.x - s, P.y - s, 2 * s, 2 * s); break; case 'mid': g.moveTo(P.x, P.y - s); g.lineTo(P.x + s, P.y + s); g.lineTo(P.x - s, P.y + s); g.closePath(); break; case 'cen': g.arc(P.x, P.y, s, 0, 7); break; case 'qua': g.moveTo(P.x, P.y - s); g.lineTo(P.x + s, P.y); g.lineTo(P.x, P.y + s); g.lineTo(P.x - s, P.y); g.closePath(); break; case 'int': g.moveTo(P.x - s, P.y - s); g.lineTo(P.x + s, P.y + s); g.moveTo(P.x + s, P.y - s); g.lineTo(P.x - s, P.y + s); break; case 'per': g.moveTo(P.x - s, P.y - s); g.lineTo(P.x - s, P.y + s); g.lineTo(P.x + s, P.y + s); g.moveTo(P.x - s, P.y); g.lineTo(P.x, P.y); g.lineTo(P.x, P.y + s); break; case 'tan': g.arc(P.x, P.y, s, 0, 7); g.moveTo(P.x - s, P.y - s); g.lineTo(P.x + s, P.y - s); break; case 'nea': g.moveTo(P.x - s, P.y - s); g.lineTo(P.x + s, P.y - s); g.lineTo(P.x - s, P.y + s); g.lineTo(P.x + s, P.y + s); g.closePath(); break; case 'nod': g.arc(P.x, P.y, s, 0, 7); g.moveTo(P.x - 3, P.y - 3); g.lineTo(P.x + 3, P.y + 3); g.moveTo(P.x + 3, P.y - 3); g.lineTo(P.x - 3, P.y + 3); break; case 'ins': g.rect(P.x - s, P.y - s, s, s); g.rect(P.x, P.y, s, s); break; }
       g.stroke(); return c.toDataURL(); };
     const ck = (id, lab, on) => '<label class="ck"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + lab + '</label>';
-    const html = '<div class="ds-tabs">' + [['os', 'Bắt điểm (OSNAP)'], ['po', 'Truy bắt cực (POLAR)'], ['gr', 'Lưới & bước (GRID/SNAP)'], ['dy', 'Nhập động & con trỏ']].map(([k, t]) => '<button data-p="' + k + '" class="' + (k === (tab || 'os') ? 'on' : '') + '">' + t + '</button>').join('') + '</div>' +
+    const html = '<div class="ds-tabs">' + [['os', 'Bắt điểm (OSNAP)'], ['po', 'Truy bắt cực (POLAR)'], ['gr', 'Lưới & bước (GRID/SNAP)'], ['dy', 'Nhập động, con trỏ & chọn']].map(([k, t]) => '<button data-p="' + k + '" class="' + (k === (tab || 'os') ? 'on' : '') + '">' + t + '</button>').join('') + '</div>' +
       '<div class="ds-pane' + ((tab || 'os') === 'os' ? ' on' : '') + '" data-p="os">' + ck('dsOs', 'Bật bắt điểm (F3)', SET.osnap) + ck('dsOt', 'Bật truy bắt theo điểm OTRACK (F11)', SET.otrack) + '<div class="os-grid" style="margin-top:8px">' + A.OS_ALL.map(k => '<label><input type="checkbox" data-os="' + k + '"' + (SET.osm.includes(k) ? ' checked' : '') + '><img src="' + mk(osIcon[k]) + '" width="18" height="18"> ' + A.OS_NAME[k] + '</label>').join('') + '</div><div style="display:flex;gap:6px;margin-top:8px"><button type="button" class="btn-ghost" data-all="1" style="flex:1;padding:6px">Chọn tất cả</button><button type="button" class="btn-ghost" data-all="0" style="flex:1;padding:6px">Bỏ hết</button></div><p style="margin-top:8px">Mẹo: gõ END, MID, CEN, INT, PER, TAN, NEA, QUA, NOD, INS khi đang chọn điểm để bắt điểm 1 lần.</p></div>' +
       '<div class="ds-pane' + (tab === 'po' ? ' on' : '') + '" data-p="po">' + ck('dsPo', 'Bật POLAR (F10)', SET.polar) + ck('dsOr', 'Bật ORTHO — chỉ ngang/dọc (F8, giữ Shift = tạm thời)', SET.ortho) + '<label class="dvd-frow" style="margin-top:8px"><span>Bước góc</span><span class="v"><select id="dsPa">' + [5, 10, 15, 18, 22.5, 30, 45, 90].map(v => '<option' + (v == SET.polarAng ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></span></label></div>' +
       '<div class="ds-pane' + (tab === 'gr' ? ' on' : '') + '" data-p="gr">' + ck('dsGr', 'Hiện lưới (F7)', SET.grid) + ck('dsSn', 'Bước nhảy theo lưới SNAP (F9)', SET.snap) + '<label class="dvd-frow" style="margin-top:8px"><span>Bước SNAP (0 = theo mức phóng)</span><span class="v"><input id="dsSp" type="number" step="any" min="0" value="' + (SET.snapSp || 0) + '"></span></label></div>' +
-      '<div class="ds-pane' + (tab === 'dy' ? ' on' : '') + '" data-p="dy">' + ck('dsDy', 'Nhập động cạnh con trỏ (F12)', SET.dyn) + '<label class="dvd-frow" style="margin-top:8px"><span>Cỡ chữ thập (% màn hình, 100 = toàn màn)</span><span class="v"><input id="dsXh" type="number" min="3" max="100" value="' + SET.xhair + '"></span></label><label class="dvd-frow"><span>Ô chọn (pickbox, px)</span><span class="v"><input id="dsPb" type="number" min="2" max="15" value="' + SET.pickbox + '"></span></label><label class="dvd-frow"><span>Vùng bắt điểm (aperture, px)</span><span class="v"><input id="dsAp" type="number" min="4" max="30" value="' + SET.aperture + '"></span></label></div>';
+      '<div class="ds-pane' + (tab === 'dy' ? ' on' : '') + '" data-p="dy">' + ck('dsDy', 'Nhập động cạnh con trỏ (F12)', SET.dyn) + ck('dsPg', 'Chọn cả nhóm / khối / kích thước (Ctrl+Shift+A)', SET.pickGroup !== false) + ck('dsRo', 'Gợi ý thuộc tính khi rê chuột lên đối tượng', SET.rollover !== false) + '<label class="dvd-frow" style="margin-top:8px"><span>Cỡ chữ thập (% màn hình, 100 = toàn màn)</span><span class="v"><input id="dsXh" type="number" min="3" max="100" value="' + SET.xhair + '"></span></label><label class="dvd-frow"><span>Ô chọn (pickbox, px)</span><span class="v"><input id="dsPb" type="number" min="2" max="15" value="' + SET.pickbox + '"></span></label><label class="dvd-frow"><span>Vùng bắt điểm (aperture, px)</span><span class="v"><input id="dsAp" type="number" min="4" max="30" value="' + SET.aperture + '"></span></label></div>';
     A.dialog({ title: 'Cài đặt trợ giúp vẽ', wide: true, html, onOpen: root => {
       root.querySelector('.ds-tabs').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if(!b) return; root.querySelectorAll('.ds-tabs button').forEach(x => x.classList.toggle('on', x === b)); root.querySelectorAll('.ds-pane').forEach(x => x.classList.toggle('on', x.dataset.p === b.dataset.p)); });
       root.querySelectorAll('[data-all]').forEach(b => b.onclick = () => root.querySelectorAll('[data-os]').forEach(c => c.checked = b.dataset.all === '1'));
@@ -572,7 +681,7 @@
       const g = id => root.querySelector('#' + id); SET.osnap = g('dsOs').checked; SET.otrack = g('dsOt').checked; SET.osm = [...root.querySelectorAll('[data-os]')].filter(c => c.checked).map(c => c.dataset.os);
       SET.polar = g('dsPo').checked; SET.ortho = g('dsOr').checked; if(SET.ortho) SET.polar = false; SET.polarAng = parseFloat(g('dsPa').value) || 45;
       SET.grid = g('dsGr').checked; SET.snap = g('dsSn').checked; SET.snapSp = Math.max(0, parseFloat(g('dsSp').value) || 0);
-      SET.dyn = g('dsDy').checked; SET.xhair = Math.max(3, Math.min(100, parseInt(g('dsXh').value) || 100)); SET.pickbox = Math.max(2, Math.min(15, parseInt(g('dsPb').value) || 5)); SET.aperture = Math.max(4, Math.min(30, parseInt(g('dsAp').value) || 10));
+      SET.dyn = g('dsDy').checked; SET.pickGroup = g('dsPg').checked; SET.rollover = g('dsRo').checked; SET.xhair = Math.max(3, Math.min(100, parseInt(g('dsXh').value) || 100)); SET.pickbox = Math.max(2, Math.min(15, parseInt(g('dsPb').value) || 5)); SET.aperture = Math.max(4, Math.min(30, parseInt(g('dsAp').value) || 10));
       A.saveSet(); try{ draw(); }catch(_){} } });
   }
   A.openDrafting = openDrafting;

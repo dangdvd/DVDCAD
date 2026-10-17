@@ -301,7 +301,7 @@
   function fillHelp(){
     const q = deaccent((helpOv.querySelector('#dvdHelpFind').value || '').trim());
     const keys = [['F1', 'Bảng này'], ['F2', 'Lịch sử dòng lệnh'], ['F3', 'Bật/tắt bắt điểm OSNAP'], ['F7', 'Lưới GRID'], ['F8', 'ORTHO (giữ Shift = tạm thời)'], ['F9', 'SNAP bước lưới'], ['F10', 'POLAR góc cực'], ['F11', 'Truy bắt OTRACK'], ['F12', 'Nhập động DYN'],
-      ['Ctrl+Z / Ctrl+Y', 'Hoàn tác / làm lại'], ['Ctrl+C / X / V', 'Sao chép / cắt / dán (giữa các bản vẽ)'], ['Ctrl+Shift+C / V', 'Sao chép kèm điểm gốc / dán đúng toạ độ'], ['Ctrl+N', 'Bản vẽ mới'], ['Ctrl+O', 'Mở'], ['Ctrl+S / Ctrl+Shift+S', 'Lưu / lưu thành'], ['Ctrl+A', 'Chọn tất cả'], ['Ctrl+P', 'In / xuất'], ['Ctrl+1', 'Thuộc tính'], ['Ctrl+0', 'Toàn màn hình (ẩn ribbon)'], ['Delete', 'Xoá đối tượng đã chọn'], ['Esc', 'Huỷ lệnh / bỏ chọn'],
+      ['Ctrl+Z / Ctrl+Y', 'Hoàn tác / làm lại'], ['Ctrl+C / X / V', 'Sao chép / cắt / dán (giữa các bản vẽ)'], ['Ctrl+Shift+C / V', 'Sao chép kèm điểm gốc / dán đúng toạ độ'], ['Ctrl+N', 'Bản vẽ mới'], ['Ctrl+O', 'Mở'], ['Ctrl+S / Ctrl+Shift+S', 'Lưu / lưu thành'], ['Ctrl+A', 'Chọn tất cả'], ['Ctrl+Shift+A', 'Bật/tắt chọn cả nhóm/khối'], ['Ctrl+P', 'In / xuất'], ['Ctrl+1', 'Thuộc tính'], ['Ctrl+0', 'Toàn màn hình (ẩn ribbon)'], ['Delete', 'Xoá đối tượng đã chọn'], ['Esc', 'Huỷ lệnh / bỏ chọn'],
       ['Chuột giữa', 'Kéo màn hình · kích đúp = vừa bản vẽ'], ['Lăn chuột', 'Phóng to/nhỏ tại con trỏ'], ['Kéo trái→phải', 'Khung trùm (chọn đối tượng nằm trọn)'], ['Kéo phải→trái', 'Khung cắt (chọn đối tượng chạm khung)'], ['Shift+bấm', 'Bỏ chọn']];
     const rows = CMDS.map(c => [c.k.join(' · '), c.d]).concat(keys).filter(r => !q || deaccent(r[0] + ' ' + r[1]).includes(q));
     helpOv.querySelector('#dvdHelpList').innerHTML = rows.map(k => '<div><b>' + esc(k[0]) + '</b><span>' + esc(k[1]) + '</span></div>').join('');
@@ -332,6 +332,14 @@
   function polyArea(v){ let s = 0; for(let i = 0; i < v.length; i++){ const a = v[i], b = v[(i + 1) % v.length]; s += a.x * b.y - b.x * a.y; } return Math.abs(s) / 2; }
   const layerNames = () => { try{ if(ACAD() && ACAD().layerNames) return ACAD().layerNames(); }catch(_){} try{ return layerList.map(l => l.name); }catch(_){ return ['0']; } };
   const lyOpts = (cur, extra) => { const set = new Set(layerNames()); if(cur != null) set.add(cur); return (extra || '') + [...set].map(n => '<option' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>').join(''); };
+  const NOLT = { TEXT: 1, HATCH: 1, SOLID: 1, POINT: 1 };
+  const ltOpts = (cur, mixed) => { const A = ACAD(); const names = A && A.ltNames ? A.ltNames() : ['CONTINUOUS']; cur = mixed ? '*' : (cur || 'BYLAYER');
+    const all = ['BYLAYER', 'BYBLOCK'].concat(names); if(!mixed && !all.includes(cur)) all.push(cur);
+    return (mixed ? '<option value="*" selected>*nhiều*</option>' : '') + all.map(n => '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + esc(n === 'BYLAYER' ? 'ByLayer' : n === 'BYBLOCK' ? 'ByBlock' : n === 'CONTINUOUS' ? 'Continuous (liền)' : n) + '</option>').join('') + '<option value="OTHER">Tải thêm kiểu nét…</option>'; };
+  const lwOpts = (cur, mixed) => { const A = ACAD(); const L = (A && A.LW_LIST || []).filter(v => v > 0); cur = mixed ? '*' : (cur > 0 ? cur : 'BYLAYER');
+    return (mixed ? '<option value="*" selected>*nhiều*</option>' : '') + '<option value="BYLAYER"' + (cur === 'BYLAYER' ? ' selected' : '') + '>ByLayer</option>' + L.map(v => '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + (v / 100).toFixed(2) + ' mm</option>').join(''); };
+  const setLT = (w, v) => { if(v === 'BYLAYER') delete w.lt; else w.lt = v; };
+  const setLW = (w, v) => { if(v === 'BYLAYER') delete w.lw; else w.lw = +v; };
   const colOpts = (cur, isBL, mixed) => { let h = (mixed ? '<option value="*" selected>*nhiều*</option>' : '') + '<option value="BYLAYER"' + (isBL && !mixed ? ' selected' : '') + '>ByLayer</option>'; let found = isBL || mixed; for(const [v, t] of COLORS){ const s = !mixed && !isBL && String(cur).toLowerCase() === v; if(s) found = true; h += '<option value="' + v + '"' + (s ? ' selected' : '') + '>' + t + '</option>'; } if(!found && cur) h += '<option value="' + esc(cur) + '" selected>' + esc(cur) + '</option>'; h += '<option value="PICK">Chọn màu…</option>'; return h; };
   function refreshPalette(force){
     if(!pal) return;
@@ -341,7 +349,7 @@
     if(pal.contains(document.activeElement) && !force) return;
     let s = selection();
     const A = ACAD(); const ln = A && A.LS ? A.LS : null;
-    const sig = s.length + '|' + s.slice(0, 50).map(uid).join(',') + '|' + (s.length === 1 ? JSON.stringify(s[0]) : '') + '|' + isModelView() + '|' + (ln ? ln.cur + ln.color : '');
+    const sig = s.length + '|' + s.slice(0, 50).map(uid).join(',') + '|' + (s.length === 1 ? JSON.stringify(s[0]) : '') + '|' + isModelView() + '|' + (ln ? ln.cur + ln.color + ln.lt + ln.lw + ln.celts + '|' + (typeof LTSCALE !== 'undefined' ? LTSCALE : '') : '');
     if(sig === palSig && !force) return; palSig = sig;
     const editable = isModelView();
     const ro = editable ? '' : ' readonly';
@@ -350,7 +358,11 @@
     if(!s.length){
       h += '<div class="grp">Không chọn — đối tượng mới</div>';
       if(ln){ h += '<div class="r"><label>Lớp hiện hành</label><select data-g="layer">' + lyOpts(ln.cur) + '</select></div>';
-              h += '<div class="r"><label>Màu</label><select data-g="col">' + colOpts(ln.color, ln.color === 'BYLAYER') + '</select></div>'; }
+              h += '<div class="r"><label>Màu</label><select data-g="col">' + colOpts(ln.color, ln.color === 'BYLAYER') + '</select></div>';
+              h += '<div class="r"><label>Kiểu nét</label><select data-g="lt">' + ltOpts(ln.lt) + '</select></div>';
+              h += '<div class="r"><label>Tỉ lệ kiểu nét</label><input data-g="celts" value="' + esc(fmt(ln.celts || 1)) + '"></div>';
+              h += '<div class="r"><label>Bề rộng nét</label><select data-g="lw">' + lwOpts(ln.lw) + '</select></div>';
+              h += '<div class="r"><label>LTSCALE (toàn cục)</label><input data-g="ltscale" value="' + esc(fmt(typeof LTSCALE !== 'undefined' ? LTSCALE : 1)) + '"></div>'; }
       h += '<div class="grp">Bản vẽ</div>' + F('Tên', '', currentName || '', true) + F('Số đối tượng', '', String(entities.length), true) + F('Đơn vị', '', (typeof UNIT !== 'undefined' && UNIT[insunits]) || '(không rõ)', true);
       palBody.innerHTML = h + '<div class="pe">Bấm vào một nét (hoặc kéo khung) để xem và sửa thuộc tính.</div>'; bindGlobal(); return;
     }
@@ -365,6 +377,10 @@
       h += '<div class="grp">Chung</div>';
       h += '<div class="r"><label>Lớp</label><select data-m="layer"' + (editable ? '' : ' disabled') + '>' + (ly.size > 1 ? '<option selected value="*">*nhiều*</option>' : '') + lyOpts(ly.size === 1 ? [...ly][0] : null) + '</select></div>';
       const c0 = [...cols][0]; h += '<div class="r"><label>Màu</label><select data-m="col"' + (editable ? '' : ' disabled') + '>' + colOpts(c0, c0 === 'BYLAYER', cols.size > 1) + '</select></div>';
+      { const lts = new Set(s.map(e => e.lt || 'BYLAYER')), lws = new Set(s.map(e => e.lw > 0 ? e.lw : 'BYLAYER')), sc = new Set(s.map(e => e.lts || 1));
+        h += '<div class="r"><label>Kiểu nét</label><select data-m="lt"' + (editable ? '' : ' disabled') + '>' + ltOpts([...lts][0], lts.size > 1) + '</select></div>';
+        h += '<div class="r"><label>Tỉ lệ kiểu nét</label><input data-m="lts"' + ro + ' value="' + (sc.size > 1 ? '*nhiều*' : esc(fmt([...sc][0]))) + '"></div>';
+        h += '<div class="r"><label>Bề rộng nét</label><select data-m="lw"' + (editable ? '' : ' disabled') + '>' + lwOpts([...lws][0], lws.size > 1) + '</select></div>'; }
       if(grpIds.size) h += '<div class="act"><button data-a="explode">Phá nhóm/khối</button></div>';
       palBody.innerHTML = h; bindMulti(s); return;
     }
@@ -372,7 +388,11 @@
     h += '<div class="grp">' + esc(TYPE_VN[e.type] || e.type) + (e.userAdded ? ' · do bạn vẽ' : '') + '</div>';
     h += '<div class="r"><label>Lớp</label><select data-f="layer"' + (editable ? '' : ' disabled') + '>' + lyOpts(e.layer || '0') + '</select></div>';
     h += '<div class="r"><label>Màu</label><span class="sw" style="background:' + esc(e.col || '#fff') + '"></span><select data-f="col"' + (editable ? '' : ' disabled') + '>' + colOpts(e.col, !!e.bl) + '</select></div>';
-    if(e.lw) h += F('Nét (mm)', '', (e.lw / 100).toFixed(2), true);
+    if(!NOLT[e.type]){
+      h += '<div class="r"><label>Kiểu nét</label><select data-f="lt"' + (editable ? '' : ' disabled') + '>' + ltOpts(e.lt) + '</select></div>';
+      h += F('Tỉ lệ kiểu nét', 'lts', e.lts || 1);
+    }
+    h += '<div class="r"><label>Bề rộng nét</label><select data-f="lw"' + (editable ? '' : ' disabled') + '>' + lwOpts(e.lw) + '</select></div>';
     h += '<div class="grp">Hình học</div>';
     switch(e.type){
       case 'LINE':
@@ -426,8 +446,13 @@
   const setColor = (w, v) => { const A = ACAD(); if(v === 'BYLAYER'){ w.bl = 1; w.col = A ? A.layerHex(w.layer || '0') : w.col; } else { delete w.bl; w.col = v; } };
   function bindGlobal(){
     const A = ACAD(); if(!A) return;
+    palBody.querySelectorAll('input[data-g]').forEach(el => el.addEventListener('keydown', ev => { ev.stopPropagation(); if(ev.key === 'Enter'){ ev.preventDefault(); el.blur(); } }));
     palBody.querySelectorAll('[data-g]').forEach(el => el.addEventListener('change', () => {
-      if(el.dataset.g === 'layer') A.setCurLayer(el.value);
+      const g = el.dataset.g;
+      if(g === 'layer') A.setCurLayer(el.value);
+      else if(g === 'lt'){ if(el.value === 'OTHER'){ if(A.openLinetypes) A.openLinetypes(); } else A.setCurLT(el.value); }
+      else if(g === 'lw') A.setCurLW(el.value);
+      else if(g === 'celts' || g === 'ltscale'){ const v = num(el.value); if(!(v > 0)) say('Tỉ lệ phải > 0.'); else if(g === 'celts') A.setCELTS(v); else A.setLTScale(v); }
       else if(el.value === 'PICK') pickColor(c => { A.setCurColor(c); palSig = ''; refreshPalette(true); }, A.LS.color);
       else A.setCurColor(el.value);
       palSig = ''; refreshPalette(true);
@@ -440,6 +465,9 @@
         if(f === 'layer'){ commitSingle(e, w => { const wasBL = w.bl; w.layer = el.value; if(wasBL && ACAD()) w.col = ACAD().layerHex(w.layer); }); return; }
         if(f === 'col'){ if(el.value === 'PICK'){ pickColor(c => commitSingle(e, w => setColor(w, c)), e.col); return; } commitSingle(e, w => setColor(w, el.value)); return; }
         if(f === 'closed'){ commitSingle(e, w => { w.closed = el.checked; }); return; }
+        if(f === 'lt'){ if(el.value === 'OTHER'){ palSig = ''; refreshPalette(true); const A = ACAD(); if(A && A.openLinetypes) A.openLinetypes(); return; } const A = ACAD(); if(A && el.value !== 'BYLAYER' && el.value !== 'BYBLOCK' && el.value !== 'CONTINUOUS' && !LTYPES[el.value]) A.loadLT(el.value); commitSingle(e, w => setLT(w, el.value)); return; }
+        if(f === 'lw'){ commitSingle(e, w => setLW(w, el.value)); return; }
+        if(f === 'lts'){ const v = num(el.value); if(!(v > 0)){ say('Tỉ lệ phải > 0.'); palSig = ''; refreshPalette(true); return; } commitSingle(e, w => { if(Math.abs(v - 1) < 1e-12) delete w.lts; else w.lts = v; }); return; }
         if(f === 'text'){ commitSingle(e, w => { w.text = el.value; }); return; }
         if(f === 'ha'){ commitSingle(e, w => { w.ha = el.value; }); return; }
         if(f === 'pat'){ commitSingle(e, w => { w.pat = el.value; w.solid = el.value === 'SOLID'; }); return; }
@@ -464,12 +492,16 @@
   function bindMulti(s){
     const A = ACAD();
     const run = fn => { if(!isModelView()) return; if(A && A.commit){ const rep = s.filter(e => modelEntities.indexOf(e) >= 0).map(e => { const w = _deepEnt(e); delete w.userAdded; fn(w); return [e, w]; }); A.commit({ rep }); selEnts.clear(); for(const [, w] of rep) selEnts.add(w); try{ refreshPanSel(); }catch(_){} palSig = ''; refreshPalette(true); say('Đã cập nhật ' + rep.length + ' đối tượng'); } };
+    palBody.querySelectorAll('input[data-m]').forEach(el => el.addEventListener('keydown', ev => { ev.stopPropagation(); if(ev.key === 'Enter'){ ev.preventDefault(); el.blur(); } }));
     palBody.querySelectorAll('[data-m]').forEach(el => el.addEventListener('change', () => {
       if(el.dataset.m === 'layer'){ if(el.value === '*') return; run(w => { const wasBL = w.bl; w.layer = el.value; if(wasBL && A) w.col = A.layerHex(w.layer); }); }
+      else if(el.dataset.m === 'lt'){ if(el.value === '*') return; if(el.value === 'OTHER'){ palSig = ''; refreshPalette(true); if(A && A.openLinetypes) A.openLinetypes(); return; } run(w => { if(!NOLT[w.type]) setLT(w, el.value); }); }
+      else if(el.dataset.m === 'lw'){ if(el.value === '*') return; run(w => setLW(w, el.value)); }
+      else if(el.dataset.m === 'lts'){ const v = num(el.value); if(!(v > 0)) return; run(w => { if(NOLT[w.type]) return; if(Math.abs(v - 1) < 1e-12) delete w.lts; else w.lts = v; }); }
       else { if(el.value === '*') return; if(el.value === 'PICK'){ pickColor(c => run(w => setColor(w, c))); return; } run(w => setColor(w, el.value)); }
     }));
-    palBody.querySelectorAll('[data-f="dimtext"]').forEach(el => { el.addEventListener('keydown', ev => { ev.stopPropagation(); if(ev.key === 'Enter'){ ev.preventDefault(); el.blur(); } }); el.addEventListener('change', () => { const t = s.find(e => e.type === 'TEXT' && e.dimv != null); if(!t || !A) return; const w = _deepEnt(t); delete w.userAdded; w.text = el.value; A.commit({ rep: [[t, w]] }); selEnts.delete(t); selEnts.add(w); palSig = ''; refreshPalette(true); }); });
-    const ex = palBody.querySelector('[data-a="explode"]'); if(ex) ex.onclick = () => { run(w => { delete w.grp; delete w.blk; delete w.dimv; }); };
+    palBody.querySelectorAll('[data-f="dimtext"]').forEach(el => { el.addEventListener('keydown', ev => { ev.stopPropagation(); if(ev.key === 'Enter'){ ev.preventDefault(); el.blur(); } }); el.addEventListener('change', () => { const t = s.find(e => e.type === 'TEXT' && e.dimv != null); if(!t || !A) return; const w = _deepEnt(t); delete w.userAdded; w.text = el.value; if(w.dimd){ w.dimd.ov = el.value.trim() ? el.value : null; if(!el.value.trim()) w.text = '?'; } A.commit({ rep: [[t, w]] }); selEnts.delete(t); if(modelEntities.indexOf(w) >= 0) selEnts.add(w); try{ refreshPanSel(); }catch(_){} palSig = ''; refreshPalette(true); }); });
+    const ex = palBody.querySelector('[data-a="explode"]'); if(ex) ex.onclick = () => { run(w => { delete w.grp; delete w.blk; delete w.dimv; delete w.dimd; delete w.bip; }); };
   }
 
   /* ---------------- phím tắt toàn cục ---------------- */
@@ -482,6 +514,7 @@
     if(k === 's'){ if(e.shiftKey) (window.DVDCloud ? DVDCloud.saveDxfLocal(true) : exportDXF(false)); else (window.DVDCloud ? DVDCloud.save() : say('Đã tự lưu trên máy.')); return true; }
     if(k === 'o'){ const b = $('openBtn'); if(b) b.click(); return true; }
     if(k === 'n'){ run('NEW'); return true; }
+    if(k === 'a' && e.shiftKey){ const A = ACAD(); if(A) A.toggle('pickGroup'); return true; }
     if(k === 'a'){ selectAll(); return true; }
     if(k === 'p'){ const b = $('exportBtn'); if(b) b.click(); return true; }
     if(k === '1'){ togglePalette(); return true; }

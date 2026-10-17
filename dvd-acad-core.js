@@ -28,7 +28,7 @@
   const SET = Object.assign({
     osnap: true, osm: ['end', 'mid', 'cen', 'int', 'per', 'qua', 'nod', 'ins'],
     ortho: false, polar: true, polarAng: 45, otrack: true, grid: true, snap: false, snapSp: 0, dyn: true,
-    aperture: 10, pickbox: 5, xhair: 100
+    aperture: 10, pickbox: 5, xhair: 100, pickGroup: true, rollover: true
   }, (() => { try{ return JSON.parse(localStorage.getItem('dvd:acad') || '{}'); }catch(_){ return {}; } })());
   A.SET = SET; A.OS_NAME = OS_NAME; A.OS_ALL = OS_ALL;
   A.saveSet = () => { try{ localStorage.setItem('dvd:acad', JSON.stringify(SET)); }catch(_){} if(A.onSetChange) A.onSetChange(); paintSoon(); };
@@ -192,7 +192,8 @@
   /* =====================================================================
      4) LỚP: lớp hiện hành, khoá, đóng băng, màu (lưu theo bản vẽ)
      ===================================================================== */
-  const LS = A.LS = { cur: '0', color: 'BYLAYER', off: new Set(), frozen: new Set(), locked: new Set(), hex: {}, orig: {}, extra: new Set(), lw: 'BYLAYER' };
+  const LS = A.LS = { cur: '0', color: 'BYLAYER', off: new Set(), frozen: new Set(), locked: new Set(), hex: {}, orig: {}, extra: new Set(), lw: 'BYLAYER',
+    lt: 'BYLAYER', celts: 1, ltscale: null, layLT: {}, layLW: {}, ltd: {}, origLT: {}, origLW: {}, origLTS: 1 };
   function lsKey(){ try{ return baseKey ? 'lay::' + baseKey : null; }catch(_){ return null; } }
   function isLockedE(e){ return LS.locked.has((e && e.layer) || '0'); }
   A.isLocked = isLockedE;
@@ -207,19 +208,27 @@
   A.lsSync = syncHidden;
   A.lsSave = function(){
     const k = lsKey(); if(!k) return; syncHidden();
-    const o = { cur: LS.cur, color: LS.color, off: [...LS.off], fz: [...LS.frozen], lk: [...LS.locked], hex: LS.hex, extra: [...LS.extra] };
+    const o = { cur: LS.cur, color: LS.color, off: [...LS.off], fz: [...LS.frozen], lk: [...LS.locked], hex: LS.hex, extra: [...LS.extra],
+      lt: LS.lt, lw: LS.lw, celts: LS.celts, lts: LS.ltscale, layLT: LS.layLT, layLW: LS.layLW, ltd: LS.ltd };
     try{ localStorage.setItem(k, JSON.stringify(o)); }catch(_){}
     if(A.onLayers) A.onLayers();
   };
   A.lsLoad = function(){
     LS.cur = '0'; LS.color = 'BYLAYER'; LS.off = new Set(); LS.frozen = new Set(); LS.locked = new Set(); LS.hex = {}; LS.orig = {}; LS.extra = new Set();
+    LS.lt = 'BYLAYER'; LS.lw = 'BYLAYER'; LS.celts = 1; LS.ltscale = null; LS.layLT = {}; LS.layLW = {}; LS.ltd = {};
     try{ for(const L of layerList) LS.orig[L.name] = String(L.hex || '#ffffff').toLowerCase(); }catch(_){}
+    // giá trị gốc từ file (để biết người dùng đã đổi gì)
+    if(!A._ltOrigFor || A._ltOrigFor !== modelEntities){ A._ltOrigFor = modelEntities; LS.origLT = Object.assign({}, LAYER_LT); LS.origLW = Object.assign({}, LAYER_LW); LS.origLTS = LTSCALE; }
+    LAYER_LT = Object.assign({}, LS.origLT); LAYER_LW = Object.assign({}, LS.origLW); LTSCALE = LS.origLTS;
     let o = null; const k = lsKey(); try{ o = k ? JSON.parse(localStorage.getItem(k) || 'null') : null; }catch(_){}
     if(o){
       LS.cur = o.cur || '0'; LS.color = o.color || 'BYLAYER';
       LS.off = new Set(o.off || []); LS.frozen = new Set(o.fz || []); LS.locked = new Set(o.lk || []); LS.extra = new Set(o.extra || []);
       const hex = o.hex || {};
       for(const [n, h] of Object.entries(hex)){ const old = LS.orig[n]; if(old && old !== h) recolorLayer(n, old, h, true); LS.hex[n] = h; }
+      LS.lt = o.lt || 'BYLAYER'; LS.lw = o.lw != null ? o.lw : 'BYLAYER'; LS.celts = o.celts > 0 ? o.celts : 1; LS.ltscale = o.lts > 0 ? o.lts : null;
+      LS.layLT = o.layLT || {}; LS.layLW = o.layLW || {}; LS.ltd = o.ltd || {};
+      applyLT();
       applyHidden();
     }
     if(!A.layerNames().includes(LS.cur)) LS.cur = '0';
@@ -257,10 +266,34 @@
     LS.extra.delete(name); delete LS.hex[name]; LS.off.delete(name); LS.frozen.delete(name); LS.locked.delete(name); applyHidden(); A.lsSave(); return '';
   };
   A.setCurColor = function(c){ LS.color = c || 'BYLAYER'; A.lsSave(); };
+  // ---- kiểu nét / bề rộng nét theo lớp + giá trị hiện hành ----
+  function applyLT(){
+    for(const [n, d] of Object.entries(LS.ltd)) if(d && d.pat) LTYPES[n] = d;
+    for(const [n, v] of Object.entries(LS.layLT)){ if(!v || v === 'CONTINUOUS') delete LAYER_LT[n]; else LAYER_LT[n] = v; }
+    for(const [n, v] of Object.entries(LS.layLW)){ if(v > 0) LAYER_LW[n] = v; else delete LAYER_LW[n]; }
+    if(LS.ltscale > 0) LTSCALE = LS.ltscale;
+  }
+  A.layerLT = n => LAYER_LT[n] || 'CONTINUOUS';
+  A.layerLW = n => LAYER_LW[n] || 0;
+  A.ltNames = function(){ const s = new Set(['CONTINUOUS']); for(const k of Object.keys(LTYPES)) s.add(k); for(const v of Object.values(LAYER_LT)) if(v) s.add(v); try{ for(const e of modelEntities) if(e.lt && e.lt !== 'BYBLOCK') s.add(e.lt); }catch(_){} return [...s].sort((a, b) => a === 'CONTINUOUS' ? -1 : b === 'CONTINUOUS' ? 1 : a.localeCompare(b)); };
+  A.ltDefOf = n => (n === 'CONTINUOUS' ? { name: n, desc: 'Solid line ________', pat: [] } : ltDef(n));
+  A.loadLT = function(name){ const d = stdLT(name); if(!d) return false; LTYPES[d.name] = { name: d.name, desc: d.desc, pat: d.pat }; LS.ltd[d.name] = LTYPES[d.name]; A.lsSave(); return true; };
+  A.setLayerLT = function(name, lt){ lt = String(lt || 'CONTINUOUS').toUpperCase(); if(lt !== 'CONTINUOUS' && !LTYPES[lt]) A.loadLT(lt); LS.layLT[name] = lt; if(lt === 'CONTINUOUS') delete LAYER_LT[name]; else LAYER_LT[name] = lt; A.lsSave(); try{ draw(); }catch(_){} };
+  A.setLayerLW = function(name, lw){ lw = +lw || 0; LS.layLW[name] = lw; if(lw > 0) LAYER_LW[name] = lw; else delete LAYER_LW[name]; A.lsSave(); try{ draw(); }catch(_){} };
+  A.setLTScale = function(v){ v = +v; if(!(v > 0)) return; LS.ltscale = v; LTSCALE = v; A.lsSave(); try{ draw(); }catch(_){} };
+  A.setCurLT = function(lt){ lt = String(lt || 'BYLAYER').toUpperCase(); if(!/^(BYLAYER|BYBLOCK|CONTINUOUS)$/.test(lt) && !LTYPES[lt]) A.loadLT(lt); LS.lt = lt; A.lsSave(); };
+  A.setCurLW = function(lw){ LS.lw = (lw === 'BYLAYER' || lw == null) ? 'BYLAYER' : (+lw || 0); A.lsSave(); };
+  A.setCELTS = function(v){ v = +v; if(v > 0){ LS.celts = v; A.lsSave(); } };
+  A.LW_LIST = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211];
   // Thuộc tính cho đối tượng mới: lớp hiện hành + màu (ByLayer)
   A.newProps = function(e){
     e.layer = LS.cur || '0';
     if(LS.color === 'BYLAYER'){ e.col = A.layerHex(e.layer); e.bl = 1; } else { e.col = LS.color; delete e.bl; }
+    if(e.type !== 'TEXT' && e.type !== 'HATCH' && e.type !== 'SOLID' && e.type !== 'POINT'){
+      if(LS.lt && LS.lt !== 'BYLAYER' && e.lt == null) e.lt = LS.lt === 'BYBLOCK' ? 'CONTINUOUS' : LS.lt;
+      if(LS.celts && LS.celts !== 1 && e.lts == null) e.lts = LS.celts;
+      if(LS.lw !== 'BYLAYER' && LS.lw > 0 && e.lw == null) e.lw = LS.lw;
+    }
     return e;
   };
 
@@ -272,6 +305,7 @@
   function groupMap(){ const m = new Map(); for(const e of modelEntities){ if(e && e.grp){ let a = m.get(e.grp); if(!a){ a = []; m.set(e.grp, a); } a.push(e); } } return m; }
   A.groupMembers = function(gid){ const out = []; for(const e of modelEntities) if(e && e.grp === gid) out.push(e); return out; };
   A.expandGroups = function(set){
+    if(SET.pickGroup === false) return set;
     let has = false; for(const e of set) if(e && e.grp){ has = true; break; } if(!has) return set;
     const m = groupMap(); for(const e of [...set]){ if(e && e.grp){ const a = m.get(e.grp); if(a) for(const x of a) if(!isHiddenE(x)) set.add(x); } }
     return set;
@@ -285,7 +319,18 @@
   A.commit = function(ch, msg){
     try{ if(!isModelView()){ say('Chuyển về Model để vẽ/sửa.'); return false; } }catch(_){}
     ch = ch || {}; const steps = [];
-    const rep = ch.rep || [], del = ch.del || [], add = ch.add || [];
+    let rep = ch.rep || [], del = ch.del || [], add = ch.add || [];
+    // kích thước: chữ có định nghĩa (dimd) bị đổi -> dựng lại cả cụm kích thước (giống dim liên kết của AutoCAD)
+    let regenSel = null;
+    if(A.dimRegenFrom && rep.length){
+      const regen = []; for(const [o, w] of rep){ if(w && w.dimd && w.grp && JSON.stringify(w.dimd) !== JSON.stringify(o.dimd)) regen.push(w); }
+      if(regen.length){
+        const gids = new Set(regen.map(w => w.grp)); const members = modelEntities.filter(e => e.grp && gids.has(e.grp)); const ms = new Set(members);
+        const dset = new Set(del); const extra = [];
+        for(const w of regen){ const ents = A.dimRegenFrom(w); if(ents) for(const x of ents) extra.push(x); }
+        if(extra.length){ if(members.some(e => selEnts.has(e))) regenSel = gids; rep = rep.filter(([o]) => !ms.has(o)); del = del.concat(members.filter(e => !dset.has(e))); add = add.concat(extra); }
+      }
+    }
     const repItems = [];
     for(const [o, w] of rep){
       const i = modelEntities.indexOf(o); if(i < 0) continue;
@@ -306,6 +351,7 @@
     if(added.length) A.lastAdded = added;
     try{ if(infoIdx >= 0) hideObjectInfo(); }catch(_){}
     for(const e of del) selEnts.delete(e); for(const [o, w] of rep){ if(selEnts.has(o)){ selEnts.delete(o); selEnts.add(w); } }
+    if(regenSel) for(const e of added) if(e.grp && regenSel.has(e.grp)) selEnts.add(e);
     try{ if(typeof buildLayerList === 'function') buildLayerList(); }catch(_){}
     draw(); if(msg) say(msg);
     return true;
@@ -487,7 +533,8 @@
   let mouse = null, mouseIn = false, lastTouch = false;
   let cur = null;          // lệnh đang chạy
   let win = null;          // khung chọn {x0,y0,x1,y1,owner,press}
-  let hoverEnt = null;
+  let hoverEnt = null, _hovFor = null, _hovSet = [];
+  A.hover = () => hoverEnt;
   let lastPt = null;       // kết quả computePoint gần nhất
   let _paintS = 0, _paintC = 0;
   function paintSoon(){ if(!_paintC) _paintC = requestAnimationFrame(() => { _paintC = 0; paintC(); }); }
@@ -509,7 +556,11 @@
       ent: (e, color, dash) => drawEntOn(c2, e, color || '#e8eef7', 1.4, dash),
       ents: (arr, color) => { let n = 0; for(const e of arr){ if(n++ > 3000) break; drawEntOn(c2, e, color || '#e8eef7', 1.3, []); } },
       shift: (arr, dx, dy, color) => { const o = toScreen(0, 0), q = toScreen(dx, dy); c2.save(); c2.translate(q.x - o.x, q.y - o.y); let n = 0; for(const e of arr){ if(n++ > 4000) break; drawEntOn(c2, e, color || '#e8eef7', 1.3, []); } c2.restore(); },
-      xform: (arr, fn, color) => { let n = 0; for(const e of arr){ if(n++ > 900) break; const w = JSON.parse(JSON.stringify(e)); try{ fn(w); }catch(_){ continue; } drawEntOn(c2, w, color || '#e8eef7', 1.3, []); } },
+      xform: (arr, fn, color) => { let n = 0; const regen = new Set(), outs = [];
+        for(const e of arr){ if(n++ > 900) break; const w = JSON.parse(JSON.stringify(e)); try{ fn(w); }catch(_){ continue; }
+          if(w.dimd && w.grp && A.dimRegenFrom && JSON.stringify(w.dimd) !== JSON.stringify(e.dimd)){ regen.add(w.grp); const r = A.dimRegenFrom(w); if(r) for(const x of r) drawEntOn(c2, x, color || '#e8eef7', 1.3, []); continue; }
+          outs.push(w); }
+        for(const w of outs){ if(w.grp && regen.has(w.grp)) continue; drawEntOn(c2, w, color || '#e8eef7', 1.3, []); } },
       line: (a, b, color, dash) => { const A1 = T(a), B1 = T(b); c2.save(); c2.strokeStyle = color || '#e8eef7'; c2.lineWidth = 1.3; c2.setLineDash(dash || []); c2.beginPath(); c2.moveTo(A1.x, A1.y); c2.lineTo(B1.x, B1.y); c2.stroke(); c2.restore(); },
       circle: (c, r, color, dash) => { const C = T(c); c2.save(); c2.strokeStyle = color || '#e8eef7'; c2.lineWidth = 1.3; c2.setLineDash(dash || []); c2.beginPath(); c2.arc(C.x, C.y, Math.abs(r) * view.scale, 0, TAU); c2.stroke(); c2.restore(); },
       poly: (pts, closed, color, dash) => { if(!pts.length) return; c2.save(); c2.strokeStyle = color || '#e8eef7'; c2.lineWidth = 1.3; c2.setLineDash(dash || []); c2.beginPath(); const p0 = T(pts[0]); c2.moveTo(p0.x, p0.y); for(let i = 1; i < pts.length; i++){ const q = T(pts[i]); c2.lineTo(q.x, q.y); } if(closed) c2.closePath(); c2.stroke(); c2.restore(); },
@@ -545,8 +596,8 @@
     if(!r && mouseIn && mouse && !win){ const gh = gripHit(mouse); if(gh){ const P = toScreen(gh.x, gh.y); cC.fillStyle = '#ff5fd2'; cC.fillRect(Math.round(P.x) - 5, Math.round(P.y) - 5, 10, 10); } }
     // làm nổi đối tượng dưới con trỏ (xem trước lựa chọn)
     if(hoverEnt && mouseIn && (!r || r.type === 'sel') && !win){
-      const set = hoverEnt.grp ? A.groupMembers(hoverEnt.grp) : [hoverEnt];
-      let n = 0; for(const e of set){ if(n++ > 600) break; drawEntOn(cC, e, '#9fd0ff', 2.6, []); }
+      if(hoverEnt !== _hovFor){ _hovFor = hoverEnt; _hovSet = hoverEnt.grp && SET.pickGroup !== false ? A.groupMembers(hoverEnt.grp) : [hoverEnt]; }
+      let n = 0; for(const e of _hovSet){ if(n++ > 1500) break; drawEntOn(cC, e, '#9fd0ff', 2.6, []); }
     }
     // xem trước của lệnh
     if(r && (mouseIn || lastTouch) && lastPt && (r.type === 'pt' || r.type === 'dist' || r.type === 'ang')){
@@ -814,7 +865,10 @@
   /* =====================================================================
      11b) NẮM KÉO (GRIPS) kiểu AutoCAD: bấm ô xanh -> đỏ -> kéo giãn / di chuyển / xoay / tỉ lệ / đối xứng
      ===================================================================== */
+  function dimOwnerSel(e){ for(const x of selEnts) if(x.grp === e.grp && x.dimd) return x; return null; }
   function gripsOf(e){
+    if(e.dimd && A.dimGrips) return A.dimGrips(e);
+    if(e.grp && e.blk){ if(String(e.blk).startsWith('*DIM') && dimOwnerSel(e)) return []; if(e.bip) return [{ x: e.bip.x, y: e.bip.y, r: 'mv' }]; }
     switch(e.type){
       case 'LINE': return [{ x: e.x1, y: e.y1, r: 'p0' }, { x: e.x2, y: e.y2, r: 'p1' }, { x: (e.x1 + e.x2) / 2, y: (e.y1 + e.y2) / 2, r: 'mid' }];
       case 'CIRCLE': return [{ x: e.cx, y: e.cy, r: 'c' }].concat([0, 1, 2, 3].map(k => ({ x: e.cx + e.r * Math.cos(k * Math.PI / 2), y: e.cy + e.r * Math.sin(k * Math.PI / 2), r: 'q' })));
@@ -830,6 +884,7 @@
   A.gripsOf = gripsOf;
   function applyGrip(w, role, from, to){
     const dx = to.x - from.x, dy = to.y - from.y;
+    if(w.dimd && role[0] === 'd' && A.dimApplyGrip){ A.dimApplyGrip(w.dimd, role, from, to); return; }
     switch(role){
       case 'p0': w.x1 = to.x; w.y1 = to.y; return;
       case 'p1': w.x2 = to.x; w.y2 = to.y; return;
@@ -891,7 +946,7 @@
         if(rep.length) A.commit({ rep }); result = rep.length ? sel.map(e => { const f = rep.find(x => x[0] === e); return f ? f[1] : e; }) : sel;
         return;
       }
-    }).then(() => { try{ selEnts.clear(); for(const e of result) if(modelEntities.indexOf(e) >= 0) selEnts.add(e); refreshPanSel(); }catch(_){} });
+    }).then(() => { try{ const keep = [...selEnts].filter(e => e.grp && modelEntities.indexOf(e) >= 0); selEnts.clear(); for(const e of result) if(modelEntities.indexOf(e) >= 0) selEnts.add(e); for(const e of keep) selEnts.add(e); refreshPanSel(); }catch(_){} });
   }
   let gripDrag = null;
 
@@ -1018,7 +1073,7 @@
   function applyCmdWin(w0, shift){
     const r = cur && cur.req; if(!r || r.type !== 'sel') return;
     const res = winSelect(w0.x0, w0.y0, w0.x1, w0.y1, r.filter);
-    if(r.wantWindow){ r.res({ window: res, sel: res.list }); return; }
+    if(r.wantWindow){ r.res({ window: res, sel: [...A.expandGroups(new Set(res.list))] }); return; }
     const set = A.expandGroups(new Set(res.list)); const rem = shift || cur.remove; let n = 0;
     for(const e of set){ if(rem){ if(cur.sel.delete(e)) n++; } else if(!cur.sel.has(e)){ cur.sel.add(e); n++; } }
     log((res.crossing ? 'Khung cắt' : 'Khung trùm') + ': ' + (rem ? 'bỏ ' : 'thêm ') + n + ', tổng ' + cur.sel.size);
@@ -1048,10 +1103,11 @@
         lastPt = r ? { x: toWorld(mouse.x, mouse.y).x, y: toWorld(mouse.x, mouse.y).y } : null;
         hoverEnt = (!win && (idleDesk() || (r && r.type === 'sel')) && !(ev.buttons & 1)) ? pickAt(mouse, { filter: r && r.filter, allowLocked: r && r.allowLocked }) : null;
       }
+      if(A.onHover) try{ A.onHover(hoverEnt, mouse); }catch(_){}
       paintC();
     });
   });
-  cv.addEventListener('pointerleave', () => { mouseIn = false; hoverEnt = null; paintSoon(); });
+  cv.addEventListener('pointerleave', () => { mouseIn = false; hoverEnt = null; if(A.onHover) try{ A.onHover(null, null); }catch(_){} paintSoon(); });
   cv.addEventListener('pointerenter', () => { mouseIn = true; });
   cv.addEventListener('dblclick', ev => {
     if(!idleDesk() || cur) return;
@@ -1120,8 +1176,19 @@
   void _eim;
   // biến đổi hình học cho ELLIPSE / HATCH / XLINE
   const rotV = (x, y, a) => ({ x: x * Math.cos(a) - y * Math.sin(a), y: x * Math.sin(a) + y * Math.cos(a) });
+  // định nghĩa kích thước (dimd) biến đổi cùng chữ kích thước -> A.commit sẽ dựng lại cả cụm
+  function xfDim(d, fp, fang, fscale){
+    for(const k of ['p1', 'p2', 'L', 'c', 'V']) if(d[k]) d[k] = fp(d[k]);
+    if(d.phi != null && fang) d.phi = fang(d.phi * D2R) * R2D;
+    if(d.d1 != null && fang){ d.d1 = fang(d.d1); d.d2 = fang(d.d2); }
+    if(d.r != null && fscale) d.r *= fscale;
+    if(d.tx && fscale) d.tx *= fscale;
+  }
+  A.xfDim = xfDim;
   const _tr = window.translateEnt;
   window.translateEnt = function(e, dx, dy){
+    if(e.dimd) xfDim(e.dimd, p => ({ x: p.x + dx, y: p.y + dy }));
+    if(e.bip) e.bip = { x: e.bip.x + dx, y: e.bip.y + dy };
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(const p of lp){ p.x += dx; p.y += dy; } return; }
     if(e.type === 'XLINE'){ e.x += dx; e.y += dy; return; }
     return _tr.apply(this, arguments);
@@ -1129,6 +1196,8 @@
   const _rot = window.rotateEnt;
   window.rotateEnt = function(e, deg, c){
     const a = deg * D2R;
+    if(e.dimd) xfDim(e.dimd, p => _rotPt(p, c, a), t => t + a);
+    if(e.bip) e.bip = _rotPt(e.bip, c, a);
     if(e.type === 'ELLIPSE'){ const q = _rotPt({ x: e.cx, y: e.cy }, c, a); e.cx = q.x; e.cy = q.y; const v = rotV(e.mx, e.my, a); e.mx = v.x; e.my = v.y; return; }
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(let i = 0; i < lp.length; i++) lp[i] = _rotPt(lp[i], c, a); e.pang = (e.pang || 0) + deg; return; }
     if(e.type === 'XLINE'){ const q = _rotPt({ x: e.x, y: e.y }, c, a); e.x = q.x; e.y = q.y; const v = rotV(e.dx, e.dy, a); e.dx = v.x; e.dy = v.y; return; }
@@ -1136,6 +1205,8 @@
   };
   const _scl = window.scaleEnt;
   window.scaleEnt = function(e, f, c){
+    if(e.dimd) xfDim(e.dimd, p => _sclPt(p, c, f), null, f);
+    if(e.bip) e.bip = _sclPt(e.bip, c, f);
     if(e.type === 'ELLIPSE'){ const q = _sclPt({ x: e.cx, y: e.cy }, c, f); e.cx = q.x; e.cy = q.y; e.mx *= f; e.my *= f; return; }
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(let i = 0; i < lp.length; i++) lp[i] = _sclPt(lp[i], c, f); if(e.psc) e.psc *= f; return; }
     if(e.type === 'XLINE'){ const q = _sclPt({ x: e.x, y: e.y }, c, f); e.x = q.x; e.y = q.y; return; }
@@ -1147,6 +1218,8 @@
     const R = p => { const wx = p.x - Ap.x, wy = p.y - Ap.y, d = wx * dx + wy * dy; return { x: Ap.x + 2 * d * dx - wx, y: Ap.y + 2 * d * dy - wy }; };
     const RV = v => { const d = v.x * dx + v.y * dy; return { x: 2 * d * dx - v.x, y: 2 * d * dy - v.y }; };
     const th = Math.atan2(dy, dx) * R2D;
+    if(e.bip) e.bip = R(e.bip);
+    if(e.dimd){ const d = e.dimd, ta = th * D2R; xfDim(d, R, t => 2 * ta - t); if(d.d1 != null){ const t = d.d1; d.d1 = d.d2; d.d2 = t; } }
     if(e.type === 'ELLIPSE'){ const q = R({ x: e.cx, y: e.cy }); e.cx = q.x; e.cy = q.y; const v = RV({ x: e.mx, y: e.my }); e.mx = v.x; e.my = v.y; const p1 = e.p1 || 0, p2 = e.p2 == null ? TAU : e.p2; e.p1 = -p2; e.p2 = -p1; return true; }
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(let i = 0; i < lp.length; i++) lp[i] = R(lp[i]); e.pang = 2 * th - (e.pang || 0); return true; }
     if(e.type === 'XLINE'){ const q = R({ x: e.x, y: e.y }); e.x = q.x; e.y = q.y; const v = RV({ x: e.dx, y: e.dy }); e.dx = v.x; e.dy = v.y; return true; }
@@ -1184,7 +1257,7 @@
     if(k === 'ortho' && SET.ortho) SET.polar = false;
     if(k === 'polar' && SET.polar) SET.ortho = false;
     A.saveSet();
-    const names = { osnap: 'OSNAP (bắt điểm)', ortho: 'ORTHO (vuông góc)', polar: 'POLAR (góc cực)', otrack: 'OTRACK (truy bắt)', grid: 'GRID (lưới)', snap: 'SNAP (bước lưới)', dyn: 'DYN (nhập động)' };
+    const names = { osnap: 'OSNAP (bắt điểm)', ortho: 'ORTHO (vuông góc)', polar: 'POLAR (góc cực)', otrack: 'OTRACK (truy bắt)', grid: 'GRID (lưới)', snap: 'SNAP (bước lưới)', dyn: 'DYN (nhập động)', pickGroup: 'Chọn cả nhóm/khối', rollover: 'Gợi ý thuộc tính khi rê chuột' };
     log('<' + (names[k] || k) + ' ' + (SET[k] ? 'bật' : 'tắt') + '>');
     if(k === 'grid') try{ draw(); }catch(_){}
     return SET[k];
