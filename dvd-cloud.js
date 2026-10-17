@@ -452,7 +452,8 @@
     const st = S.stash.get(sig); if(st && st.length) return st.splice(0);
     const found = [];
     const scan = a => { if(!a) return; for(const k of ['ent', 'orig']){ const e = a[k]; if(e && !e.userAdded && entSig(e) === sig) found.push(e); }
-      for(const arr of [a.items, a.orig]){ if(Array.isArray(arr)) for(const it of arr){ const e = it && (it.ent || it.orig); if(e && !e.userAdded && entSig(e) === sig) found.push(e); } } };
+      for(const arr of [a.items, a.orig]){ if(Array.isArray(arr)) for(const it of arr){ const e = it && (it.ent || it.orig); if(e && !e.userAdded && entSig(e) === sig) found.push(e); } }
+      if(Array.isArray(a.steps)) for(const s2 of a.steps) scan(s2); };
     try{ for(const a of editUndoStack) scan(a); for(const a of redoStack) scan(a); }catch(_){}
     return found.slice(0, 1);
   }
