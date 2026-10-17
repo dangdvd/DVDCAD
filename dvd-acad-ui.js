@@ -167,7 +167,8 @@
   .ac-panel{display:flex;flex-direction:column;border-right:1px solid #2a3039;flex:0 0 auto}
   .ac-pbody{flex:1;display:flex;align-items:stretch;gap:2px;padding:4px 5px 2px}
   .ac-ptitle{height:19px;font:500 11px system-ui,sans-serif;color:#aab3c0;text-align:center;background:#2f3541;line-height:19px;padding:0 6px;white-space:nowrap}
-  .ac-rbig{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;width:56px;padding:4px 2px;border-radius:4px;font-size:11px;line-height:1.15;text-align:center}
+  .ac-rbig{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;min-width:50px;padding:4px 5px;border-radius:4px;font-size:11px;line-height:1.15;text-align:center}
+  .ac-rbig span{white-space:nowrap}
   .ac-rbig .ic{width:28px;height:28px;stroke-width:1.4}
   .ac-rbig:hover,.ac-rbtn:hover{background:#45505f;border-color:#56627a}
   .ac-col{display:flex;flex-direction:column;gap:1px;justify-content:flex-start}
@@ -224,10 +225,10 @@
   #dvdDyn .in{background:#fff;color:#0b4fa0;border:1px solid #3d9ae8;padding:2px 7px;border-radius:2px;font:600 12px ui-monospace,Consolas,monospace;min-width:54px}
   .dvd-dlg .modal{max-height:86vh}
   .dvd-form{display:flex;flex-direction:column;gap:6px}
-  .dvd-row{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-dim)}
-  .dvd-row > span:first-child{flex:0 0 46%}
-  .dvd-row .v{flex:1;display:flex;gap:6px}
-  .dvd-row input,.dvd-row select,.dvd-dlg input,.dvd-dlg select{background:var(--bg-canvas);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:13px system-ui,sans-serif;outline:none;width:100%}
+  .dvd-frow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-dim)}
+  .dvd-frow > span:first-child{flex:0 0 46%}
+  .dvd-frow .v{flex:1;display:flex;gap:6px}
+  .dvd-frow input,.dvd-frow select,.dvd-dlg input,.dvd-dlg select{background:var(--bg-canvas);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:13px system-ui,sans-serif;outline:none;width:100%}
   .dvd-sub{font-size:11.5px;font-weight:700;color:var(--ink-faint);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px}
   .dvd-pats,.dvd-blks{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;margin-bottom:10px;max-height:46vh;overflow-y:auto}
   .dvd-pat,.dvd-blk{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:11.5px system-ui,sans-serif;cursor:pointer;text-align:center}
@@ -420,7 +421,7 @@
   function findItem(cmd){ for(const T of Object.values(RIB)) for(const p of T.panels) for(const it of p.items){ if(it.t === 'col'){ for(const x of it.items) if(x.cmd === cmd) return x; } else if(it.cmd === cmd) return it; } return null; }
   function ctlHTML(kind){
     if(kind === 'layer') return '<div class="ac-ctl"><button class="ac-laybtn" id="acLayBtn" title="Lớp hiện hành — bấm để chọn / bật tắt"><span class="sw"></span><span class="nm">0</span>▾</button><div style="display:flex;gap:2px">' + [['LAYMCUR', 'Lấy lớp của đối tượng làm hiện hành', 'BHAND'], ['LAYISO', 'Cô lập lớp', 'ZW'], ['LAYUNISO', 'Bỏ cô lập', 'ZE'], ['LAYOFF', 'Tắt lớp (bấm đối tượng)', 'BG'], ['LAYFRZ', 'Đóng băng lớp', 'SETTINGS'], ['LAYLCK', 'Khoá lớp', 'BLOCK'], ['LAYON', 'Bật tất cả lớp', 'LAYER'], ['LAYTHW', 'Rã băng tất cả', 'SYNC']].map(([c, t, i]) => '<button class="ac-rbtn" data-c="' + c + '" title="' + t + '" style="padding:0 4px">' + ico(i) + '</button>').join('') + '</div></div>';
-    if(kind === 'color') return '<div class="ac-ctl" style="min-width:170px"><select id="acColSel" title="Màu cho đối tượng mới / đang chọn"></select><select id="acLwSel" title="Hiện bề rộng nét" disabled><option>— ByLayer —</option></select><button class="ac-rbtn" data-c="PROPERTIES" title="Bảng thuộc tính (Ctrl+1)">' + ico('PROPS') + '<span>Bảng thuộc tính</span></button></div>';
+    if(kind === 'color') return '<div class="ac-ctl" style="min-width:170px"><select id="acColSel" title="Màu cho đối tượng mới / đang chọn"></select><button class="ac-rbtn" data-c="PROPERTIES" title="Bảng thuộc tính (Ctrl+1)">' + ico('PROPS') + '<span>Bảng thuộc tính</span></button></div>';
     return '';
   }
   function syncCtl(){
@@ -461,12 +462,12 @@
     popEl.innerHTML = items.map((it, i) => it.sep ? '<div class="sep"></div>' : it.hd ? '<div class="hd">' + esc(it.hd) + '</div>' : '<div class="it' + (it.dis ? ' dis' : '') + '" data-i="' + i + '">' + (it.ic ? ico(it.ic) : '<span style="width:15px"></span>') + '<span>' + esc(it.t) + '</span>' + (it.k ? '<span class="k">' + esc(it.k) + '</span>' : '') + '</div>').join('');
     document.body.appendChild(popEl);
     const r = popEl.getBoundingClientRect(); popEl.style.left = Math.max(4, Math.min(x, innerWidth - r.width - 6)) + 'px'; popEl.style.top = Math.max(4, Math.min(y, innerHeight - r.height - 6)) + 'px';
-    popEl.addEventListener('mousedown', e => e.stopPropagation());
+    popEl.addEventListener('pointerdown', e => e.stopPropagation());
     popEl.addEventListener('click', e => { const d = e.target.closest('[data-i]'); if(!d) return; const it = items[+d.dataset.i]; closePop(); if(it && it.fn) setTimeout(it.fn, 0); });
     return popEl;
   }
   A.menu = menu;
-  document.addEventListener('mousedown', e => { if(popEl && !popEl.contains(e.target)) closePop(); });
+  document.addEventListener('pointerdown', e => { if(popEl && !popEl.contains(e.target)) closePop(); }, true);
   window.addEventListener('keydown', e => { if(e.key === 'Escape' && popEl){ closePop(); e.stopPropagation(); } }, true);
   window.addEventListener('blur', closePop);
 
@@ -481,7 +482,7 @@
     const render = () => { popEl.innerHTML = '<div class="hd">Bấm tên = đặt lớp hiện hành' + (selEnts.size ? ' / chuyển ' + selEnts.size + ' đối tượng đang chọn' : '') + '</div>' + A.layerNames().map(n => '<div class="ac-lrow' + (n === A.LS.cur ? ' cur' : '') + '" data-n="' + esc(n) + '"><span class="t" data-f="off" title="Bật/tắt">' + svg(BULB(!A.LS.off.has(n))) + '</span><span class="t" data-f="frozen" title="Đóng băng">' + svg(SUN(A.LS.frozen.has(n))) + '</span><span class="t" data-f="locked" title="Khoá">' + svg(LOCK(A.LS.locked.has(n))) + '</span><span class="sw" style="background:' + esc(A.layerHex(n)) + '"></span><span class="nm">' + esc(n) + '</span><span style="color:#8f99a8;font-size:11px">' + (cnt[n] || 0) + '</span></div>').join(''); };
     render(); document.body.appendChild(popEl);
     const r = popEl.getBoundingClientRect(); popEl.style.left = Math.min(x, innerWidth - r.width - 6) + 'px'; popEl.style.top = y + 'px';
-    popEl.addEventListener('mousedown', e => e.stopPropagation());
+    popEl.addEventListener('pointerdown', e => e.stopPropagation());
     popEl.addEventListener('click', e => { const row = e.target.closest('.ac-lrow'); if(!row) return; const n = row.dataset.n; const t = e.target.closest('[data-f]');
       if(t){ const f = t.dataset.f; const set = f === 'off' ? A.LS.off : f === 'frozen' ? A.LS.frozen : A.LS.locked; A.setLayerFlag(n, f, !set.has(n)); render(); return; }
       if(selEnts.size){ const rep = [...selEnts].filter(x => !A.isLocked(x)).map(en => { const w = _deepEnt(en); delete w.userAdded; const wasBL = w.bl; w.layer = n; if(wasBL) w.col = A.layerHex(n); return [en, w]; }); A.commit({ rep }, 'Đã chuyển ' + rep.length + ' đối tượng sang lớp ' + n); selEnts.clear(); for(const [, w] of rep) selEnts.add(w); refreshPanSel(); }
@@ -498,7 +499,7 @@
     h += '</div><div class="aci-std">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => '<button data-c="' + hex(i) + '" title="' + i + '" style="background:' + hex(i) + '"></button>').join('') + [250, 251, 252, 253, 254, 255].map(i => '<button data-c="' + hex(i) + '" title="' + i + '" style="background:' + hex(i) + '"></button>').join('') + '</div><div class="it" data-c="BYLAYER"><span>ByLayer (theo lớp)</span></div><div class="it" data-c="CUSTOM"><span>Màu tuỳ ý…</span></div>';
     popEl.innerHTML = h; document.body.appendChild(popEl);
     const r = popEl.getBoundingClientRect(); popEl.style.left = Math.min(rect.left, innerWidth - r.width - 6) + 'px'; popEl.style.top = Math.min(rect.bottom + 2, innerHeight - r.height - 6) + 'px';
-    popEl.addEventListener('mousedown', e => e.stopPropagation());
+    popEl.addEventListener('pointerdown', e => e.stopPropagation());
     popEl.addEventListener('click', e => { const b = e.target.closest('[data-c]'); if(!b) return; const c = b.dataset.c; closePop();
       if(c === 'CUSTOM'){ const i = document.createElement('input'); i.type = 'color'; i.style.cssText = 'position:fixed;left:-50px;opacity:0'; document.body.appendChild(i); i.onchange = () => { cb(i.value); i.remove(); }; i.click(); return; }
       cb(c); });
@@ -561,9 +562,9 @@
     const ck = (id, lab, on) => '<label class="ck"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '> ' + lab + '</label>';
     const html = '<div class="ds-tabs">' + [['os', 'Bắt điểm (OSNAP)'], ['po', 'Truy bắt cực (POLAR)'], ['gr', 'Lưới & bước (GRID/SNAP)'], ['dy', 'Nhập động & con trỏ']].map(([k, t]) => '<button data-p="' + k + '" class="' + (k === (tab || 'os') ? 'on' : '') + '">' + t + '</button>').join('') + '</div>' +
       '<div class="ds-pane' + ((tab || 'os') === 'os' ? ' on' : '') + '" data-p="os">' + ck('dsOs', 'Bật bắt điểm (F3)', SET.osnap) + ck('dsOt', 'Bật truy bắt theo điểm OTRACK (F11)', SET.otrack) + '<div class="os-grid" style="margin-top:8px">' + A.OS_ALL.map(k => '<label><input type="checkbox" data-os="' + k + '"' + (SET.osm.includes(k) ? ' checked' : '') + '><img src="' + mk(osIcon[k]) + '" width="18" height="18"> ' + A.OS_NAME[k] + '</label>').join('') + '</div><div style="display:flex;gap:6px;margin-top:8px"><button type="button" class="btn-ghost" data-all="1" style="flex:1;padding:6px">Chọn tất cả</button><button type="button" class="btn-ghost" data-all="0" style="flex:1;padding:6px">Bỏ hết</button></div><p style="margin-top:8px">Mẹo: gõ END, MID, CEN, INT, PER, TAN, NEA, QUA, NOD, INS khi đang chọn điểm để bắt điểm 1 lần.</p></div>' +
-      '<div class="ds-pane' + (tab === 'po' ? ' on' : '') + '" data-p="po">' + ck('dsPo', 'Bật POLAR (F10)', SET.polar) + ck('dsOr', 'Bật ORTHO — chỉ ngang/dọc (F8, giữ Shift = tạm thời)', SET.ortho) + '<label class="dvd-row" style="margin-top:8px"><span>Bước góc</span><span class="v"><select id="dsPa">' + [5, 10, 15, 18, 22.5, 30, 45, 90].map(v => '<option' + (v == SET.polarAng ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></span></label></div>' +
-      '<div class="ds-pane' + (tab === 'gr' ? ' on' : '') + '" data-p="gr">' + ck('dsGr', 'Hiện lưới (F7)', SET.grid) + ck('dsSn', 'Bước nhảy theo lưới SNAP (F9)', SET.snap) + '<label class="dvd-row" style="margin-top:8px"><span>Bước SNAP (0 = theo mức phóng)</span><span class="v"><input id="dsSp" type="number" step="any" min="0" value="' + (SET.snapSp || 0) + '"></span></label></div>' +
-      '<div class="ds-pane' + (tab === 'dy' ? ' on' : '') + '" data-p="dy">' + ck('dsDy', 'Nhập động cạnh con trỏ (F12)', SET.dyn) + '<label class="dvd-row" style="margin-top:8px"><span>Cỡ chữ thập (% màn hình, 100 = toàn màn)</span><span class="v"><input id="dsXh" type="number" min="3" max="100" value="' + SET.xhair + '"></span></label><label class="dvd-row"><span>Ô chọn (pickbox, px)</span><span class="v"><input id="dsPb" type="number" min="2" max="15" value="' + SET.pickbox + '"></span></label><label class="dvd-row"><span>Vùng bắt điểm (aperture, px)</span><span class="v"><input id="dsAp" type="number" min="4" max="30" value="' + SET.aperture + '"></span></label></div>';
+      '<div class="ds-pane' + (tab === 'po' ? ' on' : '') + '" data-p="po">' + ck('dsPo', 'Bật POLAR (F10)', SET.polar) + ck('dsOr', 'Bật ORTHO — chỉ ngang/dọc (F8, giữ Shift = tạm thời)', SET.ortho) + '<label class="dvd-frow" style="margin-top:8px"><span>Bước góc</span><span class="v"><select id="dsPa">' + [5, 10, 15, 18, 22.5, 30, 45, 90].map(v => '<option' + (v == SET.polarAng ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></span></label></div>' +
+      '<div class="ds-pane' + (tab === 'gr' ? ' on' : '') + '" data-p="gr">' + ck('dsGr', 'Hiện lưới (F7)', SET.grid) + ck('dsSn', 'Bước nhảy theo lưới SNAP (F9)', SET.snap) + '<label class="dvd-frow" style="margin-top:8px"><span>Bước SNAP (0 = theo mức phóng)</span><span class="v"><input id="dsSp" type="number" step="any" min="0" value="' + (SET.snapSp || 0) + '"></span></label></div>' +
+      '<div class="ds-pane' + (tab === 'dy' ? ' on' : '') + '" data-p="dy">' + ck('dsDy', 'Nhập động cạnh con trỏ (F12)', SET.dyn) + '<label class="dvd-frow" style="margin-top:8px"><span>Cỡ chữ thập (% màn hình, 100 = toàn màn)</span><span class="v"><input id="dsXh" type="number" min="3" max="100" value="' + SET.xhair + '"></span></label><label class="dvd-frow"><span>Ô chọn (pickbox, px)</span><span class="v"><input id="dsPb" type="number" min="2" max="15" value="' + SET.pickbox + '"></span></label><label class="dvd-frow"><span>Vùng bắt điểm (aperture, px)</span><span class="v"><input id="dsAp" type="number" min="4" max="30" value="' + SET.aperture + '"></span></label></div>';
     A.dialog({ title: 'Cài đặt trợ giúp vẽ', wide: true, html, onOpen: root => {
       root.querySelector('.ds-tabs').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if(!b) return; root.querySelectorAll('.ds-tabs button').forEach(x => x.classList.toggle('on', x === b)); root.querySelectorAll('.ds-pane').forEach(x => x.classList.toggle('on', x.dataset.p === b.dataset.p)); });
       root.querySelectorAll('[data-all]').forEach(b => b.onclick = () => root.querySelectorAll('[data-os]').forEach(c => c.checked = b.dataset.all === '1'));

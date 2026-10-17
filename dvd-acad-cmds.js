@@ -623,15 +623,18 @@
     return null;
   }
   cmd(['JOIN', 'J'], 'Nối các đường/cung/đa tuyến liền mạch thành 1', async () => {
-    const s = await A.getSel('Chọn các đối tượng cần nối'); let sel = (s.sel || []).filter(e => /^(LINE|ARC)$/.test(e.type) || (e.type === 'POLYLINE' && !e.closed));
-    if(sel.length < 2){ log('Cần chọn ≥ 2 đường/cung/đa tuyến hở.'); return; }
+    const s = await A.getSel('Chọn các đối tượng cần nối'); doJoin(s.sel || []);
+  });
+  function doJoin(selIn){
+    let sel = selIn.filter(e => /^(LINE|ARC)$/.test(e.type) || (e.type === 'POLYLINE' && !e.closed));
+    if(sel.length < 2){ log('Cần chọn ≥ 2 đường/cung/đa tuyến hở.'); return null; }
     // các đường thẳng cùng phương, chồng/chạm nhau -> 1 đường
     if(sel.every(e => e.type === 'LINE')){
       const e0 = sel[0], L = Math.hypot(e0.x2 - e0.x1, e0.y2 - e0.y1); const ux = (e0.x2 - e0.x1) / L, uy = (e0.y2 - e0.y1) / L;
       const bb = bboxOf(sel), tolC = Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0) * 1e-7 + 1e-9;
       const col = sel.every(e => [[e.x1, e.y1], [e.x2, e.y2]].every(([x, y]) => Math.abs(-(x - e0.x1) * uy + (y - e0.y1) * ux) <= tolC));
       if(col){ let tmin = Infinity, tmax = -Infinity; for(const e of sel) for(const [x, y] of [[e.x1, e.y1], [e.x2, e.y2]]){ const t = (x - e0.x1) * ux + (y - e0.y1) * uy; tmin = Math.min(tmin, t); tmax = Math.max(tmax, t); }
-        const w = copyOf(e0); w.x1 = e0.x1 + ux * tmin; w.y1 = e0.y1 + uy * tmin; w.x2 = e0.x1 + ux * tmax; w.y2 = e0.y1 + uy * tmax; A.commit({ rep: [[e0, w]], del: sel.slice(1) }, 'Đã nối ' + sel.length + ' đường thẳng'); return; }
+        const w = copyOf(e0); w.x1 = e0.x1 + ux * tmin; w.y1 = e0.y1 + uy * tmin; w.x2 = e0.x1 + ux * tmax; w.y2 = e0.y1 + uy * tmax; A.commit({ rep: [[e0, w]], del: sel.slice(1) }, 'Đã nối ' + sel.length + ' đường thẳng'); return [w]; }
     }
     // các cung cùng tâm/bán kính
     if(sel.every(e => e.type === 'ARC')){
@@ -641,7 +644,7 @@
         let a = iv[0][0], b = iv[0][1];
         for(let k = 1; k < iv.length + 1; k++){ for(const [x, y] of iv){ let xx = x; while(xx < a - 1e-9) xx += TAU; if(xx <= b + 1e-6 && xx + (y - x) > b) b = xx + (y - x); } }
         const w = copyOf(e0); if(b - a >= TAU - 1e-6){ w.type = 'CIRCLE'; delete w.a1; delete w.a2; } else { w.a1 = a * R2D; w.a2 = b * R2D; }
-        A.commit({ rep: [[e0, w]], del: sel.slice(1) }, 'Đã nối cung'); return;
+        A.commit({ rep: [[e0, w]], del: sel.slice(1) }, 'Đã nối cung'); return [w];
       }
     }
     // nối chuỗi đầu mút -> đa tuyến
@@ -662,12 +665,32 @@
       }
       if(members.length > 1) chains.push({ pts, members });
     }
-    if(!chains.length){ log('Các đối tượng không nối tiếp nhau (đầu mút không trùng).'); return; }
+    if(!chains.length){ log('Các đối tượng không nối tiếp nhau (đầu mút không trùng).'); return null; }
     const rep = [], del = [];
     for(const ch of chains){ let closed = false; if(ch.pts.length > 3 && near(ch.pts[0], ch.pts[ch.pts.length - 1])){ ch.pts.pop(); closed = true; }
       const base = ch.members[0]; const w = { type: 'POLYLINE', layer: base.layer, col: base.col, bl: base.bl, vertices: ch.pts, closed }; if(w.bl === undefined) delete w.bl;
       rep.push([base, w]); del.push(...ch.members.slice(1)); }
     A.commit({ rep, del }, 'Đã nối thành ' + chains.length + ' đa tuyến');
+    return rep.map(r => r[1]);
+  }
+  A.doJoin = doJoin;
+
+  /* ---- PEDIT: đóng/mở, nối, đảo chiều đa tuyến ---- */
+  cmd(['PEDIT', 'PE'], 'Sửa đa tuyến: đóng/mở, nối, đảo chiều, chuyển đường thành đa tuyến', async () => {
+    const r = await A.getEnt('Chọn đa tuyến', { filter: e => /^(LINE|ARC|POLYLINE)$/.test(e.type) }); let e = r.ent; if(!e) return;
+    if(e.type !== 'POLYLINE'){
+      const k = await A.getKw('Đối tượng không phải đa tuyến — chuyển thành đa tuyến?', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: 'Có' }); if(k.kw === 'N') return;
+      const w = { type: 'POLYLINE', layer: e.layer, col: e.col, vertices: endpointsOf(e), closed: false }; if(e.bl) w.bl = 1; A.commit({ rep: [[e, w]] }); e = w;
+    }
+    for(;;){
+      hl([e]);
+      const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: 'C', t: e.closed ? 'Mở' : 'Đóng' }, { k: 'J', t: 'Nối' }, { k: 'R', t: 'Đảo chiều' }, { k: 'X', t: 'Thoát' }] });
+      if(k.none || k.kw === 'X') break;
+      if(k.kw === 'C'){ const w = copyOf(e); w.closed = !w.closed; delete w.wq; A.commit({ rep: [[e, w]] }); e = w; continue; }
+      if(k.kw === 'R'){ const w = copyOf(e); w.vertices = w.vertices.slice().reverse(); delete w.wq; A.commit({ rep: [[e, w]] }); e = w; continue; }
+      if(k.kw === 'J'){ if(e.closed){ log('Đa tuyến kín — mở ra trước khi nối.'); continue; } const s = await A.getSel('Chọn đối tượng cần nối vào', { pre: false }); const res = doJoin([e].concat((s.sel || []).filter(x => x !== e))); if(res){ const m = res.find(x => x.type === 'POLYLINE') || res[0]; if(m) e = m; } continue; }
+    }
+    hl([]);
   });
 
   // EXPLODE
@@ -729,8 +752,30 @@
 
   cmd(['ERASE', 'E', 'DELETE', 'DEL'], 'Xoá đối tượng', async () => {
     const s = await A.getSel('Chọn đối tượng cần xoá'); const sel = s.sel || []; if(!sel.length) return;
-    A.commit({ del: sel }, 'Đã xoá ' + sel.length + ' đối tượng'); clearSelSafe();
+    A.commit({ del: sel }, 'Đã xoá ' + sel.length + ' đối tượng'); clearSelSafe(); A.lastErased = sel;
   });
+  cmd(['OOPS'], 'Khôi phục đối tượng vừa xoá bằng ERASE', async () => {
+    const L = (A.lastErased || []).filter(e => modelEntities.indexOf(e) < 0); if(!L.length){ log('Không có gì để khôi phục.'); return; }
+    A.commit({ add: L.map(e => { const w = copyOf(e); return w; }) }, 'Đã khôi phục ' + L.length + ' đối tượng'); A.lastErased = [];
+  });
+  let simResult = null;
+  DVDCmd.register(['SELECTSIMILAR', 'SELSIM'], 'Chọn các đối tượng cùng loại & cùng lớp', () => {
+    simResult = null;
+    A.run('SELECTSIMILAR', async () => {
+      const s = await A.getSel('Chọn đối tượng mẫu'); const sel = s.sel || []; if(!sel.length) return;
+      const keys = new Set(sel.map(e => e.type + '|' + (e.layer || '0') + '|' + (e.blk || '')));
+      simResult = A.selectable().filter(e => keys.has(e.type + '|' + (e.layer || '0') + '|' + (e.blk || '')));
+      log('Đã chọn ' + simResult.length + ' đối tượng tương tự');
+    }).then(() => { if(simResult){ selEnts.clear(); for(const e of simResult) selEnts.add(e); refreshPanSel(); } });
+  });
+  plain(['PURGE', 'PU'], 'Dọn lớp trống không dùng', () => {
+    const used = new Set(modelEntities.map(e => e.layer || '0')); let n = 0;
+    for(const nm of [...A.LS.extra]){ if(!used.has(nm) && nm !== A.LS.cur && nm !== '0'){ A.deleteLayer(nm); n++; } }
+    log('Đã dọn ' + n + ' lớp trống.');
+  });
+  plain(['DSETTINGS', 'DS', 'OSNAP', 'OS', 'SE'], 'Cài đặt bắt điểm / polar / lưới / nhập động', () => { if(A.openDrafting) A.openDrafting(); });
+  plain(['UNITS', 'UN'], 'Đơn vị & tỉ lệ đo', () => { const b = document.getElementById('displayBtn'); if(b) b.click(); setTimeout(() => { const c = document.getElementById('openCalib'); if(c) c.click(); }, 30); });
+  plain(['CLOSE'], 'Đóng bản vẽ', () => { if(confirm('Đóng bản vẽ? (thay đổi đã tự lưu trên máy)')) location.href = location.pathname; });
   cmd(['MATCHPROP', 'MA', 'PAINTER'], 'Sao chép thuộc tính (lớp, màu, cao chữ, mẫu hatch)', async () => {
     const r = await A.getEnt('Chọn đối tượng nguồn'); if(!r.ent) return; const src = r.ent; hl([src]);
     log('Nguồn: lớp ' + (src.layer || '0') + ', màu ' + (src.bl ? 'ByLayer' : src.col));
@@ -969,7 +1014,7 @@
         DS.prefix = v('dsPre'); DS.suffix = v('dsSuf'); for(const [k, id] of [['asz', 'dsAsz'], ['exo', 'dsExo'], ['exe', 'dsExe'], ['dli', 'dsDli']]){ const x = nv(id); if(isFinite(x) && x >= 0) DS[k] = x; } DS.layer = v('dsLayer');
         dsSave(); say('Đã lưu kiểu kích thước'); } });
   }
-  function row(l, h){ return '<label class="dvd-row"><span>' + l + '</span><span class="v">' + h + '</span></label>'; }
+  function row(l, h){ return '<label class="dvd-frow"><span>' + l + '</span><span class="v">' + h + '</span></label>'; }
   function sel(id, opts, cur){ return '<select id="' + id + '">' + opts.map(([v, t]) => '<option value="' + escapeHtml(v) + '"' + (v === cur ? ' selected' : '') + '>' + escapeHtml(t) + '</option>').join('') + '</select>'; }
   A.formRow = row; A.formSel = sel;
 

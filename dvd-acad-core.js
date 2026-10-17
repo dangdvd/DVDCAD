@@ -470,7 +470,9 @@
   for(const c of [ovS, ovC]){ c.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1'; }
   cv.insertAdjacentElement('afterend', ovC); cv.insertAdjacentElement('afterend', ovS);
   const cS = ovS.getContext('2d'), cC = ovC.getContext('2d');
-  function sizeOv(){ const dpr = window.devicePixelRatio || 1; const w = cv.clientWidth, h = cv.clientHeight; for(const c of [ovS, ovC]){ const W2 = Math.max(1, Math.round(w * dpr)), H2 = Math.max(1, Math.round(h * dpr)); if(c.width !== W2 || c.height !== H2){ c.width = W2; c.height = H2; } } }
+  // điện thoại: lớp phủ chỉ cấp bộ nhớ khi đang chạy lệnh (tiết kiệm RAM iPhone); dpr tối đa 2
+  function ovDpr(){ return deskUI() ? (window.devicePixelRatio || 1) : (cur ? Math.min(2, window.devicePixelRatio || 1) : 0); }
+  function sizeOv(){ const dpr = ovDpr(); const w = dpr ? cv.clientWidth : 1, h = dpr ? cv.clientHeight : 1; for(const c of [ovS, ovC]){ const W2 = Math.max(1, Math.round(w * (dpr || 1))), H2 = Math.max(1, Math.round(h * (dpr || 1))); if(c.width !== W2 || c.height !== H2){ c.width = W2; c.height = H2; } } }
   // vẽ đối tượng bằng hàm của app lên canvas phủ
   function withCtx(c2, fn){ const sv = ctx; ctx = c2; try{ fn(); } finally { ctx = sv; } }
   function drawEntOn(c2, e, color, width, dash){
@@ -493,7 +495,7 @@
   A.paint = () => { paintSelSoon(); paintSoon(); };
   function acc(){ return getCSS('--accent') || '#38bdf8'; }
   function paintS(){
-    sizeOv(); const dpr = window.devicePixelRatio || 1; cS.setTransform(dpr, 0, 0, dpr, 0, 0); cS.clearRect(0, 0, cv.clientWidth, cv.clientHeight);
+    sizeOv(); const dpr = ovDpr(); if(!dpr) return; cS.setTransform(dpr, 0, 0, dpr, 0, 0); cS.clearRect(0, 0, cv.clientWidth, cv.clientHeight);
     if(!hasDoc()) return;
     if(!cur){ drawGrips(cS); return; }
     if(cur.hot){ const P = toScreen(cur.hot.x, cur.hot.y); cS.fillStyle = '#ff3b3b'; cS.fillRect(Math.round(P.x) - 4, Math.round(P.y) - 4, 8, 8); }
@@ -536,7 +538,7 @@
   }
   function tipBox(c2, x, y, text, bg, fg){ c2.save(); c2.font = '12px system-ui,sans-serif'; const tw = c2.measureText(text).width; c2.fillStyle = bg || 'rgba(255,248,200,.95)'; c2.strokeStyle = 'rgba(0,0,0,.35)'; c2.fillRect(x, y, tw + 10, 18); c2.strokeRect(x + .5, y + .5, tw + 9, 17); c2.fillStyle = fg || '#1b1b1b'; c2.fillText(text, x + 5, y + 13); c2.restore(); }
   function paintC(){
-    sizeOv(); const dpr = window.devicePixelRatio || 1; cC.setTransform(dpr, 0, 0, dpr, 0, 0); const Wd = cv.clientWidth, Hd = cv.clientHeight; cC.clearRect(0, 0, Wd, Hd);
+    sizeOv(); const dpr = ovDpr(); if(!dpr){ updateDyn(); return; } cC.setTransform(dpr, 0, 0, dpr, 0, 0); const Wd = cv.clientWidth, Hd = cv.clientHeight; cC.clearRect(0, 0, Wd, Hd);
     if(!hasDoc()){ updateDyn(); return; }
     const r = cur && cur.req;
     // ô nắm dưới con trỏ (hồng)

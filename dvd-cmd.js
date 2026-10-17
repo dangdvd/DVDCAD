@@ -125,6 +125,8 @@
   const CSS = `
   #dvdCmd{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:8;width:min(760px,calc(100% - 200px));display:none;flex-direction:column;gap:3px}
   #dvdCmd.show{display:flex}
+  #dvdCmd{pointer-events:none}
+  #dvdCmd .box,#dvdCmd .sug{pointer-events:auto}
   @media (max-width:700px){ #dvdCmd{width:calc(100% - 24px)} }
   #dvdCmd .hist{display:flex;flex-direction:column;gap:1px;max-height:66px;overflow:hidden;font:12px ui-monospace,Menlo,Consolas,monospace;color:#c9d2de;pointer-events:none}
   #dvdCmd .hist div{background:rgba(20,26,34,.72);padding:1px 8px;border-radius:4px;align-self:flex-start;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .6s}

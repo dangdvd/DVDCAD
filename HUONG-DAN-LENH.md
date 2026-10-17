@@ -1,0 +1,73 @@
+# DVDCAD v4 — Lệnh & thao tác kiểu AutoCAD
+
+Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
+Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
+
+## Cách dùng chung (giống AutoCAD)
+- Gõ lệnh hoặc lệnh tắt rồi bấm **Enter** hoặc **Space**. **Enter** khi trống sẽ lặp lại lệnh trước. **Esc** để huỷ.
+- Lời nhắc hiện ở dòng lệnh. Bấm vào **chữ vàng** trong `[...]` hoặc gõ chữ tắt để chọn tuỳ chọn.
+- Khi đang chạy lệnh, **chuột phải = Enter**. Khi rảnh, chuột phải mở menu (lặp lệnh, sao chép/dán, di chuyển…).
+- **Chọn trước rồi gõ lệnh** cũng được: MOVE, COPY, ERASE… sẽ dùng luôn các đối tượng đang chọn.
+- Nhập điểm:
+  - `x,y` là toạ độ tuyệt đối.
+  - `@dx,dy` là dời so với điểm trước.
+  - `@dài<góc` (hoặc `dài<góc`) là theo chiều dài và góc.
+  - Chỉ gõ **một số** thì đi theo hướng con trỏ, đúng như cách nhập khoảng cách trực tiếp của AutoCAD. Dùng chung với ORTHO hoặc POLAR rất tiện.
+- Bắt điểm một lần: khi được hỏi điểm, gõ `END`, `MID`, `CEN`, `INT`, `PER`, `TAN`, `NEA`, `QUA`, `NOD`, `INS` hoặc `NON`.
+
+## Chuột
+- **Lăn chuột**: phóng to hoặc thu nhỏ tại con trỏ. **Giữ chuột giữa**: kéo màn hình. **Kích đúp chuột giữa**: phóng vừa bản vẽ.
+- **Bấm đối tượng** để thêm vào vùng chọn. **Shift + bấm** để bỏ chọn.
+- **Khung chọn**: bấm 2 góc, hoặc kéo giữ chuột.
+  - Trái → phải (xanh dương) chỉ chọn đối tượng nằm trọn trong khung.
+  - Phải → trái (xanh lá, nét đứt) chọn mọi đối tượng chạm khung.
+- **Ô nắm xanh (grip)**: bấm vào một ô thì ô chuyển đỏ và bắt đầu **kéo giãn**. Bấm **Space** để đổi lần lượt sang Di chuyển, Xoay, Tỉ lệ, Đối xứng. Gõ `C` để tạo bản sao.
+- **Kích đúp** vào chữ để sửa nội dung, vào đối tượng khác để mở Thuộc tính.
+
+## Phím tắt
+| Phím | Chức năng | Phím | Chức năng |
+|---|---|---|---|
+| F1 | Danh sách lệnh | F2 | Lịch sử dòng lệnh |
+| F3 | OSNAP bắt điểm | F7 | GRID lưới |
+| F8 | ORTHO (giữ Shift = tạm thời) | F9 | SNAP bước lưới |
+| F10 | POLAR góc cực | F11 | OTRACK truy bắt |
+| F12 | DYN nhập động | Ctrl+1 | Bảng Thuộc tính |
+| Ctrl+Z / Y | Hoàn tác / làm lại | Ctrl+C / X / V | Sao chép / cắt / dán (dùng được giữa các bản vẽ) |
+| Ctrl+Shift+C / V | Sao chép kèm điểm gốc / dán đúng toạ độ | Ctrl+N / O / S | Mới / mở / lưu |
+| Ctrl+Shift+S | Lưu thành DXF | Ctrl+P | In / xuất |
+| Ctrl+A | Chọn tất cả | Ctrl+9 / Ctrl+0 | Ẩn/hiện dòng lệnh / toàn màn hình |
+| Delete | Xoá đối tượng đang chọn | Esc | Huỷ / bỏ chọn |
+
+Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thái để chọn nhanh bước góc hoặc loại điểm bắt.
+
+## Danh sách lệnh
+**Vẽ:** `LINE L` · `PLINE PL` (A = cung, C = đóng) · `RECTANG REC` (D = kích thước) · `CIRCLE C` (D, 2P, 3P) · `ARC A` (3 điểm, C = tâm) · `ELLIPSE EL` · `POLYGON POL` · `POINT PO` · `XLINE XL` · `RAY` · `SPLINE SPL` · `REVCLOUD RC` · `TEXT T/DT` · `MTEXT MT` · `HATCH H` (bấm điểm trong vùng kín; S = chọn đường kín; T = mẫu và tỉ lệ)
+
+**Sửa:** `MOVE M` · `COPY CO` · `ROTATE RO` (C = sao chép, R = tham chiếu) · `SCALE SC` · `MIRROR MI` · `OFFSET O` (T = đi qua) · `ARRAY AR` (chữ nhật hoặc tròn) · `STRETCH S` (khung cắt) · `TRIM TR` · `EXTEND EX` (bấm phần cần bỏ hoặc kéo dài; giữ Shift để đổi qua lại) · `FILLET F` (R, P = cả đa tuyến, bán kính 0 = nối góc) · `CHAMFER CHA` · `BREAK BR` · `BREAKATPOINT BRP` · `JOIN J` · `EXPLODE X` · `LENGTHEN LEN` · `PEDIT PE` · `ERASE E` · `OOPS` · `MATCHPROP MA` · `DDEDIT ED`
+
+**Kích thước** (nét thật trong bản vẽ, xuất DXF được): `DIMLINEAR DLI` · `DIMALIGNED DAL` · `DIMRADIUS DRA` · `DIMDIAMETER DDI` · `DIMANGULAR DAN` · `DIMCONTINUE DCO` · `DIMBASELINE DBA` · `DIMSTYLE D` (cao chữ, gạch chéo hoặc mũi tên, số lẻ, hệ số, lớp)
+
+**Lớp:** `LAYER LA` (quản lý: tạo lớp, bật/tắt, đóng băng, khoá, màu lớp, lớp hiện hành) · `LAYMCUR` · `LAYISO` / `LAYUNISO` · `LAYOFF` / `LAYON` · `LAYFRZ` / `LAYTHW` · `LAYLCK` / `LAYULK` · `PURGE`
+
+**Khối, nhóm, bộ nhớ tạm:** `INSERT I` · `BLOCK B` (lưu vào thư viện khối của bạn, chèn được vào bản vẽ khác) · `GROUP G` · `UNGROUP` · `COPYCLIP` · `CUTCLIP` · `COPYBASE` · `PASTECLIP` · `PASTEORIG` · `SELECTSIMILAR`
+
+**Hỏi / đo:** `DIST DI` · `AREA AA` (O = chọn đối tượng) · `ID` · `LIST LI` · `DIVIDE DIV` · `MEASURE ME` · `DO` (đo nhanh, lưu dạng đánh dấu)
+
+**Xem / file:** `ZOOM Z` (E, W, P, số, O) · `PAN` · `REGEN RE` · `NEW` · `OPEN` · `QSAVE` · `SAVEAS` · `EXPORT/PLOT` · `DSETTINGS DS` · `UNITS` · `FIND` · `COMPARE` · `DRIVE` · `SHARE`
+
+## Lưu & mở
+- Mọi thay đổi **tự lưu trên máy**, gắn với đúng file đó.
+- **Ctrl+S** ghi ra DXF. Trên Edge/Chrome máy tính, sau lần chọn chỗ lưu đầu tiên, các lần sau ghi thẳng vào file. Bản vẽ đang mở từ Drive thì đồng bộ lên Drive.
+- File DXF xuất ra giữ:
+  - Bảng lớp (màu, bật/tắt, đóng băng, khoá) và màu ByLayer.
+  - Chữ tiếng Việt (mã Unicode).
+  - Hatch, được tách thành nét hoặc vùng đặc.
+  - Kích thước và khối, dạng nét rời.
+- **Bản vẽ mới** (`NEW`, Ctrl+N) dùng đơn vị mm và được lưu trong mục "Gần đây".
+
+## Khác với AutoCAD
+- Chỉ lưu được **DXF**. File DWG mở để xem và sửa được, nhưng khi lưu sẽ thành DXF.
+- Kích thước và khối là nhóm nét: chọn một nét sẽ chọn cả nhóm. Kích thước không tự cập nhật khi sửa hình (không liên kết như AutoCAD).
+- Hatch dò biên theo các nét **đang hiện trên màn hình**. Phóng tới vùng cần tô trước khi bấm.
+- Đa tuyến có đoạn cong được lưu dạng nhiều đoạn thẳng nhỏ.
+- Chưa có 3D, kiểu đường nét (linetype), kiểu chữ (text style), XREF.
