@@ -5,7 +5,7 @@
      ngay lần đầu mở một file .dwg khi có mạng -> các lần sau dùng offline được.
    Đổi số phiên bản CACHE bên dưới mỗi khi cập nhật file để buộc làm mới.
    HTML dùng network-first: có mạng luôn lấy bản mới nhất, mất mạng mới dùng cache. */
-const CACHE = 'dvdcad-v1g';
+const CACHE = 'dvdcad-v3a';
 const CORE = [
   './',
   './index.html',
@@ -14,7 +14,11 @@ const CORE = [
   './icon-512.png',
   './icon-512-maskable.png',
   './apple-touch-icon-180.png',
-  './sample.dxf'
+  './sample.dxf',
+  './dvd-config.js',
+  './dvd-collab-core.js',
+  './dvd-cloud.js',
+  './dvd-cmd.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -37,6 +41,22 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return; // bỏ qua tài nguyên khác origin
 
   const isHTML = req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
+  // Mô-đun nhỏ dvd-*.js (cấu hình Google, Drive, dòng lệnh): NETWORK-FIRST để sửa xong là máy nào cũng nhận bản mới
+  if (/\/dvd-[\w-]+\.js$/.test(url.pathname)) {
+    e.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      try {
+        const res = await fetch(req.url, { cache: 'no-store' });
+        if (res && res.ok) cache.put(req, res.clone());
+        return res;
+      } catch (err) {
+        const hit = await cache.match(req, { ignoreSearch: true });
+        if (hit) return hit;
+        throw err;
+      }
+    })());
+    return;
+  }
 
   if (isHTML) {
     // NETWORK-FIRST cho HTML: luôn lấy bản mới nhất, bỏ qua cả HTTP cache
