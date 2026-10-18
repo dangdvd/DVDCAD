@@ -149,7 +149,7 @@
   document.addEventListener('mouseover', e => {
     if(!document.documentElement.classList.contains('acad')) return;
     const b = e.target.closest && e.target.closest('#acadTop [data-c], #acadTop [data-q], #acadStatus button[data-k], #acadStatus button[data-x]');
-    if(!b){ if(tipFor) hideTip(); return; }
+    if(!b || b.dataset.tl != null){ if(tipFor) hideTip(); return; }
     if(b === tipFor) return; hideTip(); tipFor = b;
     if(b.title){ b.dataset.tip = b.title; b.removeAttribute('title'); }
     tipT = setTimeout(() => {

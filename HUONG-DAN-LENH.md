@@ -1,4 +1,4 @@
-# DVDCAD v4k — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4l — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -212,6 +212,19 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 **Khác:** `VIEW` (lưu/gọi góc nhìn 2D đặt tên), `CAL` (máy tính: `2*(3+4)^2`, `sqrt`, `sin/cos/tan` theo độ, `pi`; kết quả chép vào clipboard), `PUBLISH` (in nhiều layout ra một PDF nhiều trang).
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
+
+## Giao diện ribbon giống AutoCAD (v4l)
+Bố cục tab, bảng và biểu tượng theo AutoCAD để người dùng AutoCAD tìm lệnh ở đúng chỗ quen thuộc.
+- **Không gian làm việc** (nút cạnh thanh truy cập nhanh, hoặc View → Interface → Workspace):
+  - **Drafting & Annotation:** Home · Insert · Annotate · Parametric · View · Manage · Output · Collaborate.
+  - **3D Modeling:** Home (Modeling, Solid Editing, Draw, Modify, Section, Coordinates, View, Layers) · Solid · Visualize · và các tab chung.
+- **Tab Home** như AutoCAD: Draw (Line, Polyline, Circle ▾, Arc ▾…), Modify (Move, Rotate, Trim ▾ / Copy, Mirror, Fillet ▾ / Stretch, Scale, Array ▾ + Erase, Explode, Offset, Draworder ▾), Annotation, Layers, Block, Properties, Groups, Utilities, Clipboard.
+- **Nút tách (▾):** bấm nửa dưới hoặc mũi tên để chọn kiểu (Circle: tâm-bán kính / 2 điểm / 3 điểm; Trim/Extend; Fillet/Chamfer/Blend; mảng chữ nhật/đường/tròn; Draworder…). Nút nhớ lựa chọn cuối như AutoCAD.
+- **Bảng mở rộng:** tên bảng có ▾ (Draw ▾, Modify ▾, Layers ▾…) — bấm để hiện thêm lệnh (Spline, Xline, Ray, Divide, Measure, Wipeout, Break, Join, Lengthen, Edit Polyline, Align, Overkill…).
+- **Chú giải khi rê chuột:** tên lệnh tiếng Anh + tiếng Việt, mô tả, tên gõ lệnh và lệnh tắt.
+- **Nhãn ribbon:** mặc định tiếng Anh như AutoCAD; đổi sang tiếng Việt trong menu không gian làm việc.
+- Bấm đúp tên tab (hoặc nút ▴ bên phải) để thu gọn ribbon. Màn hình hẹp: các bảng tự thu thành nút như AutoCAD.
+- Biểu tượng mới theo quy ước màu của CAD: nét có sẵn màu sáng, nét tạo ra màu xanh, phần cắt bỏ màu đỏ, hướng di chuyển màu vàng, điểm nắm ô vuông xanh, khối 3D tô 3 sắc độ. Bộ biểu tượng do DVDCAD tự vẽ (không sao chép biểu tượng của Autodesk).
 
 ## Lệnh bổ sung (v4k)
 **Thứ tự vẽ & vùng che:**

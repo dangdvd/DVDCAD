@@ -221,8 +221,9 @@
     '3DWALK': '<circle cx="13" cy="4" r="2"/><path d="M9 21l2-6 3 3v3M11 15l1-6 4 3 3 1M12 9l-4 2-1 4"/>',
     FLATSHOT: '<path d="M4 8l8-4 8 4v9l-8 4-8-4z" stroke-dasharray="2 2"/><rect x="7" y="9" width="10" height="8"/>'
   };
-  const ico = (k, cls) => '<svg class="' + (cls || 'ic') + '" viewBox="0 0 24 24">' + (I[k] || I.TOOLS) + '</svg>';
-  A.ICONS = I; A.ico = ico;
+  const ICN = () => window.DVDIcons || {};
+  const ico = (k, cls) => { const C = ICN(); const sv = C[k] || I[k] || C.TOOLS || I.TOOLS; return '<svg class="' + (cls || 'ic') + (C[k] ? ' cc' : '') + '" viewBox="0 0 24 24">' + sv + '</svg>'; };
+  A.ICONS = Object.assign({}, I, window.DVDIcons || {}); A.ico = ico;
 
   /* ---------------- CSS giao diện AutoCAD (tối) ---------------- */
   const CSS = `
@@ -391,84 +392,222 @@
   .mb-grid button .ic{width:24px;height:24px}
   .mb-grid button:active{transform:scale(.96)}
   .mb-sec{font-size:11.5px;font-weight:700;color:var(--ink-faint);margin:10px 0 6px;text-transform:uppercase}
-  `;
+  
+  /* ===== ribbon kiểu AutoCAD (giao diện tối) ===== */
+  .ac-appbar{background:#20262f;height:34px}
+  .ac-ws{display:flex;align-items:center;gap:5px;height:24px;margin-left:8px;padding:0 8px;border-radius:3px;border:1px solid #3c4553;background:#2a313b;color:#d6dde7;font:500 11.5px system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+  .ac-ws:hover{background:#38414e}
+  .ac-ws .ic{width:14px;height:14px}
+  .ac-ws i{font-style:normal;font-size:9px;opacity:.7}
+  .ac-tabs{background:#2b323c;height:27px;padding:0 6px;border-top:1px solid #1a1f26}
+  .ac-tabs button{font:500 12.5px "Segoe UI",system-ui,sans-serif;color:#c3cbd6;padding:5px 13px 5px;border:1px solid transparent;border-bottom:none;border-radius:3px 3px 0 0;margin-top:2px}
+  .ac-tabs button:hover{color:#fff;background:#343c48}
+  .ac-tabs button.on{color:#fff;background:#3b4452;border-color:#4a5463;border-bottom-color:#3b4452}
+  .ac-tabsp{flex:1}
+  .ac-tabs .ac-tabmin{padding:2px 8px;margin:0 0 2px;font-size:11px;color:#9aa4b2;border:none;background:none}
+  .ac-ribbon{background:#3b4452;height:104px;border-top:1px solid #4a5463;border-bottom:1px solid #20262e}
+  .ac-panel{border-right:1px solid #2c333e;box-shadow:inset -1px 0 0 #46505e}
+  .ac-pbody{padding:3px 4px 1px;gap:1px}
+  .ac-ptitle{height:20px;line-height:20px;font:500 11.5px "Segoe UI",system-ui,sans-serif;color:#c1c9d4;background:#323a46;border-top:1px solid #2c333e;padding:0 8px}
+  .ac-ptitle.more{cursor:pointer}
+  .ac-ptitle.more i{font-style:normal;font-size:9px;opacity:.75;margin-left:2px}
+  .ac-ptitle.more:hover,.ac-ptitle.open{background:#3f6ea5;color:#fff}
+  .ac-rbig{min-width:46px;max-width:76px;padding:2px 4px 3px;gap:2px;border-radius:2px;font:400 11.5px "Segoe UI",system-ui,sans-serif;color:#e4e9f0;justify-content:flex-start}
+  .ac-rbig .ic{width:32px;height:32px;margin-top:1px}
+  .ac-rbig span{white-space:nowrap;line-height:1.18}
+  .ac-rbig .dd,.ac-dd{font-style:normal;font-size:8.5px;color:#aeb7c3}
+  .ac-rbig .dd{display:block;line-height:9px}
+  .ac-rbig.has-dd{padding-bottom:1px}
+  .ac-rbig:hover,.ac-rbtn:hover,.ac-dd:hover{background:#4c5869;border-color:#61708a}
+  .ac-col{gap:0;justify-content:space-around}
+  .ac-sgrp{display:flex;align-items:stretch}
+  .ac-rbtn{height:25px;gap:5px;padding:0 6px 0 3px;border-radius:2px;font:400 12px "Segoe UI",system-ui,sans-serif;color:#e4e9f0}
+  .ac-rbtn .ic{width:16px;height:16px}
+  .ac-rbtn.ac-ic{padding:0 4px;width:27px;justify-content:center}
+  .ac-dd{width:13px;height:25px;padding:0;border:1px solid transparent;background:none;cursor:pointer;border-radius:2px;margin-left:-2px}
+  .ac-rbtn.on,.ac-rbig.on{background:#2d6cb3;border-color:#4b8fdc}
+  .ac-panel.ico-only .ac-rbtn:not(.ac-ic) span{display:none}
+  .ac-panel.ico-only .ac-rbtn{padding:0 4px}
+  .ac-ctl{min-width:190px}
+  .ac-ctl select,.ac-laybtn{background:#2a313b;border-color:#566173;height:23px}
+  .ac-ctl .ac-rbtn.ac-ic{width:24px;height:23px}
+  .ac-slide{position:fixed;z-index:69;background:#3b4452;border:1px solid #5a6680;box-shadow:0 10px 26px rgba(0,0,0,.5);display:flex;flex-direction:column}
+  .ac-slbody{display:grid;grid-template-columns:repeat(2,minmax(150px,auto));gap:1px;padding:4px}
+  .ac-slide .ac-ptitle{cursor:pointer;background:#3f6ea5;color:#fff}
+  .ac-rtip{position:fixed;z-index:90;max-width:340px;background:#f4f6f9;color:#1d232c;border:1px solid #8f9aaa;border-radius:2px;box-shadow:0 6px 18px rgba(0,0,0,.45);padding:8px 10px 6px;font:12px "Segoe UI",system-ui,sans-serif;pointer-events:none}
+  .ac-rtip.sm{padding:3px 7px}
+  .ac-rtip .tt{font-weight:700;font-size:13px;margin-bottom:3px}
+  .ac-rtip .tt span{font-weight:400;color:#5b6676;font-size:12px;margin-left:8px}
+  .ac-rtip .td{color:#2b333f;line-height:1.4;margin-bottom:6px}
+  .ac-rtip .tk{display:flex;align-items:center;gap:6px;border-top:1px solid #d3d9e2;padding-top:5px;color:#3a4553}
+  .ac-rtip .tk .ic{width:18px;height:18px;color:#46505e;--ic-bg:#f4f6f9}
+  .ac-rtip .tf{color:#7a8594;font-size:11px;margin-top:4px}
+  .ac-qat .ic{width:18px;height:18px}
+  /* màu biểu tượng */
+  .ic{--ia:#4ba7ff;--ir:#ff5f57;--iy:#f6c445;--ig:#5fd07a;--ic-bg:#3b4452}
+  .ac-pop .ic,.mb-grid .ic,.dvd-dlg .ic,.lm-bar .ic,.lm-tbl .ic{--ic-bg:#2b313b}
+  .ic .a{stroke:var(--ia)} .ic .r{stroke:var(--ir)} .ic .y{stroke:var(--iy)} .ic .g{stroke:var(--ig)} .ic .w{stroke:currentColor}
+  .ic .p{fill:var(--ia);stroke:none} .ic .pd{fill:currentColor;stroke:none} .ic .pa{fill:var(--ia);stroke:none} .ic .py{fill:var(--iy);stroke:none} .ic .pg{fill:var(--ig);stroke:none}
+  .ic .fa{fill:var(--ia);fill-opacity:.28;stroke:none} .ic .fa2{fill:var(--ia);stroke:none} .ic .fa3{fill:var(--ia);fill-opacity:.45;stroke:none}
+  .ic .fy{fill:var(--iy);stroke:none} .ic .fy2{fill:#ffd977;stroke:currentColor;stroke-width:1} .ic .fr{fill:var(--ir);fill-opacity:.85;stroke:none} .ic .fr2{fill:var(--ir);fill-opacity:.32;stroke:none} .ic .fg2{fill:var(--ig);fill-opacity:.45;stroke:none}
+  .ic .fd{fill:#dfe6ef;fill-opacity:.16} .ic .fbg{fill:var(--ic-bg);stroke:none} .ic .fz{fill:#7d8796;stroke:none} .ic .fk{fill:#1d232b;stroke:#17324f;stroke-width:.6}
+  .ic .fl0{fill:#7d8796;stroke:#1d232b;stroke-width:.8} .ic .fl1{fill:#f6c445;stroke:#1d232b;stroke-width:.8} .ic .fl2{fill:#4ba7ff;stroke:#1d232b;stroke-width:.8} .ic .fl3{fill:#5fd07a;stroke:#1d232b;stroke-width:.8}
+  .ic .f1{fill:#a8d4ff;stroke:#17324f;stroke-width:.8} .ic .f2{fill:#4b93dc;stroke:#17324f;stroke-width:.8} .ic .f3{fill:#2b62a0;stroke:#17324f;stroke-width:.8} .ic .f2n{fill:#4b93dc;stroke:none} .ic .f2s{fill:#4b93dc;fill-opacity:.35}
+  .ac-rtip .ic .fd{fill:#dfe6ef;fill-opacity:1}
+`;
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
-  /* ---------------- RIBBON ---------------- */
-  const big = (cmd, label, opts) => Object.assign({ t: 'big', cmd, label }, opts || {});
-  const sm = (cmd, label, opts) => Object.assign({ t: 'sm', cmd, label }, opts || {});
+  /* ---------------- RIBBON (bố cục theo AutoCAD) ----------------
+     Mỗi nút: lệnh, nhãn tiếng Anh (như AutoCAD), nhãn tiếng Việt. Nút tách (split) nhớ lựa chọn cuối như AutoCAD.
+     Bảng có `more` = phần mở rộng (bấm tên bảng ▾). Hai không gian làm việc: Drafting & Annotation, 3D Modeling. */
+  const big = (cmd, en, vi, o) => Object.assign({ t: 'big', cmd, en, vi }, o || {});
+  const sm = (cmd, en, vi, o) => Object.assign({ t: 'sm', cmd, en, vi }, o || {});
+  const ic = (cmd, en, vi, o) => Object.assign({ t: 'ic', cmd, en, vi }, o || {});
   const col = (...items) => ({ t: 'col', items });
   const ctl = (kind) => ({ t: 'ctl', kind });
-  const act = fn => ({ fn });
+  const S = o => Object.assign({ split: true }, o);
+  const M_CIRCLE = [['CIRCLE', 'Center, Radius', 'Tâm, bán kính'], ['CIRCLE|2P', '2-Point', '2 điểm'], ['CIRCLE|3P', '3-Point', '3 điểm']];
+  const M_ARC = [['ARC', '3-Point', '3 điểm'], ['ARC|C', 'Center, Start, End', 'Tâm, đầu, cuối']];
+  const M_RECT = [['RECTANG', 'Rectangle', 'Chữ nhật'], ['POLYGON', 'Polygon', 'Đa giác đều']];
+  const M_ELL = [['ELLIPSE', 'Axis, End', 'Elip theo trục'], ['ELLIPSE|C', 'Center', 'Elip theo tâm']];
+  const M_HATCH = [['HATCH', 'Hatch', 'Tô vật liệu'], ['BOUNDARY', 'Boundary', 'Tạo đường biên'], ['HATCHSET', 'Hatch Settings', 'Mẫu & tỉ lệ hatch']];
+  const M_TRIM = [['TRIM', 'Trim', 'Cắt'], ['EXTEND', 'Extend', 'Kéo dài']];
+  const M_FIL = [['FILLET', 'Fillet', 'Bo góc'], ['CHAMFER', 'Chamfer', 'Vát góc'], ['BLEND', 'Blend Curves', 'Nối cong trơn']];
+  const M_ARR = [['ARRAYRECT', 'Rectangular Array', 'Mảng chữ nhật'], ['ARRAYPATH', 'Path Array', 'Mảng theo đường'], ['ARRAYPOLAR', 'Polar Array', 'Mảng tròn']];
+  const M_DO = [['DRAWORDER|F', 'Bring to Front', 'Đưa lên trên cùng'], ['DRAWORDER|B', 'Send to Back', 'Đưa xuống dưới cùng'], ['DRAWORDER|A', 'Bring Above Objects', 'Đưa lên trên đối tượng'], ['DRAWORDER|U', 'Send Under Objects', 'Đưa xuống dưới đối tượng'], ['TEXTTOFRONT', 'Bring Text and Dimensions to Front', 'Đưa chữ, kích thước lên trên'], ['HATCHTOBACK', 'Send Hatches to Back', 'Đưa hatch xuống dưới']];
+  const M_TEXT = [['MTEXT', 'Multiline Text', 'Chữ nhiều dòng'], ['TEXT', 'Single Line', 'Chữ một dòng']];
+  const M_DIM = [['DIMLINEAR', 'Linear', 'Ngang / dọc'], ['DIMALIGNED', 'Aligned', 'Chéo'], ['DIMANGULAR', 'Angular', 'Góc'], ['DIMARC', 'Arc Length', 'Dài cung'], ['DIMRADIUS', 'Radius', 'Bán kính'], ['DIMDIAMETER', 'Diameter', 'Đường kính'], ['DIMORDINATE', 'Ordinate', 'Toạ độ']];
+  const M_LEAD = [['MLEADER', 'Multileader', 'Ghi chú dẫn'], ['QLEADER', 'Leader', 'Dẫn nhiều đoạn']];
+  const M_CONT = [['DIMCONTINUE', 'Continue', 'Nối tiếp'], ['DIMBASELINE', 'Baseline', 'Cùng gốc']];
+  const M_MEA = [['MEASUREGEOM', 'Quick', 'Đo nhanh'], ['DIST', 'Distance', 'Khoảng cách'], ['AREA', 'Area', 'Diện tích'], ['ID', 'ID Point', 'Toạ độ điểm'], ['LIST', 'List', 'Liệt kê']];
+  const M_PASTE = [['PASTECLIP', 'Paste', 'Dán'], ['PASTEORIG', 'Paste to Original Coordinates', 'Dán đúng toạ độ']];
+  const M_ZOOM = [['ZE', 'Extents', 'Vừa bản vẽ'], ['ZW', 'Window', 'Theo khung'], ['ZP', 'Previous', 'Khung trước'], ['ZIN', 'In', 'Phóng to'], ['ZOUT', 'Out', 'Thu nhỏ']];
+  const M_PRIM = [['BOX', 'Box', 'Hộp'], ['CYLINDER', 'Cylinder', 'Trụ'], ['CONE', 'Cone', 'Nón'], ['SPHERE', 'Sphere', 'Cầu'], ['PYRAMID', 'Pyramid', 'Chóp'], ['WEDGE', 'Wedge', 'Nêm'], ['TORUS', 'Torus', 'Xuyến']];
+  const M_EXT = [['EXTRUDE', 'Extrude', 'Đùn'], ['REVOLVE', 'Revolve', 'Xoay tròn'], ['SWEEP', 'Sweep', 'Quét'], ['LOFT', 'Loft', 'Chuyển tiếp']];
+  const M_BOOL = [['UNION', 'Union', 'Cộng khối'], ['SUBTRACT', 'Subtract', 'Trừ khối'], ['INTERSECT', 'Intersect', 'Giao khối']];
+  const M_LDC = [['DCHORIZONTAL', 'Horizontal', 'Ngang'], ['DCVERTICAL', 'Vertical', 'Dọc']];
+  const M_REV = [['REVCLOUD', 'Revision Cloud', 'Khoanh mây'], ['WIPEOUT', 'Wipeout', 'Vùng che']];
+  const LAYMORE = [sm('LAYOFF', 'Off', 'Tắt lớp'), sm('LAYFRZ', 'Freeze', 'Đóng băng lớp'), sm('LAYLCK', 'Lock', 'Khoá lớp'), sm('LAYULK', 'Unlock', 'Mở khoá lớp'), sm('LAYON', 'Turn All Layers On', 'Bật tất cả lớp'), sm('LAYTHW', 'Thaw All Layers', 'Rã băng tất cả'), sm('LAYMCUR', 'Make Current', 'Đặt làm hiện hành'), sm('LAYISO', 'Isolate', 'Cô lập lớp'), sm('LAYUNISO', 'Unisolate', 'Bỏ cô lập'), sm('LAYMRG', 'Merge', 'Gộp lớp'), sm('LAYDEL', 'Delete', 'Xoá lớp'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer')];
+  const P_LAYERS = { id: 'layers', en: 'Layers', vi: 'Lớp', pri: 6, items: [big('LAYER', 'Layer\nProperties', 'Quản lý\nlớp'), ctl('layer')], more: LAYMORE };
+  const P_PROPS = { id: 'props', en: 'Properties', vi: 'Thuộc tính', pri: 4, items: [big('MATCHPROP', 'Match\nProperties', 'Sao\nthuộc tính'), ctl('props3')], more: [sm('PROPERTIES', 'Properties Palette', 'Bảng thuộc tính'), sm('LIST', 'List', 'Liệt kê'), sm('LINETYPE', 'Linetype Manager', 'Quản lý kiểu nét'), sm('LWEIGHT', 'Lineweight Settings', 'Cài đặt bề rộng nét'), sm('LTSCALE', 'Linetype Scale', 'Tỉ lệ kiểu nét')] };
   const RIB = {
-    home: { name: 'Trang chủ', panels: [
-      { pri: 0, title: 'Vẽ', items: [big('LINE', 'Line\nĐường'), big('PLINE', 'Polyline\nĐa tuyến'), big('CIRCLE', 'Circle\nTròn', { menu: [['CIRCLE', 'Tâm, bán kính'], ['CIRCLE|2P', '2 điểm'], ['CIRCLE|3P', '3 điểm']] }), big('ARC', 'Arc\nCung', { menu: [['ARC', '3 điểm'], ['ARC|C', 'Tâm, đầu, cuối']] }),
-        col(sm('RECTANG', 'Chữ nhật'), sm('POLYGON', 'Đa giác'), sm('ELLIPSE', 'Elip')), col(sm('HATCH', 'Hatch'), sm('SPLINE', 'Spline'), sm('XLINE', 'Đường dựng')), col(sm('POINT', 'Điểm'), sm('REVCLOUD', 'Mây'), sm('MLINE', 'Đường đôi'))] },
-      { pri: 0, title: 'Sửa', items: [col(sm('MOVE', 'Move'), sm('ROTATE', 'Rotate'), sm('TRIM', 'Trim')), col(sm('COPY', 'Copy'), sm('MIRROR', 'Mirror'), sm('FILLET', 'Fillet')), col(sm('STRETCH', 'Stretch'), sm('SCALE', 'Scale'), sm('ARRAY', 'Array')),
-        col(sm('ERASE', 'Erase'), sm('EXPLODE', 'Explode'), sm('OFFSET', 'Offset')), col(sm('EXTEND', 'Extend'), sm('BREAK', 'Break'), sm('MODMORE', 'Thêm ▾', { icon: 'TOOLS', menu: [['CHAMFER', 'Chamfer — vát góc'], ['JOIN', 'Join — nối'], ['LENGTHEN', 'Lengthen — đổi dài'], ['BREAKATPOINT', 'Break at point — tách tại điểm'], ['MATCHPROP', 'Match Properties — sao thuộc tính'], ['ALIGN', 'Align — căn chỉnh theo 2 điểm'], ['OVERKILL', 'Overkill — xoá nét trùng'], ['BOUNDARY', 'Boundary — tạo đường biên kín'], ['DONUT', 'Donut — vành khuyên'], ['DIVIDE', 'Divide — chia đều'], ['MEASURE', 'Measure — đặt điểm theo khoảng'], ['DDEDIT', 'Sửa chữ'], ['ARRAYPATH', 'Array path — mảng theo đường'], ['BLEND', 'Blend — nối cong trơn'], ['REVERSE', 'Reverse — đảo chiều'], ['SETBYLAYER', 'SetByLayer — về ByLayer'], ['CENTERLINE', 'Centerline — đường tâm'], ['CENTERMARK', 'Center mark — dấu tâm'], ['DRAWORDER', 'Draworder — thứ tự vẽ'], ['WIPEOUT', 'Wipeout — vùng che']] }))] },
-      { pri: 7, title: 'Chú thích', items: [big('TEXT', 'Text\nChữ', { menu: [['TEXT', 'Chữ 1 dòng'], ['MTEXT', 'Chữ nhiều dòng']] }), big('DIMLINEAR', 'Dimension\nKích thước', { menu: [['DIMLINEAR', 'Ngang / dọc'], ['DIMALIGNED', 'Chéo'], ['DIMANGULAR', 'Góc'], ['DIMRADIUS', 'Bán kính'], ['DIMDIAMETER', 'Đường kính'], ['DIMCONTINUE', 'Nối tiếp'], ['DIMBASELINE', 'Cùng gốc'], ['QDIM', 'Kích thước nhanh (QDIM)']] }), col(sm('MLEADER', 'Leader'), sm('DIMCONTINUE', 'Nối tiếp'), sm('DIMSTYLE', 'Kiểu Dim'))] },
-      { pri: 6, title: 'Lớp', items: [big('LAYER', 'Layer\nProperties'), { t: 'ctl', kind: 'layer' }] },
-      { pri: 8, title: 'Khối', items: [big('INSERT', 'Insert\nChèn'), col(sm('BLOCK', 'Tạo khối'), sm('REFEDIT', 'Sửa khối'), sm('GROUP', 'Nhóm'))] },
-      { pri: 4, title: 'Thuộc tính', items: [big('MATCHPROP', 'Match\nProperties'), { t: 'ctl', kind: 'props3' }] },
-      { pri: 9, title: 'Tiện ích', items: [big('MEASUREGEOM', 'Measure\nĐo', { menu: [['MEASUREGEOM', 'Đo nhanh (rê chuột)'], ['DIST', 'Khoảng cách'], ['AREA', 'Diện tích'], ['ID', 'Toạ độ điểm'], ['LIST', 'Liệt kê đối tượng'], ['DO', 'Đo nhanh (đánh dấu)']] }), col(sm('QSELECT', 'Quick Select'), sm('SELECTSIMILAR', 'Chọn tương tự', { icon: 'QSELECT' }), sm('ID', 'Toạ độ điểm'))] },
-      { pri: 10, title: 'Clipboard', items: [big('PASTECLIP', 'Paste\nDán'), col(sm('COPYCLIP', 'Copy'), sm('CUTCLIP', 'Cut'), sm('COPYBASE', 'Copy gốc'))] }
+    home: { en: 'Home', vi: 'Trang chủ', panels: [
+      { id: 'draw', en: 'Draw', vi: 'Vẽ', pri: 0, items: [big('LINE', 'Line', 'Đường\nthẳng'), big('PLINE', 'Polyline', 'Đa\ntuyến'), big('CIRCLE', 'Circle', 'Đường\ntròn', S({ menu: M_CIRCLE, keep: 1 })), big('ARC', 'Arc', 'Cung\ntròn', S({ menu: M_ARC, keep: 1 })),
+        col(ic('RECTANG', 'Rectangle', 'Chữ nhật', S({ menu: M_RECT })), ic('ELLIPSE', 'Ellipse', 'Elip', S({ menu: M_ELL })), ic('HATCH', 'Hatch', 'Tô hatch', S({ menu: M_HATCH }))), col(ic('SPLINE', 'Spline Fit', 'Spline'), ic('XLINE', 'Construction Line', 'Đường dựng'), ic('POINT', 'Multiple Points', 'Nhiều điểm'))],
+        more: [sm('SPLINE', 'Spline Fit', 'Đường cong spline'), sm('XLINE', 'Construction Line', 'Đường dựng'), sm('RAY', 'Ray', 'Tia'), sm('POINT', 'Multiple Points', 'Nhiều điểm'), sm('DIVIDE', 'Divide', 'Chia đều'), sm('MEASURE', 'Measure', 'Chia theo khoảng'), sm('BOUNDARY', 'Boundary', 'Tạo đường biên'), sm('WIPEOUT', 'Wipeout', 'Vùng che'), sm('REVCLOUD', 'Revision Cloud', 'Khoanh mây'), sm('DONUT', 'Donut', 'Vành khuyên'), sm('MLINE', 'Multiline', 'Đường đôi'), sm('POLYGON', 'Polygon', 'Đa giác đều')] },
+      { id: 'modify', en: 'Modify', vi: 'Sửa', pri: 0, items: [col(sm('MOVE', 'Move', 'Di chuyển'), sm('COPY', 'Copy', 'Sao chép'), sm('STRETCH', 'Stretch', 'Kéo giãn')), col(sm('ROTATE', 'Rotate', 'Xoay'), sm('MIRROR', 'Mirror', 'Đối xứng'), sm('SCALE', 'Scale', 'Tỉ lệ')),
+        col(sm('TRIM', 'Trim', 'Cắt', S({ menu: M_TRIM })), sm('FILLET', 'Fillet', 'Bo góc', S({ menu: M_FIL })), sm('ARRAYRECT', 'Array', 'Mảng', S({ menu: M_ARR }))),
+        col(ic('ERASE', 'Erase', 'Xoá'), ic('EXPLODE', 'Explode', 'Phá khối'), ic('OFFSET', 'Offset', 'Song song')), col(ic('DRAWORDER|F', 'Draworder', 'Thứ tự vẽ', S({ menu: M_DO })), ic('BREAKATPOINT', 'Break at Point', 'Tách tại điểm'), ic('JOIN', 'Join', 'Nối'))],
+        more: [sm('BREAK', 'Break', 'Bẻ gãy'), sm('BREAKATPOINT', 'Break at Point', 'Tách tại điểm'), sm('JOIN', 'Join', 'Nối'), sm('CHAMFER', 'Chamfer', 'Vát góc'), sm('BLEND', 'Blend Curves', 'Nối cong trơn'), sm('LENGTHEN', 'Lengthen', 'Đổi chiều dài'), sm('PEDIT', 'Edit Polyline', 'Sửa đa tuyến'), sm('REVERSE', 'Reverse', 'Đảo chiều'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer'), sm('ALIGN', 'Align', 'Căn chỉnh'), sm('OVERKILL', 'Delete Duplicate Objects', 'Xoá nét trùng'), sm('DRAWORDER|F', 'Draworder', 'Thứ tự vẽ', { menu: M_DO })] },
+      { id: 'annot', en: 'Annotation', vi: 'Chú thích', pri: 7, items: [big('MTEXT', 'Text', 'Chữ', S({ menu: M_TEXT })), big('DIMLINEAR', 'Dimension', 'Kích\nthước', S({ menu: M_DIM })),
+        col(sm('MLEADER', 'Leader', 'Ghi chú dẫn', S({ menu: M_LEAD })), sm('TABLE', 'Table', 'Bảng'), sm('DIMSTYLE', 'Dimension Style', 'Kiểu kích thước'))],
+        more: [sm('STYLE', 'Text Style', 'Kiểu chữ'), sm('QDIM', 'Quick Dimension', 'Kích thước nhanh'), sm('DIMCONTINUE', 'Continue', 'Nối tiếp'), sm('DIMBASELINE', 'Baseline', 'Cùng gốc'), sm('CENTERMARK', 'Center Mark', 'Dấu tâm'), sm('CENTERLINE', 'Centerline', 'Đường tâm'), sm('ANNOTATIVE', 'Annotative', 'Chú thích theo tỉ lệ')] },
+      P_LAYERS,
+      { id: 'block', en: 'Block', vi: 'Khối', pri: 8, items: [big('INSERT', 'Insert', 'Chèn\nkhối'), col(sm('BLOCK', 'Create', 'Tạo khối'), sm('REFEDIT', 'Edit', 'Sửa khối'), sm('EATTEDIT', 'Edit Attributes', 'Sửa thuộc tính'))],
+        more: [sm('ATTDEF', 'Define Attributes', 'Định nghĩa thuộc tính'), sm('BLOCKLIB', 'Blocks Library', 'Thư viện khối'), sm('BPARAMETER', 'Block Parameters', 'Tham số khối động'), sm('BDYN', 'Dynamic State', 'Trạng thái khối động')] },
+      P_PROPS,
+      { id: 'groups', en: 'Groups', vi: 'Nhóm', pri: 9, items: [big('GROUP', 'Group', 'Nhóm'), col(sm('UNGROUP', 'Ungroup', 'Bỏ nhóm'), sm('PICKSTYLE', 'Group Selection', 'Chọn cả nhóm'))] },
+      { id: 'util', en: 'Utilities', vi: 'Tiện ích', pri: 9, items: [big('MEASUREGEOM', 'Measure', 'Đo', S({ menu: M_MEA })), col(sm('QSELECT', 'Quick Select', 'Chọn nhanh'), sm('SELECTALL', 'Select All', 'Chọn tất cả'), sm('COUNT', 'Count', 'Đếm khối'))],
+        more: [sm('ID', 'ID Point', 'Toạ độ điểm'), sm('LIST', 'List', 'Liệt kê'), sm('SELECTSIMILAR', 'Select Similar', 'Chọn tương tự'), sm('CAL', 'QuickCalc', 'Máy tính')] },
+      { id: 'clip', en: 'Clipboard', vi: 'Bộ nhớ tạm', pri: 10, items: [big('PASTECLIP', 'Paste', 'Dán', S({ menu: M_PASTE })), col(sm('CUTCLIP', 'Cut', 'Cắt'), sm('COPYCLIP', 'Copy Clip', 'Sao chép'), sm('COPYBASE', 'Copy with Base Point', 'Sao chép kèm gốc'))] }
     ] },
-    insert: { name: 'Chèn', panels: [
-      { title: 'Khối', items: [big('INSERT', 'Insert\nChèn khối'), big('BLOCK', 'Create\nTạo khối'), big('REFEDIT', 'Edit\nSửa khối'), col(sm('BLOCKLIB', 'Thư viện khối', { icon: 'LIST' }), sm('GROUP', 'Nhóm'), sm('UNGROUP', 'Bỏ nhóm'))] },
-      { title: 'Khối động', items: [big('BPARAMETER', 'Parameter\nTham số động'), col(sm('BDYN', 'Đổi trạng thái'), sm('REFEDIT', 'Sửa khối'))] },
-      { title: 'Thuộc tính khối', items: [big('ATTDEF', 'Define\nĐịnh nghĩa'), col(sm('EATTEDIT', 'Sửa thuộc tính'), sm('ATTEXPORT', 'Xuất CSV'))] },
-      { title: 'Tham chiếu', items: [big('XATTACH', 'Attach\nGắn XREF'), big('IMAGEATTACH', 'Image\nẢnh nền'), col(sm('XREF', 'Quản lý XREF'), sm('IMAGEADJUST', 'Chỉnh ảnh'), sm('COMPARE', 'So sánh'))] },
-      { title: 'Dán', items: [big('PASTECLIP', 'Paste\nDán'), col(sm('PASTEORIG', 'Dán đúng toạ độ', { icon: 'PASTECLIP' }), sm('COPYBASE', 'Copy kèm gốc'))] }
+    insert: { en: 'Insert', vi: 'Chèn', panels: [
+      { id: 'iblock', en: 'Block', vi: 'Khối', items: [big('INSERT', 'Insert', 'Chèn\nkhối'), big('EATTEDIT', 'Edit\nAttribute', 'Sửa\nthuộc tính'), col(sm('BLOCKLIB', 'Blocks Library', 'Thư viện khối'), sm('GROUP', 'Group', 'Nhóm'), sm('UNGROUP', 'Ungroup', 'Bỏ nhóm'))] },
+      { id: 'bdef', en: 'Block Definition', vi: 'Định nghĩa khối', items: [big('BLOCK', 'Create\nBlock', 'Tạo\nkhối'), col(sm('ATTDEF', 'Define Attributes', 'Định nghĩa thuộc tính'), sm('REFEDIT', 'Block Editor', 'Sửa khối'), sm('ATTEXPORT', 'Extract Attributes', 'Xuất thuộc tính'))] },
+      { id: 'bdyn', en: 'Dynamic Block', vi: 'Khối động', items: [big('BPARAMETER', 'Block\nParameters', 'Tham số\nđộng'), col(sm('BDYN', 'Dynamic State', 'Đổi trạng thái'), sm('REFCLOSE', 'Close Block Editor', 'Đóng sửa khối'))] },
+      { id: 'ref', en: 'Reference', vi: 'Tham chiếu', items: [big('XATTACH', 'Attach', 'Gắn\nXREF'), col(sm('IMAGEATTACH', 'Attach Image', 'Gắn ảnh nền'), sm('IMAGEADJUST', 'Adjust', 'Chỉnh ảnh'), sm('XREF', 'External References', 'Quản lý XREF'))] },
+      { id: 'data', en: 'Linking & Extraction', vi: 'Dữ liệu', items: [big('ATTEXPORT', 'Extract\nData', 'Trích\ndữ liệu'), big('TABLE', 'Table', 'Bảng')] }
     ] },
-    annotate: { name: 'Chú thích', panels: [
-      { title: 'Chữ', items: [big('MTEXT', 'Multiline\nText'), col(sm('TEXT', 'Chữ 1 dòng'), sm('DDEDIT', 'Sửa chữ', { icon: 'TEXT' }), sm('FIND', 'Tìm chữ')), col(sm('STYLE', 'Kiểu chữ', { icon: 'TEXT' }))] },
-      { title: 'Bảng', items: [big('TABLE', 'Table\nBảng')] },
-      { title: 'Kích thước', items: [big('DIMLINEAR', 'Linear\nNgang/dọc'), big('QDIM', 'Quick\nDim nhanh'), col(sm('DIMALIGNED', 'Chéo'), sm('DIMANGULAR', 'Góc'), sm('DIMRADIUS', 'Bán kính')), col(sm('DIMDIAMETER', 'Đường kính'), sm('DIMCONTINUE', 'Nối tiếp'), sm('DIMBASELINE', 'Cùng gốc')), col(sm('DIMORDINATE', 'Toạ độ'), sm('DIMARC', 'Dài cung'), sm('CENTERMARK', 'Dấu tâm')), big('DIMSTYLE', 'Dim\nStyle')] },
-      { title: 'Sửa chữ', items: [col(sm('SCALETEXT', 'Đổi cỡ chữ', { icon: 'TEXT' }), sm('JUSTIFYTEXT', 'Canh lề chữ', { icon: 'TEXT' }), sm('TXT2MTXT', 'Gộp dòng chữ', { icon: 'MTEXT' }))] },
-      { title: 'Ghi chú dẫn', items: [big('MLEADER', 'Multileader\nGhi chú dẫn'), col(sm('QLEADER', 'Dẫn nhiều đoạn'))] },
-      { title: 'Hatch', items: [big('HATCH', 'Hatch\nTô vật liệu'), col(sm('HATCHSET', 'Mẫu & tỉ lệ', { icon: 'SETTINGS' }))] },
-      { title: 'Che & thứ tự', items: [big('WIPEOUT', 'Wipeout\nVùng che'), col(sm('DRAWORDER', 'Thứ tự vẽ'), sm('TEXTTOFRONT', 'Chữ lên trên'), sm('HATCHTOBACK', 'Hatch xuống dưới')), col(sm('WIPEOUTFRAME', 'Khung vùng che', { icon: 'WIPEOUT' }))] },
-      { title: 'Tỉ lệ chú thích', items: [big('CANNOSCALE', 'Anno Scale\nTỉ lệ chú thích'), col(sm('ANNOTATIVE', 'Gán chú thích theo TL'))] },
-      { title: 'Đánh dấu (không sửa file)', items: [big('DO', 'Quick\nĐo nhanh', { icon: 'MEASURE' }), big('NOTE', 'Markup\nGhi chú', { icon: 'NOTE' }), big('REVCLOUD', 'Revcloud\nMây')] }
+    annotate: { en: 'Annotate', vi: 'Chú thích', panels: [
+      { id: 'text', en: 'Text', vi: 'Chữ', pri: 1, items: [big('MTEXT', 'Multiline\nText', 'Chữ\nnhiều dòng', S({ menu: M_TEXT })), col(sm('FIND', 'Find Text', 'Tìm chữ'), sm('DDEDIT', 'Edit Text', 'Sửa chữ'), sm('STYLE', 'Text Style', 'Kiểu chữ'))],
+        more: [sm('SCALETEXT', 'Scale Text', 'Đổi cỡ chữ'), sm('JUSTIFYTEXT', 'Justify Text', 'Canh lề chữ'), sm('TXT2MTXT', 'Convert to MText', 'Gộp thành chữ nhiều dòng')] },
+      { id: 'dims', en: 'Dimensions', vi: 'Kích thước', pri: 0, items: [big('DIMLINEAR', 'Dimension', 'Kích\nthước', S({ menu: M_DIM })), col(sm('QDIM', 'Quick', 'Nhanh'), sm('DIMCONTINUE', 'Continue', 'Nối tiếp', S({ menu: M_CONT })), sm('DIMORDINATE', 'Ordinate', 'Toạ độ')), big('DIMSTYLE', 'Dimension\nStyle', 'Kiểu\nkích thước')],
+        more: [sm('DIMALIGNED', 'Aligned', 'Chéo'), sm('DIMANGULAR', 'Angular', 'Góc'), sm('DIMARC', 'Arc Length', 'Dài cung'), sm('DIMRADIUS', 'Radius', 'Bán kính'), sm('DIMDIAMETER', 'Diameter', 'Đường kính')] },
+      { id: 'cl', en: 'Centerlines', vi: 'Đường tâm', pri: 5, items: [big('CENTERMARK', 'Center\nMark', 'Dấu\ntâm'), big('CENTERLINE', 'Centerline', 'Đường\ntâm')] },
+      { id: 'lead', en: 'Leaders', vi: 'Ghi chú dẫn', pri: 4, items: [big('MLEADER', 'Multileader', 'Ghi chú\ndẫn'), col(sm('QLEADER', 'Leader', 'Dẫn nhiều đoạn'))] },
+      { id: 'tables', en: 'Tables', vi: 'Bảng', pri: 6, items: [big('TABLE', 'Table', 'Bảng'), col(sm('TABLEDIT', 'Edit Table', 'Sửa bảng'), sm('ATTEXPORT', 'Extract Data', 'Trích dữ liệu'))] },
+      { id: 'markup', en: 'Markup', vi: 'Đánh dấu', pri: 7, items: [big('REVCLOUD', 'Revision\nCloud', 'Khoanh\nmây', S({ menu: M_REV })), col(sm('WIPEOUT', 'Wipeout', 'Vùng che'), sm('NOTE', 'Markup Note', 'Ghi chú markup'), sm('DO', 'Quick Measure', 'Đo đánh dấu'))] },
+      { id: 'ascale', en: 'Annotation Scaling', vi: 'Tỉ lệ chú thích', pri: 3, items: [big('CANNOSCALE', 'Annotation\nScale', 'Tỉ lệ\nchú thích'), col(sm('ANNOTATIVE', 'Annotative', 'Gán theo tỉ lệ'))] },
+      { id: 'ahatch', en: 'Hatch', vi: 'Hatch', pri: 8, items: [big('HATCH', 'Hatch', 'Tô\nhatch', S({ menu: M_HATCH })), col(sm('HATCHTOBACK', 'Send to Back', 'Xuống dưới'))] }
     ] },
-    param: { name: 'Tham số', panels: [
-      { pri: 0, title: 'Hình học', items: [big('AUTOCONSTRAIN', 'Auto\nTự ràng buộc'), col(sm('GCCOINCIDENT', 'Trùng điểm'), sm('GCHORIZONTAL', 'Ngang'), sm('GCVERTICAL', 'Dọc')), col(sm('GCPARALLEL', 'Song song'), sm('GCPERPENDICULAR', 'Vuông góc'), sm('GCCOLLINEAR', 'Thẳng hàng')), col(sm('GCEQUAL', 'Bằng nhau'), sm('GCCONCENTRIC', 'Đồng tâm'), sm('GCTANGENT', 'Tiếp xúc')), col(sm('GCFIX', 'Cố định'), sm('CONSTRAINTBAR', 'Hiện/ẩn ký hiệu'))] },
-      { pri: 1, title: 'Kích thước', items: [big('DCALIGNED', 'Aligned\nThẳng'), col(sm('DCHORIZONTAL', 'Ngang', { icon: 'DIMLINEAR' }), sm('DCVERTICAL', 'Dọc', { icon: 'DIMLINEAR' }), sm('DCANGULAR', 'Góc')), col(sm('DCRADIUS', 'Bán kính'), sm('DCDIAMETER', 'Đường kính', { icon: 'DCRADIUS' }))] },
-      { pri: 2, title: 'Quản lý', items: [big('PARAMETERS', 'Parameters\nBảng tham số'), col(sm('DELCONSTRAINT', 'Xoá ràng buộc'))] }
+    param: { en: 'Parametric', vi: 'Tham số', panels: [
+      { id: 'geo', en: 'Geometric', vi: 'Hình học', pri: 0, items: [big('AUTOCONSTRAIN', 'Auto\nConstrain', 'Tự\nràng buộc'),
+        col(ic('GCCOINCIDENT', 'Coincident', 'Trùng điểm'), ic('GCPARALLEL', 'Parallel', 'Song song'), ic('GCTANGENT', 'Tangent', 'Tiếp xúc')), col(ic('GCCOLLINEAR', 'Collinear', 'Thẳng hàng'), ic('GCPERPENDICULAR', 'Perpendicular', 'Vuông góc'), ic('GCEQUAL', 'Equal', 'Bằng nhau')),
+        col(ic('GCCONCENTRIC', 'Concentric', 'Đồng tâm'), ic('GCHORIZONTAL', 'Horizontal', 'Ngang')), col(ic('GCFIX', 'Fix', 'Cố định'), ic('GCVERTICAL', 'Vertical', 'Dọc')), col(sm('CONSTRAINTBAR', 'Show/Hide', 'Hiện/ẩn ký hiệu'))] },
+      { id: 'dimc', en: 'Dimensional', vi: 'Kích thước', pri: 1, items: [big('DCHORIZONTAL', 'Linear', 'Ngang/dọc', S({ menu: M_LDC })), big('DCALIGNED', 'Aligned', 'Thẳng'), col(sm('DCRADIUS', 'Radius', 'Bán kính'), sm('DCDIAMETER', 'Diameter', 'Đường kính'), sm('DCANGULAR', 'Angular', 'Góc'))] },
+      { id: 'cman', en: 'Manage', vi: 'Quản lý', pri: 2, items: [big('DELCONSTRAINT', 'Delete\nConstraints', 'Xoá\nràng buộc'), big('PARAMETERS', 'Parameters\nManager', 'Bảng\ntham số')] }
     ] },
-    view: { name: 'Hiển thị', panels: [
-      { title: 'Điều hướng', items: [big('ZE', 'Extents\nVừa bản vẽ'), big('ZW', 'Window\nKhung'), col(sm('ZIN', 'Phóng to'), sm('ZOUT', 'Thu nhỏ'), sm('ZP', 'Khung trước')), col(sm('ROTVIEW', 'Xoay 90°'), sm('ROTRESET', 'Về hướng gốc', { icon: 'ROTVIEW' }), sm('BOOKMARK', 'Vị trí đã lưu')), col(sm('VIEW', 'Góc nhìn đặt tên', { icon: 'LAYOUT' }))] },
-      { title: 'Hiển thị', items: [col(sm('TGRID', 'Lưới', { icon: 'GRID', tog: 'grid' }), sm('TLWT', 'Bề rộng nét', { icon: 'LWT' }), sm('TBG', 'Nền trắng/tối', { icon: 'BG' })), col(sm('LINETYPE', 'Kiểu nét', { icon: 'LTYPE' }), sm('LTSCALE', 'Tỉ lệ nét', { icon: 'LTYPE' }), sm('LWEIGHT', 'Bề rộng nét…', { icon: 'LWT' })), big('DISPLAY', 'Display\nTuỳ chọn', { icon: 'SETTINGS' })] },
-      { title: 'Cô lập', items: [big('ISOLATEOBJECTS', 'Isolate\nCô lập'), col(sm('HIDEOBJECTS', 'Ẩn đối tượng'), sm('UNISOLATEOBJECTS', 'Hiện lại tất cả'))] },
-      { title: 'Bảng', items: [big('PROPERTIES', 'Properties\nThuộc tính', { icon: 'PROPS' }), col(sm('LAYER', 'Lớp'), sm('CMDLINE', 'Dòng lệnh'), sm('HISTORY', 'Lịch sử lệnh'))] },
-      { title: 'Layout', items: [big('LAYOUT', 'New Layout\nLayout mới'), col(sm('MVIEW', 'Khung nhìn (MVIEW)'), sm('VPEDIT', 'Tỉ lệ khung nhìn'), sm('LAYOUTS', 'Danh sách layout', { icon: 'LAYOUT' })), big('CLEAN', 'Clean\nToàn màn hình')] }
+    view: { en: 'View', vi: 'Hiển thị', panels: [
+      { id: 'nav', en: 'Navigate 2D', vi: 'Điều hướng', pri: 0, items: [big('PAN', 'Pan', 'Kéo\nmàn hình'), big('ZE', 'Extents', 'Vừa\nbản vẽ', S({ menu: M_ZOOM })), col(sm('ROTVIEW', 'Rotate View 90°', 'Xoay 90°'), sm('ROTRESET', 'Reset Rotation', 'Về hướng gốc'), sm('BOOKMARK', 'Bookmarks', 'Vị trí đã lưu'))] },
+      { id: 'named', en: 'Named Views', vi: 'Góc nhìn', pri: 4, items: [big('VIEW', 'View\nManager', 'Góc nhìn\nđặt tên')] },
+      { id: 'disp', en: 'Visual', vi: 'Hiển thị', pri: 3, items: [col(sm('TGRID', 'Grid', 'Lưới', { icon: 'GRID', tog: 'grid' }), sm('TLWT', 'Lineweight', 'Bề rộng nét', { icon: 'LWT' }), sm('TBG', 'Background', 'Nền tối/trắng', { icon: 'BG' })), col(sm('LINETYPE', 'Linetypes', 'Kiểu nét'), sm('LTSCALE', 'Linetype Scale', 'Tỉ lệ nét'), sm('LWEIGHT', 'Lineweight Settings', 'Bề rộng nét…')), big('DISPLAY', 'Display\nOptions', 'Tuỳ chọn\nhiển thị')] },
+      { id: 'iso', en: 'Isolate', vi: 'Cô lập', pri: 5, items: [big('ISOLATEOBJECTS', 'Isolate\nObjects', 'Cô lập\nđối tượng'), col(sm('HIDEOBJECTS', 'Hide Objects', 'Ẩn đối tượng'), sm('UNISOLATEOBJECTS', 'End Isolation', 'Hiện lại tất cả'))] },
+      { id: 'pal', en: 'Palettes', vi: 'Bảng', pri: 6, items: [big('PROPERTIES', 'Properties', 'Thuộc\ntính'), col(sm('LAYER', 'Layer Properties', 'Quản lý lớp'), sm('CMDLINE', 'Command Line', 'Dòng lệnh'), sm('HISTORY', 'Command History', 'Lịch sử lệnh'))] },
+      { id: 'lay', en: 'Layout Viewports', vi: 'Layout', pri: 7, items: [big('LAYOUT', 'New\nLayout', 'Layout\nmới'), col(sm('MVIEW', 'Rectangular', 'Khung nhìn'), sm('VPEDIT', 'Viewport Scale', 'Tỉ lệ khung nhìn'), sm('LAYOUTS', 'Layout List', 'Danh sách layout'))] },
+      { id: 'ui', en: 'Interface', vi: 'Giao diện', pri: 8, items: [big('CLEAN', 'Clean\nScreen', 'Toàn\nmàn hình'), big('WSPACE', 'Workspace', 'Không gian\nlàm việc', { icon: 'SETTINGS' })] }
     ] },
-    m3d: { name: '3D', panels: [
-      { pri: 0, title: 'Khối cơ bản', items: [big('BOX', 'Box\nHộp'), big('CYLINDER', 'Cylinder\nTrụ'), col(sm('CONE', 'Nón'), sm('SPHERE', 'Cầu'), sm('PYRAMID', 'Chóp')), col(sm('WEDGE', 'Nêm'), sm('TORUS', 'Xuyến'), sm('ELEV', 'Cao độ Z'))] },
-      { pri: 1, title: 'Tạo từ 2D', items: [big('EXTRUDE', 'Extrude\nĐùn'), big('PRESSPULL', 'Presspull\nKéo vùng'), col(sm('REVOLVE', 'Xoay tròn'), sm('SWEEP', 'Quét'), sm('WALL3D', 'Dựng tường'))] },
-      { pri: 2, title: 'Sửa khối', items: [big('UNION', 'Union\nCộng'), big('SUBTRACT', 'Subtract\nTrừ'), col(sm('INTERSECT', 'Giao'), sm('SLICE', 'Cắt khối'), sm('3DMOVE', 'Dời 3D')), col(sm('3DROTATE', 'Xoay 3D'), sm('MIRROR3D', 'Đối xứng 3D'), sm('3DARRAY', 'Mảng 3D', { icon: 'ARRAY' })), col(sm('SHELL', 'Làm rỗng', { icon: 'SUBTRACT' }), sm('INTERFERE', 'Va chạm', { icon: 'INTERSECT' }), sm('MASSPROP', 'Tính khối', { icon: 'MEASUREGEOM' }))] },
-      { pri: 4, title: 'Nâng cao', items: [big('UCS', 'UCS\nMặt phẳng'), col(sm('LOFT', 'Loft'), sm('FILLETEDGE', 'Bo cạnh'), sm('CHAMFEREDGE', 'Vát cạnh'))] },
-      { pri: 5, title: 'Ánh sáng & camera', items: [col(sm('SUNPROPERTIES', 'Mặt trời'), sm('LIGHT', 'Đèn'), sm('CAMERA', 'Camera')), col(sm('3DWALK', 'Đi bộ'))] },
-      { pri: 3, title: 'Xem', items: [big('3DORBIT', 'Orbit\nXem 3D'), big('RENDER', 'Render\nThực tế'), col(sm('MATERIALS', 'Vật liệu'), sm('SECTIONPLANE', 'Mặt cắt'), sm('FLATSHOT', 'Chiếu 2D')), col(sm('VIEWTOP', 'Trên'), sm('VIEWFRONT', 'Trước'), sm('VIEWSWISO', 'ISO Tây Nam'))] },
-      { pri: 8, title: 'Xuất 3D', items: [col(sm('EXPORTSTL', 'Xuất STL'), sm('EXPORTOBJ', 'Xuất OBJ'), sm('DXFOUT', 'DXF (3DFACE)', { icon: 'EXPORT' }))] }
+    manage: { en: 'Manage', vi: 'Quản lý', panels: [
+      { id: 'draft', en: 'Drafting', vi: 'Trợ giúp vẽ', items: [big('DSETTINGS', 'Drafting\nSettings', 'Cài đặt\nbắt điểm'), col(sm('TOSNAP', 'Object Snap', 'Bắt điểm', { tog: 'osnap' }), sm('TORTHO', 'Ortho Mode', 'Vuông góc', { tog: 'ortho' }), sm('TPOLAR', 'Polar Tracking', 'Góc cực', { tog: 'polar' }))] },
+      { id: 'units', en: 'Units', vi: 'Đơn vị', items: [big('UNITS', 'Units', 'Đơn vị'), col(sm('CALIB', 'Calibrate Scale', 'Tỉ lệ đo'), sm('CAL', 'QuickCalc', 'Máy tính'))] },
+      { id: 'clean', en: 'Cleanup', vi: 'Dọn dẹp', items: [big('PURGE', 'Purge', 'Dọn\nlớp trống'), big('OVERKILL', 'Overkill', 'Xoá\nnét trùng'), col(sm('LAYMRG', 'Layer Merge', 'Gộp lớp'), sm('LAYDEL', 'Layer Delete', 'Xoá lớp'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer'))] },
+      { id: 'mutil', en: 'Utilities', vi: 'Tiện ích', items: [big('COUNT', 'Count', 'Đếm\nkhối'), big('QSELECT', 'Quick\nSelect', 'Chọn\nnhanh')] },
+      { id: 'help', en: 'Help', vi: 'Trợ giúp', items: [big('HELP', 'Command\nList', 'Danh sách\nlệnh')] }
     ] },
-    manage: { name: 'Quản lý', panels: [
-      { title: 'Trợ giúp vẽ', items: [big('DSETTINGS', 'Drafting\nSettings', { icon: 'SETTINGS' }), col(sm('TOSNAP', 'OSNAP', { icon: 'ID', tog: 'osnap' }), sm('TORTHO', 'ORTHO', { icon: 'LINE', tog: 'ortho' }), sm('TPOLAR', 'POLAR', { icon: 'DIMANGULAR', tog: 'polar' }))] },
-      { title: 'Đơn vị & đo', items: [big('CALIB', 'Units\nTỉ lệ & đơn vị'), big('COUNT', 'Count\nĐếm khối'), col(sm('CAL', 'Máy tính', { icon: 'MEASUREGEOM' }), sm('LAYMRG', 'Gộp lớp', { icon: 'LAYER' }), sm('LAYDEL', 'Xoá lớp', { icon: 'LAYER' }))] },
-      { title: 'Xuất', items: [big('PLOT', 'Plot\nIn bản vẽ'), big('PUBLISH', 'Publish\nIn hàng loạt', { icon: 'PLOT' }), col(sm('EXPORT', 'Xuất ảnh/PDF', { icon: 'EXPORT' }), sm('DXFOUT', 'Xuất DXF', { icon: 'EXPORT' }), sm('SAVEAS', 'Lưu thành DXF')), col(sm('SAVEDWG', 'Lưu DWG'), sm('DWGSERVER', 'Máy chủ DWG'))] },
-      { title: 'Trợ giúp', items: [big('HELP', 'Commands\nDanh sách lệnh')] }
+    output: { en: 'Output', vi: 'Xuất', panels: [
+      { id: 'plot', en: 'Plot', vi: 'In', items: [big('PLOT', 'Plot', 'In bản vẽ'), big('PUBLISH', 'Batch\nPlot', 'In\nhàng loạt'), col(sm('LAYOUTS', 'Page Setup', 'Layout & khổ giấy'), sm('EXPORT', 'Export Image', 'Xuất ảnh / PDF'))] },
+      { id: 'exp', en: 'Export', vi: 'Xuất file', items: [big('EXPORT', 'Export\nPDF', 'Xuất\nPDF'), big('SAVEDWG', 'Save\nDWG', 'Lưu\nDWG'), col(sm('DXFOUT', 'Export DXF', 'Xuất DXF'), sm('SAVEAS', 'Save As DXF', 'Lưu thành DXF'), sm('DWGSERVER', 'DWG Server', 'Máy chủ DWG'))] },
+      { id: 'exp3', en: '3D Print', vi: 'Xuất 3D', items: [col(sm('EXPORTSTL', 'Export STL', 'Xuất STL'), sm('EXPORTOBJ', 'Export OBJ', 'Xuất OBJ'))] }
     ] },
-    online: { name: 'Online · Drive', panels: [
-      { title: 'Google Drive', items: [big('DRIVE', 'Drive\nMở/Lưu'), col(sm('DOPEN', 'Mở từ Drive', { icon: 'OPEN' }), sm('DUP', 'Tải bản vẽ lên', { icon: 'EXPORT' }), sm('DSAVE', 'Lưu DXF lên Drive', { icon: 'SAVE' }))] },
-      { title: 'Chia sẻ & cộng tác', items: [big('SHARE', 'Share\nChia sẻ link'), big('COLLAB', 'Collaborate\nCùng sửa'), col(sm('SYNC', 'Đồng bộ ngay'), sm('DSET', 'Cài đặt Google', { icon: 'SETTINGS' }))] },
-      { title: 'Máy tính', items: [big('SAVE', 'Save\nLưu (Ctrl+S)'), big('SAVEAS', 'Save As\nLưu thành'), big('SAVEDWG', 'DWG\nLưu DWG')] }
+    collab: { en: 'Collaborate', vi: 'Cộng tác', panels: [
+      { id: 'share', en: 'Share', vi: 'Chia sẻ', items: [big('SHARE', 'Share\nDrawing', 'Chia sẻ\nlink'), big('COLLAB', 'Co-Edit', 'Cùng\nsửa'), col(sm('SYNC', 'Sync Now', 'Đồng bộ ngay'), sm('DSET', 'Google Settings', 'Cài đặt Google'))] },
+      { id: 'gdrive', en: 'Google Drive', vi: 'Google Drive', items: [big('DRIVE', 'Drive', 'Drive'), col(sm('DOPEN', 'Open from Drive', 'Mở từ Drive'), sm('DUP', 'Upload Drawing', 'Tải bản vẽ lên'), sm('DSAVE', 'Save DXF to Drive', 'Lưu DXF lên Drive'))] },
+      { id: 'cmp', en: 'Compare', vi: 'So sánh', items: [big('COMPARE', 'DWG\nCompare', 'So sánh\nbản vẽ')] },
+      { id: 'cmark', en: 'Markup', vi: 'Đánh dấu', items: [col(sm('NOTE', 'Markup Note', 'Ghi chú'), sm('DO', 'Quick Measure', 'Đo đánh dấu'), sm('REVCLOUD', 'Revision Cloud', 'Khoanh mây'))] }
+    ] },
+    /* ---------- không gian 3D Modeling ---------- */
+    home3d: { en: 'Home', vi: 'Trang chủ', panels: [
+      { id: 'model', en: 'Modeling', vi: 'Tạo khối', pri: 0, items: [big('BOX', 'Box', 'Hộp', S({ menu: M_PRIM })), big('EXTRUDE', 'Extrude', 'Đùn', S({ menu: M_EXT })), col(sm('PRESSPULL', 'Presspull', 'Kéo vùng'), sm('WALL3D', 'Polysolid Wall', 'Dựng tường'), sm('ELEV', 'Elevation', 'Cao độ Z'))] },
+      { id: 'sedit', en: 'Solid Editing', vi: 'Sửa khối', pri: 1, items: [big('UNION', 'Union', 'Cộng', S({ menu: M_BOOL })), col(sm('SLICE', 'Slice', 'Cắt khối'), sm('SHELL', 'Shell', 'Làm rỗng'), sm('INTERFERE', 'Interfere', 'Va chạm')), col(sm('FILLETEDGE', 'Fillet Edge', 'Bo cạnh'), sm('CHAMFEREDGE', 'Chamfer Edge', 'Vát cạnh'), sm('MASSPROP', 'Mass Properties', 'Tính khối'))] },
+      { id: 'draw3', en: 'Draw', vi: 'Vẽ', pri: 2, items: [col(ic('LINE', 'Line', 'Đường thẳng'), ic('PLINE', 'Polyline', 'Đa tuyến'), ic('CIRCLE', 'Circle', 'Tròn', { menu: M_CIRCLE })), col(ic('ARC', 'Arc', 'Cung', { menu: M_ARC }), ic('RECTANG', 'Rectangle', 'Chữ nhật', S({ menu: M_RECT })), ic('HATCH', 'Hatch', 'Hatch'))] },
+      { id: 'mod3', en: 'Modify', vi: 'Sửa', pri: 2, items: [col(ic('3DMOVE', '3D Move', 'Dời 3D'), ic('3DROTATE', '3D Rotate', 'Xoay 3D'), ic('MIRROR3D', '3D Mirror', 'Đối xứng 3D')), col(ic('3DARRAY', '3D Array', 'Mảng 3D'), ic('ALIGN', 'Align', 'Căn chỉnh'), ic('ERASE', 'Erase', 'Xoá')), col(ic('MOVE', 'Move', 'Di chuyển'), ic('COPY', 'Copy', 'Sao chép'), ic('OFFSET', 'Offset', 'Song song'))] },
+      { id: 'sect', en: 'Section', vi: 'Mặt cắt', pri: 4, items: [big('SECTIONPLANE', 'Section\nPlane', 'Mặt\ncắt'), col(sm('SECTION2D', 'Section to 2D', 'Mặt cắt ra 2D'), sm('FLATSHOT', 'Flatshot', 'Chiếu 2D'))] },
+      { id: 'coord', en: 'Coordinates', vi: 'Toạ độ', pri: 5, items: [big('UCS', 'UCS', 'UCS'), col(sm('UCSICON', 'UCS Info', 'Thông tin UCS'))] },
+      { id: 'view3', en: 'View', vi: 'Xem', pri: 3, items: [big('3DORBIT', '3D\nOrbit', 'Xem\n3D'), col(sm('VIEWTOP', 'Top', 'Trên'), sm('VIEWFRONT', 'Front', 'Trước'), sm('VIEWSWISO', 'SW Isometric', 'ISO Tây Nam'))] },
+      Object.assign({}, P_LAYERS, { id: 'layers3', pri: 7 })
+    ] },
+    solid: { en: 'Solid', vi: 'Khối đặc', panels: [
+      { id: 'prim', en: 'Primitive', vi: 'Khối cơ bản', items: [big('BOX', 'Box', 'Hộp'), big('CYLINDER', 'Cylinder', 'Trụ'), col(sm('CONE', 'Cone', 'Nón'), sm('SPHERE', 'Sphere', 'Cầu'), sm('PYRAMID', 'Pyramid', 'Chóp')), col(sm('WEDGE', 'Wedge', 'Nêm'), sm('TORUS', 'Torus', 'Xuyến'), sm('WALL3D', 'Polysolid Wall', 'Dựng tường'))] },
+      { id: 'sol', en: 'Solid', vi: 'Tạo từ 2D', items: [big('EXTRUDE', 'Extrude', 'Đùn'), big('PRESSPULL', 'Presspull', 'Kéo\nvùng'), col(sm('REVOLVE', 'Revolve', 'Xoay tròn'), sm('SWEEP', 'Sweep', 'Quét'), sm('LOFT', 'Loft', 'Chuyển tiếp'))] },
+      { id: 'bool', en: 'Boolean', vi: 'Cộng trừ khối', items: [big('UNION', 'Union', 'Cộng'), col(sm('SUBTRACT', 'Subtract', 'Trừ'), sm('INTERSECT', 'Intersect', 'Giao'), sm('INTERFERE', 'Interfere', 'Va chạm'))] },
+      { id: 'sed2', en: 'Solid Editing', vi: 'Sửa khối', items: [col(sm('SLICE', 'Slice', 'Cắt khối'), sm('SHELL', 'Shell', 'Làm rỗng'), sm('MASSPROP', 'Mass Properties', 'Tính khối')), col(sm('FILLETEDGE', 'Fillet Edge', 'Bo cạnh'), sm('CHAMFEREDGE', 'Chamfer Edge', 'Vát cạnh'), sm('3DARRAY', '3D Array', 'Mảng 3D'))] },
+      { id: 'sec2', en: 'Section', vi: 'Mặt cắt', items: [big('SECTIONPLANE', 'Section\nPlane', 'Mặt\ncắt'), col(sm('SECTION2D', 'Section to 2D', 'Mặt cắt ra 2D'), sm('FLATSHOT', 'Flatshot', 'Chiếu 2D'))] }
+    ] },
+    visualize: { en: 'Visualize', vi: 'Trình diễn', panels: [
+      { id: 'views', en: 'Views', vi: 'Hướng nhìn', items: [col(sm('VIEWTOP', 'Top', 'Trên'), sm('VIEWFRONT', 'Front', 'Trước'), sm('VIEWRIGHT', 'Right', 'Phải')), col(sm('VIEWSWISO', 'SW Isometric', 'ISO Tây Nam'), sm('VIEWSEISO', 'SE Isometric', 'ISO Đông Nam'), sm('VIEWNEISO', 'NE Isometric', 'ISO Đông Bắc')), col(sm('VIEWNWISO', 'NW Isometric', 'ISO Tây Bắc'))] },
+      { id: 'navi', en: 'Navigate', vi: 'Điều hướng', items: [big('3DORBIT', '3D\nOrbit', 'Xem\n3D'), big('3DWALK', 'Walk', 'Đi bộ')] },
+      { id: 'lights', en: 'Lights', vi: 'Ánh sáng', items: [big('LIGHT', 'Point\nLight', 'Đèn\nđiểm'), big('SUNPROPERTIES', 'Sun &\nLocation', 'Mặt\ntrời')] },
+      { id: 'mats', en: 'Materials', vi: 'Vật liệu', items: [big('MATERIALS', 'Materials\nBrowser', 'Vật\nliệu')] },
+      { id: 'cam', en: 'Camera', vi: 'Camera', items: [big('CAMERA', 'Create\nCamera', 'Đặt\ncamera')] },
+      { id: 'rend', en: 'Render', vi: 'Render', items: [big('RENDER', 'Render', 'Render')] },
+      { id: 'x3', en: 'Export 3D', vi: 'Xuất 3D', items: [col(sm('EXPORTSTL', 'Export STL', 'Xuất STL'), sm('EXPORTOBJ', 'Export OBJ', 'Xuất OBJ'))] }
     ] }
   };
+  const WS = {
+    draft: { en: 'Drafting & Annotation', vi: 'Vẽ 2D & Chú thích', tabs: ['home', 'insert', 'annotate', 'param', 'view', 'manage', 'output', 'collab'] },
+    m3d: { en: '3D Modeling', vi: 'Mô hình 3D', tabs: ['home3d', 'solid', 'visualize', 'param', 'insert', 'annotate', 'view', 'manage', 'output', 'collab'] }
+  };
+  let WSK = 'draft', LANG = 'en';
+  try{ const w = localStorage.getItem('dvd:ws'); if(WS[w]) WSK = w; const l = localStorage.getItem('dvd:riblang'); if(l === 'vi' || l === 'en') LANG = l; }catch(_){}
+  const L = o => (LANG === 'vi' ? (o.vi || o.en) : (o.en || o.vi)) || '';
+  const L2 = o => (LANG === 'vi' ? o.en : o.vi) || '';
   // hành động ngoài dòng lệnh
   const ACT = {
     'CIRCLE|2P': () => { run('CIRCLE'); setTimeout(() => A.input('2P'), 30); },
     'CIRCLE|3P': () => { run('CIRCLE'); setTimeout(() => A.input('3P'), 30); },
     'ARC|C': () => { run('ARC'); setTimeout(() => A.input('C'), 30); },
+    'ELLIPSE|C': () => { run('ELLIPSE'); setTimeout(() => A.input('C'), 30); },
+    'DRAWORDER|F': () => runKw('DRAWORDER', 'F'), 'DRAWORDER|B': () => runKw('DRAWORDER', 'B'), 'DRAWORDER|A': () => runKw('DRAWORDER', 'A'), 'DRAWORDER|U': () => runKw('DRAWORDER', 'U'),
+    WSPACE: () => { const b = document.querySelector('[data-c="WSPACE"]') || $('acWS'); const r = b.getBoundingClientRect(); wsMenu(r.left, r.bottom + 2); },
     ZE: () => { A.pushView && A.pushView(); fitView(); }, ZW: () => run('ZOOM'), ZP: () => A.prevView && A.prevView(),
     ZIN: () => { A.pushView && A.pushView(); applyZoom(1.5, W() / 2, H() / 2); draw(); }, ZOUT: () => { A.pushView && A.pushView(); applyZoom(1 / 1.5, W() / 2, H() / 2); draw(); },
     ROTVIEW: () => click('rotBtn'), ROTRESET: () => { try{ setRotation(0); }catch(_){} }, BOOKMARK: () => click('bookmarkBtn'),
@@ -481,6 +620,8 @@
     COLLAB: () => window.DVDCloud && (DVDCloud.state.collab ? DVDCloud.stopCollab() : DVDCloud.enableCollab()), DSET: () => window.DVDCloud && DVDCloud.openSettings(),
     BLOCKLIB: () => openBlockLib(), LAYER: () => openLayerManager(), NEW: () => A.newDrawing(), LINETYPE: () => openLinetypes(), LWEIGHT: () => openLweight()
   };
+  // chạy lệnh rồi tự trả lời từ khoá ở lời nhắc chọn tuỳ chọn đầu tiên (vd DRAWORDER → F)
+  function runKw(c, kw){ run(c); let n = 0; const t = setInterval(() => { const r = A.reqInfo ? A.reqInfo() : null; if(!A.busy() || ++n > 1200){ clearInterval(t); return; } if(r && r.type === 'kw'){ clearInterval(t); A.input(kw); } }, 50); }
   const doCmd = c => { if(ACT[c]) ACT[c](); else run(c.split('|')[0]); };
   A.doCmd = doCmd;
 
@@ -488,7 +629,7 @@
   const top = document.createElement('div'); top.id = 'acadTop';
   top.innerHTML = '<div class="ac-appbar"><button class="ac-logo" id="acLogo" title="Menu ứng dụng">DVD<span class="tri">▼</span></button>' +
     '<div class="ac-qat">' + [['NEW', 'Bản vẽ mới (Ctrl+N)'], ['OPEN', 'Mở (Ctrl+O)'], ['SAVE', 'Lưu (Ctrl+S)'], ['SAVEAS', 'Lưu thành'], ['PLOT', 'In / xuất (Ctrl+P)'], ['UNDO', 'Hoàn tác (Ctrl+Z)'], ['REDO', 'Làm lại (Ctrl+Y)']].map(([k, t]) => '<button data-q="' + k + '" title="' + t + '">' + ico(k) + '</button>').join('') + '</div>' +
-    '<div class="ac-title" id="acTitle">DVDCAD</div>' +
+    '<button class="ac-ws" id="acWS" title="Không gian làm việc · nhãn ribbon"></button>' + '<div class="ac-title" id="acTitle">DVDCAD</div>' +
     '<div class="ac-right"><input id="acFind" placeholder="Tìm lệnh…" style="height:24px;width:150px;background:#1b2028;border:1px solid #454e5c;border-radius:4px;color:#e6eaf0;padding:0 8px;font:12px system-ui"><button id="acDrive" title="Google Drive · chia sẻ · cộng tác">' + ico('DRIVE') + '<span>Drive</span></button><button id="acHelp" title="Trợ giúp (F1)">' + ico('HELP') + '</button></div></div>' +
     '<div class="ac-tabs" id="acTabs"></div><div class="ac-ribbon" id="acRibbon"></div>';
   const stageEl = document.querySelector('.stage');
@@ -504,38 +645,50 @@
     else if(s.dataset.v === 't') menu(r.left, r.bottom + 2, [{ t: 'Hướng gốc (Bắc lên trên)', fn: ACT.ROTRESET }, { t: 'Xoay 90°', fn: ACT.ROTVIEW }]);
     else menu(r.left, r.bottom + 2, [{ t: 'Phóng vừa bản vẽ', fn: ACT.ZE }, { t: 'Toàn màn hình (Ctrl+0)', fn: ACT.CLEAN }, { t: 'Thanh dòng lệnh (Ctrl+9)', fn: ACT.CMDLINE }]); });
   // tab
-  let curTab = 'home'; try{ curTab = localStorage.getItem('dvd:rtab') || 'home'; }catch(_){} if(!RIB[curTab]) curTab = 'home';
+  const wsTabs = () => WS[WSK].tabs;
+  let curTab = 'home'; try{ curTab = localStorage.getItem('dvd:rtab') || 'home'; }catch(_){} if(!wsTabs().includes(curTab)) curTab = wsTabs()[0];
   const tabsEl = $('acTabs'), ribEl = $('acRibbon');
-  function renderTabs(){ tabsEl.innerHTML = Object.entries(RIB).map(([k, v]) => '<button data-t="' + k + '" class="' + (k === curTab ? 'on' : '') + '">' + esc(v.name) + '</button>').join(''); }
-  tabsEl.addEventListener('click', e => { const b = e.target.closest('[data-t]'); if(!b) return; if(b.dataset.t === curTab && !top.classList.contains('min')){ /* bấm lại: giữ */ } curTab = b.dataset.t; top.classList.remove('min'); try{ localStorage.setItem('dvd:rtab', curTab); }catch(_){} renderTabs(); renderRibbon(); });
-  tabsEl.addEventListener('dblclick', () => { top.classList.toggle('min'); setTimeout(() => { try{ resize(); }catch(_){} }, 20); });
-  function btnHTML(it){
-    const icon = it.icon || it.cmd.split('|')[0];
-    const tip = (it.label || '').replace('\n', ' — ') + ' (' + it.cmd.split('|')[0] + ')';
-    const tg = it.tog ? ' data-tog="' + it.tog + '"' : '';
-    if(it.t === 'big') return '<button class="ac-rbig' + (it.tog && SET[it.tog] ? ' on' : '') + '" data-c="' + it.cmd + '"' + (it.menu ? ' data-menu="1"' : '') + tg + ' title="' + esc(tip) + '">' + ico(icon) + '<span>' + esc(it.label).replace('\n', '<br>') + (it.menu ? ' ▾' : '') + '</span></button>';
-    return '<button class="ac-rbtn' + (it.tog && SET[it.tog] ? ' on' : '') + '" data-c="' + it.cmd + '"' + tg + ' title="' + esc(tip) + '">' + ico(icon) + '<span>' + esc(it.label) + '</span></button>';
+  function renderTabs(){ tabsEl.innerHTML = wsTabs().map(k => '<button data-t="' + k + '" class="' + (k === curTab ? 'on' : '') + '" data-tip="' + esc(L2(RIB[k])) + '">' + esc(L(RIB[k])) + '</button>').join('') + '<span class="ac-tabsp"></span><button class="ac-tabmin" id="acRibMin" title="Thu gọn / mở ribbon (bấm đúp tên tab)">' + (top.classList.contains('min') ? '▾' : '▴') + '</button>'; }
+  tabsEl.addEventListener('click', e => { if(e.target.closest('#acRibMin')){ toggleMin(); return; } const b = e.target.closest('[data-t]'); if(!b) return;
+    if(top.classList.contains('min')){ top.classList.remove('min'); } curTab = b.dataset.t; try{ localStorage.setItem('dvd:rtab', curTab); }catch(_){} renderTabs(); renderRibbon(); setTimeout(() => { try{ resize(); }catch(_){} }, 20); });
+  function toggleMin(){ top.classList.toggle('min'); renderTabs(); setTimeout(() => { try{ resize(); }catch(_){} }, 20); }
+  tabsEl.addEventListener('dblclick', e => { if(e.target.closest('[data-t]')) toggleMin(); });
+  // nút tách: nhớ lựa chọn cuối
+  let SPL = {}; try{ SPL = JSON.parse(localStorage.getItem('dvd:split') || '{}') || {}; }catch(_){}
+  const splitKey = it => it._k || it.cmd;
+  function face(it){ if(!it.split || !it.menu) return { cmd: it.cmd, en: it.en, vi: it.vi, icon: it.icon };
+    const c = SPL[splitKey(it)]; const m = c && it.menu.find(x => x[0] === c); if(!m) return { cmd: it.cmd, en: it.en, vi: it.vi, icon: it.icon };
+    if(it.keep) return { cmd: m[0], en: it.en, vi: it.vi, icon: null, sub: { en: m[1], vi: m[2] } };
+    return { cmd: m[0], en: it.t === 'big' && it.en.includes('\n') ? m[1].replace(' ', '\n') : m[1], vi: m[2], icon: null }; }
+  const iconOf = (cmd, icon) => { if(icon) return icon; const k = cmd.replace('|', '_'); return (window.DVDIcons && DVDIcons[k]) || I[k] ? k : cmd.split('|')[0]; };
+  function cmdInfo(cmd){ const n = cmd.split('|')[0]; const c = DVDCmd.commands.find(x => x.k.includes(n)); return c || null; }
+  function btnHTML(it, idx){
+    const f = face(it); const lab = L(f); const tg = it.tog ? ' data-tog="' + it.tog + '"' : '';
+    const on = it.tog && SET[it.tog] ? ' on' : '';
+    const dd = it.menu ? ' data-menu="' + idx + '"' : '';
+    const tip = ' data-tl="' + esc((L(f) + (f.sub ? ', ' + L(f.sub) : '')).replace(/\n/g, ' ')) + '" data-ts="' + esc(L2(f).replace(/\n/g, ' ')) + '"';
+    if(it.t === 'big') return '<button class="ac-rbig' + on + (it.menu ? ' has-dd' : '') + '" data-c="' + f.cmd + '"' + dd + tg + tip + ' aria-label="' + esc(lab) + '">' + ico(iconOf(f.cmd, f.icon)) + '<span>' + esc(lab).replace(/\n/g, '<br>') + (it.menu ? '<i class="dd">▾</i>' : '') + '</span></button>';
+    if(it.t === 'ic') return '<span class="ac-sgrp"><button class="ac-rbtn ac-ic' + on + '" data-c="' + f.cmd + '"' + tg + tip + ' aria-label="' + esc(lab) + '">' + ico(iconOf(f.cmd, f.icon)) + '</button>' + (it.menu ? '<button class="ac-dd" data-menu="' + idx + '" aria-label="▾">▾</button>' : '') + '</span>';
+    return '<span class="ac-sgrp"><button class="ac-rbtn' + on + '" data-c="' + f.cmd + '"' + tg + tip + ' aria-label="' + esc(lab) + '">' + ico(iconOf(f.cmd, f.icon)) + '<span>' + esc(lab) + '</span></button>' + (it.menu ? '<button class="ac-dd" data-menu="' + idx + '" aria-label="▾">▾</button>' : '') + '</span>';
   }
+  let ITEMS = [];   // các nút đang hiện (để mở menu tách)
+  const reg = it => { ITEMS.push(it); return ITEMS.length - 1; };
+  function itemsHTML(items){ let h = ''; for(const it of items){ if(it.t === 'col') h += '<div class="ac-col">' + it.items.map(x => btnHTML(x, reg(x))).join('') + '</div>'; else if(it.t === 'ctl') h += ctlHTML(it.kind); else h += btnHTML(it, reg(it)); } return h; }
   function renderRibbon(){
-    const T = RIB[curTab]; let h = '';
-    for(const p of T.panels){
-      h += '<div class="ac-panel"><div class="ac-pbody">';
-      for(const it of p.items){
-        if(it.t === 'col') h += '<div class="ac-col">' + it.items.map(btnHTML).join('') + '</div>';
-        else if(it.t === 'ctl') h += ctlHTML(it.kind);
-        else h += btnHTML(it);
-      }
-      h += '</div><div class="ac-ptitle">' + esc(p.title) + '</div></div>';
-    }
+    const T = RIB[curTab]; let h = ''; ITEMS = []; closeSlide();
+    T.panels.forEach((p, pi) => {
+      p.items.forEach(it => { if(it.split) it._k = p.id + ':' + it.cmd; if(it.t === 'col') it.items.forEach(x => { if(x.split) x._k = p.id + ':' + x.cmd; }); });
+      h += '<div class="ac-panel" data-p="' + pi + '"><div class="ac-pbody">' + itemsHTML(p.items) + '</div><div class="ac-ptitle' + (p.more ? ' more' : '') + '"' + (p.more ? ' data-more="' + pi + '" title="Thêm công cụ"' : '') + '>' + esc(L(p)) + (p.more ? ' <i>▾</i>' : '') + '</div></div>';
+    });
     ribEl.innerHTML = h; syncCtl(); fitRibbon();
   }
   // màn hình hẹp: thu gọn bảng từ phải sang trái thành 1 nút (như AutoCAD)
   function fitRibbon(){
-    const panels = [...ribEl.querySelectorAll('.ac-panel')]; panels.forEach((p, i) => p.dataset.pi = i);
+    const panels = [...ribEl.querySelectorAll('.ac-panel')];
     const over = () => ribEl.scrollWidth > ribEl.clientWidth + 2;
     const PP = RIB[curTab].panels;
     const collapse = i => { const P = PP[i]; const first = P.items.find(x => x.cmd) || (P.items[0] && P.items[0].items && P.items[0].items[0]) || {};
-      panels[i].querySelector('.ac-pbody').innerHTML = '<button class="ac-rbig" data-panel="' + i + '" title="' + esc(P.title) + '">' + ico(first.icon || (first.cmd || 'TOOLS').split('|')[0]) + '<span>' + esc(P.title) + ' ▾</span></button>'; };
+      panels[i].querySelector('.ac-pbody').innerHTML = '<button class="ac-rbig" data-panel="' + i + '" data-tl="' + esc(L(P)) + '">' + ico(iconOf(first.cmd || 'TOOLS', first.icon)) + '<span>' + esc(L(P)) + '<i class="dd">▾</i></span></button>'; panels[i].classList.add('collapsed'); };
     const pri = i => PP[i].pri == null ? 3 : PP[i].pri;
     const order = PP.map((_, i) => i).sort((a, b) => pri(b) - pri(a) || b - a);
     const done = new Set();
@@ -544,27 +697,67 @@
     for(const i of order){ if(!over()) return; if(done.has(i) || pri(i) === 0) continue; collapse(i); done.add(i); }
     for(let i = PP.length - 1; i >= 1 && over(); i--){ if(!done.has(i)){ collapse(i); done.add(i); } }
   }
-  function panelMenu(i, el){
-    const P = RIB[curTab].panels[i]; const items = [];
-    const add = it => { if(it.t === 'col') return it.items.forEach(add); if(it.t === 'ctl'){ if(it.kind === 'layer') ['LAYER', 'LAYMCUR', 'LAYISO', 'LAYUNISO', 'LAYON', 'LAYTHW'].forEach(c => items.push({ t: c === 'LAYER' ? 'Quản lý lớp' : (DVDCmd.commands.find(x => x.k[0] === c) || { d: c }).d, ic: 'LAYER', fn: () => doCmd(c) })); else { items.push({ t: 'Bảng thuộc tính', ic: 'PROPS', fn: () => doCmd('PROPERTIES') }); if(it.kind === 'props3'){ items.push({ t: 'Quản lý kiểu nét (LINETYPE)', ic: 'LTYPE', fn: () => doCmd('LINETYPE') }); items.push({ t: 'Bề rộng nét (LWEIGHT)', ic: 'LWT', fn: () => doCmd('LWEIGHT') }); } } return; }
-      if(it.menu){ it.menu.forEach(([c, t]) => items.push({ t, ic: c.split('|')[0], fn: () => doCmd(c) })); return; }
-      items.push({ t: String(it.label || it.cmd).replace('\n', ' — '), ic: it.icon || it.cmd.split('|')[0], fn: () => doCmd(it.cmd) }); };
-    P.items.forEach(add); const r = el.getBoundingClientRect(); menu(r.left, r.bottom + 2, items);
+  // danh sách lệnh của 1 bảng (để mở menu khi bảng bị thu gọn)
+  function panelItems(P, withMore){ const items = [];
+    const add = it => { if(it.t === 'col') return it.items.forEach(add); if(it.t === 'ctl'){ if(it.kind === 'layer') ['LAYER', 'LAYMCUR', 'LAYISO', 'LAYUNISO', 'LAYON', 'LAYTHW'].forEach(c => items.push({ t: c === 'LAYER' ? 'Layer Properties' : ((cmdInfo(c) || { d: c }).d), ic: c, fn: () => doCmd(c) })); else { items.push({ t: L({ en: 'Properties', vi: 'Bảng thuộc tính' }), ic: 'PROPS', fn: () => run('PROPERTIES') }); items.push({ t: L({ en: 'Linetype…', vi: 'Kiểu nét…' }), ic: 'LINETYPE', fn: () => openLinetypes() }); items.push({ t: L({ en: 'Lineweight…', vi: 'Bề rộng nét…' }), ic: 'LWEIGHT', fn: () => openLweight() }); } return; }
+      if(it.menu){ it.menu.forEach(([c, en, vi]) => items.push({ t: L({ en, vi }), ic: iconOf(c), fn: () => pickSplit(it, c) })); return; }
+      items.push({ t: L(it).replace(/\n/g, ' '), ic: iconOf(it.cmd, it.icon), fn: () => doCmd(it.cmd) }); };
+    P.items.forEach(add); if(withMore && P.more){ items.push({ sep: 1 }); P.more.forEach(add); } return items; }
+  function panelMenu(i, el){ const r = el.getBoundingClientRect(); menu(r.left, r.bottom + 2, panelItems(RIB[curTab].panels[i], true)); }
+  function pickSplit(it, c){ if(it.split){ SPL[splitKey(it)] = c; try{ localStorage.setItem('dvd:split', JSON.stringify(SPL)); }catch(_){} setTimeout(() => { const sl = slideOpen; renderRibbon(); if(sl != null) openSlide(sl); }, 0); } doCmd(c); }
+  // phần mở rộng của bảng (bấm tên bảng ▾)
+  let slideEl = null, slideOpen = null;
+  function closeSlide(){ if(slideEl){ slideEl.remove(); slideEl = null; } slideOpen = null; ribEl.querySelectorAll('.ac-ptitle.open').forEach(x => x.classList.remove('open')); }
+  function openSlide(pi){
+    closeSlide(); const P = RIB[curTab].panels[pi]; if(!P || !P.more) return; const pan = ribEl.querySelector('.ac-panel[data-p="' + pi + '"]'); if(!pan) return;
+    slideEl = document.createElement('div'); slideEl.className = 'ac-slide'; slideOpen = pi;
+    slideEl.innerHTML = '<div class="ac-slbody">' + P.more.map(x => btnHTML(x, reg(x))).join('') + '</div><div class="ac-ptitle open">' + esc(L(P)) + ' <i>▴</i></div>';
+    document.body.appendChild(slideEl); const r = pan.getBoundingClientRect(); slideEl.style.left = Math.max(2, Math.min(r.left, innerWidth - slideEl.offsetWidth - 4)) + 'px'; slideEl.style.top = (r.bottom - 20) + 'px'; slideEl.style.minWidth = r.width + 'px';
+    const t = pan.querySelector('.ac-ptitle'); if(t) t.classList.add('open');
+    slideEl.addEventListener('click', onRibClick); slideEl.addEventListener('pointerdown', e => e.stopPropagation());
+    slideEl.querySelector('.ac-ptitle').onclick = closeSlide;
   }
+  document.addEventListener('pointerdown', e => { if(slideEl && !slideEl.contains(e.target) && !e.target.closest('[data-more]')) closeSlide(); }, true);
   let _rbT = 0; window.addEventListener('resize', () => { clearTimeout(_rbT); _rbT = setTimeout(() => { if(document.documentElement.classList.contains('acad')) renderRibbon(); }, 150); });
-  ribEl.addEventListener('click', e => {
+  function onRibClick(e){
+    hideTip();
+    const mo = e.target.closest('[data-more]'); if(mo){ const pi = +mo.dataset.more; if(slideOpen === pi) closeSlide(); else openSlide(pi); return; }
     const pc0 = e.target.closest('[data-panel]'); if(pc0){ panelMenu(+pc0.dataset.panel, pc0); return; }
+    const ddb = e.target.closest('.ac-dd'); if(ddb){ openSplit(ITEMS[+ddb.dataset.menu], ddb.closest('.ac-sgrp') || ddb); return; }
     const b = e.target.closest('[data-c]'); if(!b) return;
-    const it = findItem(b.dataset.c);
-    const pc = e.target.closest('[data-panel]'); if(pc){ panelMenu(+pc.dataset.panel, pc); return; }
-    if(it && it.menu){ const r = b.getBoundingClientRect(); const rect = { left: r.left, bottom: r.bottom };
-      const lower = it.t === 'sm' || (e.clientY - r.top) > r.height * 0.62;
-      if(lower){ menu(rect.left, rect.bottom + 2, it.menu.map(([c, t]) => ({ t, fn: () => doCmd(c), ic: c.split('|')[0] }))); return; } }
+    if(b.classList.contains('has-dd')){ const r = b.getBoundingClientRect(); if((e.clientY - r.top) > r.height * 0.62){ openSplit(ITEMS[+b.dataset.menu], b); return; } }
+    const inSlide = slideEl && slideEl.contains(b); if(inSlide) closeSlide();
     doCmd(b.dataset.c);
-  });
-  function findItem(cmd){ for(const T of Object.values(RIB)) for(const p of T.panels) for(const it of p.items){ if(it.t === 'col'){ for(const x of it.items) if(x.cmd === cmd) return x; } else if(it.cmd === cmd) return it; } return null; }
+  }
+  function openSplit(it, el){ if(!it || !it.menu) return; const r = el.getBoundingClientRect(); const cur = face(it).cmd;
+    menu(r.left, r.bottom + 2, it.menu.map(([c, en, vi]) => ({ t: L({ en, vi }) + (it.split && c === cur ? '' : ''), cur: it.split && c === cur, fn: () => { if(slideEl) closeSlide(); pickSplit(it, c); }, ic: iconOf(c) }))); }
+  ribEl.addEventListener('click', onRibClick);
+  function findItem(cmd){ for(const T of Object.values(RIB)) for(const p of T.panels) for(const it of p.items.concat(p.more || [])){ if(it.t === 'col'){ for(const x of it.items) if(x.cmd === cmd) return x; } else if(it.cmd === cmd) return it; } return null; }
+  // chú giải khi rê chuột (như AutoCAD): tên lệnh, mô tả, tên gõ lệnh
+  let tipEl = null, tipT = 0;
+  function hideTip(){ clearTimeout(tipT); if(tipEl){ tipEl.remove(); tipEl = null; } }
+  function showTip(b){
+    const c = b.dataset.c, tl = b.dataset.tl || '', ts = b.dataset.ts || ''; const info = c ? cmdInfo(c) : null;
+    hideTip(); tipEl = document.createElement('div'); tipEl.className = 'ac-rtip';
+    const keys = info ? info.k.filter(k => !k.startsWith('-')).slice(0, 4) : [];
+    tipEl.innerHTML = '<div class="tt">' + esc(tl) + (ts && ts !== tl ? '<span>' + esc(ts) + '</span>' : '') + '</div>' + (info ? '<div class="td">' + esc(info.d) + '</div>' : '') +
+      (keys.length ? '<div class="tk">' + ico(iconOf(c)) + '<b>' + esc(keys[0]) + '</b>' + (keys.length > 1 ? ' · ' + keys.slice(1).map(esc).join(', ') : '') + '</div>' : '') + '<div class="tf">F1 — danh sách lệnh</div>';
+    document.body.appendChild(tipEl); const r = b.getBoundingClientRect(); tipEl.style.left = Math.max(4, Math.min(r.left, innerWidth - tipEl.offsetWidth - 6)) + 'px'; tipEl.style.top = Math.min(r.bottom + 6, innerHeight - tipEl.offsetHeight - 6) + 'px';
+  }
+  function tipOver(e){ const b = e.target.closest('[data-tl],[data-tip]'); if(!b){ return; } if(tipEl && tipEl._b === b) return; hideTip();
+    tipT = setTimeout(() => { if(b.dataset.tip != null && !b.dataset.tl){ if(!b.dataset.tip) return; hideTip(); tipEl = document.createElement('div'); tipEl.className = 'ac-rtip sm'; tipEl.textContent = b.dataset.tip; document.body.appendChild(tipEl); const r = b.getBoundingClientRect(); tipEl.style.left = r.left + 'px'; tipEl.style.top = (r.bottom + 4) + 'px'; } else showTip(b); if(tipEl) tipEl._b = b; }, 550); }
+  for(const el of [ribEl, tabsEl]){ el.addEventListener('pointerover', tipOver); el.addEventListener('pointerleave', hideTip); el.addEventListener('pointerdown', hideTip); }
+  document.addEventListener('pointerover', e => { if(e.target.closest && e.target.closest('.ac-slide')) tipOver(e); });
+  window.addEventListener('wheel', hideTip, { passive: true });
+  // không gian làm việc + ngôn ngữ nhãn ribbon
+  function wsMenu(x, y){ menu(x, y, [{ hd: 'KHÔNG GIAN LÀM VIỆC' }].concat(Object.entries(WS).map(([k, w]) => ({ t: (k === WSK ? '✓ ' : '   ') + w.en + ' — ' + w.vi, fn: () => setWS(k) })), [{ sep: 1 }, { hd: 'NHÃN RIBBON' },
+    { t: (LANG === 'en' ? '✓ ' : '   ') + 'English (như AutoCAD)', fn: () => setLang('en') }, { t: (LANG === 'vi' ? '✓ ' : '   ') + 'Tiếng Việt', fn: () => setLang('vi') }])); }
+  function setWS(k){ if(!WS[k]) return; WSK = k; try{ localStorage.setItem('dvd:ws', k); }catch(_){} if(!wsTabs().includes(curTab)) curTab = wsTabs()[0]; renderTabs(); renderRibbon(); syncWS(); }
+  function setLang(l){ LANG = l; try{ localStorage.setItem('dvd:riblang', l); }catch(_){} renderTabs(); renderRibbon(); syncWS(); }
+  function syncWS(){ const b = $('acWS'); if(b) b.innerHTML = ico('SETTINGS') + '<span>' + esc(L(WS[WSK])) + '</span><i>▾</i>'; }
+  A.ribbon = { setWS, setLang, get ws(){ return WSK; }, get lang(){ return LANG; }, get tab(){ return curTab; }, RIB, WS, render: () => { renderTabs(); renderRibbon(); } };
   function ctlHTML(kind){
-    if(kind === 'layer') return '<div class="ac-ctl"><button class="ac-laybtn" id="acLayBtn" title="Lớp hiện hành — bấm để chọn / bật tắt"><span class="sw"></span><span class="nm">0</span>▾</button><div style="display:flex;gap:2px">' + [['LAYMCUR', 'Lấy lớp của đối tượng làm hiện hành', 'BHAND'], ['LAYISO', 'Cô lập lớp', 'ZW'], ['LAYUNISO', 'Bỏ cô lập', 'ZE'], ['LAYOFF', 'Tắt lớp (bấm đối tượng)', 'BG'], ['LAYFRZ', 'Đóng băng lớp', 'SETTINGS'], ['LAYLCK', 'Khoá lớp', 'BLOCK'], ['LAYON', 'Bật tất cả lớp', 'LAYER'], ['LAYTHW', 'Rã băng tất cả', 'SYNC']].map(([c, t, i]) => '<button class="ac-rbtn" data-c="' + c + '" title="' + t + '" style="padding:0 4px">' + ico(i) + '</button>').join('') + '</div></div>';
+    if(kind === 'layer') return '<div class="ac-ctl"><button class="ac-laybtn" id="acLayBtn" title="Lớp hiện hành — bấm để chọn / bật tắt"><span class="sw"></span><span class="nm">0</span>▾</button><div style="display:flex;gap:2px">' + [['LAYMCUR', 'Make Current', 'Lấy lớp của đối tượng làm hiện hành'], ['LAYISO', 'Isolate', 'Cô lập lớp'], ['LAYUNISO', 'Unisolate', 'Bỏ cô lập'], ['LAYOFF', 'Off', 'Tắt lớp (bấm đối tượng)'], ['LAYFRZ', 'Freeze', 'Đóng băng lớp'], ['LAYLCK', 'Lock', 'Khoá lớp'], ['LAYON', 'Turn All Layers On', 'Bật tất cả lớp'], ['LAYTHW', 'Thaw All Layers', 'Rã băng tất cả']].map(([c, en, vi]) => '<button class="ac-rbtn ac-ic" data-c="' + c + '" data-tl="' + esc(L({ en, vi })) + '" data-ts="' + esc(L2({ en, vi })) + '">' + ico(c) + '</button>').join('') + '</div></div>';
     if(kind === 'color') return '<div class="ac-ctl" style="min-width:170px"><select id="acColSel" title="Màu cho đối tượng mới / đang chọn"></select><button class="ac-rbtn" data-c="PROPERTIES" title="Bảng thuộc tính (Ctrl+1)">' + ico('PROPS') + '<span>Bảng thuộc tính</span></button></div>';
     if(kind === 'props3') return '<div class="ac-ctl ac-p3" style="min-width:150px;max-width:170px"><select id="acColSel" title="Màu — đối tượng mới / đang chọn"></select><select id="acLwSel" title="Bề rộng nét — đối tượng mới / đang chọn"></select><select id="acLtSel" title="Kiểu nét — đối tượng mới / đang chọn"></select></div>';
     return '';
@@ -886,7 +1079,8 @@
   $('acStart').onclick = () => click('openBtn');
   $('acFileClose').onclick = () => { if(!confirm('Đóng bản vẽ? (các thay đổi đã tự lưu trên máy)')) return; location.href = location.pathname; };
   window.addEventListener('resize', applyMode);
-  applyMode(); renderTabs(); renderRibbon(); syncSB(); updTitle(); renderLT();
+  $('acWS').onclick = e => { const r = e.currentTarget.getBoundingClientRect(); wsMenu(r.left, r.bottom + 2); };
+  applyMode(); syncWS(); renderTabs(); renderRibbon(); syncSB(); updTitle(); renderLT();
   // vẽ lại khi mở modal ở chế độ máy tính: các overlay của app canh giữa
   setTimeout(() => { try{ resize(); }catch(_){} }, 60);
 })();
