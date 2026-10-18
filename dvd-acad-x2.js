@@ -151,7 +151,7 @@
   });
   cmd(['REVERSE'], 'Đảo chiều đường / đa tuyến', async () => {
     const s = await A.getSel('Chọn đường, đa tuyến, cung'); const sel = (s.sel || []).filter(e => /^(LINE|POLYLINE|ARC)$/.test(e.type) && !A.isLocked(e)); if(!sel.length) return;
-    A.commit({ rep: sel.map(e => { const w = copy(e); if(w.type === 'LINE'){ [w.x1, w.x2, w.y1, w.y2] = [w.x2, w.x1, w.y2, w.y1]; } else if(w.type === 'POLYLINE') w.vertices.reverse(); return [e, w]; }) }, 'Đã đảo chiều ' + sel.length);
+    A.commit({ rep: sel.map(e => { const w = copy(e); if(w.type === 'LINE'){ [w.x1, w.x2, w.y1, w.y2] = [w.x2, w.x1, w.y2, w.y1]; } else if(w.type === 'POLYLINE'){ if(!A.bvReverse(w, !!w.closed)) w.vertices.reverse(); } return [e, w]; }) }, 'Đã đảo chiều ' + sel.length);
   });
   cmd(['SETBYLAYER', 'SETBYL'], 'Đặt màu, kiểu nét, bề rộng nét về ByLayer', async () => {
     const s = await A.getSel('Chọn đối tượng'); const sel = (s.sel || []).filter(e => !A.isLocked(e)); if(!sel.length) return;

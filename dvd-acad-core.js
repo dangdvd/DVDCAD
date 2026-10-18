@@ -47,7 +47,34 @@
     if(!w.closed && nb.length) delete nb[nb.length - 1].bulge;
     if(!nb.some(p => p.bulge)){ w.vertices = nb; delete w.bv; delete w.bvs; return w; }
     w.bv = nb; w.vertices = bvExpand(nb, w.closed); w.bvs = bvSig(w.vertices); delete w.wq; return w; }
+  // cắt đoạn [a, b] (theo chiều dài các điểm lấy mẫu) của đa tuyến có cung → danh sách đỉnh + bulge (giữ cung)
+  function bvSub(e, v, pieces, total, closed, a, b){
+    const B = e.bv, n = B.length, ns = closed ? n : n - 1;
+    // chỉ số điểm lấy mẫu ứng với từng đỉnh gốc
+    const idx = []; let j = 0; const tol = 1e-7 * Math.max(1, Math.abs(B[0].x) + Math.abs(B[0].y));
+    for(let k = 0; k < n; k++){ const q = B[k]; while(j < v.length && Math.hypot(v[j].x - q.x, v[j].y - q.y) > tol * (1 + Math.abs(q.x) + Math.abs(q.y))) j++; if(j >= v.length) return null; idx.push(j); }
+    const U = idx.map(i => i === 0 ? 0 : pieces[i - 1].u1); U.push(total);   // U[k] = chiều dài tại đỉnh k; U[n] = cuối (kín) hoặc = U[n-1]
+    if(!closed) U[n] = U[n - 1];
+    const segAt = u => { for(let k = 0; k < ns; k++) if(u <= U[k + 1] + 1e-12) return k; return ns - 1; };
+    const info = k => { const p = B[k], q = B[(k + 1) % n]; const arc = p.bulge ? bulgeArc(p, q, p.bulge) : null; return { p, q, arc, L: (U[k + 1] - U[k]) || 1e-300 }; };
+    const ptAt = (k, f) => { const I = info(k); if(I.arc){ const t = I.arc.a0 + I.arc.sw * f; return { x: I.arc.cx + I.arc.r * Math.cos(t), y: I.arc.cy + I.arc.r * Math.sin(t) }; } return { x: I.p.x + (I.q.x - I.p.x) * f, y: I.p.y + (I.q.y - I.p.y) * f }; };
+    const bulgePart = (k, f0, f1) => { const I = info(k); return I.arc ? Math.tan(I.arc.sw * (f1 - f0) / 4) : 0; };
+    const out = [];
+    const walk = (lo, hi) => {   // lo < hi trong [0, total]
+      let k = segAt(lo); let f0 = (lo - U[k]) / info(k).L;
+      for(;;){ const I = info(k); const endU = U[k + 1]; if(hi <= endU + 1e-12){ const f1 = (hi - U[k]) / I.L; const P0 = ptAt(k, Math.max(0, f0)); out.push({ x: P0.x, y: P0.y, bulge: bulgePart(k, f0, f1) }); return ptAt(k, Math.min(1, f1)); }
+        const P0 = ptAt(k, Math.max(0, f0)); out.push({ x: P0.x, y: P0.y, bulge: bulgePart(k, f0, 1) }); k++; f0 = 0; if(k >= ns) return ptAt(ns - 1, 1); } };
+    let end;
+    if(b <= total + 1e-12) end = walk(Math.max(0, a), Math.min(total, b));
+    else { walk(Math.max(0, a), total); end = walk(0, b - total); }
+    out.push({ x: end.x, y: end.y });
+    return out.filter((p, i) => i === 0 || Math.hypot(p.x - out[i - 1].x, p.y - out[i - 1].y) > 1e-12);
+  }
+  A.bvSubOf = (e, a, b) => { const c = curveOf(e); return c && c.sub ? c.sub(a, b) : null; };
   function bvFix(e, bv){ e.bv = bv; e.bvs = bvSig(e.vertices); }   // sau khi biến đổi cả vertices lẫn bv
+  // đảo chiều đa tuyến có cung (đổi dấu bulge)
+  A.bvReverse = (w, closed) => { const B = bvOf(w); if(!B) return false; const n = B.length, o = []; if(closed){ o.push({ x: B[0].x, y: B[0].y, bulge: B[n - 1].bulge ? -B[n - 1].bulge : 0 }); for(let i = n - 1; i >= 1; i--) o.push({ x: B[i].x, y: B[i].y, bulge: B[i - 1].bulge ? -B[i - 1].bulge : 0 }); }
+    else for(let i = n - 1; i >= 0; i--) o.push({ x: B[i].x, y: B[i].y, bulge: i > 0 && B[i - 1].bulge ? -B[i - 1].bulge : 0 }); setBV(w, o); return true; };
   A.bvOf = bvOf; A.setBV = setBV; A.bvSig = bvSig; A.bvExpand = bvExpand; A.bvFix = bvFix;
   // cung của 1 đoạn có bulge: tâm, bán kính, góc đầu, góc quét (có dấu)
   function bulgeArc(a, b, bulge){ const ch = Math.hypot(b.x - a.x, b.y - a.y); if(!bulge || ch < 1e-12) return null; const th = 4 * Math.atan(bulge); const r = ch / (2 * Math.sin(th / 2)); const ux = (b.x - a.x) / ch, uy = (b.y - a.y) / ch; const d = r * Math.cos(th / 2);
@@ -97,7 +124,9 @@
             const add = (lo, hi, off) => { for(const q of verts){ const ss = q.s + off; if(ss > lo + 1e-9 && ss < hi - 1e-9) pts.push({ x: q.p.x, y: q.p.y }); } };
             if(b <= total + 1e-12) add(a, b, 0); else { add(a, total + 1e-12, 0); add(total, b, total); }
             pts.push(at(b));
-            const o = clone(e); o.type = 'POLYLINE'; o.vertices = dedup(pts); o.closed = false; delete o.pts; delete o.wq; return o;
+            const o = clone(e); o.type = 'POLYLINE'; o.vertices = dedup(pts); o.closed = false; delete o.pts; delete o.wq;
+            if(e.type === 'POLYLINE' && bvOf(e)){ try{ const nb = bvSub(e, v, pieces, total, closed, a, b); if(nb && nb.length >= 2){ setBV(o, nb); return o; } }catch(_){} delete o.bv; delete o.bvs; }
+            return o;
           } };
       }
       case 'ELLIPSE': {
@@ -850,7 +879,7 @@
     if(!cur) return false;
     if(!r){ return true; }
     const T = t.toUpperCase().replace(/^'/, '');
-    if(TRANSPARENT.has(T.split(/\s+/)[0])){ try{ DVDCmd.runTransparent(T); }catch(_){} return true; }
+    if(TRANSPARENT.has(T.split(/\s+/)[0]) && !(r.kw && r.kw.some(k => deacc(k.k) === deacc(T)))){ try{ DVDCmd.runTransparent(T); }catch(_){} return true; }
     if(!t){
       if(r.type === 'sel' && cur.poly){ finishPolySel(); return true; }
       if(r.type === 'sel'){ if(win){ win = null; } r.res({ sel: [...cur.sel] }); return true; }

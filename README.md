@@ -4,6 +4,11 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v4r: cải tiến các giới hạn còn lại
+- TRIM / BREAK / EXTEND / JOIN / FILLET / CHAMFER / REVERSE giữ cung của đa tuyến; từ khoá P không bị PAN chiếm.
+- DXF: kích thước góc thành DIMENSION, bản khối sửa riêng thành khối biến thể.
+- Kiểu nét có hình (FENCELINE, TRACKS, ZIGZAG, BATTING), nét đứt bắt đầu đúng mẫu; DATALINKURL (Google Sheets / CSV online, dùng được trên iPhone).
+
 ## v4q: cải tiến các hạn chế còn lại
 - Đa tuyến có cung (bulge) giữ đúng cung khi sửa, OFFSET, bắt điểm, lưu DXF; PLINE cung.
 - Lưu DXF: khối thành BLOCK/INSERT + ATTDEF/ATTRIB, kích thước thẳng/bán kính/đường kính thành DIMENSION, vùng kèm XDATA.

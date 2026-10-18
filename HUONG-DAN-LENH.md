@@ -213,6 +213,17 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v4r)
+**Cắt, nối, bo góc giữ cung:** TRIM, BREAK / BREAKATPOINT, EXTEND (đầu thẳng), JOIN (nối đoạn thẳng + cung + đa tuyến), FILLET / CHAMFER đa tuyến (một góc hoặc **P** cả đa tuyến) và REVERSE / PEDIT đảo chiều đều giữ cung thật — cung cắt ra vẫn đúng tâm, bán kính; bo góc tạo cung thật (bulge) thay vì nhiều đoạn nhỏ.
+
+**Từ khoá ưu tiên hơn lệnh trong suốt:** trong lời nhắc có từ khoá **P** (FILLET → Đa tuyến…), gõ P chọn từ khoá thay vì PAN.
+
+**Lưu DXF:** kích thước góc lưu thành DIMENSION 3 điểm. Bản khối bị sửa riêng lưu thành khối biến thể (`COT$1`…) thay vì nét rời.
+
+**Kiểu nét có hình:** đọc hình (shape) trong kiểu nét từ DXF / DWG và vẽ gần đúng; LINETYPE → Tải có thêm FENCELINE1 (tròn), FENCELINE2 (vuông), TRACKS, ZIGZAG, BATTING. Nét đứt nay bắt đầu đúng vị trí mẫu như AutoCAD (mẫu bắt đầu bằng khoảng hở hoặc có hai đoạn liền ở hai đầu).
+
+**DATALINKURL** (Insert → Linking & Extraction): bảng lấy từ đường link Google Sheets (chia sẻ “Bất kỳ ai có liên kết”) hoặc file CSV / XLSX trên mạng. `DATALINKUPDATE` tải lại ngay — dùng được trên iPhone / iPad; khi quay lại cửa sổ, DVDCAD kiểm tra (tối đa 1 lần / phút) và báo nếu trang tính đã đổi.
+
 ## Bổ sung (v4q)
 **Đa tuyến có cung giữ đúng cung:** đa tuyến từ file DWG/DXF, PLINE chế độ cung (**A**), vùng, PDF nhập vào… giữ đỉnh gốc và cung (bulge):
 - MOVE, COPY, ROTATE, MIRROR, SCALE, ô nắm giữ nguyên cung. Ô nắm giữa cung kéo để đổi độ cong.
@@ -413,13 +424,13 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 
 ## Khác với AutoCAD
 - Lưu DXF ngay trong app. Lưu **DWG** cần máy chủ chuyển đổi (`SAVEDWG`, xem trên).
-- Khối lưu ra DXF thành BLOCK + INSERT (kèm thuộc tính ATTDEF/ATTRIB); kích thước thẳng, bán kính, đường kính lưu thành DIMENSION. Khối đã bị sửa riêng một bản, kích thước góc vẫn lưu dạng nét rời. Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước. Kích thước không bám theo khi chỉ sửa riêng đường hình.
+- Khối lưu ra DXF thành BLOCK + INSERT (kèm thuộc tính ATTDEF/ATTRIB); kích thước thẳng, bán kính, đường kính lưu thành DIMENSION. Kích thước góc lưu thành DIMENSION 3 điểm; bản khối bị sửa riêng lưu thành khối biến thể (TÊN$1…). Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước. Kích thước không bám theo khi chỉ sửa riêng đường hình.
 - Kích thước thẳng/chéo có sẵn trong file DWG/DXF cũng kéo ô nắm và STRETCH được. Khi sửa, kích thước được vẽ lại theo kiểu của DVDCAD: giữ cao chữ, số lẻ, mũi tên/gạch chéo. Kích thước góc và bán kính của file gốc chỉ chọn theo cụm.
 - Bề rộng nét theo từng đối tượng không ghi được vào DXF R12 (AutoCAD vẫn đọc được kiểu nét).
 - Hatch dò biên trong màn hình trước, không thấy biên kín thì tự mở rộng phạm vi dò (tới 40 lần màn hình).
-- Đa tuyến có cung giữ đúng cung khi di chuyển, xoay, lật, tỉ lệ, OFFSET, sửa bằng ô nắm và lưu DXF. Các lệnh cắt (TRIM, BREAK, JOIN, FILLET đa tuyến) đổi phần cong thành nhiều đoạn thẳng nhỏ.
+- Đa tuyến có cung giữ đúng cung khi di chuyển, xoay, lật, tỉ lệ, OFFSET, sửa bằng ô nắm và lưu DXF. TRIM, BREAK, EXTEND, JOIN, FILLET / CHAMFER đa tuyến, REVERSE cũng giữ cung. Cung ở đầu đa tuyến chưa EXTEND được (kéo ô nắm hoặc LENGTHEN).
 - Vùng (REGION) lưu ra DXF dạng đa tuyến kín kèm dữ liệu DVDCAD (mở lại trong DVDCAD vẫn là vùng; AutoCAD thấy đa tuyến). Spline / elip trong phép toán vùng được chia thành đoạn thẳng nhỏ.
-- DATALINK tự đọc lại file Excel trên Chrome / Edge máy tính. Trên iPhone / iPad / Safari cần chọn lại file khi chạy DATALINKUPDATE.
+- DATALINK tự đọc lại file Excel trên Chrome / Edge máy tính. Trên iPhone / iPad / Safari: dùng `DATALINKURL` (Google Sheets / link CSV) để tự cập nhật, hoặc chọn lại file khi chạy DATALINKUPDATE.
 - Trình duyệt không tự ghi được DWG: `SAVEDWG` gửi DXF tới máy chủ ODA của bạn. Không có máy chủ thì lưu DXF, AutoCAD mở bình thường.
 - Ràng buộc tham số và khối động lưu trên máy (theo bản vẽ / tên khối), không ghi vào DXF. Khối động trong file AutoCAD hiện đúng trạng thái đang lưu nhưng chưa đổi được tham số gốc của AutoCAD.
 - Vùng che, thứ tự vẽ và chú thích theo tỉ lệ ghi ra DXF dạng nét thường.
@@ -429,4 +440,4 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - UCS ở DVDCAD chỉ dùng cho lệnh tạo khối 3D. Nét 2D luôn vẽ trên mặt bằng XY.
 - Layout chỉ chứa khung tên và khung nhìn. Muốn ghi chú thêm thì vẽ ở Model.
 - Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
-- Kiểu nét phức: chữ trong nét hiện đúng (GAS, HW…); hình (shape SHX) trong nét chưa vẽ. Khi lưu DXF R12, chữ trong nét không được ghi (AutoCAD thấy nét đứt).
+- Kiểu nét phức: chữ và hình trong nét hiện đúng (hình của ltypeshp.shx vẽ gần đúng: tròn, vuông, gạch, zigzag, batting; hình SHX khác hiện dạng vòng tròn nhỏ). DXF R12 không có kiểu nét phức nên khi lưu, chữ / hình trong nét không được ghi (AutoCAD thấy nét đứt).

@@ -214,9 +214,24 @@
   }
   A.pickLinked = pickLinked;
   async function handleFile(h, ask){ try{ let p = h.queryPermission ? await h.queryPermission({ mode: 'read' }) : 'granted'; if(p !== 'granted' && ask && h.requestPermission) p = await h.requestPermission({ mode: 'read' }); if(p !== 'granted') return null; return await h.getFile(); }catch(_){ return null; } }
-  async function dataLink(){
-    const pk = await pickLinked(); if(!pk) return; const f = pk.file;
-    let book; try{ log('Đang đọc ' + f.name + '…'); book = await readTableFile(f); }catch(err){ console.error(err); say('Không đọc được file: ' + err.message); return; }
+  // nguồn dữ liệu là đường link (Google Sheets chia sẻ công khai, file CSV / XLSX trên mạng) — cập nhật được cả trên iPhone / iPad
+  function sheetUrl(u){ u = String(u || '').trim(); const m = /docs\.google\.com\/spreadsheets\/d\/([^/?#]+)/.exec(u); if(m && !/[?&](output|format)=/.test(u)){ const g = /[#&?]gid=(\d+)/.exec(u); return 'https://docs.google.com/spreadsheets/d/' + m[1] + '/export?format=csv' + (g ? '&gid=' + g[1] : ''); } return u; }
+  A.sheetUrl = sheetUrl;
+  const hashStr = t => { let h = 2166136261; for(let i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+  async function readUrl(url){
+    const r = await fetch(sheetUrl(url), { cache: 'no-store' }); if(!r.ok) throw new Error('HTTP ' + r.status); const ct = r.headers.get('content-type') || ''; const buf = new Uint8Array(await r.arrayBuffer());
+    const isX = /spreadsheetml|ms-excel|opendocument/.test(ct) || /\.(xlsx|xls|ods)(\?|$)/i.test(url) || /format=xlsx|output=xlsx/.test(url) || (buf[0] === 0x50 && buf[1] === 0x4b);
+    let hs = 0; for(let i = 0; i < buf.length; i += Math.max(1, buf.length >> 12)) hs = (hs * 31 + buf[i]) >>> 0;
+    const book = await readTableFile(new File([buf], isX ? 'link.xlsx' : 'link.csv')); book.hash = buf.length + ':' + hs.toString(36); return book;
+  }
+  A.readUrl = readUrl;
+  async function dataLink(fromUrl){
+    let pk = null, f = null, book, url = null;
+    if(fromUrl){ const r = await A.getStr('Đường link Google Sheets (chia sẻ “Bất kỳ ai có liên kết”) hoặc file CSV / XLSX', {}); url = String(r.str || '').trim(); if(!url) return; if(!/^https?:\/\//i.test(url)){ say('Đường link phải bắt đầu bằng http:// hoặc https://'); return; }
+      try{ log('Đang tải ' + url + '…'); book = await readUrl(url); }catch(err){ console.error(err); say('Không tải được dữ liệu từ link (' + err.message + '). Kiểm tra quyền chia sẻ của trang tính.'); return; }
+      f = { name: /docs\.google\.com/.test(url) ? 'Google Sheets' : decodeURIComponent(url.split(/[?#]/)[0].split('/').pop() || 'link'), lastModified: 0 }; }
+    else { pk = await pickLinked(); if(!pk) return; f = pk.file;
+      try{ log('Đang đọc ' + f.name + '…'); book = await readTableFile(f); }catch(err){ console.error(err); say('Không đọc được file: ' + err.message); return; } }
     const th0 = (A.dimTxt ? A.dimTxt() : 2.5);
     const o = await new Promise(res => {
       A.dialog({ title: 'Liên kết dữ liệu (Data Link) — ' + esc(f.name), wide: true, okText: 'Chèn bảng', html:
@@ -234,25 +249,30 @@
     });
     if(!o) return;
     const rows = cutRange(book.sheets[o.sheet] || [], o.range); if(!rows.length){ say('Vùng dữ liệu trống.'); return; }
-    const T = tableDefFrom(rows, o); T.link = { file: f.name, sheet: o.sheet, range: o.range, t: Date.now(), mt: f.lastModified || 0 }; if(pk.handle){ T.link.id = 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); await hPut(T.link.id, pk.handle); }
+    const T = tableDefFrom(rows, o); T.link = { file: f.name, sheet: o.sheet, range: o.range, t: Date.now(), mt: f.lastModified || 0 }; if(url){ T.link.url = url; T.link.h = book.hash; } if(pk && pk.handle){ T.link.id = 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); await hPut(T.link.id, pk.handle); }
     const r = await A.getPoint('Chỉ định điểm chèn (góc trên trái của bảng)', { rubber: false, preview: (g, p) => { const t2 = deep(T); t2.o = p; g.ents(A.tblRegenFrom({ tbld: t2 })); } }); if(!r.pt) return;
     T.o = { x: r.pt.x, y: r.pt.y }; const ents = tableEnts(T, A.newGroupId('T'));
     A.commit({ add: ents }, 'DATALINK: chèn bảng ' + T.cells.length + '×' + T.cw.length + ' từ ' + f.name + (o.sheet !== 'CSV' ? ' [' + o.sheet + ']' : ''));
   }
   cmd(['DATALINK', 'DL', 'TABLEIMPORT', 'NHAPBANG'], 'Chèn bảng liên kết từ Excel (.xlsx/.xls/.ods) hoặc CSV — chọn trang tính, vùng ô', () => dataLink());
+  cmd(['DATALINKURL', 'DLURL', 'NHAPBANGLINK'], 'Chèn bảng liên kết từ đường link Google Sheets / CSV / XLSX trên mạng (tự cập nhật, dùng được trên iPhone)', () => dataLink(true));
   const carrierOf = e => { if(!e) return null; if(e.tbld) return e; if(e.grp && e.blk === '*TABLE') return modelEntities.find(x => x.grp === e.grp && x.tbld) || null; return null; };
   A.tableCarrierOf = carrierOf;
-  function updateLinked(c, book, mt){
+  function updateLinked(c, book, mt, hash){
     const T = c.tbld, L = T.link; if(!L) return false; const rows = cutRange(book.sheets[L.sheet] || book.sheets[book.names[0]] || [], L.range); if(!rows.length) return false;
     const N = deep(T); const off = T.title ? 1 : 0; const nc = Math.max(1, ...rows.map(r => r.length));
     N.cells = (T.title ? [T.cells[0].slice(0, 1).concat(Array(nc - 1).fill(''))] : []).concat(rows.map(r => { const a = r.map(v => String(v).trim()); while(a.length < nc) a.push(''); return a; }));
     while(N.cw.length < nc) N.cw.push(N.cw[N.cw.length - 1] || T.th * 8); N.cw.length = nc;
     while(N.rh.length < N.cells.length) N.rh.push(N.rh[N.rh.length - 1] || T.th * 2.2); N.rh.length = N.cells.length;
-    N.link = Object.assign({}, L, { t: Date.now() }); if(mt) N.link.mt = mt; const w = copy(c); w.tbld = N; return [c, w];
+    N.link = Object.assign({}, L, { t: Date.now() }); if(mt) N.link.mt = mt; if(hash) N.link.h = hash; const w = copy(c); w.tbld = N; return [c, w];
   }
-  A.dataLinkUpdate = async (book, list, mt) => { const rep = []; for(const c of list){ const r = updateLinked(c, book, mt); if(r) rep.push(r); } if(rep.length) A.commit({ rep }, 'Đã cập nhật ' + rep.length + ' bảng liên kết'); return rep.length; };
+  A.dataLinkUpdate = async (book, list, mt, hash) => { const rep = []; for(const c of list){ const r = updateLinked(c, book, mt, hash); if(r) rep.push(r); } if(rep.length) A.commit({ rep }, 'Đã cập nhật ' + rep.length + ' bảng liên kết'); return rep.length; };
   cmd(['DATALINKUPDATE', 'DLU'], 'Cập nhật bảng liên kết từ file Excel / CSV đã sửa', async () => {
     const linked = modelEntities.filter(e => e.tbld && e.tbld.link); if(!linked.length){ say('Bản vẽ không có bảng liên kết dữ liệu (tạo bằng DATALINK).'); return; }
+    // 0) bảng liên kết đường link: tải lại
+    let nUrl = 0; const urls = new Map(); for(const e of linked) if(e.tbld.link.url){ const a = urls.get(e.tbld.link.url) || []; a.push(e); urls.set(e.tbld.link.url, a); }
+    for(const [u, list] of urls){ try{ const book = await readUrl(u); nUrl += await A.dataLinkUpdate(book, list.filter(e => modelEntities.includes(e)), 0, book.hash); }catch(err){ log('Không tải được ' + u + ': ' + err.message); } }
+    if(urls.size){ const rest0 = linked.filter(e => !e.tbld.link.url); if(!rest0.length){ say(nUrl ? 'Đã cập nhật ' + nUrl + ' bảng từ đường link' : 'Không cập nhật được bảng nào'); return; } linked.length = 0; linked.push(...rest0.map(e => modelEntities.find(x => x === e) || e)); }
     // 1) bảng có tay cầm file: tự đọc lại file gốc
     const byId = new Map(); for(const e of linked) if(e.tbld.link.id){ const a = byId.get(e.tbld.link.id) || []; a.push(e); byId.set(e.tbld.link.id, a); }
     let nAuto = 0; const left = new Set(linked);
@@ -268,10 +288,11 @@
     const n = await A.dataLinkUpdate(book, list, f.lastModified); say(n ? 'Đã cập nhật ' + n + ' bảng' : 'Không cập nhật được bảng nào');
   });
   // như AutoCAD: báo khi file Excel liên kết đã đổi (kiểm tra khi quay lại cửa sổ)
-  let chkBusy = false, lastNote = 0;
+  let chkBusy = false, lastNote = 0, lastUrlChk = 0;
   async function checkLinks(){
     if(chkBusy || document.hidden) return 0; chkBusy = true; let changed = 0;
-    try{ const seen = new Set(); for(const e of modelEntities){ const L = e.tbld && e.tbld.link; if(!L || !L.id || seen.has(L.id)) continue; seen.add(L.id); const h = await hGet(L.id); if(!h) continue; const f = await handleFile(h, false); if(f && f.lastModified && L.mt && f.lastModified > L.mt + 500) changed++; } }catch(_){} finally { chkBusy = false; }
+    try{ const seen = new Set(); if(Date.now() - lastUrlChk > 60000 || A._forceLinkChk){ lastUrlChk = Date.now(); for(const e of modelEntities){ const L = e.tbld && e.tbld.link; if(!L || !L.url || seen.has(L.url)) continue; seen.add(L.url); try{ const b = await readUrl(L.url); if(L.h && b.hash !== L.h) changed++; }catch(_){} } }
+      for(const e of modelEntities){ const L = e.tbld && e.tbld.link; if(!L || !L.id || seen.has(L.id)) continue; seen.add(L.id); const h = await hGet(L.id); if(!h) continue; const f = await handleFile(h, false); if(f && f.lastModified && L.mt && f.lastModified > L.mt + 500) changed++; } }catch(_){} finally { chkBusy = false; }
     if(changed && Date.now() - lastNote > 4000){ lastNote = Date.now(); showLinkNote(changed); } return changed; }
   A.checkLinks = checkLinks;
   function showLinkNote(n){ let el = document.getElementById('dvdLinkNote'); if(!el){ el = document.createElement('div'); el.id = 'dvdLinkNote'; el.style.cssText = 'position:fixed;right:16px;bottom:48px;z-index:40;background:#2b313b;color:#e6eaf0;border:1px solid #4a5363;border-left:4px solid #f5b400;border-radius:6px;padding:10px 12px;font:13px system-ui;box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:320px'; document.body.appendChild(el); }
@@ -630,6 +651,17 @@
      10) KIỂU NÉT PHỨC — chữ chèn trong nét (GAS_LINE, đường cấp / thoát nước, điện…)
      ===================================================================== */
   const CLT = { GAS_LINE: ['Gas line ----GAS----GAS----', 'GAS'], HOT_WATER_SUPPLY: ['Hot water supply ---- HW ---- HW ----', 'HW'], CAP_NUOC: ['Cấp nước ---- CN ---- CN ----', 'CN'], THOAT_NUOC: ['Thoát nước ---- TN ---- TN ----', 'TN'], DIEN: ['Điện ---- Đ ---- Đ ----', 'Đ'], PCCC: ['PCCC ---- CC ---- CC ----', 'CC'] };
+  // kiểu nét có hình (ltypeshp.shx) — hình vẽ gần đúng
+  const SLT = { FENCELINE1: ['Fenceline circle ----0-----0----0-----0----', [6.35, -2.54, -2.54, 25.4], { i: 1, sh: 'CIRC1', s: 2.54, x: -2.54 }], FENCELINE2: ['Fenceline square ----[]-----[]----[]-----[]---', [6.35, -2.54, -2.54, 25.4], { i: 1, sh: 'BOX', s: 2.54, x: -2.54 }],
+    TRACKS: ['Tracks -|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-', [3.81, 3.81], { i: 0, sh: 'TRACK1', s: 6.35, x: 0 }], ZIGZAG: ['Zig zag /\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/', [0.0001, -5.08, -10.16, -5.08], { i: 1, sh: 'ZIG', s: 5.08, x: -5.08 }, { i: 2, sh: 'ZIG', s: 5.08, x: 5.08, r: 180 }],
+    BATTING: ['Batting SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS', [0.0001, -2.54, -5.08, -2.54], { i: 1, sh: 'BAT', s: 2.54, x: -2.54 }, { i: 2, sh: 'BAT', s: 2.54, x: 2.54, r: 180 }] };
+  try{ for(const k in SLT){ const [d, p, ...t] = SLT[k]; STD_LT_ISO[k] = { d, p, t: t.map(o => Object.assign({ t: '', r: 0, y: 0, abs: false }, o)) }; } }catch(_){}
+  const SHP = { CIRC1: { c: [1, 0, 1] }, BOX: { p: [[0, -1], [2, -1], [2, 1], [0, 1], [0, -1]] }, TRACK1: { p: [[0, -0.5], [0, 0.5]] }, ZIG: { p: [[0, 0], [0.5, 1], [1.5, -1], [2, 0]] },
+    BAT: { p: Array.from({ length: 17 }, (_, i) => [i / 8, Math.sin(i / 8 * Math.PI) * 0.8 * (i <= 8 ? 1 : -1) * (i <= 8 ? 1 : 1)]) } };
+  const SHPN = { 130: 'TRACK1', 131: 'ZIG', 132: 'BOX', 133: 'CIRC1', 134: 'BAT' };
+  function shapeOf(t, ltName){ if(typeof t.sh === 'string' && SHP[t.sh]) return SHP[t.sh]; const n = String(ltName || '');
+    if(/TRACK/i.test(n)) return SHP.TRACK1; if(/ZIG/i.test(n)) return SHP.ZIG; if(/BATT/i.test(n)) return SHP.BAT; if(/FENCE.*2|BOX|SQUARE/i.test(n)) return SHP.BOX; if(/FENCE|CIRC/i.test(n)) return SHP.CIRC1; return SHP[SHPN[t.n]] || SHP.CIRC1; }
+  A.ltShapeOf = shapeOf;
   try{ for(const k in CLT){ const [d, t] = CLT[k]; const w = Math.max(1, [...t].length); STD_LT_ISO[k] = { d, p: [12.7, -5.08 - (w - 3) * 0.8, -6.35 - (w - 3) * 0.8], t: [{ i: 1, t, s: 2.54, r: 0, x: -2.54 - (w - 3) * 0.8, y: -1.27, abs: false }] }; } }catch(_){}
   const _stdLT = window.stdLT;
   window.stdLT = function(name){ const d = _stdLT.apply(this, arguments); if(d){ const S = STD_LT_ISO[d.name]; if(S && S.t){ const k = S.p[0] ? d.pat[0] / S.p[0] : 1; d.txt = S.t.map(t => Object.assign({}, t, { s: t.s * k, x: t.x * k, y: t.y * k })); } } return d; };
@@ -645,7 +677,13 @@
         const P = pathPts(e); if(!P) continue; const cum = [0]; for(let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i].x - P[i - 1].x, P[i].y - P[i - 1].y)); const L = cum[cum.length - 1]; if(L < tot * 0.5) continue;
         const at = s => { let lo = 0, hi = cum.length - 1; while(hi - lo > 1){ const m = (lo + hi) >> 1; if(cum[m] <= s) lo = m; else hi = m; } const a = P[lo], b = P[hi], f = (s - cum[lo]) / ((cum[hi] - cum[lo]) || 1); return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, ang: Math.atan2(b.y - a.y, b.x - a.x) }; };
         let col; try{ col = plotColor(e.col || getCSS('--entity')); }catch(_){ col = e.col || '#fff'; } c2.fillStyle = col;
-        for(const t of d.txt){ const off = d.pat.slice(0, t.i + 1).reduce((a, b) => a + Math.abs(b), 0) * k; const h = t.s * k; const hp = h * view.scale; if(hp < 3) continue; c2.font = Math.round(hp * 100) / 100 + 'px ' + (A.fontCss ? A.fontCss() : 'Arial, sans-serif'); const wpx = c2.measureText(t.t).width; const wW = wpx / view.scale;
+        for(const t of d.txt){ const off = d.pat.slice(0, t.i + 1).reduce((a, b) => a + Math.abs(b), 0) * k; const h = t.s * k; const hp = h * view.scale; if(hp < 3) continue;
+          if(t.sh){ const S = shapeOf(t, n); c2.strokeStyle = col; c2.lineWidth = 1.15;
+            for(let s0 = off; s0 < L && budget > 0; s0 += tot){ const q = at(Math.min(L, s0)); const ang = (t.abs ? 0 : q.ang) + (t.r || 0) * D2R; const ca = Math.cos(ang), sa = Math.sin(ang), cq = Math.cos(q.ang), sq = Math.sin(q.ang);
+              const ox = q.x + cq * t.x * k - sq * t.y * k, oy = q.y + sq * t.x * k + cq * t.y * k; const W = (u, v) => toScreen(ox + (ca * u - sa * v) * h, oy + (sa * u + ca * v) * h);
+              c2.beginPath(); if(S.c){ const C = W(S.c[0], S.c[1]); c2.arc(C.x, C.y, S.c[2] * hp, 0, TAU); } else { S.p.forEach(([u, v], i) => { const Q = W(u, v); if(i) c2.lineTo(Q.x, Q.y); else c2.moveTo(Q.x, Q.y); }); } c2.stroke(); ltTextN++; budget--; }
+            continue; }
+          c2.font = Math.round(hp * 100) / 100 + 'px ' + (A.fontCss ? A.fontCss() : 'Arial, sans-serif'); const wpx = c2.measureText(t.t).width; const wW = wpx / view.scale;
           for(let s0 = off; s0 < L && budget > 0; s0 += tot){ const q = at(Math.min(L, s0)); let ang = t.abs ? t.r * D2R : q.ang + t.r * D2R; let ox = t.x * k, oy = t.y * k; let flip = false; if(!t.abs && Math.cos(ang) < -1e-9){ ang += Math.PI; flip = true; }
             const dx = Math.cos(q.ang), dy = Math.sin(q.ang), nx = -dy, ny = dx; let x = q.x + dx * ox + nx * oy, y = q.y + dy * ox + ny * oy;
             if(flip){ x = q.x + dx * (ox + wW) + nx * (oy + h); y = q.y + dy * (ox + wW) + ny * (oy + h); }

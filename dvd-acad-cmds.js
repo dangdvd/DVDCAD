@@ -525,14 +525,15 @@
     if(e.type === 'LINE' || (e.type === 'POLYLINE' && !e.closed)){
       let a, b, atStart;
       if(e.type === 'LINE'){ atStart = Math.hypot(pick.x - e.x1, pick.y - e.y1) < Math.hypot(pick.x - e.x2, pick.y - e.y2); a = atStart ? { x: e.x2, y: e.y2 } : { x: e.x1, y: e.y1 }; b = atStart ? { x: e.x1, y: e.y1 } : { x: e.x2, y: e.y2 }; }
-      else { const V = e.vertices; atStart = Math.hypot(pick.x - V[0].x, pick.y - V[0].y) < Math.hypot(pick.x - V[V.length - 1].x, pick.y - V[V.length - 1].y); if(atStart){ b = V[0]; a = V[1]; } else { b = V[V.length - 1]; a = V[V.length - 2]; } }
+      else { const BV = A.bvOf(e); const V = BV || e.vertices; atStart = Math.hypot(pick.x - V[0].x, pick.y - V[0].y) < Math.hypot(pick.x - V[V.length - 1].x, pick.y - V[V.length - 1].y); if(atStart){ b = V[0]; a = V[1]; } else { b = V[V.length - 1]; a = V[V.length - 2]; }
+        if(BV && (atStart ? BV[0].bulge : BV[BV.length - 2].bulge)) return 'Đầu đa tuyến là cung — dùng LENGTHEN hoặc kéo ô nắm.'; }
       const L = dist(a, b); if(L < 1e-12) return 'Đoạn quá ngắn.';
       const ux = (b.x - a.x) / L, uy = (b.y - a.y) / L;
       const seg = { t: 's', ax: b.x, ay: b.y, bx: b.x + ux * big, by: b.y + uy * big, u0: 0, u1: 1 };
       const h = firstHit(seg); if(!h) return 'Không gặp ranh giới nào theo hướng kéo dài.';
       const w = copyOf(e);
       if(e.type === 'LINE'){ if(atStart){ w.x1 = h.x; w.y1 = h.y; } else { w.x2 = h.x; w.y2 = h.y; } }
-      else { if(atStart) w.vertices[0] = { x: h.x, y: h.y }; else w.vertices[w.vertices.length - 1] = { x: h.x, y: h.y }; delete w.wq; }
+      else { const BV = A.bvOf(e); if(BV){ const nb = BV.map(q => Object.assign({}, q)); if(atStart) Object.assign(nb[0], { x: h.x, y: h.y }); else Object.assign(nb[nb.length - 1], { x: h.x, y: h.y }); A.setBV(w, nb); } else { if(atStart) w.vertices[0] = { x: h.x, y: h.y }; else w.vertices[w.vertices.length - 1] = { x: h.x, y: h.y }; delete w.wq; } }
       A.commit({ rep: [[e, w]] }); return '';
     }
     if(e.type === 'ARC'){
@@ -573,6 +574,19 @@
     const K1 = keep(L1, t1), K2 = keep(L2, t2);
     return { l1: { x1: K1.x, y1: K1.y, x2: P.x, y2: P.y }, l2: { x1: K2.x, y1: K2.y, x2: P.x, y2: P.y } };
   }
+  // bo / vát 1 góc của đa tuyến có cung (hai đoạn kề là đoạn thẳng) → cung thật (bulge)
+  function cornerBV(V, closed, k, kind, val){
+    const n = V.length; if(!closed && (k <= 0 || k >= n - 1)) return null; const ip = (k - 1 + n) % n, inx = (k + 1) % n;
+    if(V[ip].bulge || V[k].bulge) return null;
+    const P = V[k], A1 = V[ip], B1 = V[inx]; const L1 = dist(A1, P), L2 = dist(P, B1); if(L1 < 1e-12 || L2 < 1e-12) return null;
+    const u1 = { x: (P.x - A1.x) / L1, y: (P.y - A1.y) / L1 }, u2 = { x: (B1.x - P.x) / L2, y: (B1.y - P.y) / L2 };
+    const phi = Math.atan2(u1.x * u2.y - u1.y * u2.x, u1.x * u2.x + u1.y * u2.y); if(Math.abs(phi) < 1e-9 || Math.abs(Math.abs(phi) - Math.PI) < 1e-9) return null;
+    const t = kind === 'fillet' ? val * Math.tan(Math.abs(phi) / 2) : val; if(t > L1 + 1e-9 || t > L2 + 1e-9) return null;
+    const T1 = { x: P.x - u1.x * t, y: P.y - u1.y * t }, T2 = { x: P.x + u2.x * t, y: P.y + u2.y * t };
+    if(kind === 'fillet') T1.bulge = Math.tan(phi / 4);
+    const out = V.slice(); out.splice(k, 1, T1, T2); return out.filter((q, i) => i === 0 || dist(q, out[i - 1]) > 1e-12);
+  }
+  G.cornerBV = cornerBV;
   async function cornerCmd(kind){
     const key = kind === 'fillet' ? 'fr' : 'cd';
     let val = MEM[key] != null ? MEM[key] : 0;
@@ -586,13 +600,22 @@
       if(r1.kw === 'P'){
         const rp = await A.getEnt('Chọn đa tuyến', { filter: e => e.type === 'POLYLINE' }); if(!rp.ent) continue;
         if(!(val > 0)){ log('Đặt bán kính/khoảng > 0 trước.'); continue; }
-        let V = rp.ent.vertices.slice(); const closed = !!rp.ent.closed; let n = 0;
+        const BV0 = A.bvOf(rp.ent); const closed = !!rp.ent.closed; let n = 0;
+        if(BV0){ let V = BV0.map(q => Object.assign({}, q)); for(let k = closed ? V.length - 1 : V.length - 2; k >= (closed ? 0 : 1); k--){ const nv = cornerBV(V, closed, k, kind, val); if(nv){ V = nv; n++; } }
+          if(n){ const w = copyOf(rp.ent); A.setBV(w, V); A.commit({ rep: [[rp.ent, w]] }, (kind === 'fillet' ? 'Đã bo ' : 'Đã vát ') + n + ' góc'); } else log('Không bo/vát được góc nào.'); if(!multiple) return; continue; }
+        let V = rp.ent.vertices.slice();
         for(let k = closed ? V.length - 1 : V.length - 2; k >= (closed ? 0 : 1); k--){ const nv = polyCorner(V, closed, k, kind, val); if(nv){ V = nv; n++; } }
         if(n){ const w = copyOf(rp.ent); w.vertices = V; delete w.wq; A.commit({ rep: [[rp.ent, w]] }, (kind === 'fillet' ? 'Đã bo ' : 'Đã vát ') + n + ' góc'); } else log('Không bo/vát được góc nào.');
         if(!multiple) return; continue;
       }
       if(!r1.ent) return;
       const e1 = r1.ent;
+      if(e1.type === 'POLYLINE' && A.bvOf(e1)){
+        const BV = A.bvOf(e1); let k = -1, bd = Infinity; for(let i = 0; i < BV.length; i++){ const d = dist(BV[i], r1.pt); if(d < bd){ bd = d; k = i; } }
+        if(!(val > 0)){ log('Đa tuyến: đặt bán kính/khoảng > 0.'); if(!multiple) return; continue; }
+        const nv = cornerBV(BV.map(q => Object.assign({}, q)), !!e1.closed, k, kind, val); if(!nv){ log('Không bo/vát được góc này.'); if(!multiple) return; continue; }
+        const w = copyOf(e1); A.setBV(w, nv); A.commit({ rep: [[e1, w]] }); if(!multiple) return; continue;
+      }
       if(e1.type === 'POLYLINE'){
         const V = e1.vertices; let k = -1, bd = Infinity; for(let i = 0; i < V.length; i++){ const d = dist(V[i], r1.pt); if(d < bd){ bd = d; k = i; } }
         if(!(val > 0)){ log('Đa tuyến: đặt bán kính/khoảng > 0.'); if(!multiple) return; continue; }
@@ -644,12 +667,14 @@
   });
 
   // JOIN
-  function endpointsOf(e){
+  function endpointsOf(e){   // đỉnh kèm bulge (cung giữ nguyên khi nối)
     if(e.type === 'LINE') return [{ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }];
-    if(e.type === 'POLYLINE' && !e.closed) return e.vertices.map(v => ({ x: v.x, y: v.y }));
-    if(e.type === 'ARC'){ const c = G.curveOf(e); const n = Math.max(4, Math.ceil(c.u1 / (5 * D2R))); const pts = []; for(let i = 0; i <= n; i++) pts.push(c.at(c.u1 * i / n)); return pts; }
+    if(e.type === 'POLYLINE' && !e.closed){ const bv = A.bvOf(e); return (bv || e.vertices).map(v => v.bulge ? { x: v.x, y: v.y, bulge: v.bulge } : { x: v.x, y: v.y }); }
+    if(e.type === 'ARC'){ const c = G.curveOf(e); const a = c.at(0), b = c.at(c.u1); if(c.u1 >= Math.PI * 1.9){ const m = c.at(c.u1 / 2); return [{ x: a.x, y: a.y, bulge: Math.tan(c.u1 / 8) }, { x: m.x, y: m.y, bulge: Math.tan(c.u1 / 8) }, { x: b.x, y: b.y }]; } return [{ x: a.x, y: a.y, bulge: Math.tan(c.u1 / 4) }, { x: b.x, y: b.y }]; }
     return null;
   }
+  const revBV = P => { const n = P.length, o = []; for(let i = n - 1; i >= 0; i--){ const q = { x: P[i].x, y: P[i].y }; const b = i > 0 ? P[i - 1].bulge : 0; if(b) q.bulge = -b; o.push(q); } return o; };
+  const catBV = (A0, B0) => { const o = A0.map(q => Object.assign({}, q)); const last = o[o.length - 1]; if(B0[0].bulge) last.bulge = B0[0].bulge; else delete last.bulge; return o.concat(B0.slice(1).map(q => Object.assign({}, q))); };
   cmd(['JOIN', 'J'], 'Nối các đường/cung/đa tuyến liền mạch thành 1', async () => {
     const s = await A.getSel('Chọn các đối tượng cần nối'); doJoin(s.sel || []);
   });
@@ -686,8 +711,8 @@
       while(grown){ grown = false;
         for(const o of items){ if(o.used) continue; const a = o.pts[0], b = o.pts[o.pts.length - 1];
           const tail = pts[pts.length - 1], head = pts[0];
-          if(near(tail, a)){ pts = pts.concat(o.pts.slice(1)); } else if(near(tail, b)){ pts = pts.concat(o.pts.slice().reverse().slice(1)); }
-          else if(near(head, b)){ pts = o.pts.slice(0, -1).concat(pts); } else if(near(head, a)){ pts = o.pts.slice().reverse().slice(0, -1).concat(pts); }
+          if(near(tail, a)){ pts = catBV(pts, o.pts); } else if(near(tail, b)){ pts = catBV(pts, revBV(o.pts)); }
+          else if(near(head, b)){ pts = catBV(o.pts, pts); } else if(near(head, a)){ pts = catBV(revBV(o.pts), pts); }
           else continue;
           o.used = true; members.push(o.e); grown = true; }
       }
@@ -695,8 +720,8 @@
     }
     if(!chains.length){ log('Các đối tượng không nối tiếp nhau (đầu mút không trùng).'); return null; }
     const rep = [], del = [];
-    for(const ch of chains){ let closed = false; if(ch.pts.length > 3 && near(ch.pts[0], ch.pts[ch.pts.length - 1])){ ch.pts.pop(); closed = true; }
-      const base = ch.members[0]; const w = { type: 'POLYLINE', layer: base.layer, col: base.col, bl: base.bl, vertices: ch.pts, closed }; if(w.bl === undefined) delete w.bl;
+    for(const ch of chains){ let closed = false; if((ch.pts.length > 3 || (ch.pts.length > 2 && ch.pts.some(q => q.bulge))) && near(ch.pts[0], ch.pts[ch.pts.length - 1])){ ch.pts.pop(); closed = true; }
+      const base = ch.members[0]; const w = { type: 'POLYLINE', layer: base.layer, col: base.col, bl: base.bl, vertices: ch.pts.map(q => ({ x: q.x, y: q.y })), closed }; if(w.bl === undefined) delete w.bl; if(ch.pts.some(q => q.bulge)) A.setBV(w, ch.pts);
       rep.push([base, w]); del.push(...ch.members.slice(1)); }
     A.commit({ rep, del }, 'Đã nối thành ' + chains.length + ' đa tuyến');
     return rep.map(r => r[1]);
@@ -715,7 +740,7 @@
       const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: 'C', t: e.closed ? 'Mở' : 'Đóng' }, { k: 'J', t: 'Nối' }, { k: 'R', t: 'Đảo chiều' }, { k: 'X', t: 'Thoát' }] });
       if(k.none || k.kw === 'X') break;
       if(k.kw === 'C'){ const w = copyOf(e); w.closed = !w.closed; delete w.wq; A.commit({ rep: [[e, w]] }); e = w; continue; }
-      if(k.kw === 'R'){ const w = copyOf(e); w.vertices = w.vertices.slice().reverse(); delete w.wq; A.commit({ rep: [[e, w]] }); e = w; continue; }
+      if(k.kw === 'R'){ const w = copyOf(e); if(!A.bvReverse(w, !!w.closed)){ w.vertices = w.vertices.slice().reverse(); delete w.wq; } A.commit({ rep: [[e, w]] }); e = w; continue; }
       if(k.kw === 'J'){ if(e.closed){ log('Đa tuyến kín — mở ra trước khi nối.'); continue; } const s = await A.getSel('Chọn đối tượng cần nối vào', { pre: false }); const res = doJoin([e].concat((s.sel || []).filter(x => x !== e))); if(res){ const m = res.find(x => x.type === 'POLYLINE') || res[0]; if(m) e = m; } continue; }
     }
     hl([]);
@@ -1524,17 +1549,18 @@
     const grpAll = gid => { const a = byGrp.get(gid) || []; const n = grpCnt.get(gid) || 0; return a.length === n || n === 0 ? a : null; };
     const inv = m => { const det = m.a * m.d - m.b * m.c; if(Math.abs(det) < 1e-300) return null; return { a: m.d / det, b: -m.b / det, c: -m.c / det, d: m.a / det, e: (m.c * m.f - m.d * m.e) / det, f: (m.b * m.e - m.a * m.f) / det }; };
     const clone = o => JSON.parse(JSON.stringify(o));
-    const blockDefs = new Map(), inserts = new Map(), dims = new Map(); const done = new Set();
+    const blockDefs = new Map(), blockFam = new Map(), inserts = new Map(), dims = new Map(); const done = new Set();
     if(ents.length < 200000) for(const [gid, mem0] of byGrp){
       const mem = grpAll(gid); if(!mem || !mem.length) continue; const f = mem[0];
       if(f.bm && f.bm.name && !String(f.blk || '').startsWith('*') && !mem.some(x => x.vh || x.type === 'SOLID3D' || x.type === 'IMAGE')){
         const Mi = inv(f.bm); if(!Mi || mem.some(x => !x.bm || x.bm.name !== f.bm.name)) continue; const nm = String(f.bm.name).replace(/[<>\/":;?*|=`]/g, '_').slice(0, 250); if(!nm) continue;
         const loc = mem.map(x => { const w = A.xformEnt(clone(x), Mi); return w; }); const bb = bboxOf(loc.filter(x => !x.att)) || { x0: 0, y0: 0, x1: 0, y1: 0 };
-        let D = blockDefs.get(nm);
-        if(!D){ D = { name: nm, ents: loc, n: mem.length, bb, atts: loc.filter(x => x.att) }; blockDefs.set(nm, D); }
-        else { const tol = Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0, 1) * 1e-6; if(D.n !== mem.length || Math.abs(D.bb.x0 - bb.x0) > tol || Math.abs(D.bb.y0 - bb.y0) > tol || Math.abs(D.bb.x1 - bb.x1) > tol || Math.abs(D.bb.y1 - bb.y1) > tol) continue; }
+        // bản khối bị sửa riêng → định nghĩa khối biến thể NAME$1, NAME$2… (AutoCAD vẫn thấy là khối)
+        const tol = Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0, 1) * 1e-6; const same = D0 => D0.n === mem.length && Math.abs(D0.bb.x0 - bb.x0) <= tol && Math.abs(D0.bb.y0 - bb.y0) <= tol && Math.abs(D0.bb.x1 - bb.x1) <= tol && Math.abs(D0.bb.y1 - bb.y1) <= tol;
+        const fam = blockFam.get(nm) || []; let D = fam.find(same);
+        if(!D){ const vn = fam.length ? nm + '$' + fam.length : nm; D = { name: vn, ents: loc, n: mem.length, bb, atts: loc.filter(x => x.att) }; fam.push(D); blockFam.set(nm, fam); blockDefs.set(vn, D); }
         inserts.set(gid, { D, m: f.bm, mem }); for(const x of mem) done.add(x); continue; }
-      if(String(f.blk || '').startsWith('*DIM')){ const t = mem.find(x => x.dimd && x.type === 'TEXT'); if(t && /^(lin|rad|dia)$/.test(t.dimd.k)){ dims.set(gid, { t, mem }); for(const x of mem) done.add(x); } }
+      if(String(f.blk || '').startsWith('*DIM')){ const t = mem.find(x => x.dimd && x.type === 'TEXT'); if(t && /^(lin|rad|dia|ang)$/.test(t.dimd.k)){ dims.set(gid, { t, mem }); for(const x of mem) done.add(x); } }
     }
     // bảng ghi chú vùng (REGION) & các mục khác: XDATA DVDCAD để mở lại đúng trong DVDCAD
     P(0, 'SECTION'); P(2, 'BLOCKS');
@@ -1599,6 +1625,10 @@
       P(0, 'DIMENSION'); P(8, ly); P(2, d.bn);
       if(D.k === 'lin'){ const ph = (D.phi || 0) * D2R, ux = Math.cos(ph), uy = Math.sin(ph), nx = -uy, ny = ux; const d2 = (D.L.x - D.p2.x) * nx + (D.L.y - D.p2.y) * ny;
         P(10, D.p2.x + nx * d2); P(20, D.p2.y + ny * d2); P(30, 0); P(11, t.x); P(21, t.y); P(31, 0); P(70, 32); if(D.ov) P(1, dxfStr(D.ov)); P(3, 'STANDARD'); P(13, D.p1.x); P(23, D.p1.y); P(33, 0); P(14, D.p2.x); P(24, D.p2.y); P(34, 0); P(50, D.phi || 0); }
+      else if(D.k === 'ang'){ const R = Math.max(Math.hypot(D.L.x - D.V.x, D.L.y - D.V.y), 1e-9); const aL = Math.atan2(D.L.y - D.V.y, D.L.x - D.V.x); let r1 = D.d1, sw = 0;
+        for(const a1 of [D.d1, D.d1 + Math.PI]) for(const a2 of [D.d2, D.d2 + Math.PI]){ const w = G.norm(a2 - a1); if(w < 1e-9 || w > Math.PI) continue; if(G.norm(aL - a1) <= w && !sw){ r1 = a1; sw = w; } }
+        P(10, D.L.x); P(20, D.L.y); P(30, 0); P(11, t.x); P(21, t.y); P(31, 0); P(70, 32 + 5); if(D.ov) P(1, dxfStr(D.ov)); P(3, 'STANDARD');
+        P(13, D.V.x + Math.cos(r1) * R); P(23, D.V.y + Math.sin(r1) * R); P(33, 0); P(14, D.V.x + Math.cos(r1 + sw) * R); P(24, D.V.y + Math.sin(r1 + sw) * R); P(34, 0); P(15, D.V.x); P(25, D.V.y); P(35, 0); }
       else { const ux0 = D.L.x - D.c.x, uy0 = D.L.y - D.c.y, L0 = Math.hypot(ux0, uy0) || 1, ux = ux0 / L0, uy = uy0 / L0; const q = { x: D.c.x + ux * D.r, y: D.c.y + uy * D.r };
         if(D.k === 'rad'){ P(10, D.c.x); P(20, D.c.y); P(30, 0); P(11, t.x); P(21, t.y); P(31, 0); P(70, 32 + 4); if(D.ov) P(1, dxfStr(D.ov)); P(3, 'STANDARD'); P(15, q.x); P(25, q.y); P(35, 0); P(40, Math.abs(L0 - D.r)); }
         else { P(10, D.c.x - ux * D.r); P(20, D.c.y - uy * D.r); P(30, 0); P(11, t.x); P(21, t.y); P(31, 0); P(70, 32 + 3); if(D.ov) P(1, dxfStr(D.ov)); P(3, 'STANDARD'); P(15, q.x); P(25, q.y); P(35, 0); P(40, 0); } } }
