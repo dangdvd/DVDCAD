@@ -4,6 +4,10 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v4x: REVCLOUD như AutoCAD + lệnh mới
+- `dvd-acad-x11.js`: REVCLOUD (cung lồi ra ngoài, cung nhỏ nhất / lớn nhất, Chữ nhật / Đa giác / Tự do / Đối tượng, Thường / Thư pháp, đảo chiều), REVCLOUDPROPERTIES, DIMOVERRIDE, BLOCKREPLACE, MOCORO, TCASE, CDORDER, HATCHGENERATEBOUNDARY, HATCHSETBOUNDARY, LAYTRANS, SHOWURLS, GETSEL, SSX, XPLODE, ARRAYCLASSIC.
+- Đa tuyến rộng có cung: tứ giác tô khít nhau (không răng cưa).
+
 ## v4w: bổ sung lệnh còn thiếu so với AutoCAD
 - `dvd-acad-x10.js`: DIM (kích thước thông minh), MLEDIT (chữ thập / chữ T / góc cho tường MLINE), ATTSYNC + BATTMAN, MLEADEREDIT / MLEADERALIGN / MLEADERCOLLECT, TRACE, 3DSCALE, FILTER, PASTEBLOCK, LIMITS, POLAR, VISUALSTYLES, DWGCOMPARE.
 - PLINE W/H, PEDIT W (độ rộng), lưu DXF giữ độ rộng 40/41; đọc ATTDEF của khối trong DXF; đọc MLINE (DXF/DWG) thành đường đôi; DIMANGULAR chọn đường theo thứ tự nào cũng được.

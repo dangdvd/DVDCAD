@@ -410,8 +410,21 @@
     LIMITS: '<rect class="y" x="3" y="5" width="18" height="14" stroke-dasharray="3 2"/><path d="M7 15l4-5 3 3 3-4" class="a"/>' + O(3, 19, 'pa') + O(21, 5, 'pa'),
     POLAR: '<circle cx="12" cy="12" r="9" opacity=".4"/><path class="a" d="M12 12h9M12 12l6.4-6.4M12 12V3" stroke-dasharray="2 1.5"/><path class="y" d="M12 12L19 5" stroke-width="1.8"/>' + O(12, 12, 'pa'),
     VISUALSTYLES: '<path class="fd" d="M4 8l8-4 8 4-8 4z"/><path class="fa3" d="M4 8v9l8 4v-9z"/><path class="fy" d="M20 8v9l-8 4v-9z" opacity=".6"/><path d="M4 8l8-4 8 4-8 4zM4 8v9l8 4 8-4V8M12 12v9"/>',
+    /* ---------- v4x (vẽ mới) ---------- */
+    REVCLOUDPROPERTIES: '<path class="r" d="M4 12a2.4 2.4 0 0 1 3.5-3 2.4 2.4 0 0 1 4.5-1 2.4 2.4 0 0 1 4 2 2.4 2.4 0 0 1 0 4.5 2.4 2.4 0 0 1-3.5 2.5 2.4 2.4 0 0 1-4.5 0A2.4 2.4 0 0 1 4 12z"/>' + GEAR(18, 18, 2.4),
+    DIMOVERRIDE: '<path d="M4 18V9M20 18V9"/><path class="a" d="M4 12h16"/>' + AR(12, 12, 4, 12, 'a') + AR(12, 12, 20, 12, 'a') + '<path class="y" d="M9 7h6M12 4v6" stroke-width="1.8"/>',
+    BLOCKREPLACE: '<circle class="fd" cx="7" cy="8" r="4"/><circle cx="7" cy="8" r="4"/><rect class="fa3" x="13" y="13" width="8" height="8"/><rect class="a" x="13" y="13" width="8" height="8"/><path class="g" d="M12 5h4a3 3 0 0 1 3 3v2M17 8l2 2 2-2" stroke-width="1.6"/>',
+    MOCORO: '<rect class="fd" x="4" y="9" width="9" height="9"/><rect x="4" y="9" width="9" height="9"/><path class="a" d="M15 4h5v5M20 4l-6 6"/><path class="y" d="M17 21a5 5 0 0 0 4-5"/>' + O(8.5, 13.5, 'pa'),
+    TCASE: '<path d="M2 18l4-12h1l4 12M3.5 14h6"/><path class="a" d="M14 11.5a3 3 0 1 1 0 4.5M17 10v8"/><path class="y" d="M13 4h8M19 2l2 2-2 2" stroke-width="1.5"/>',
+    CDORDER: '<rect class="fr" x="3" y="3" width="10" height="8" rx="1"/><rect class="fy" x="7" y="8" width="10" height="8" rx="1" opacity=".9"/><rect class="fa" x="11" y="13" width="10" height="8" rx="1" opacity=".9"/>',
+    HATCHGENERATEBOUNDARY: '<path class="fa3" d="M4 4h16v16H4z"/><path d="M4 9l5-5M4 14l10-10M4 19l15-15M9 20L20 9M14 20l6-6" opacity=".5"/><path class="y" d="M4 4h16v16H4z" stroke-width="2"/>',
+    HATCHSETBOUNDARY: '<path d="M3 8l5-5M3 13l10-10M3 18l15-15" opacity=".45"/><path d="M3 3h15v15H3z" stroke-dasharray="2 2" opacity=".6"/><circle class="a" cx="14" cy="14" r="7" stroke-width="2"/>',
+    LAYTRANS: '<path class="fd" d="M2 7l6-3 6 3-6 3z"/><path d="M2 7l6-3 6 3-6 3z"/><path class="fa3" d="M10 17l6-3 6 3-6 3z"/><path class="a" d="M10 17l6-3 6 3-6 3z"/><path class="g" d="M9 12h5M12 10l2 2-2 2" stroke-width="1.6"/>',
+    SHOWURLS: CHAIN.replace('class="g"', 'class="a"') + '<path d="M3 20h18" opacity=".5"/>',
+    GETSEL: '<rect class="a" x="3" y="3" width="13" height="13" stroke-dasharray="3 2"/><path class="fd" d="M7 11l3 1-1 3zM12 6l2 2-2 2-2-2z"/><path d="M14 13l7 3-3 1 2 3-1.5 1-2-3-2.5 2z" class="fy"/>',
+    SSX: '<circle class="fa" cx="6" cy="6" r="3"/><circle class="a" cx="16" cy="7" r="3"/><circle class="a" cx="8" cy="17" r="3"/><path class="y" d="M17 14l4 2-2 .8 1.5 2.5-1.2.7-1.5-2.5-1.6 1.5z"/>',
     COUNT_: ''
   };
-  delete I.COUNT_; I.DIMSMART = I.DIM; I.MLE = I.MLEADEREDIT; I.DWGCOMPARE = I.COMPARE; I.VSCURRENT = I.VISUALSTYLES; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.DATALINKURL = I.DATALINK; I.DXFVERSION = I.DXFOUT; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
+  delete I.COUNT_; I.RCP = I.REVCLOUDPROPERTIES; I.XPLODE = I.EXPLODE; I.ARRAYCLASSIC = I.ARRAYRECT || I.ARRAY; I.HGB = I.HATCHGENERATEBOUNDARY; I.DIMSMART = I.DIM; I.MLE = I.MLEADEREDIT; I.DWGCOMPARE = I.COMPARE; I.VSCURRENT = I.VISUALSTYLES; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.DATALINKURL = I.DATALINK; I.DXFVERSION = I.DXFOUT; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
   window.DVDIcons = I;
 })();

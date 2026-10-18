@@ -213,6 +213,32 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v4x)
+**REVCLOUD — khoanh mây như AutoCAD**
+- Sửa lỗi cung bị lật vào trong: cung luôn **lồi ra ngoài**. Mây là đa tuyến có cung thật, lưu DXF ra LWPOLYLINE có cung.
+- Từ khoá:
+  - **Độ dài cung**: nhập độ dài cung nhỏ nhất và lớn nhất; khác nhau thì cung dài ngắn xen kẽ như vẽ tay. Chưa đặt thì tự lấy theo mức phóng.
+  - **Chữ nhật**: 2 góc. **Đa giác**: bấm các đỉnh, Enter để khép.
+  - **Tự do**: bấm điểm đầu rồi rê chuột / ngón tay theo đường mây; về gần điểm đầu là mây kín.
+  - **Đối tượng** (mặc định khi Enter): đổi đường tròn, elip, đa tuyến, cung, đường thẳng thành mây. Biên hatch thì tạo thêm mây theo biên, hatch giữ nguyên. Có hỏi **đảo chiều cung**.
+  - **Kiểu**: Thường / Thư pháp (nét đậm nhạt).
+  - **Sửa mây**: mở `REVCLOUDPROPERTIES`.
+- Cài đặt được nhớ cho lần sau.
+- `REVCLOUDPROPERTIES` (RCP): chọn mây đã vẽ để đổi độ dài cung, kiểu, đảo chiều. Mây đã dời / xoay / tỉ lệ vẫn sửa được.
+
+**Lệnh mới khác**
+- `DIMOVERRIDE`: ghi đè cho từng kích thước đã vẽ: cao chữ, số lẻ, mũi tên, hệ số đo, tiền tố / hậu tố, cỡ mũi tên, khe chữ. **Xoá ghi đè** đưa kích thước về kiểu hiện hành.
+- `BLOCKREPLACE`: thay mọi bản chèn của khối A bằng khối B, giữ vị trí, góc xoay, tỉ lệ và giá trị thuộc tính cùng tên.
+- `MOCORO`: dời / sao chép / xoay / tỉ lệ liên tiếp quanh một điểm gốc.
+- `TCASE`: đổi kiểu chữ Câu / thường / HOA / Tiêu Đề / đẢO, đúng cả chữ tiếng Việt có dấu.
+- `CDORDER`: sắp thứ tự hiển thị theo màu, màu ghi trước nằm trên cùng.
+- `HATCHGENERATEBOUNDARY`: tạo đa tuyến biên từ hatch. `HATCHSETBOUNDARY`: đặt lại biên hatch theo đối tượng kín khác.
+- `LAYTRANS`: chuyển lớp theo bảng ánh xạ (đổi tên hoặc gộp lớp theo chuẩn công ty). Lưu được bảng để dùng cho bản vẽ khác. Lớp nguồn được xoá sau khi chuyển.
+- `SHOWURLS`: danh sách đối tượng có siêu liên kết, có nút phóng tới và mở link.
+- `GETSEL`: chọn theo lớp + loại đối tượng mẫu. `SSX`: chọn cùng loại với mẫu, lọc thêm theo lớp / màu / kiểu nét.
+- `XPLODE`, `ARRAYCLASSIC`: gọi lại EXPLODE, ARRAY.
+- Đa tuyến có độ rộng, đoạn cong: phần tô liền mạch, không còn răng cưa.
+
 ## Bổ sung (v4w)
 **Kích thước**
 - `DIM` — kích thước thông minh như AutoCAD 2016+: bấm vào đường → kích thước thẳng / chéo; đường tròn → đường kính; cung → bán kính; bấm tiếp đường thứ hai (hoặc từ khoá Góc) → kích thước góc; bấm chỗ trống hoặc bắt điểm → kích thước theo 2 điểm (tự ngang / dọc theo vị trí đặt). Lặp lại tới khi Enter / Esc.
@@ -509,3 +535,4 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Kiểu nét phức: chữ và hình trong nét hiện đúng (hình của ltypeshp.shx vẽ gần đúng: tròn, vuông, gạch, zigzag, batting; hình SHX khác hiện dạng vòng tròn nhỏ).. Lưu DXF R2000 ghi đủ chữ trong nét; hình trong nét ghi đúng số hình chuẩn của ltypeshp.shx (130 TRACK1, 131 ZIG, 132 BOX, 133 CIRC1, 134 BAT, 135 AMZIGZAG) và vẽ đúng hình theo định nghĩa SHP.
 - MLEDIT dùng cho đường đôi vẽ bằng `MLINE` của DVDCAD và MLINE trong file AutoCAD (DXF đã thử; DWG đọc theo dữ liệu LibreDWG). Đường đôi khép kín chưa sửa được. Chưa có kiểu nối Chữ T liền, Cắt bỏ / Nối lại đoạn, thêm / bớt đỉnh. Nắp đầu theo kiểu MLINESTYLE của file AutoCAD chưa vẽ.
 - Đa tuyến có độ rộng: đoạn cong có độ rộng được ghi DXF thành nhiều đoạn thẳng nhỏ (vẫn đúng hình). Sửa đỉnh / bo góc đa tuyến rộng sẽ đưa về nét mảnh.
+- REVCLOUD: chưa có tuỳ chọn Sửa kiểu AutoCAD (vẽ lại một đoạn mây). Dùng `REVCLOUDPROPERTIES` để đổi cung, hoặc vẽ mây mới. Sửa đỉnh mây bằng ô nắm thì mây không còn dựng lại được từ đường dẫn gốc.
