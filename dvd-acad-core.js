@@ -806,6 +806,7 @@
       }
     }
   };
+  A.cmdName = () => (cur && cur.name) || '';
   A.cancel = function(silent){
     if(!cur) return false;
     const c = cur; const r = c.req; cur = null; win = null; osOverride = null;

@@ -4,6 +4,22 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5b: giống AutoCAD hơn — kích thước liên kết, đa tuyến rộng, POLYSOLID, mặt lưới
+- `dvd-acad-x14.js`:
+  - Kích thước liên kết (DIMASSOC 2, DIMDISASSOCIATE, DIMREASSOCIATE). Khi sửa đường hình, `A.commit` thêm các kích thước có gốc trùng điểm đặc trưng vào danh sách sửa, nên UNDO một lần trả lại cả hai.
+  - Đa tuyến rộng: lưu `pw` = [x, y, rộng đầu, rộng cuối] theo đỉnh thật, dựng lại `wq` sau mỗi lần commit. `scaleEnt` nhân độ rộng.
+  - Lệnh mới: POLYSOLID, RULESURF / TABSURF / REVSURF / EDGESURF / PLANESURF, SURFTAB1/2, VPOINT, DDVPOINT, HIDE, MINSERT, DIMROTATED, ABOUT, EXOFFSET, SAVEIMG, MTEDIT, EXCHPROP.
+- `index.html`:
+  - `widePoly()`: đọc LWPOLYLINE / POLYLINE có độ rộng (DXF, DWG), giữ kín + cung.
+  - `polyWidthQuads` thêm phần lấp góc kiểu miter; mọi mảnh tô cùng chiều vòng nên tô không bị thủng.
+- `dvd-acad-dxf.js`: ghi đa tuyến rộng thành LWPOLYLINE với 40 / 41 / 42 theo đỉnh.
+- `dvd-acad-cmds.js`:
+  - FILLET / CHAMFER P dùng cung thật cho mọi đa tuyến.
+  - EXPLODE đa tuyến có cung ra ARC + LINE.
+  - `A.chooseBlock`.
+- `dvd-acad-3d.js`: kiểu xem "Khuất nét (HIDE)"; `view3D.setAzEl()` và `setStyle()`.
+- Kiểm thử: `v5b_test.py`.
+
 ## v5a: xem 3D cập nhật khi bật / tắt lớp
 - `dvd-acad-3d.js`: khi đang xem 3D, khung nhìn tự dựng lại nếu có một trong các thay đổi sau:
   - lớp ẩn / hiện;

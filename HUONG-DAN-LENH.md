@@ -213,6 +213,55 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v5b) — giống AutoCAD hơn
+**Kích thước liên kết** (như DIMASSOC = 2 của AutoCAD)
+- Nếu gốc đường gióng của kích thước nằm đúng điểm đặc trưng của đường hình, kích thước tự cập nhật theo khi sửa riêng đường hình. Điểm đặc trưng gồm: đầu mút, trung điểm, tâm, góc phần tư, đỉnh đa tuyến.
+- Các thao tác áp dụng: kéo ô nắm, MOVE, ROTATE, SCALE, STRETCH, MIRROR.
+- Dời cả đối tượng: đường kích thước dời theo, giữ nguyên khoảng cách.
+- Kích thước chéo (DIMALIGNED) xoay theo đường hình.
+- Kích thước bán kính / đường kính bám theo đường tròn hoặc cung.
+- Lệnh liên quan:
+  - `DIMDISASSOCIATE` (`DDA`): bỏ liên kết, kích thước đứng yên.
+  - `DIMREASSOCIATE` (`DRE`): chọn lại điểm gốc. Enter để giữ điểm cũ.
+  - `DIMASSOC`: 2 = bám theo (mặc định), 0 / 1 = không bám.
+- `DIMROTATED`: kích thước thẳng đo theo góc cho trước.
+
+**Đa tuyến có độ rộng** (PLINE W / H, PEDIT W, TRACE, mây thư pháp, file DWG / DXF)
+- Giữ đúng đỉnh thật, cung và cờ kín. Trước đây bị đổi thành đường hở nhiều đỉnh.
+- Góc được lấp kiểu vát nhọn (miter) như AutoCAD.
+- Vẫn giữ độ rộng khi kéo ô nắm, thêm / xoá đỉnh, FILLET / CHAMFER, OFFSET, BREAK, MOVE, ROTATE và MIRROR.
+- SCALE nhân cả độ rộng. Đảo chiều (PEDIT R, REVERSE) đổi độ rộng đầu ↔ cuối.
+- Lưu DXF ghi độ rộng 40 / 41 theo từng đỉnh, kèm cung.
+
+**FILLET / CHAMFER đa tuyến (P):** góc bo thành cung thật (bulge) ngay cả với đa tuyến thẳng.
+
+**EXPLODE đa tuyến có cung:** ra cung ARC và đoạn LINE, không còn hàng trăm đoạn nhỏ.
+
+**3D**
+- `POLYSOLID` (`PSOLID`): tường 3D như AutoCAD. Vẽ theo điểm (C = khép kín) hoặc chọn **Đối tượng** (đường, cung, tròn, đa tuyến; đối tượng gốc bị xoá như AutoCAD).
+  - Tuỳ chọn **Cao / Rộng / Canh** (Trái / Giữa / Phải).
+  - Góc tường nối kiểu vát nhọn. Phòng khép kín thành một khối có lỗ.
+- Mặt lưới (số chia theo `SURFTAB1` / `SURFTAB2`, mặc định 6 như AutoCAD):
+  - `RULESURF`: mặt kẻ giữa 2 đường. Điểm bấm trên mỗi đường quyết định đầu nào nối với đầu nào.
+  - `TABSURF`: đường dẫn trượt theo đoạn thẳng chỉ hướng, hoặc **Cao** (dựng mặt đứng theo Z).
+  - `REVSURF`: xoay đường biên dạng quanh một trục (đoạn thẳng), có góc đầu và góc quay. Ví dụ dùng cho chậu, bình, mái vòm.
+  - `EDGESURF`: mặt Coons giới hạn bởi 4 cạnh nối đầu nhau.
+  - `PLANESURF`: mặt phẳng từ 2 góc chữ nhật hoặc từ đối tượng kín.
+- Hướng nhìn 3D:
+  - `VPOINT`: nhập véc-tơ x,y,z, ví dụ `0,-1,0` = nhìn đứng, `1,-1,1` = ISO Tây Nam. Tuỳ chọn Xoay để nhập 2 góc.
+  - `DDVPOINT`: hộp thoại 2 góc.
+  - `HIDE`: khuất nét, chỉ hiện cạnh thấy được. Trong khung 3D có thêm kiểu "Khuất nét (HIDE)".
+
+**Khác**
+- `MINSERT`: chèn khối thành mảng hàng × cột.
+- `ABOUT`: thông tin phiên bản.
+- Tên gọi khác như AutoCAD: `EXOFFSET` (= OFFSET có E / L / M), `SAVEIMG` (PNG), `MTEDIT`, `EXCHPROP`.
+- Ribbon:
+  - Annotate › Kích thước: Liên kết lại / Bỏ liên kết / Xoay góc.
+  - Solid: thêm bảng Mặt lưới.
+  - Visualize › Điều hướng: VPOINT, DDVPOINT, HIDE.
+  - Polysolid thay cho nút Dựng tường cũ. `WALL3D` vẫn dùng được.
+
 ## Bổ sung (v5a) — xem 3D cập nhật theo lớp
 Khi đang xem 3D, khung nhìn tự vẽ lại sau khoảng 0,3 giây nếu có một trong các thay đổi sau:
 - Bật / tắt, đóng băng / rã băng lớp: ô Lớp trên ribbon, bảng Quản lý lớp, bảng Lớp trên điện thoại, `LAYOFF`, `LAYFRZ`, `LAYON`, `LAYTHW`, `LAYISO`, `LAYUNISO`, `LAYERP`, `LAYERSTATE`.
@@ -582,7 +631,7 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 
 ## Khác với AutoCAD
 - Lưu DXF ngay trong app. Lưu **DWG** cần máy chủ chuyển đổi (`SAVEDWG`, xem trên).
-- Khối lưu ra DXF thành BLOCK + INSERT (kèm thuộc tính ATTDEF/ATTRIB); kích thước thẳng, bán kính, đường kính lưu thành DIMENSION. Kích thước góc lưu thành DIMENSION 3 điểm; bản khối bị sửa riêng lưu thành khối biến thể (TÊN$1…). Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước. Kích thước không bám theo khi chỉ sửa riêng đường hình.
+- Khối lưu ra DXF thành BLOCK + INSERT (kèm thuộc tính ATTDEF/ATTRIB); kích thước thẳng, bán kính, đường kính lưu thành DIMENSION. Kích thước góc lưu thành DIMENSION 3 điểm; bản khối bị sửa riêng lưu thành khối biến thể (TÊN$1…). Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước, và bám theo đường hình khi gốc đường gióng nằm đúng điểm đặc trưng (v5b). Kích thước góc chưa bám theo đường hình. AutoCAD đọc lại thấy kích thước thường (không liên kết).
 - Kích thước thẳng/chéo có sẵn trong file DWG/DXF cũng kéo ô nắm và STRETCH được. Khi sửa, kích thước được vẽ lại theo kiểu của DVDCAD: giữ cao chữ, số lẻ, mũi tên/gạch chéo. Kích thước góc và bán kính của file gốc chỉ chọn theo cụm.
 - DXF lưu mặc định **2018 (AC1032)**, chữ UTF-8, màu RGB. `DXFVERSION` chọn 2013 / 2010 / 2007 / 2004 / 2000, Tự động (2000/2004) hoặc R12 (phần mềm rất cũ). AutoCAD 2017 trở về trước không mở được file 2018 — chọn phiên bản thấp hơn.
 - Hatch dò biên trong màn hình trước, không thấy biên kín thì tự mở rộng phạm vi dò (tới 40 lần màn hình).
@@ -600,8 +649,10 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
 - Kiểu nét phức: chữ và hình trong nét hiện đúng (hình của ltypeshp.shx vẽ gần đúng: tròn, vuông, gạch, zigzag, batting; hình SHX khác hiện dạng vòng tròn nhỏ).. Lưu DXF R2000 ghi đủ chữ trong nét; hình trong nét ghi đúng số hình chuẩn của ltypeshp.shx (130 TRACK1, 131 ZIG, 132 BOX, 133 CIRC1, 134 BAT, 135 AMZIGZAG) và vẽ đúng hình theo định nghĩa SHP.
 - MLEDIT dùng cho đường đôi vẽ bằng `MLINE` của DVDCAD và MLINE trong file AutoCAD (DXF đã thử; DWG đọc theo dữ liệu LibreDWG). Đường đôi khép kín chưa sửa được. Chưa có kiểu nối Chữ T liền, Cắt bỏ / Nối lại đoạn, thêm / bớt đỉnh. Nắp đầu theo kiểu MLINESTYLE của file AutoCAD chưa vẽ.
-- Đa tuyến có độ rộng: đoạn cong có độ rộng được ghi DXF thành nhiều đoạn thẳng nhỏ (vẫn đúng hình). Sửa đỉnh / bo góc đa tuyến rộng sẽ đưa về nét mảnh.
+- Đa tuyến có độ rộng: độ rộng mỗi đoạn giữ khi sửa. Thêm / xoá đỉnh trên đoạn có độ rộng thay đổi (thon) thì đỉnh mới lấy độ rộng của đỉnh gần nhất. Đa tuyến rộng trong khối bị kéo giãn không đều chỉ tô gần đúng.
 - REVCLOUD: chưa có tuỳ chọn Sửa kiểu AutoCAD (vẽ lại một đoạn mây). Dùng `REVCLOUDPROPERTIES` để đổi cung, hoặc vẽ mây mới. Sửa đỉnh mây bằng ô nắm thì mây không còn dựng lại được từ đường dẫn gốc.
 - File rất lớn trên iPhone / iPad chỉ hiện 400 nghìn đối tượng đầu (sau khi nổ khối) để tránh Safari bị tắt vì hết bộ nhớ. Muốn xem đủ, mở trên máy tính hoặc tách bản vẽ. File DWG lớn vẫn tốn bộ nhớ hơn DXF (bộ giải mã LibreDWG).
 - Vẽ lại đầy đủ bản vẽ hàng trăm nghìn nét vẫn mất khoảng 1–2 giây (máy thử không có GPU, máy thật thường nhanh hơn). Phóng / dời thì dùng ảnh tạm nên mượt.
 - Xem 3D theo dõi thay đổi lớp / ẩn hiện đối tượng mỗi 0,3 giây rồi dựng lại toàn cảnh. Với bản vẽ rất nhiều khối, sau mỗi lần bật / tắt lớp có thể phải chờ một chút mới thấy kết quả.
+- Mặt lưới RULESURF / TABSURF / REVSURF / EDGESURF / PLANESURF là khối lưới tam giác: lưu DXF thành 3DFACE và UNION / SUBTRACT không dùng cho mặt hở. Đường 2D của DVDCAD luôn nằm trên mặt bằng XY (cao độ theo ELEV), nên RULESURF / EDGESURF giữa các đường 2D ra mặt phẳng.
+- POLYSOLID chưa có tuỳ chọn Cung khi vẽ theo điểm. Muốn có đoạn cong, vẽ đa tuyến có cung rồi dùng POLYSOLID › Đối tượng.

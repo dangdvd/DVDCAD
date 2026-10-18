@@ -88,10 +88,10 @@
     if(V.length >= 2){
       if(closed && BV.length >= 2){ BV[BV.length - 1].sw = wS; BV[BV.length - 1].ew = wE; }
       if(BV.some(p => p.sw > 0 || p.ew > 0) && typeof polyWidthQuads === 'function'){   // đa tuyến có độ rộng (tô đặc như AutoCAD)
-        const raw = BV.map(p => ({ x: p.x, y: p.y, bulge: p.bulge || 0, sw: p.sw || 0, ew: p.ew || 0 })); const e = mk('POLYLINE', { vertices: expandPolyline(raw, closed), closed: false, wq: polyWidthQuads(raw, closed) }); A.commit({ add: [e] }); return; }
+        const raw = BV.map(p => ({ x: p.x, y: p.y, bulge: p.bulge || 0, sw: p.sw || 0, ew: p.ew || 0 })); const e = widePoly(raw, closed, mk('POLYLINE', {})); A.commit({ add: [e] }); return; }
       const e = mk('POLYLINE', { vertices: V.map(p => ({ x: p.x, y: p.y })), closed }); if(BV.some(p => p.bulge) && A.setBV) A.setBV(e, BV); A.commit({ add: [e] }); }
   });
-  A.widthPoly = (raw, closed) => ({ type: 'POLYLINE', vertices: expandPolyline(raw, closed), closed: false, wq: polyWidthQuads(raw, closed) });
+  A.widthPoly = (raw, closed) => widePoly(raw, closed, {});
 
   const rectPts = (a, b) => [{ x: a.x, y: a.y }, { x: b.x, y: a.y }, { x: b.x, y: b.y }, { x: a.x, y: b.y }];
   cmd(['RECTANG', 'REC', 'RECTANGLE'], 'Vẽ hình chữ nhật (D = theo kích thước)', async () => {
@@ -610,7 +610,7 @@
       if(r1.kw === 'P'){
         const rp = await A.getEnt('Chọn đa tuyến', { filter: e => e.type === 'POLYLINE' }); if(!rp.ent) continue;
         if(!(val > 0)){ log('Đặt bán kính/khoảng > 0 trước.'); continue; }
-        const BV0 = A.bvOf(rp.ent); const closed = !!rp.ent.closed; let n = 0;
+        const BV0 = A.bvOf(rp.ent) || (rp.ent.vertices || []).map(q => ({ x: q.x, y: q.y })); const closed = !!rp.ent.closed; let n = 0;   /* như AutoCAD: góc bo thành cung thật (bulge), không chia thành đoạn nhỏ */
         if(BV0){ let V = BV0.map(q => Object.assign({}, q)); for(let k = closed ? V.length - 1 : V.length - 2; k >= (closed ? 0 : 1); k--){ const nv = cornerBV(V, closed, k, kind, val); if(nv){ V = nv; n++; } }
           if(n){ const w = copyOf(rp.ent); A.setBV(w, V); A.commit({ rep: [[rp.ent, w]] }, (kind === 'fillet' ? 'Đã bo ' : 'Đã vát ') + n + ' góc'); } else log('Không bo/vát được góc nào.'); if(!multiple) return; continue; }
         let V = rp.ent.vertices.slice();
@@ -750,8 +750,8 @@
       const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: 'C', t: e.closed ? 'Mở' : 'Đóng' }, { k: 'J', t: 'Nối' }, { k: 'W', t: 'Độ rộng' }, { k: 'R', t: 'Đảo chiều' }, { k: 'X', t: 'Thoát' }] });
       if(k.none || k.kw === 'X') break;
       if(k.kw === 'W'){ const d = await A.getDist('Độ rộng mới cho cả đa tuyến (0 = nét mảnh)', { def: 0 }); if(d.num == null || d.num < 0) continue; const w = copyOf(e);
-        if(d.num > 0){ const src = (A.bvOf && A.bvOf(e)) || e.vertices; const raw = src.map(p => ({ x: p.x, y: p.y, bulge: p.bulge || 0, sw: d.num, ew: d.num })); const cl = !!e.closed; w.vertices = expandPolyline(raw, cl); w.closed = false; w.wq = polyWidthQuads(raw, cl); delete w.bv; delete w.bvs; }
-        else delete w.wq; A.commit({ rep: [[e, w]] }, 'Đã đổi độ rộng đa tuyến'); e = w; continue; }
+        if(d.num > 0){ const src = (A.bvOf && A.bvOf(e)) || e.vertices; const raw = src.map(p => ({ x: p.x, y: p.y, bulge: p.bulge || 0, sw: d.num, ew: d.num })); const cl = !!e.closed; delete w.bv; delete w.bvs; widePoly(raw, cl, w); }
+        else { delete w.wq; delete w.pw; } A.commit({ rep: [[e, w]] }, 'Đã đổi độ rộng đa tuyến'); e = w; continue; }
       if(k.kw === 'C'){ const w = copyOf(e); w.closed = !w.closed; delete w.wq; A.commit({ rep: [[e, w]] }); e = w; continue; }
       if(k.kw === 'R'){ const w = copyOf(e); if(!A.bvReverse(w, !!w.closed)){ w.vertices = w.vertices.slice().reverse(); delete w.wq; } A.commit({ rep: [[e, w]] }); e = w; continue; }
       if(k.kw === 'J'){ if(e.closed){ log('Đa tuyến kín — mở ra trước khi nối.'); continue; } const s = await A.getSel('Chọn đối tượng cần nối vào', { pre: false }); const res = doJoin([e].concat((s.sel || []).filter(x => x !== e))); if(res){ const m = res.find(x => x.type === 'POLYLINE') || res[0]; if(m) e = m; } continue; }
@@ -765,6 +765,13 @@
     const rep = [], add = [], del = []; let n = 0;
     for(const e of sel){
       if(e.grp){ const w = copyOf(e); delete w.grp; delete w.blk; delete w.dimv; delete w.dimd; delete w.bip; delete w.bm; delete w.l0; delete w.tbld; rep.push([e, w]); n++; continue; }
+      if(e.type === 'POLYLINE' && A.bvOf(e)){   // như AutoCAD: đoạn cong của đa tuyến phá thành cung (ARC), không thành nhiều đoạn nhỏ
+        const B = A.bvOf(e), segs = [], m = e.closed ? B.length : B.length - 1;
+        for(let i = 0; i < m; i++){ const a = B[i], b = B[(i + 1) % B.length]; if(dist(a, b) < 1e-12) continue; const o = { layer: e.layer, col: e.col }; if(e.bl !== undefined) o.bl = e.bl;
+          const ar = a.bulge ? G.bulgeArc(a, b, a.bulge) : null;
+          if(ar){ const s0 = ar.a0 * R2D, s1 = (ar.a0 + ar.sw) * R2D; segs.push(Object.assign(o, { type: 'ARC', cx: ar.cx, cy: ar.cy, r: ar.r, a1: ar.sw > 0 ? s0 : s1, a2: ar.sw > 0 ? s1 : s0 })); }
+          else segs.push(Object.assign(o, { type: 'LINE', x1: a.x, y1: a.y, x2: b.x, y2: b.y })); }
+        if(segs.length){ rep.push([e, segs[0]]); add.push(...segs.slice(1)); n++; } continue; }
       if(e.type === 'POLYLINE'){ const V = e.vertices || []; const segs = []; const m = e.closed ? V.length : V.length - 1; for(let i = 0; i < m; i++){ const a = V[i], b = V[(i + 1) % V.length]; if(dist(a, b) < 1e-12) continue; segs.push({ type: 'LINE', layer: e.layer, col: e.col, bl: e.bl, x1: a.x, y1: a.y, x2: b.x, y2: b.y }); } if(segs.length){ segs.forEach(x => { if(x.bl === undefined) delete x.bl; }); rep.push([e, segs[0]]); add.push(...segs.slice(1)); n++; } continue; }
       if(e.type === 'HATCH'){ const loops = (e.loops || []).filter(l => l.length >= 2).map(l => ({ type: 'POLYLINE', layer: e.layer, col: e.col, vertices: l.map(p => ({ x: p.x, y: p.y })), closed: true })); if(loops.length){ rep.push([e, loops[0]]); add.push(...loops.slice(1)); n++; } continue; }
     }
@@ -1398,7 +1405,7 @@
   const saveLib = o => { try{ localStorage.setItem(LIBK, JSON.stringify(o)); return true; }catch(_){ say('Bộ nhớ đầy — không lưu được khối.'); return false; } };
   function fileBlockNames(){ const b = window._dvdBlocks || {}; return Object.keys(b).filter(n => n && !n.startsWith('*') && !/^_/.test(n)).sort((a, b2) => a.localeCompare(b2, undefined, { numeric: true })); }
   const blkCache = new Map();
-  A.blockLib = lib; A.saveBlockLib = o => { const r = saveLib(o); blkCache.clear(); return r; }; A.fileBlockNames = () => fileBlockNames(); A.blockPrims = (n, s) => blockPrims(n, s);
+  A.blockLib = lib; A.saveBlockLib = o => { const r = saveLib(o); blkCache.clear(); return r; }; A.fileBlockNames = () => fileBlockNames(); A.chooseBlock = () => chooseBlock(); A.blockPrims = (n, s) => blockPrims(n, s);
   function blockPrims(name, src){
     const ck = src + '|' + name; if(blkCache.has(ck)) return blkCache.get(ck);
     let out = null;

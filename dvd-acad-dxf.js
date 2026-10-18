@@ -173,7 +173,9 @@
         case 'CIRCLE': head('CIRCLE', 'AcDbCircle'); P(10, e.cx); P(20, e.cy); P(30, 0); P(40, e.r); break;
         case 'ARC': head('ARC', 'AcDbCircle'); P(10, e.cx); P(20, e.cy); P(30, 0); P(40, e.r); P(100, 'AcDbArc'); P(50, e.a1); P(51, e.a2); break;
         case 'POINT': head('POINT', 'AcDbPoint'); P(10, e.x); P(20, e.y); P(30, 0); break;
-        case 'POLYLINE': { if(e.wq && e.wq.length && (e.vertices || []).length >= 2){ widthPoly(e); break; } if(e.wipe && !o.inBlock && (e.vertices || []).length >= 3){ wipeout(e, head); break; } const bv = A.bvOf ? A.bvOf(e) : null; lwpoly(bv && bv.length >= 2 ? bv : (e.vertices || []), !!e.closed); break; }
+        case 'POLYLINE': { if(e.pw && e.wq && e.wq.length){ const B = (A.bvOf && A.bvOf(e)) || e.vertices || []; if(B.length === e.pw.length && B.length >= 2){   // đa tuyến rộng dạng gốc: đỉnh + cung + độ rộng 40/41 từng đỉnh
+              head('LWPOLYLINE', 'AcDbPolyline'); P(90, B.length); P(70, e.closed ? 1 : 0); B.forEach((v, k) => { P(10, v.x); P(20, v.y); P(40, e.pw[k][2] || 0); P(41, e.pw[k][3] || 0); if(v.bulge) P(42, v.bulge); }); break; } }
+          if(e.wq && e.wq.length && (e.vertices || []).length >= 2){ widthPoly(e); break; } if(e.wipe && !o.inBlock && (e.vertices || []).length >= 3){ wipeout(e, head); break; } const bv = A.bvOf ? A.bvOf(e) : null; lwpoly(bv && bv.length >= 2 ? bv : (e.vertices || []), !!e.closed); break; }
         case 'IMAGE': try{ lwpoly(imgCorners(e), true); }catch(_){} break;
         case 'TEXT': {
           if(!e.text) break; const txt = String(e.text);
