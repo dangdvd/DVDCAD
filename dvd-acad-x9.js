@@ -656,10 +656,12 @@
     TRACKS: ['Tracks -|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-', [3.81, 3.81], { i: 0, sh: 'TRACK1', s: 6.35, x: 0 }], ZIGZAG: ['Zig zag /\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/', [0.0001, -5.08, -10.16, -5.08], { i: 1, sh: 'ZIG', s: 5.08, x: -5.08 }, { i: 2, sh: 'ZIG', s: 5.08, x: 5.08, r: 180 }],
     BATTING: ['Batting SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS', [0.0001, -2.54, -5.08, -2.54], { i: 1, sh: 'BAT', s: 2.54, x: -2.54 }, { i: 2, sh: 'BAT', s: 2.54, x: 2.54, r: 180 }] };
   try{ for(const k in SLT){ const [d, p, ...t] = SLT[k]; STD_LT_ISO[k] = { d, p, t: t.map(o => Object.assign({ t: '', r: 0, y: 0, abs: false }, o)) }; } }catch(_){}
-  const SHP = { CIRC1: { c: [1, 0, 1] }, BOX: { p: [[0, -1], [2, -1], [2, 1], [0, 1], [0, -1]] }, TRACK1: { p: [[0, -0.5], [0, 0.5]] }, ZIG: { p: [[0, 0], [0.5, 1], [1.5, -1], [2, 0]] },
-    BAT: { p: Array.from({ length: 17 }, (_, i) => [i / 8, Math.sin(i / 8 * Math.PI) * 0.8 * (i <= 8 ? 1 : -1) * (i <= 8 ? 1 : 1)]) } };
-  const SHPN = { 130: 'TRACK1', 131: 'ZIG', 132: 'BOX', 133: 'CIRC1', 134: 'BAT' };
-  function shapeOf(t, ltName){ if(typeof t.sh === 'string' && SHP[t.sh]) return SHP[t.sh]; const n = String(ltName || '');
+  // hình trong ltypeshp.shx (đúng theo định nghĩa SHP chuẩn: *130 TRACK1, *131 ZIG, *132 BOX, *133 CIRC1, *134 BAT, *135 AMZIGZAG)
+  const batPts = (() => { const o = [[0, 0], [-1, 2]]; for(let i = 1; i <= 16; i++){ const a = Math.PI - Math.PI * i / 16; o.push([1 + 2 * Math.cos(a), 2 + 2 * Math.sin(a)]); } o.push([2, 0]); return o; })();
+  const SHP = { CIRC1: { c: [1, 0, 1] }, BOX: { p: [[0, 0], [0, 1], [2, 1], [2, -1], [0, -1], [0, 0]] }, TRACK1: { p: [[0, -1], [0, 1]] }, ZIG: { p: [[0, 0], [1, 1], [2, 0]] }, BAT: { p: batPts },
+    AMZIGZAG: { p: [[0, 0], [108, 0], [123, 56], [153, -56], [168, 0], [275, 0]] } };
+  const SHPN = { 130: 'TRACK1', 131: 'ZIG', 132: 'BOX', 133: 'CIRC1', 134: 'BAT', 135: 'AMZIGZAG' };
+  function shapeOf(t, ltName){ if(typeof t.sh === 'string' && SHP[t.sh]) return SHP[t.sh]; if(t.n && SHPN[t.n]) return SHP[SHPN[t.n]]; const n = String(ltName || '');
     if(/TRACK/i.test(n)) return SHP.TRACK1; if(/ZIG/i.test(n)) return SHP.ZIG; if(/BATT/i.test(n)) return SHP.BAT; if(/FENCE.*2|BOX|SQUARE/i.test(n)) return SHP.BOX; if(/FENCE|CIRC/i.test(n)) return SHP.CIRC1; return SHP[SHPN[t.n]] || SHP.CIRC1; }
   A.ltShapeOf = shapeOf;
   try{ for(const k in CLT){ const [d, t] = CLT[k]; const w = Math.max(1, [...t].length); STD_LT_ISO[k] = { d, p: [12.7, -5.08 - (w - 3) * 0.8, -6.35 - (w - 3) * 0.8], t: [{ i: 1, t, s: 2.54, r: 0, x: -2.54 - (w - 3) * 0.8, y: -1.27, abs: false }] }; } }catch(_){}

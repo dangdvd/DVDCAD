@@ -7,20 +7,41 @@
   const A = window.DVDAcad; if(!A || A._dxf2000) return; A._dxf2000 = true;
   const G = A.G, D2R = Math.PI / 180, R2D = 180 / Math.PI, TAU = Math.PI * 2;
   const VK = 'dvd:dxfver';
-  A.dxfVer = (() => { try{ return localStorage.getItem(VK) || 'R2000'; }catch(_){ return 'R2000'; } })();
-  A.setDxfVer = v => { A.dxfVer = v === 'R12' ? 'R12' : 'R2000'; try{ localStorage.setItem(VK, A.dxfVer); }catch(_){} };
+  A.dxfVer = (() => { try{ return localStorage.getItem(VK) || 'AUTO'; }catch(_){ return 'AUTO'; } })();
+  A.setDxfVer = v => { A.dxfVer = /^(R12|R2000|R2004|R2007)$/.test(v) ? v : 'AUTO'; try{ localStorage.setItem(VK, A.dxfVer); }catch(_){} };
+  const hexRGB = h => { let s = String(h || '').replace('#', ''); if(s.length === 3) s = s.split('').map(c => c + c).join(''); const n = parseInt(s, 16); return /^[0-9a-f]{6}$/i.test(s) ? n : null; };
+  const isAciColor = h => { const n = hexRGB(h); if(n == null) return true; const a = A.aciNear(h); return (ACI_RGB[a] >>> 0) === n; };
+  // thuộc tính riêng của DVDCAD ghi kèm (XDATA) để mở lại trong DVDCAD còn nguyên
+  const XKEYS = ['cid', 'dord', 'anno', 'fld', 'url', 'dyn', 'dvs', 'mt'];
 
-  function dxfStr(s){ return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }
-  function mtStr(s){ return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/[{}]/g, c => '\\' + c).replace(/\r?\n/g, '\\P').replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }
+  let UTF8 = false;   // DXF R2007+: chữ ghi thẳng UTF-8 (không cần mã \U+)
+  function dxfStr(s){ if(UTF8) return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[\x00-\x1f]/g, ' '); return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }
+  function mtStr(s){ const t = String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/[{}]/g, c => '\\' + c).replace(/\r?\n/g, '\\P'); if(UTF8) return t.replace(/[\x00-\x1f]/g, ' '); return t.replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }
   const fr = v => { if(!isFinite(v)) v = 0; let s = (+v).toFixed(10); s = s.replace(/0+$/, '').replace(/\.$/, ''); return s === '-0' || s === '' ? '0' : s; };
   const isReal = c => (c >= 10 && c < 60) || (c >= 110 && c < 150) || (c >= 210 && c < 240) || (c >= 1010 && c < 1060) || c === 460 || c === 461 || c === 462;
   const bbox = ents => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for(const e of ents){ let b = null; try{ b = entBBox(e); }catch(_){} if(!b) continue; if(b.x0 < x0) x0 = b.x0; if(b.y0 < y0) y0 = b.y0; if(b.x1 > x1) x1 = b.x1; if(b.y1 > y1) y1 = b.y1; } return isFinite(x0) ? { x0, y0, x1, y1 } : null; };
   const LWV = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211];
   const lwStd = v => { if(!(v > 0)) return null; let b = LWV[0], bd = Infinity; for(const w of LWV){ const d = Math.abs(w - v); if(d < bd){ bd = d; b = w; } } return b; };
-  const SHPN = { TRACK1: 130, ZIG: 131, BOX: 132, CIRC1: 133, BAT: 134 };
+  const SHPN = { TRACK1: 130, ZIG: 131, BOX: 132, CIRC1: 133, BAT: 134, AMZIGZAG: 135 };   // số hình trong ltypeshp.shx chuẩn
 
+  // dữ liệu riêng của bản vẽ (ràng buộc tham số, định nghĩa khối động) → XRECORD "DVDCAD_DATA" trong OBJECTS
+  function dvdData(ents){
+    const o = {}; try{ const cons = A.constraints ? A.constraints() : []; if(cons && cons.length) o.cons = cons; }catch(_){}
+    try{ const D = A.dynDefs ? A.dynDefs() : null; if(D){ const names = new Set(); for(const e of ents){ if(e.blk) names.add(e.blk); if(e.bm && e.bm.name) names.add(e.bm.name); } const dd = {}; for(const n of names) if(D[n]) dd[n] = D[n]; if(Object.keys(dd).length) o.dyn = dd; } }catch(_){}
+    return Object.keys(o).length ? JSON.stringify(o) : null;
+  }
+  // mở lại: áp dữ liệu DVDCAD (trước khi các mô-đun nạp ràng buộc)
+  A.onLoad = (function(prev){ return function(){ try{ const d = window._dvdXData; window._dvdXData = null; if(d){ const o = JSON.parse(d); const nm = (typeof currentName !== 'undefined' && currentName) || '';
+        if(o.cons && o.cons.length) localStorage.setItem('dvd:cons::' + nm, JSON.stringify(o.cons));
+        if(o.dyn && A.dynDefs){ Object.assign(A.dynDefs(), o.dyn); try{ localStorage.setItem('dvd:dynblk', JSON.stringify(A.dynDefs())); }catch(_){} } } }catch(err){ console.warn(err); } if(prev) prev(); }; })(A.onLoad);
   function writeR2000(ents){
     ents = ents.filter(e => e && !e.xr && !e.vh);
+    ents = ents.map((e, i) => [e, i]).sort((a, b) => ((a[0].dord | 0) - (b[0].dord | 0)) || (a[1] - b[1])).map(x => x[0]);   // thứ tự vẽ (DRAWORDER) = thứ tự trong file
+    const needTC = ents.some(e => e.col && !e.bl && !isAciColor(e.col) && String(e.col).toLowerCase() !== String(A.layerHex(e.layer || '0')).toLowerCase()) || [...new Set(ents.map(e => e.layer || '0'))].some(l => !isAciColor(A.layerHex(l)));
+    const V2007 = A.dxfVer === 'R2007'; UTF8 = V2007;
+    const V2004 = V2007 || A.dxfVer === 'R2004' || (A.dxfVer !== 'R2000' && needTC);
+    A.lastDxfVer = V2007 ? 'R2007' : V2004 ? 'R2004' : 'R2000';
+    const hasWipe = ents.some(e => e.wipe && e.type === 'POLYLINE');
     const L = []; const P = (c, v) => { L.push(String(c)); L.push(typeof v === 'number' ? (isReal(c) ? fr(v) : String(Math.round(v))) : String(v)); };
     let hseq = 0x20; const H = () => (hseq++).toString(16).toUpperCase();
     const ext = bbox(ents) || { x0: 0, y0: 0, x1: 100, y1: 100 };
@@ -60,7 +81,7 @@
     let dn = 0; for(const d of dims.values()) d.bn = '*D' + (++dn);
     // ---------- HEADER ----------
     P(0, 'SECTION'); P(2, 'HEADER');
-    P(9, '$ACADVER'); P(1, 'AC1015'); P(9, '$ACADMAINTVER'); P(70, 20); P(9, '$DWGCODEPAGE'); P(3, 'ANSI_1252');
+    P(9, '$ACADVER'); P(1, V2007 ? 'AC1021' : V2004 ? 'AC1018' : 'AC1015'); P(9, '$ACADMAINTVER'); P(70, 20); P(9, '$DWGCODEPAGE'); P(3, 'ANSI_1252');
     P(9, '$INSBASE'); P(10, (A.drawBase && A.drawBase.x) || 0); P(20, (A.drawBase && A.drawBase.y) || 0); P(30, 0);
     P(9, '$EXTMIN'); P(10, ext.x0); P(20, ext.y0); P(30, 0); P(9, '$EXTMAX'); P(10, ext.x1); P(20, ext.y1); P(30, 0);
     P(9, '$LIMMIN'); P(10, 0); P(20, 0); P(9, '$LIMMAX'); P(10, 420); P(20, 297);
@@ -69,7 +90,10 @@
     if(typeof insunits !== 'undefined' && insunits){ P(9, '$INSUNITS'); P(70, insunits); }
     P(9, '$PSLTSCALE'); P(70, 1); P(9, '$HANDSEED'); const seedAt = L.length + 1; P(5, 'FFFF');
     P(0, 'ENDSEC');
-    P(0, 'SECTION'); P(2, 'CLASSES'); P(0, 'ENDSEC');
+    P(0, 'SECTION'); P(2, 'CLASSES');
+    if(hasWipe){ P(0, 'CLASS'); P(1, 'WIPEOUTVARIABLES'); P(2, 'AcDbWipeoutVariables'); P(3, 'WipeOut|AutoCAD Express Tool|expresstools@autodesk.com'); P(90, 0); P(280, 0); P(281, 0);
+      P(0, 'CLASS'); P(1, 'WIPEOUT'); P(2, 'AcDbWipeout'); P(3, 'WipeOut|AutoCAD Express Tool|expresstools@autodesk.com'); P(90, 127); P(280, 0); P(281, 1); }
+    P(0, 'ENDSEC');
     // ---------- TABLES ----------
     P(0, 'SECTION'); P(2, 'TABLES');
     const table = (name, n, rows, extra) => { P(0, 'TABLE'); P(2, name); P(5, hT[name]); P(330, '0'); P(100, 'AcDbSymbolTable'); P(70, n); if(extra) extra(); rows(); P(0, 'ENDTAB'); };
@@ -87,7 +111,7 @@
           else P(74, 0); }); } });
     A.lsSync && A.lsSync();
     table('LAYER', layers.size, () => { for(const ly of layers){ const aci = A.aciNear(A.layerHex(ly)); let fl = 0; if(A.LS.frozen.has(ly)) fl |= 1; if(A.LS.locked.has(ly)) fl |= 4;
-      rec('LAYER', layH.get(ly), 'AcDbLayerTableRecord'); P(2, dxfStr(ly)); P(70, fl); P(62, A.LS.off.has(ly) ? -aci : aci); const llt = String(A.layerLT(ly) || '').toUpperCase(); P(6, ltOk.has(llt) ? dxfStr(llt) : 'Continuous');
+      rec('LAYER', layH.get(ly), 'AcDbLayerTableRecord'); P(2, dxfStr(ly)); P(70, fl); P(62, A.LS.off.has(ly) ? -aci : aci); if(V2004 && !isAciColor(A.layerHex(ly))) P(420, hexRGB(A.layerHex(ly))); const llt = String(A.layerLT(ly) || '').toUpperCase(); P(6, ltOk.has(llt) ? dxfStr(llt) : 'Continuous');
       const lw = lwStd(A.layerLW ? A.layerLW(ly) : 0); P(370, lw != null ? lw : -3); P(390, hPsnNormal); } });
     table('STYLE', 1 + stUsed.size + (hStShx ? 1 : 0), () => {
       rec('STYLE', hStStd, 'AcDbTextStyleTableRecord'); P(2, 'Standard'); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'arial.ttf'); P(4, '');
@@ -113,9 +137,12 @@
       const aci = byL ? 256 : A.aciNear(e.col || '#ffffff');
       const ltn = e.lt ? String(e.lt).toUpperCase() : null; const elt = ltn ? (ltOk.has(ltn) ? dxfStr(ltn) : ltn === 'CONTINUOUS' ? 'Continuous' : ltn === 'BYBLOCK' ? 'ByBlock' : null) : null;
       const lw = e.lw > 0 ? lwStd(e.lw) : (e.lwb ? -2 : null);
-      const head = (t, sub, hh) => { const h = hh || H(); P(0, t); P(5, h); P(330, owner); P(100, 'AcDbEntity'); P(8, ly); if(elt && t !== 'HATCH' && t !== 'TEXT' && t !== 'MTEXT') P(6, elt); if(aci !== 256) P(62, aci); if(lw != null) P(370, lw); if(e.lts && Math.abs(e.lts - 1) > 1e-9 && t !== 'TEXT' && t !== 'MTEXT') P(48, e.lts); if(sub) P(100, sub); return h; };
-      const xd = () => { if(e.rgn && !o.inBlock){ P(1001, 'DVDCAD'); P(1000, 'RGN' + (e.grp && e.blk === '*REGION' ? ':' + e.grp : '')); } };
-      const lwpoly = (verts, closed) => { if(verts.length < 2) return; head('LWPOLYLINE', 'AcDbPolyline'); P(90, verts.length); P(70, closed ? 1 : 0); P(43, 0); for(const v of verts){ P(10, v.x); P(20, v.y); if(v.bulge) P(42, v.bulge); } xd(); };
+      const tc = V2004 && aci !== 256 && !isAciColor(e.col) ? hexRGB(e.col) : null;
+      let wrote = false;
+      const head = (t, sub, hh) => { wrote = true; const h = hh || H(); P(0, t); P(5, h); P(330, owner); P(100, 'AcDbEntity'); P(8, ly); if(elt && t !== 'HATCH' && t !== 'TEXT' && t !== 'MTEXT') P(6, elt); if(aci !== 256) P(62, aci); if(tc != null) P(420, tc); if(lw != null) P(370, lw); if(e.lts && Math.abs(e.lts - 1) > 1e-9 && t !== 'TEXT' && t !== 'MTEXT') P(48, e.lts); if(sub) P(100, sub); return h; };
+      const xd = () => { if(o.inBlock || o.dimBlock) return; const pr = {}; for(const k of XKEYS) if(e[k] != null && e[k] !== '' && !(k === 'mt' && e.type !== 'TEXT')) pr[k] = e[k]; const js = Object.keys(pr).length ? JSON.stringify(pr) : null;
+        if(!e.rgn && !js) return; P(1001, 'DVDCAD'); if(e.rgn) P(1000, 'RGN' + (e.grp && e.blk === '*REGION' ? ':' + e.grp : '')); if(js){ for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); } };
+      const lwpoly = (verts, closed) => { if(verts.length < 2) return; head('LWPOLYLINE', 'AcDbPolyline'); P(90, verts.length); P(70, closed ? 1 : 0); P(43, 0); for(const v of verts){ P(10, v.x); P(20, v.y); if(v.bulge) P(42, v.bulge); } };
       const just = t => ({ hj: t.ha === 'center' ? 1 : (t.ha === 'right' || t.ha === 'end') ? 2 : 0, vj: t.va === 'bottom' ? 1 : t.va === 'middle' ? 2 : t.va === 'top' ? 3 : 0 });
       const textBody = (t, val) => { const { hj, vj } = just(t); P(10, t.x); P(20, t.y); P(30, 0); P(40, t.h || 2.5); P(1, dxfStr(val)); if(t.rot) P(50, t.rot); if(t.xs && Math.abs(Math.abs(t.xs) - 1) > 1e-3) P(41, Math.abs(t.xs)); if(t.style && stUsed.has(t.style)) P(7, dxfStr(t.style)); if(t.xs < 0) P(71, 2); if(hj) P(72, hj); if(hj || vj){ P(11, t.x); P(21, t.y); P(31, 0); } return { hj, vj }; };
       if(e.att && o.inBlock && e.type === 'TEXT'){ head('ATTDEF', 'AcDbText'); const { vj } = textBody(e, e.text || ''); P(100, 'AcDbAttributeDefinition'); P(3, dxfStr(e.attp || e.att)); P(2, dxfStr(e.att)); P(70, 0); if(vj) P(74, vj); return; }
@@ -124,7 +151,7 @@
         case 'CIRCLE': head('CIRCLE', 'AcDbCircle'); P(10, e.cx); P(20, e.cy); P(30, 0); P(40, e.r); break;
         case 'ARC': head('ARC', 'AcDbCircle'); P(10, e.cx); P(20, e.cy); P(30, 0); P(40, e.r); P(100, 'AcDbArc'); P(50, e.a1); P(51, e.a2); break;
         case 'POINT': head('POINT', 'AcDbPoint'); P(10, e.x); P(20, e.y); P(30, 0); break;
-        case 'POLYLINE': { const bv = A.bvOf ? A.bvOf(e) : null; lwpoly(bv && bv.length >= 2 ? bv : (e.vertices || []), !!e.closed); break; }
+        case 'POLYLINE': { if(e.wipe && !o.inBlock && (e.vertices || []).length >= 3){ wipeout(e, head); break; } const bv = A.bvOf ? A.bvOf(e) : null; lwpoly(bv && bv.length >= 2 ? bv : (e.vertices || []), !!e.closed); break; }
         case 'IMAGE': try{ lwpoly(imgCorners(e), true); }catch(_){} break;
         case 'TEXT': {
           if(!e.text) break; const txt = String(e.text);
@@ -138,6 +165,14 @@
         case 'HATCH': hatch(e, head); break;
         case 'SOLID3D': solid3d(e, head, ly, aci); break;
       }
+      if(wrote && e.type !== 'SOLID3D') xd();
+    }
+    // vùng che: thực thể WIPEOUT (như IMAGE, khung cắt theo đa giác; toạ độ khung trong ô ảnh 1×1, trục Y hướng xuống)
+    function wipeout(e, head){
+      const V = e.vertices; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for(const q of V){ x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); }
+      const W = Math.max(x1 - x0, 1e-9), Hh = Math.max(y1 - y0, 1e-9);
+      head('WIPEOUT', 'AcDbWipeout'); P(90, 0); P(10, x0); P(20, y0); P(30, 0); P(11, W); P(21, 0); P(31, 0); P(12, 0); P(22, Hh); P(32, 0); P(13, 1); P(23, 1); P(340, '0'); P(70, 7); P(280, 1); P(281, 50); P(282, 50); P(283, 0); P(360, '0'); P(71, 2);
+      P(91, V.length + 1); for(const q of V.concat([V[0]])){ P(14, (q.x - x0) / W - 0.5); P(24, 0.5 - (q.y - y0) / Hh); }
     }
     // HATCH thật: tô đặc, hoặc mẫu đường song song (ANSI31, ANSI32, ANSI37, NET, LINE, BRICK); mẫu khác ghi thành nét
     function patLines(e){ const P0 = (A.PATS || {})[e.pat]; if(!P0) return null; const sc = e.psc || 1, rot = (e.pang || 0); const out = [];
@@ -145,6 +180,12 @@
         out.push({ a: aDeg + rot, bx: (base[0] * cr - base[1] * sr) * sc, by: (base[0] * sr + base[1] * cr) * sc, ox: (dpat[0] * c - dpat[1] * s) * sc, oy: (dpat[0] * s + dpat[1] * c) * sc, dash: (dash || []).map(v => v * sc) }); };
       if(P0.fam){ for(const f of P0.fam){ const a = f.a * D2R; const off = f.off || 0; add(f.a, [-Math.sin(a) * off, Math.cos(a) * off], [0, f.sp]); } return out; }
       if(P0.brick){ const h = P0.brick.h, w = P0.brick.w; add(0, [0, 0], [0, h]); add(90, [0, 0], [h, -w / 2], [h, -h]); return out; }
+      if(P0.dots){ const S = P0.dots; add(0, [0, 0], [S / 2, S], [0, -S]); return out; }
+      if(P0.earth){ const k = P0.earth / 6.35; for(const y of [0, 2.38125, 4.7625]) add(0, [0, y * k], [6.35 * k, 6.35 * k], [6.35 * k, -6.35 * k]); for(const x of [0.79375, 3.175, 5.55625]) add(90, [x * k, 5.55625 * k], [6.35 * k, 6.35 * k], [6.35 * k, -6.35 * k]); return out; }
+      if(P0.conc){ const k = P0.conc / 6; // bê tông: các cạnh đá + chấm (gần đúng mẫu AR-CONC)
+        add(50, [0, 0], [4.12975 * k, -5.89789 * k], [0.75 * k, -8.25 * k]); add(355, [0, 0], [-2.03781 * k, 7.37237 * k], [0.6 * k, -6.6 * k]); add(100.45144, [0.59772 * k, -0.05229 * k], [5.73059 * k, -6.93977 * k], [0.6374 * k, -7.01142 * k]);
+        add(46.1842, [0, 2 * k], [6.19463 * k, -8.84684 * k], [1.125 * k, -12.375 * k]); add(96.63556, [0.88937 * k, 1.86207 * k], [8.59588 * k, -10.40965 * k], [0.95610 * k, -10.51713 * k]); add(351.18415, [0, 2 * k], [7.74307 * k, 11.05855 * k], [0.9 * k, -9.9 * k]);
+        add(21, [1 * k, 1.5 * k], [4.95325 * k, -6.32394 * k], [0.75 * k, -8.25 * k]); add(326, [1 * k, 1.5 * k], [3.33355 * k, -7.81413 * k], [0.3 * k, -3.3 * k]); add(0, [0.3 * k, 0.4 * k], [2.4 * k, 1.7 * k], [0, -3.1 * k]); add(0, [1.9 * k, 2.6 * k], [2.9 * k, 1.3 * k], [0, -4.1 * k]); return out; }
       return null; }
     function hatch(e, head){
       const loops = (e.loops || []).filter(l => l.length >= 3); if(!loops.length) return; const solid = e.pat === 'SOLID' || (!e.pat && e.solid);
@@ -200,7 +241,11 @@
     // ---------- OBJECTS ----------
     P(0, 'SECTION'); P(2, 'OBJECTS');
     const dict = (h, owner, entries, hard) => { P(0, 'DICTIONARY'); P(5, h); if(owner !== '0'){ P(102, '{ACAD_REACTORS'); P(330, owner); P(102, '}'); } P(330, owner); P(100, 'AcDbDictionary'); if(hard) P(280, 1); P(281, 1); for(const [k, v] of entries){ P(3, k); P(350, v); } };
-    dict(hRoot, '0', [['ACAD_GROUP', hGroupD], ['ACAD_LAYOUT', hLayoutD], ['ACAD_MLINESTYLE', hMlsD], ['ACAD_PLOTSETTINGS', hPsetD], ['ACAD_PLOTSTYLENAME', hPsnD]]);
+    const hWv = hasWipe ? H() : null; const xdat = dvdData(ents); const hXr = xdat ? H() : null;
+    const rootE = [['ACAD_GROUP', hGroupD], ['ACAD_LAYOUT', hLayoutD], ['ACAD_MLINESTYLE', hMlsD], ['ACAD_PLOTSETTINGS', hPsetD], ['ACAD_PLOTSTYLENAME', hPsnD]]; if(hWv) rootE.push(['ACAD_WIPEOUT_VARS', hWv]); if(hXr) rootE.push(['DVDCAD_DATA', hXr]);
+    dict(hRoot, '0', rootE);
+    if(hWv){ P(0, 'WIPEOUTVARIABLES'); P(5, hWv); P(102, '{ACAD_REACTORS'); P(330, hRoot); P(102, '}'); P(330, hRoot); P(100, 'AcDbWipeoutVariables'); P(70, (typeof WIPEFRAME !== 'undefined' && WIPEFRAME === 0) ? 0 : 1); }
+    if(hXr){ P(0, 'XRECORD'); P(5, hXr); P(102, '{ACAD_REACTORS'); P(330, hRoot); P(102, '}'); P(330, hRoot); P(100, 'AcDbXrecord'); P(280, 1); P(1, 'DVDCAD1'); for(let k = 0; k < xdat.length; k += 240) P(300, xdat.slice(k, k + 240)); }
     dict(hGroupD, hRoot, []);
     dict(hLayoutD, hRoot, [['Layout1', hLayPaper], ['Model', hLayModel]]);
     dict(hMlsD, hRoot, [['Standard', hMlsStd]]);
@@ -218,9 +263,10 @@
   }
   A.dxfR2000 = writeR2000;
   // lệnh chọn phiên bản DXF khi lưu
-  DVDCmd.register(['DXFVERSION', 'DXFVER', 'PHIENBANDXF'], 'Phiên bản file DXF khi lưu: R2000 (mặc định, giữ bề rộng nét, HATCH, MTEXT, kiểu nét phức) hoặc R12 (phần mềm cũ)', () => A.run('DXFVERSION', async () => {
-    const r = await A.getKw('Lưu DXF theo phiên bản', { kw: [{ k: '2000', t: 'R2000 (AutoCAD 2000+)' }, { k: 'R12', t: 'R12 (cũ)' }], def: A.dxfVer === 'R12' ? 'R12 (cũ)' : 'R2000 (AutoCAD 2000+)' });
-    if(r.kw) A.setDxfVer(r.kw === 'R12' ? 'R12' : 'R2000'); A.log('Lưu DXF: ' + A.dxfVer);
+  DVDCmd.register(['DXFVERSION', 'DXFVER', 'PHIENBANDXF'], 'Phiên bản DXF khi lưu: Tự động (R2000, hoặc R2004 khi có màu RGB), R2000, R2004, R2007 (chữ UTF-8), R12 (phần mềm cũ)', () => A.run('DXFVERSION', async () => {
+    const lab = { AUTO: 'Tự động', R2000: 'R2000', R2004: 'R2004 (màu RGB)', R2007: 'R2007 (chữ UTF-8)', R12: 'R12 (cũ)' };
+    const r = await A.getKw('Lưu DXF theo phiên bản', { kw: [{ k: 'T', t: 'Tự động' }, { k: '2000', t: 'R2000' }, { k: '2004', t: 'R2004 (màu RGB)' }, { k: '2007', t: 'R2007 (chữ UTF-8)' }, { k: 'R12', t: 'R12 (cũ)' }], def: lab[A.dxfVer] || 'Tự động' });
+    if(r.kw) A.setDxfVer(r.kw === 'R12' ? 'R12' : r.kw === '2000' ? 'R2000' : r.kw === '2004' ? 'R2004' : r.kw === '2007' ? 'R2007' : 'AUTO'); A.log('Lưu DXF: ' + (lab[A.dxfVer] || A.dxfVer));
   }), { engine: true });
   try{ DVDCmd.refresh && DVDCmd.refresh(); }catch(_){}
 })();

@@ -4,6 +4,11 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v4t: DXF giữ thêm màu RGB, WIPEOUT, thứ tự vẽ, ràng buộc
+- Màu RGB (420, tự lên R2004), WIPEOUT thật, thứ tự vẽ theo thứ tự file, HATCH DOTS/EARTH/AR-CONC có đường mẫu.
+- XDATA + XRECORD DVDCAD_DATA: ràng buộc tham số, khối động, chú thích theo tỉ lệ… mở lại còn nguyên.
+- Hình ltypeshp.shx đúng số hiệu & hình; DXFVERSION thêm R2007 (UTF-8).
+
 ## v4s: lưu DXF R2000
 - `dvd-acad-dxf.js`: ghi DXF AC1015 đầy đủ handle / BLOCK_RECORD / OBJECTS; bề rộng nét 370, LWPOLYLINE, MTEXT, HATCH (đặc + mẫu), ELLIPSE, XLINE/RAY, kiểu nét phức, khối + thuộc tính, DIMENSION. `DXFVERSION` để chọn lại R12.
 - Đọc DXF/DWG: hatch giữ mẫu / tỉ lệ / góc; đường tròn, cung, elip trong khối giữ nguyên loại.
