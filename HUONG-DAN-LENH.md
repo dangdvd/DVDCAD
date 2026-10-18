@@ -213,6 +213,15 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v5c) — ngôn ngữ giao diện đồng bộ
+- Bấm nút **Không gian làm việc** (cạnh nút Lưu) › **Ngôn ngữ giao diện** để chọn **English** hoặc **Tiếng Việt**. Lựa chọn áp dụng cho toàn bộ giao diện:
+  - ribbon, thẻ, thanh trạng thái, bảng Thuộc tính, bảng Lớp;
+  - dòng lệnh, lời nhắc, tuỳ chọn lệnh;
+  - thông báo, hộp thoại, menu chuột phải, khung 3D, trợ giúp F1.
+- Lần đầu mở app, ngôn ngữ theo trình duyệt (trình duyệt tiếng Việt → Tiếng Việt, khác → English). Chọn lại thì app nhớ cho lần sau.
+- Dữ liệu bản vẽ **không** bị dịch: tên lớp, tên khối, layout, tên file và chữ trong bản vẽ giữ nguyên.
+- Tên lệnh, phím tắt và chữ cái tuỳ chọn giữ như AutoCAD ở cả hai ngôn ngữ.
+
 ## Bổ sung (v5b) — giống AutoCAD hơn
 **Kích thước liên kết** (như DIMASSOC = 2 của AutoCAD)
 - Nếu gốc đường gióng của kích thước nằm đúng điểm đặc trưng của đường hình, kích thước tự cập nhật theo khi sửa riêng đường hình. Điểm đặc trưng gồm: đầu mút, trung điểm, tâm, góc phần tư, đỉnh đa tuyến.
@@ -656,3 +665,4 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Xem 3D theo dõi thay đổi lớp / ẩn hiện đối tượng mỗi 0,3 giây rồi dựng lại toàn cảnh. Với bản vẽ rất nhiều khối, sau mỗi lần bật / tắt lớp có thể phải chờ một chút mới thấy kết quả.
 - Mặt lưới RULESURF / TABSURF / REVSURF / EDGESURF / PLANESURF là khối lưới tam giác: lưu DXF thành 3DFACE và UNION / SUBTRACT không dùng cho mặt hở. Đường 2D của DVDCAD luôn nằm trên mặt bằng XY (cao độ theo ELEV), nên RULESURF / EDGESURF giữa các đường 2D ra mặt phẳng.
 - POLYSOLID chưa có tuỳ chọn Cung khi vẽ theo điểm. Muốn có đoạn cong, vẽ đa tuyến có cung rồi dùng POLYSOLID › Đối tượng.
+- Giao diện English dịch từ chuỗi tiếng Việt gốc khi hiển thị. Một vài câu ghép có thể đọc chưa trơn như AutoCAD bản tiếng Anh. Chữ do lệnh ghi vào bản vẽ (trường ngày tháng, nhãn ký hiệu, khung tên mẫu) vẫn là tiếng Việt.

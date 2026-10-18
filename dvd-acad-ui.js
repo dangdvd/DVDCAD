@@ -610,10 +610,10 @@
     draft: { en: 'Drafting & Annotation', vi: 'Vẽ 2D & Chú thích', tabs: ['home', 'insert', 'annotate', 'param', 'view', 'manage', 'output', 'collab', 'express'] },
     m3d: { en: '3D Modeling', vi: 'Mô hình 3D', tabs: ['home3d', 'solid', 'visualize', 'param', 'insert', 'annotate', 'view', 'manage', 'output', 'collab', 'express'] }
   };
-  let WSK = 'draft', LANG = 'en';
-  try{ const w = localStorage.getItem('dvd:ws'); if(WS[w]) WSK = w; const l = localStorage.getItem('dvd:riblang'); if(l === 'vi' || l === 'en') LANG = l; }catch(_){}
+  let WSK = 'draft', LANG = window.DVDI18N ? DVDI18N.lang : 'en';   // một ngôn ngữ chung cho cả giao diện (dvd-i18n.js)
+  try{ const w = localStorage.getItem('dvd:ws'); if(WS[w]) WSK = w; if(!window.DVDI18N){ const l = localStorage.getItem('dvd:riblang'); if(l === 'vi' || l === 'en') LANG = l; } }catch(_){}
   const L = o => (LANG === 'vi' ? (o.vi || o.en) : (o.en || o.vi)) || '';
-  const L2 = o => (LANG === 'vi' ? o.en : o.vi) || '';
+  const L2 = o => (LANG === 'vi' ? (o.en || '') : '');   // chú thích phụ: giao diện Việt kèm tên lệnh AutoCAD; giao diện Anh không kèm tiếng Việt
   // hành động ngoài dòng lệnh
   const ACT = {
     'CIRCLE|2P': () => { run('CIRCLE'); setTimeout(() => A.input('2P'), 30); },
@@ -645,7 +645,7 @@
   const top = document.createElement('div'); top.id = 'acadTop';
   top.innerHTML = '<div class="ac-appbar"><button class="ac-logo" id="acLogo" title="Menu ứng dụng">DVD<span class="tri">▼</span></button>' +
     '<div class="ac-qat">' + [['NEW', 'Bản vẽ mới (Ctrl+N)'], ['OPEN', 'Mở (Ctrl+O)'], ['SAVE', 'Lưu (Ctrl+S)'], ['SAVEAS', 'Lưu thành'], ['PLOT', 'In / xuất (Ctrl+P)'], ['UNDO', 'Hoàn tác (Ctrl+Z)'], ['REDO', 'Làm lại (Ctrl+Y)']].map(([k, t]) => '<button data-q="' + k + '" title="' + t + '">' + ico(k) + '</button>').join('') + '</div>' +
-    '<button class="ac-ws" id="acWS" title="Không gian làm việc · nhãn ribbon"></button>' + '<div class="ac-title" id="acTitle">DVDCAD</div>' +
+    '<button class="ac-ws" id="acWS" title="Không gian làm việc · ngôn ngữ giao diện"></button>' + '<div class="ac-title" id="acTitle">DVDCAD</div>' +
     '<div class="ac-right"><input id="acFind" placeholder="Tìm lệnh…" style="height:24px;width:150px;background:#1b2028;border:1px solid #454e5c;border-radius:4px;color:#e6eaf0;padding:0 8px;font:12px system-ui"><button id="acDrive" title="Google Drive · chia sẻ · cộng tác">' + ico('DRIVE') + '<span>Drive</span></button><button id="acHelp" title="Trợ giúp (F1)">' + ico('HELP') + '</button></div></div>' +
     '<div class="ac-tabs" id="acTabs"></div><div class="ac-ribbon" id="acRibbon"></div>';
   const stageEl = document.querySelector('.stage');
@@ -766,10 +766,10 @@
   document.addEventListener('pointerover', e => { if(e.target.closest && e.target.closest('.ac-slide')) tipOver(e); });
   window.addEventListener('wheel', hideTip, { passive: true });
   // không gian làm việc + ngôn ngữ nhãn ribbon
-  function wsMenu(x, y){ menu(x, y, [{ hd: 'KHÔNG GIAN LÀM VIỆC' }].concat(Object.entries(WS).map(([k, w]) => ({ t: (k === WSK ? '✓ ' : '   ') + w.en + ' — ' + w.vi, fn: () => setWS(k) })), [{ sep: 1 }, { hd: 'NHÃN RIBBON' },
-    { t: (LANG === 'en' ? '✓ ' : '   ') + 'English (như AutoCAD)', fn: () => setLang('en') }, { t: (LANG === 'vi' ? '✓ ' : '   ') + 'Tiếng Việt', fn: () => setLang('vi') }])); }
+  function wsMenu(x, y){ menu(x, y, [{ hd: LANG === 'vi' ? 'KHÔNG GIAN LÀM VIỆC' : 'WORKSPACE' }].concat(Object.entries(WS).map(([k, w]) => ({ t: (k === WSK ? '✓ ' : '   ') + L(w), fn: () => setWS(k) })), [{ sep: 1 }, { hd: LANG === 'vi' ? 'NGÔN NGỮ GIAO DIỆN' : 'INTERFACE LANGUAGE' },
+    { t: (LANG === 'en' ? '✓ ' : '   ') + 'English', fn: () => setLang('en') }, { t: (LANG === 'vi' ? '✓ ' : '   ') + 'Tiếng Việt', fn: () => setLang('vi') }])); }
   function setWS(k){ if(!WS[k]) return; WSK = k; try{ localStorage.setItem('dvd:ws', k); }catch(_){} if(!wsTabs().includes(curTab)) curTab = wsTabs()[0]; renderTabs(); renderRibbon(); syncWS(); }
-  function setLang(l){ LANG = l; try{ localStorage.setItem('dvd:riblang', l); }catch(_){} renderTabs(); renderRibbon(); syncWS(); }
+  function setLang(l){ if(l !== 'vi' && l !== 'en') return; if(window.DVDI18N) DVDI18N.set(l); LANG = l; try{ localStorage.setItem('dvd:riblang', l); }catch(_){} renderTabs(); renderRibbon(); syncWS(); try{ if(A.onLangChange) A.onLangChange(l); }catch(_){} }
   function syncWS(){ const b = $('acWS'); if(b) b.innerHTML = ico('SETTINGS') + '<span>' + esc(L(WS[WSK])) + '</span><i>▾</i>'; }
   A.ribbon = { setWS, setLang, get ws(){ return WSK; }, get lang(){ return LANG; }, get tab(){ return curTab; }, RIB, WS, render: () => { renderTabs(); renderRibbon(); } };
   function ctlHTML(kind){
@@ -1089,7 +1089,7 @@
     document.documentElement.classList.toggle('acad', on);
     if(on !== was){ setTimeout(() => { try{ resize(); }catch(_){} try{ DVDCmd.refresh(); }catch(_){} }, 20); }
   }
-  function updTitle(){ const n = (typeof currentName === 'string' && currentName) ? currentName : ''; $('acTitle').innerHTML = 'DVDCAD' + (n ? ' — <b>' + esc(n) + '</b>' : ''); $('acFileName').textContent = n || 'Chưa mở bản vẽ'; $('acFileTab').style.display = A.hasDoc() ? '' : 'none'; try{ document.title = (n ? n + ' — ' : '') + 'DVDCAD'; }catch(_){} }
+  function updTitle(){ const n = (typeof currentName === 'string' && currentName) ? currentName : ''; $('acTitle').innerHTML = 'DVDCAD' + (n ? ' — <b translate="no">' + esc(n) + '</b>' : ''); $('acFileName').textContent = n || 'Chưa mở bản vẽ'; $('acFileTab').style.display = A.hasDoc() ? '' : 'none'; try{ document.title = (n ? n + ' — ' : '') + 'DVDCAD'; }catch(_){} }
   A.onLoad = (function(prev){ return function(){ if(prev) prev(); updTitle(); renderLT(); syncCtl(); syncSB(); }; })(A.onLoad);
   $('acNewTab').onclick = () => A.newDrawing();
   $('acStart').onclick = () => click('openBtn');

@@ -368,6 +368,10 @@
   alias(['SAVEIMG'], 'PNGOUT', 'Lưu ảnh khung nhìn (PNG)');
   alias(['MTEDIT'], 'DDEDIT', 'Sửa chữ nhiều dòng');
   alias(['EXCHPROP'], 'CHPROP', 'Đổi thuộc tính đối tượng (Express)');
+  /* tên do người dùng đặt (lớp, khối, layout) không bị dịch khi giao diện tiếng Anh */
+  if(window.DVDI18N){ const upd = () => { try{ const S = new Set(A.layerNames ? A.layerNames() : []); for(const k of Object.keys(window._dvdBlocks || {})) S.add(k); try{ for(const k of Object.keys(A.blockLib() || {})) S.add(k); }catch(_){} try{ for(const L of (window.dwgLayouts || [])) if(L && L.name) S.add(L.name); }catch(_){} DVDI18N.protect([...S]); }catch(_){} };
+    A.onLoad = (prev => function(){ if(prev) prev.apply(this, arguments); upd(); })(A.onLoad);
+    { const ol = A.onLayers; A.onLayers = function(){ if(ol) ol.apply(this, arguments); upd(); }; } upd(); }
   plain(['ABOUT'], 'Thông tin phiên bản DVDCAD', () => {
     const m = (document.body.innerHTML.match(/bản màu · (v\w+)/) || [])[1] || '';
     A.dialog({ title: 'DVDCAD', html: '<div style="line-height:1.6">DVDCAD ' + m + '<br>Xem và sửa bản vẽ DWG / DXF trên trình duyệt, chạy offline.<br>Số lệnh: ' + new Set(DVDCmd.commands.map(c => c.k[0])).size + '</div>', ok: () => {} });

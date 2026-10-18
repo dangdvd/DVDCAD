@@ -4,6 +4,20 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5c: ngôn ngữ giao diện đồng bộ English / Tiếng Việt
+- `dvd-i18n.js`: một công tắc ngôn ngữ chung (`DVDI18N`, khoá `dvd:riblang`, mặc định theo trình duyệt).
+  - Khi chọn English, `MutationObserver` thay chữ hiển thị: nút chữ, `title`, `placeholder`, `aria-label`, `data-tl`, nút `<input>`, `alert` / `confirm` / `prompt`.
+  - Cách thay: khớp nguyên câu trước. Không khớp thì thay từng mảnh, theo thứ tự dài trước.
+  - Từ đơn chỉ dịch khi đứng cạnh số, `=`, `:`, `·` hoặc ngoặc.
+  - Không dịch: phần trong "…", ô `.nm`, phần tử `translate="no"`, tên lớp / khối / layout.
+  - Chuyển về Tiếng Việt thì trả lại chữ gốc.
+- `dvd-i18n-en.js`: từ điển khoảng 4.100 mục, sinh từ chuỗi tiếng Việt trong mã bằng `tools/i18n/extract.py` + `build.py` (bản dịch gốc: `tools/i18n/translations.json`).
+- `dvd-acad-ui.js`: ribbon dùng chung ngôn ngữ đó; menu Không gian làm việc có mục "Ngôn ngữ giao diện"; chú thích phụ tiếng Việt không còn hiện ở giao diện English.
+- `manifest.webmanifest`: tên app "DVDCAD — DWG/DXF".
+- Kiểm thử:
+  - `v5c_test.py`: duyệt các thẻ ribbon, bảng Thuộc tính, khoảng 20 lệnh, 25 hộp thoại, menu, khung 3D, lịch sử lệnh; yêu cầu không còn chữ tiếng Việt và chuyển qua lại được.
+  - Các bài cũ chạy với trình duyệt `vi-VN`.
+
 ## v5b: giống AutoCAD hơn — kích thước liên kết, đa tuyến rộng, POLYSOLID, mặt lưới
 - `dvd-acad-x14.js`:
   - Kích thước liên kết (DIMASSOC 2, DIMDISASSOCIATE, DIMREASSOCIATE). Khi sửa đường hình, `A.commit` thêm các kích thước có gốc trùng điểm đặc trưng vào danh sách sửa, nên UNDO một lần trả lại cả hai.
