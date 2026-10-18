@@ -1,4 +1,4 @@
-# DVDCAD v4m — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4n — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -212,6 +212,21 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 **Khác:** `VIEW` (lưu/gọi góc nhìn 2D đặt tên), `CAL` (máy tính: `2*(3+4)^2`, `sqrt`, `sin/cos/tan` theo độ, `pi`; kết quả chép vào clipboard), `PUBLISH` (in nhiều layout ra một PDF nhiều trang).
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
+
+## Bổ sung (v4n)
+**Nhiều khung nhìn trong Model:** `VPORTS` — chia màn hình 1, 2 (dọc/ngang), 3, 4 khung (View → Model Viewports). Bấm vào khung để làm hiện hành; mỗi khung phóng, kéo, ZE riêng. **J** = gộp về một khung.
+
+**Mảng liên kết (như AutoCAD 2012+):** `ARRAYRECT`, `ARRAYPOLAR`, `ARRAYPATH` tạo mảng liên kết (một nhóm). Sửa bằng `ARRAYEDIT` (số cột, số hàng, khoảng cách, số phần tử, góc lấp đầy, xoay) hoặc ngay trong **bảng Thuộc tính** khi chọn mảng. Dời / sao chép mảng vẫn sửa được. `ARRAYASSOCIATIVITY 0` để tạo đối tượng rời. EXPLODE để tách.
+
+**Hatch liên kết đường biên:** hatch trong đa tuyến kín / đường tròn / elip tự liên kết; sửa, kéo nắm, STRETCH đường biên thì hatch đổi theo. Xoá đường biên thì hatch thôi liên kết. `HATCHASSOC` gắn lại / bỏ liên kết.
+
+**Kiểm tra chính tả:** `SPELL` (`SP`) — liệt kê chữ trong bản vẽ (hoặc vùng chọn), gạch đỏ từ sai theo từ điển của trình duyệt (tiếng Việt / tiếng Anh), sửa trực tiếp rồi Áp dụng.
+
+**Biến hệ thống:** `SETVAR` (hộp thoại) hoặc gõ thẳng tên biến: `OSMODE` (mã bit như AutoCAD), `ORTHOMODE`, `SNAPMODE`, `GRIDMODE`, `POLARANG`, `APERTURE`, `PICKBOX`, `CLAYER`, `CECOLOR`, `CELTYPE`, `CELWEIGHT`, `TEXTSIZE`, `OFFSETDIST`, `FILLETRAD`, `PDMODE`, `PDSIZE`, `INSUNITS`, `WIPEOUTFRAME`… `PTYPE` — chọn kiểu điểm.
+
+**Vẽ trục đo:** `ISODRAFT` (mặt Trái / Trên / Phải, **F5** đổi mặt, nút ISO ở thanh trạng thái) — ORTHO đi theo trục 30° / 90° / 150°. `ISOCIRCLE` vẽ vòng tròn trục đo (elip) theo mặt hiện hành.
+
+**Khác:** `XCLIP` (cắt hiển thị khối / XREF theo khung), `IMAGECLIP`, `GROUPEDIT` (thêm / bớt / đổi tên nhóm), `HYPERLINK` + `OPENLINK` (Ctrl + bấm để mở liên kết), `DIMBREAK` (ngắt đường kích thước chỗ cắt nét khác), `PURGE` (hộp thoại: lớp, kiểu nét, khối động không dùng), `OPTIONS` (`OP`), `STATUS`, `REGENALL`.
 
 ## Lệnh bổ sung (v4m)
 **Bắt điểm mới:** `EXT` (Kéo dài — rê qua đầu mút một đoạn rồi đi theo phần kéo dài của nó), `PAR` (Song song — rê qua một đoạn, rồi vẽ song song với đoạn đó), `GCE` (Tâm hình học của đa tuyến kín). Gõ trong lúc chọn điểm hoặc bật trong Drafting Settings.

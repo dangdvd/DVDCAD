@@ -356,6 +356,23 @@
     DWGPROPS: DOC + '<circle class="a" cx="12" cy="13" r="3.5"/><path class="a" d="M12 12v3M12 10.6v.2"/>',
     TIME: '<circle class="fd" cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="9.5"/><path class="a" d="M12 6v6l4.5 2.5"/>',
     PLAN: '<rect x="3" y="3" width="18" height="18"/><path class="a" d="M7 7h4v4H7zM13 13h4v4h-4z"/><path class="r" d="M12 3v3"/>',
+    /* ---------- v4n ---------- */
+    VPORTS: '<rect class="fd" x="2" y="3" width="20" height="18"/><path d="M12 3v18M12 12h10"/><rect class="a" x="2" y="3" width="10" height="18" stroke-width="2"/>',
+    ARRAYEDIT: '<rect class="fa" x="3" y="3" width="5" height="5"/><rect class="a" x="3" y="3" width="5" height="5"/><rect class="a" x="10" y="3" width="5" height="5"/><rect class="a" x="3" y="10" width="5" height="5"/><rect class="a" x="10" y="10" width="5" height="5"/><path class="y" d="M12 22l8-8 2 2-8 8z"/>',
+    HATCHASSOC: '<rect class="a" x="3" y="3" width="13" height="13"/><path d="M3 9l6-6M3 15L15 3M9 16l7-7" opacity=".7"/>' + CHAIN.replace('class="g"', 'class="g" transform="translate(8 8) scale(.6)"'),
+    SPELL: '<path d="M3 15L7 4h1.5l4 11M4.6 11h6"/><path class="r" d="M3 19c1-1 2 1 3 0s2 1 3 0 2 1 3 0"/><path class="g" d="M14 13l3 3 5-7" stroke-width="2"/>',
+    SETVAR: '<rect class="fd" x="3" y="3" width="18" height="18" rx="1.5"/><path class="a" d="M6 8h5M6 12h7M6 16h4"/><path class="y" d="M15 8h3M15 12h3M15 16h3"/>',
+    PTYPE: '<path d="M6 3v6M3 6h6"/><path d="M15 3l6 6M21 3l-6 6"/><circle class="a" cx="6" cy="17" r="3"/>' + O(6, 17, 'pa') + '<rect class="a" x="15" y="14" width="6" height="6"/>',
+    ISODRAFT: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path class="a" d="M4 7.5l8 4.5 8-4.5M12 12v9"/><path class="y" d="M2 20l4-2.3M22 20l-4-2.3" opacity=".8"/>',
+    ISOCIRCLE: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" opacity=".5"/><ellipse class="a" cx="12" cy="7.5" rx="5.5" ry="3.2"/>',
+    XCLIP: '<rect x="3" y="3" width="14" height="14" stroke-dasharray="2 1.5"/><rect class="fa3" x="7" y="7" width="14" height="14"/><rect class="a" x="7" y="7" width="14" height="14" stroke-width="1.8"/>',
+    IMAGECLIP: '<rect class="fd" x="2" y="4" width="16" height="13"/><path class="fg2" d="M2 17l5-6 4 4 3-2 4 4z"/><rect class="a" x="6" y="8" width="16" height="13" stroke-width="1.8" stroke-dasharray="3 1.5"/>',
+    GROUPEDIT: '<rect x="2.5" y="2.5" width="17" height="17" stroke-dasharray="2 1.5" class="a"/><rect x="5.5" y="5.5" width="5" height="5"/><circle cx="14" cy="14" r="3"/><path class="y" d="M14 23l7-7 2 2-7 7z"/>',
+    HYPERLINK: CHAIN.replace('class="g"', 'class="a"'),
+    OPENLINK: CHAIN.replace('class="g"', 'class="a"') + AR(15, 9, 21, 3, 'y'),
+    DIMBREAK: '<path d="M4 20V6M20 20V6"/><path class="a" d="M4 10h6M14 10h6"/><path class="r" d="M12 3v18"/>',
+    OPTIONS: GEAR(12, 12, 5.5),
+    STATUS: '<rect class="fd" x="3" y="3" width="18" height="18" rx="1"/><path class="a" d="M7 16v-4M11 16V8M15 16v-6"/>',
     COUNT_: ''
   };
   delete I.COUNT_;

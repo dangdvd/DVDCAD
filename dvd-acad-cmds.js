@@ -413,6 +413,7 @@
       if(C * R * sel.length > 60000){ say('Mảng quá lớn.'); return; }
       Object.assign(MEM, { ac: C, ar: R, acs: dx, ars: dy }); remember();
       const add = []; for(let i = 0; i < C; i++) for(let j = 0; j < R; j++){ if(!i && !j) continue; add.push(...remapGroups(sel.map(e => { const w = copyOf(e); translateEnt(w, dx * i, dy * j); return w; }))); }
+      if(A.arrCommit && A.arrCommit(sel, add, { k: 'R', C, R, dx, dy }, 'Đã tạo mảng ' + C + '×' + R)) return;
       A.commit({ add }, 'Đã tạo mảng ' + C + '×' + R); return;
     }
     const c = await A.getPoint('Chỉ định tâm mảng'); if(!c.pt) return;
@@ -421,6 +422,7 @@
     Object.assign(MEM, { apn: N, apa: F }); remember();
     const step = Math.abs(Math.abs(F) - 360) < 1e-9 ? F / N : F / (N - 1); const add = [];
     for(let i = 1; i < N; i++){ const a = step * i; add.push(...remapGroups(sel.map(e => { const w = copyOf(e); if(rotItems) rotateEnt(w, a, c.pt); else { const ce = entCenter(w), q = _rotPt(ce, c.pt, a * D2R); translateEnt(w, q.x - ce.x, q.y - ce.y); } return w; }))); }
+    if(A.arrCommit && A.arrCommit(sel, add, { k: 'P', N, F, rot: rotItems, c: { x: c.pt.x, y: c.pt.y } }, 'Đã tạo mảng tròn ' + N + ' phần tử')) return;
     A.commit({ add }, 'Đã tạo mảng tròn ' + N + ' phần tử');
   }
 

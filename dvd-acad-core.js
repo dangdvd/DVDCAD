@@ -468,6 +468,13 @@
     const tol = (touch ? 14 : 9) / view.scale;
     const lines = [];
     if(base && !(r && r.noOrtho)){
+      if(SET.ortho && SET.iso){   // vẽ trục đo (ISODRAFT): vuông góc theo trục 30° / 90° / 150°
+        const pl = SET.iso, angs = pl === 'top' ? [30, 150] : pl === 'left' ? [90, 150] : [90, 30];
+        const dx = w.x - base.x, dy = w.y - base.y; let best = null;
+        for(const a of angs){ const ux = Math.cos(a * Math.PI / 180), uy = Math.sin(a * Math.PI / 180); const t = dx * ux + dy * uy; if(!best || Math.abs(t) > Math.abs(best.t)) best = { t, ux, uy, a }; }
+        res.x = base.x + best.ux * best.t; res.y = base.y + best.uy * best.t; res.track = { base, ang: Math.atan2(best.uy * Math.sign(best.t || 1), best.ux * Math.sign(best.t || 1)), d: Math.abs(best.t), ortho: true };
+        return res;
+      }
       if(SET.ortho){
         const dx = w.x - base.x, dy = w.y - base.y;
         if(Math.abs(dx) >= Math.abs(dy)){ res.x = w.x; res.y = base.y; res.track = { base, ang: dx >= 0 ? 0 : Math.PI, d: Math.abs(dx), ortho: true }; }

@@ -121,6 +121,7 @@
     if(e.type === 'ELLIPSE'){ try{ return { P: smpEllipse(e), closed: false }; }catch(_){ return null; } }
     return null;
   }
+  A.pathPts = e => pathPts(e); A.pathAt = pp => pathAt(pp);
   function pathAt(pp){ const P = pp.closed ? pp.P.concat([pp.P[0]]) : pp.P; const cum = [0]; for(let i = 1; i < P.length; i++) cum.push(cum[i - 1] + dist(P[i - 1], P[i]));
     const total = cum[cum.length - 1]; return { total, at(d){ d = Math.max(0, Math.min(total, d)); let i = 1; while(i < P.length - 1 && cum[i] < d) i++; const a = P[i - 1], b = P[i], seg = (cum[i] - cum[i - 1]) || 1, t = (d - cum[i - 1]) / seg; return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, ang: Math.atan2(b.y - a.y, b.x - a.x) }; } }; }
   cmd(['ARRAYPATH', 'ARPATH'], 'Mảng theo đường dẫn (cột dọc trục cong, cây dọc đường…)', async () => {
@@ -136,7 +137,7 @@
     const al = await A.getKw('Xoay theo hướng đường dẫn?', { kw: [{ k: 'C', t: 'Có' }, { k: 'K', t: 'Không' }], def: 'Có' }); const align = al.kw !== 'K';
     const a0 = PA.at(0).ang, add = [];
     for(let i = 0; i < N; i++){ const q = PA.at(i * step); for(const e of sel){ const w = copy(e); delete w.grp; window.translateEnt(w, q.x - base.x, q.y - base.y); if(align && Math.abs(q.ang - a0) > 1e-12) window.rotateEnt(w, (q.ang - a0) * R2D, { x: q.x, y: q.y }); if(i === 0 && Math.abs(q.x - base.x) + Math.abs(q.y - base.y) < 1e-9 && !(align && Math.abs(q.ang - a0) > 1e-12)) continue; A.newProps(w); w.layer = e.layer; w.col = e.col; if(e.bl) w.bl = 1; add.push(w); } }
-    A.commit({ add }, 'Mảng theo đường: ' + N + ' bản'); log('ARRAYPATH: ' + N + ' vị trí, khoảng cách ' + fmtN(step) + ' dọc đường dài ' + fmtN(PA.total) + '.');
+    if(!(A.arrCommit && A.arrCommit(sel, add, { k: 'A', N, step, align, base: { x: base.x, y: base.y }, pp: { P: pp.P.map(q => ({ x: q.x, y: q.y })), closed: !!pp.closed } }, 'Mảng theo đường: ' + N + ' bản'))) A.commit({ add }, 'Mảng theo đường: ' + N + ' bản'); log('ARRAYPATH: ' + N + ' vị trí, khoảng cách ' + fmtN(step) + ' dọc đường dài ' + fmtN(PA.total) + '.');
   });
   function endInfo(e, pick){ const pp = pathPts(e); if(!pp || pp.closed) return null; const P = pp.P, a = P[0], b = P[P.length - 1]; const atStart = dist(pick, a) < dist(pick, b);
     if(atStart){ const n = P[1]; const L = dist(a, n) || 1; return { p: a, d: { x: (a.x - n.x) / L, y: (a.y - n.y) / L } }; } const n = P[P.length - 2]; const L = dist(b, n) || 1; return { p: b, d: { x: (b.x - n.x) / L, y: (b.y - n.y) / L } }; }
