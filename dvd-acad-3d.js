@@ -662,7 +662,7 @@
     const onKeyUp = e => { keys.delete(e.key.toLowerCase()); if(e.key === 'Shift') keys.delete('shift'); };
     window.addEventListener('keydown', onKey, true); window.addEventListener('keyup', onKeyUp, true);
     const ro = new ResizeObserver(() => { need = true; }); ro.observe(ov);
-    R3 = { ov, renderer, scene, ro, onKey, onKeyUp, raf: 0, rebuild, refreshHi, cmdClickAt(x, y, btn){ const ev = { clientX: x, clientY: y }; if(btn === 2){ A.input(''); return; } cmdClick(ev); }, toClient(x, y, z){ place(); const v = new T.Vector3(x, y, z || 0).project(cam()); const r = cv3.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, pointAtXY(x, y){ const q = pointAt({ clientX: x, clientY: y }); return q ? [q.p.x, q.p.y, q.p.z, q.snap] : null; }, stop(){ if(sunAnim) clearInterval(sunAnim); sunAnim = 0; clearTimeout(capT); }, setView, flatshot, camTo, setWalk, walkKey(k, on){ if(on) keys.add(k); else keys.delete(k); }, buildCaps(){ buildCaps(); return secRegions; }, setSun(o){ Object.assign(SUN, o); syncSunUI(); applySun(); }, sunVec, buildUCS(){ buildUCS(); need = true; }, get cutPlane(){ return cutPlane; }, get state(){ return S; }, get solids(){ return solids.length; }, render(){ need = true; place(); renderer.render(scene, cam()); }, canvas: cv3, setCut(on, f, mode, line){ V.cut = !!on; if(f != null) V.cutF = f; if(mode) V.cutMode = mode; if(line) V.cutLine = line; applyCut(); }, setStyle(st){ V.style = st; ov.querySelector('select[data-a="style"]').value = st; applyStyle(); } };
+    R3 = { ov, renderer, scene, ro, onKey, onKeyUp, raf: 0, rebuild, refreshHi, cmdClickAt(x, y, btn){ const ev = { clientX: x, clientY: y }; if(btn === 2){ A.input(''); return; } cmdClick(ev); }, toClient(x, y, z){ place(); const v = new T.Vector3(x, y, z || 0).project(cam()); const r = cv3.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, pointAtXY(x, y){ const q = pointAt({ clientX: x, clientY: y }); return q ? [q.p.x, q.p.y, q.p.z, q.snap] : null; }, stop(){ if(sunAnim) clearInterval(sunAnim); sunAnim = 0; clearTimeout(capT); }, setView, flatshot, camTo, setWalk, walkKey(k, on){ if(on) keys.add(k); else keys.delete(k); }, buildCaps(){ buildCaps(); return secRegions; }, setSun(o){ Object.assign(SUN, o); syncSunUI(); applySun(); }, sunVec, buildUCS(){ buildUCS(); need = true; }, get cutPlane(){ return cutPlane; }, get state(){ return S; }, get solids(){ return solids.length; }, get parts(){ let n = 0; for(const o of solids) n += o.parts.length; return n; }, get colors(){ return solids.map(o => o.col); }, get n2d(){ return l2 ? l2.geometry.attributes.position.count / 2 : 0; }, render(){ need = true; place(); renderer.render(scene, cam()); }, canvas: cv3, setCut(on, f, mode, line){ V.cut = !!on; if(f != null) V.cutF = f; if(mode) V.cutMode = mode; if(line) V.cutLine = line; applyCut(); }, setStyle(st){ V.style = st; ov.querySelector('select[data-a="style"]').value = st; applyStyle(); } };
     applyCut();
     if(opt.cam){ V.persp = true; pc.fov = 60; const pb = ov.querySelector('[data-a="persp"]'); if(pb) pb.textContent = 'Phối cảnh'; camTo(opt.cam.pos, opt.cam.target); }
     else if(MEM.cam3 && !opt.view){ S.az = MEM.cam3.az; S.el = MEM.cam3.el; } else setView(opt.view || MEM.v3 || 'se');
@@ -670,11 +670,20 @@
     if(!meshes.length) log('Bản vẽ chưa có khối 3D — dùng BOX, CYLINDER, EXTRUDE, PRESSPULL hoặc WALL3D để tạo. Đang hiện nét 2D ở cao độ 0.');
     else log('Xem 3D: ' + meshes.length + ' khối. Esc hoặc "✕ 2D" để về bản vẽ.');
     A.view3D = R3;
+    // theo dõi thay đổi làm đổi nội dung 3D mà không qua sửa hình: bật / tắt / đóng băng lớp (ribbon, bảng Lớp, LAYISO, LAYOFF…),
+    // HIDEOBJECTS / ISOLATEOBJECTS, đổi màu lớp, mở bản vẽ khác / đổi tab → dựng lại cảnh 3D
+    { const sig = () => { let h = ''; try{ h = [...hiddenUserLayers].sort().join('\u0001'); }catch(_){} let lay = ''; try{ lay = JSON.stringify(A.LS.hex) + JSON.stringify(A.LS.orig); }catch(_){}
+        return h + '#' + (OBJ_HIDE ? OBJ_HIDE.size : -1) + '#' + modelEntities.length + '#' + lay; };
+      R3._doc = modelEntities; R3._sig = sig();
+      R3._watch = setInterval(() => { if(!R3) return;
+        if(R3._doc !== modelEntities){ clearInterval(R3._watch); close3D(); setTimeout(() => { if(modelEntities && modelEntities.length) open3D(); }, 0); return; }   // bản vẽ khác: mở lại 3D, khung nhìn mới
+        const s = sig(); if(s !== R3._sig || OBJ_HIDE !== R3._objHide){ R3._sig = s; R3._objHide = OBJ_HIDE; try{ R3.rebuild(); }catch(err){ console.warn(err); } } }, 300);
+      R3._objHide = OBJ_HIDE; }
   }
   function close3D(){
     if(!R3) { V.open = false; return; }
     try{ MEM.cam3 = { az: R3.state.az, el: R3.state.el }; }catch(_){}
-    cancelAnimationFrame(R3.raf); window.removeEventListener('keydown', R3.onKey, true); window.removeEventListener('keyup', R3.onKeyUp, true); V.walk = false; try{ R3.stop(); }catch(_){} try{ R3.ro.disconnect(); }catch(_){}
+    clearInterval(R3._watch); cancelAnimationFrame(R3.raf); window.removeEventListener('keydown', R3.onKey, true); window.removeEventListener('keyup', R3.onKeyUp, true); V.walk = false; try{ R3.stop(); }catch(_){} try{ R3.ro.disconnect(); }catch(_){}
     R3.scene.traverse(o => { if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); } });
     try{ R3.renderer.dispose(); R3.renderer.forceContextLoss(); }catch(_){}
     R3.ov.remove(); document.documentElement.classList.remove('v3d'); R3 = null; A.view3D = null; V.open = false; try{ draw(); A.paint(); }catch(_){}

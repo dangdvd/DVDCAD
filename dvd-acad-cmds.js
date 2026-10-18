@@ -1510,7 +1510,7 @@
     if(!keep.has(A.LS.cur)) A.LS.cur = [...keep][0];
     A.setLayerFlag([...keep][0], 'off', false); log('Đã cô lập ' + keep.size + ' lớp');
   });
-  cmd(['LAYUNISO'], 'Bỏ cô lập lớp', async () => { if(!isoPrev){ log('Chưa cô lập lớp nào.'); return; } A.LS.off = new Set(isoPrev.off); A.LS.cur = isoPrev.cur; isoPrev = null; A.setLayerFlag('0', 'locked', A.LS.locked.has('0')); log('Đã khôi phục trạng thái lớp'); });
+  cmd(['LAYUNISO'], 'Bỏ cô lập lớp', async () => { if(!isoPrev){ log('Chưa cô lập lớp nào.'); return; } A.lsSync(); A.LS.off = new Set(isoPrev.off); A.LS.cur = isoPrev.cur; isoPrev = null; A.setLayerFlag('0', 'off', A.LS.off.has('0')); log('Đã khôi phục trạng thái lớp'); });
   const layPick = (flag, on, prompt) => async () => {
     for(;;){ const r = await A.getEnt(prompt, { allowLocked: true }); if(!r.ent) return; const n = r.ent.layer || '0';
       if(flag === 'frozen' && n === A.LS.cur){ log('Không đóng băng lớp hiện hành.'); continue; }

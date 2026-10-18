@@ -213,6 +213,20 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v5a) — xem 3D cập nhật theo lớp
+Khi đang xem 3D, khung nhìn tự vẽ lại sau khoảng 0,3 giây nếu có một trong các thay đổi sau:
+- Bật / tắt, đóng băng / rã băng lớp: ô Lớp trên ribbon, bảng Quản lý lớp, bảng Lớp trên điện thoại, `LAYOFF`, `LAYFRZ`, `LAYON`, `LAYTHW`, `LAYISO`, `LAYUNISO`, `LAYERP`, `LAYERSTATE`.
+- Đổi màu lớp. Khối đọc từ file DWG/DXF cũng đổi màu theo.
+- Ẩn / hiện đối tượng: `HIDEOBJECTS`, `ISOLATEOBJECTS`, `UNISOLATEOBJECTS`.
+- Mở bản vẽ khác khi 3D đang mở: khung 3D tự mở lại với bản vẽ mới.
+
+Sửa lỗi lớp (cả ở màn hình 2D):
+- `LAYISO` trước đây không tắt được lớp nào.
+- `LAYUNISO` không khôi phục được trạng thái lớp.
+- `LAYON` / `LAYTHW` sau khi cô lập bị bật ngược lại.
+
+Nguyên nhân: các lệnh này sửa thẳng danh sách lớp, rồi bị trạng thái cũ của bảng Lớp ghi đè.
+
 ## Bổ sung (v4z)
 **Công cụ chữ** (như Express Tools)
 - `TJUST`: đổi canh lề (L, C, R, TL…BR, MC) mà chữ không dời.
@@ -590,3 +604,4 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - REVCLOUD: chưa có tuỳ chọn Sửa kiểu AutoCAD (vẽ lại một đoạn mây). Dùng `REVCLOUDPROPERTIES` để đổi cung, hoặc vẽ mây mới. Sửa đỉnh mây bằng ô nắm thì mây không còn dựng lại được từ đường dẫn gốc.
 - File rất lớn trên iPhone / iPad chỉ hiện 400 nghìn đối tượng đầu (sau khi nổ khối) để tránh Safari bị tắt vì hết bộ nhớ. Muốn xem đủ, mở trên máy tính hoặc tách bản vẽ. File DWG lớn vẫn tốn bộ nhớ hơn DXF (bộ giải mã LibreDWG).
 - Vẽ lại đầy đủ bản vẽ hàng trăm nghìn nét vẫn mất khoảng 1–2 giây (máy thử không có GPU, máy thật thường nhanh hơn). Phóng / dời thì dùng ảnh tạm nên mượt.
+- Xem 3D theo dõi thay đổi lớp / ẩn hiện đối tượng mỗi 0,3 giây rồi dựng lại toàn cảnh. Với bản vẽ rất nhiều khối, sau mỗi lần bật / tắt lớp có thể phải chờ một chút mới thấy kết quả.

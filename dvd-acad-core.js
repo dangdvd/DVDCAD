@@ -249,12 +249,14 @@
   A.isLocked = isLockedE;
   A.layerHex = n => LS.hex[n] || LS.orig[n] || '#ffffff';
   A.layerNames = () => { const s = new Set(['0']); try{ for(const L of layerList) s.add(L.name); }catch(_){} for(const n of LS.extra) s.add(n); for(const n of Object.keys(LS.hex)) s.add(n); return [...s].sort((a, b) => a === '0' ? -1 : b === '0' ? 1 : a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })); };
+  let hidSig = null; const hidKey = () => [...hiddenUserLayers].sort().join('\u0001');
   function syncHidden(){   // đồng bộ với bảng Lớp gốc (điện thoại) nếu người dùng bật/tắt ở đó
+    if(hidSig !== null && hidKey() === hidSig) return;   // bảng Lớp không đổi từ lần áp gần nhất → LS là chuẩn (LAYISO / LAYON sửa thẳng LS.off)
     for(const n of [...LS.frozen]) if(!hiddenUserLayers.has(n)) LS.frozen.delete(n);
     for(const n of [...LS.off]) if(!hiddenUserLayers.has(n)) LS.off.delete(n);
     for(const n of hiddenUserLayers) if(!LS.frozen.has(n)) LS.off.add(n);
   }
-  function applyHidden(){ hiddenUserLayers.clear(); for(const n of LS.off) hiddenUserLayers.add(n); for(const n of LS.frozen) hiddenUserLayers.add(n); }
+  function applyHidden(){ hiddenUserLayers.clear(); for(const n of LS.off) hiddenUserLayers.add(n); for(const n of LS.frozen) hiddenUserLayers.add(n); hidSig = hidKey(); }
   A.lsSync = syncHidden;
   A.lsSave = function(){
     const k = lsKey(); if(!k) return; syncHidden();
@@ -264,7 +266,7 @@
     if(A.onLayers) A.onLayers();
   };
   A.lsLoad = function(){
-    LS.cur = '0'; LS.color = 'BYLAYER'; LS.off = new Set(); LS.frozen = new Set(); LS.locked = new Set(); LS.hex = {}; LS.orig = {}; LS.extra = new Set();
+    hidSig = null; LS.cur = '0'; LS.color = 'BYLAYER'; LS.off = new Set(); LS.frozen = new Set(); LS.locked = new Set(); LS.hex = {}; LS.orig = {}; LS.extra = new Set();
     LS.lt = 'BYLAYER'; LS.lw = 'BYLAYER'; LS.celts = 1; LS.ltscale = null; LS.layLT = {}; LS.layLW = {}; LS.ltd = {};
     try{ for(const L of layerList) LS.orig[L.name] = String(L.hex || '#ffffff').toLowerCase(); }catch(_){}
     // giá trị gốc từ file (để biết người dùng đã đổi gì)

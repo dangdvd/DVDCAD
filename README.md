@@ -4,6 +4,20 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5a: xem 3D cập nhật khi bật / tắt lớp
+- `dvd-acad-3d.js`: khi đang xem 3D, khung nhìn tự dựng lại nếu có một trong các thay đổi sau:
+  - lớp ẩn / hiện;
+  - màu lớp;
+  - đối tượng bị ẩn (HIDEOBJECTS / ISOLATEOBJECTS);
+  - số đối tượng.
+
+  Nếu mở bản vẽ khác, khung 3D mở lại với bản vẽ mới. Trước đây chỉ sửa hình mới dựng lại.
+- `dvd-acad-core.js`: chỉ đồng bộ trạng thái lớp từ bảng Lớp khi bảng đó thực sự đổi. Sửa được 3 lỗi:
+  - LAYISO không tắt lớp nào;
+  - LAYUNISO không khôi phục được;
+  - LAYON sau cô lập bị bật lại.
+- Kiểm thử: `v5a_test.py` dùng bản vẽ 3D của người dùng, gồm 15 bước kiểm tra; `d3.py` gồm 13 bước kiểm tra. Các bài cũ so nhãn phiên bản theo thứ tự (`>= v4x`) nên chạy được với v5.
+
 ## v4z: công cụ chữ, VIEWBASE, MSTRETCH…
 - `dvd-acad-x13.js`: TJUST, TORIENT, TSCALE, TEXTFIT, TCIRCLE, MULTIPLE, HISTORY/TEXTSCR, ATTIPEDIT, XLIST, CHURLS, DELAY, DIMEX/DIMIM, MSTRETCH, VIEWBASE (3 hình chiếu, góc chiếu 1 / 3), BATTORDER, TEXTSTYLE.
 - Kiểm thử: e2e_v4 sửa phép so sánh chữ (bảng Thuộc tính hiện tên loại bằng chữ HOA qua CSS); e2e_test cũ (giao diện trước v4) đã thay bằng e2e_v4.
