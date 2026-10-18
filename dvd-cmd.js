@@ -505,7 +505,7 @@
       else { if(el.value === '*') return; if(el.value === 'PICK'){ pickColor(c => run(w => setColor(w, c))); return; } run(w => setColor(w, el.value)); }
     }));
     palBody.querySelectorAll('[data-f="dimtext"]').forEach(el => { el.addEventListener('keydown', ev => { ev.stopPropagation(); if(ev.key === 'Enter'){ ev.preventDefault(); el.blur(); } }); el.addEventListener('change', () => { const t = s.find(e => e.type === 'TEXT' && e.dimv != null); if(!t || !A) return; const w = _deepEnt(t); delete w.userAdded; w.text = el.value; if(w.dimd){ w.dimd.ov = el.value.trim() ? el.value : null; if(!el.value.trim()) w.text = '?'; } A.commit({ rep: [[t, w]] }); selEnts.delete(t); if(modelEntities.indexOf(w) >= 0) selEnts.add(w); try{ refreshPanSel(); }catch(_){} palSig = ''; refreshPalette(true); }); });
-    const ex = palBody.querySelector('[data-a="explode"]'); if(ex) ex.onclick = () => { run(w => { delete w.grp; delete w.blk; delete w.dimv; delete w.dimd; delete w.bip; }); };
+    const ex = palBody.querySelector('[data-a="explode"]'); if(ex) ex.onclick = () => { run(w => { delete w.grp; delete w.blk; delete w.dimv; delete w.dimd; delete w.bip; delete w.bm; delete w.l0; delete w.tbld; }); };
   }
 
   /* ---------------- phím tắt toàn cục ---------------- */

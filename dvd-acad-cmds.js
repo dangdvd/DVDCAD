@@ -428,6 +428,7 @@
   function inBox(p, b){ return p.x >= b.minx && p.x <= b.maxx && p.y >= b.miny && p.y <= b.maxy; }
   function stretchEnt(w, box, dx, dy){
     const mv = p => { if(inBox(p, box)){ p.x += dx; p.y += dy; } };
+    if(w.tbld){ if(inBox(w.tbld.o, box)) translateEnt(w, dx, dy); return; }
     if(w.dimd){ const d = w.dimd; const Lin = d.L && inBox(d.L, box); for(const k of ['p1', 'p2', 'c', 'V']) if(d[k]) mv(d[k]); if(d.L && (Lin || inBox({ x: w.x, y: w.y }, box))){ d.L.x += dx; d.L.y += dy; } return; }
     if(w.bip){ if(inBox(w.bip, box)) translateEnt(w, dx, dy); return; }   // khối: chỉ dời khi điểm chèn nằm trong khung (như AutoCAD)
     switch(w.type){
@@ -447,7 +448,7 @@
     const r = await A.getSel('Chọn đối tượng cần kéo giãn bằng khung cắt (kéo phải → trái)', { wantWindow: true, pre: false });
     const box = r.window ? r.window.box : null; let sel = r.sel || []; if(!sel.length){ log('Không có đối tượng.'); return; }
     selHL(sel);
-    { const dimG = new Set(sel.filter(e => e.dimd).map(e => e.grp)); if(dimG.size) sel = sel.filter(e => !(e.grp && dimG.has(e.grp) && !e.dimd)); }   // kích thước: chỉ kéo điểm định nghĩa rồi dựng lại
+    { const dimG = new Set(sel.filter(e => e.dimd || e.tbld).map(e => e.grp)); if(dimG.size) sel = sel.filter(e => !(e.grp && dimG.has(e.grp) && !e.dimd && !e.tbld)); }   // kích thước: chỉ kéo điểm định nghĩa rồi dựng lại
     let b = await basePoint(); let base, to;
     if(b.none || b.kw === 'D'){ const d = await A.getPoint('Chỉ định độ dời dx,dy'); if(!d.pt) return; base = { x: 0, y: 0 }; to = d.pt; }
     else { base = b.pt; const r2 = await A.getPoint('Chỉ định điểm thứ hai', { base, preview: (g, p) => g.xform(sel, w => box ? stretchEnt(w, box, p.x - base.x, p.y - base.y) : translateEnt(w, p.x - base.x, p.y - base.y)) }); if(!r2.pt) return; to = r2.pt; }
@@ -701,7 +702,7 @@
     const s = await A.getSel('Chọn đối tượng cần phá'); const sel = s.sel || []; if(!sel.length) return;
     const rep = [], add = [], del = []; let n = 0;
     for(const e of sel){
-      if(e.grp){ const w = copyOf(e); delete w.grp; delete w.blk; delete w.dimv; delete w.dimd; delete w.bip; rep.push([e, w]); n++; continue; }
+      if(e.grp){ const w = copyOf(e); delete w.grp; delete w.blk; delete w.dimv; delete w.dimd; delete w.bip; delete w.bm; delete w.l0; delete w.tbld; rep.push([e, w]); n++; continue; }
       if(e.type === 'POLYLINE'){ const V = e.vertices || []; const segs = []; const m = e.closed ? V.length : V.length - 1; for(let i = 0; i < m; i++){ const a = V[i], b = V[(i + 1) % V.length]; if(dist(a, b) < 1e-12) continue; segs.push({ type: 'LINE', layer: e.layer, col: e.col, bl: e.bl, x1: a.x, y1: a.y, x2: b.x, y2: b.y }); } if(segs.length){ segs.forEach(x => { if(x.bl === undefined) delete x.bl; }); rep.push([e, segs[0]]); add.push(...segs.slice(1)); n++; } continue; }
       if(e.type === 'HATCH'){ const loops = (e.loops || []).filter(l => l.length >= 2).map(l => ({ type: 'POLYLINE', layer: e.layer, col: e.col, vertices: l.map(p => ({ x: p.x, y: p.y })), closed: true })); if(loops.length){ rep.push([e, loops[0]]); add.push(...loops.slice(1)); n++; } continue; }
     }
@@ -982,6 +983,8 @@
       return;
     }
   }
+  A.makeDimLinear = (p1, p2, L, phi, kind) => { const d = dimLinearEnts(p1, p2, L, phi); if(!d) return null; return finishDim(d.ents, d.meas, kind || 'nhanh', { k: 'lin', p1, p2, L, phi, ov: null }); };
+  A.dimTxt = () => dimTxt();
   cmd(['DIMLINEAR', 'DLI', 'DIMLIN'], 'Kích thước ngang/dọc (thật, trong bản vẽ)', () => dimLinearCmd(false));
   cmd(['DIMALIGNED', 'DAL', 'DIMALI'], 'Kích thước chéo theo 2 điểm', () => dimLinearCmd(true));
   async function dimChain(baseline){
@@ -1310,11 +1313,12 @@
   function instBlock(name, src, ins, sc, rotDeg){
     const B = blockPrims(name, src); if(!B) return [];
     const gid = A.newGroupId('B'); const lay = A.LS.cur || '0'; const l0 = A.layerHex('0');
+    const r = (rotDeg || 0) * D2R, co = Math.cos(r) * sc, si = Math.sin(r) * sc; const bm = { name, src, lay, a: co, b: si, c: -si, d: co, e: ins.x - (co * B.base.x - si * B.base.y), f: ins.y - (si * B.base.x + co * B.base.y) };
     const out = [];
-    for(const p of B.prims){ if(out.length > 50000) break; const w = deep(p); delete w.userAdded; delete w.grp; delete w.bip; delete w.dimd;
+    for(const p of B.prims){ if(out.length > 50000) break; const w = deep(p); delete w.userAdded; delete w.grp; delete w.bip; delete w.dimd; delete w.bm; delete w.l0; delete w.tbld;
       translateEnt(w, -B.base.x, -B.base.y); if(sc !== 1) scaleEnt(w, sc, { x: 0, y: 0 }); if(rotDeg) rotateEnt(w, rotDeg, { x: 0, y: 0 }); translateEnt(w, ins.x, ins.y);
-      if(!w.layer || w.layer === '0'){ w.layer = lay; if(!w.col || String(w.col).toLowerCase() === String(l0).toLowerCase() || w.bl){ w.col = A.layerHex(lay); w.bl = 1; } }
-      w.grp = gid; w.blk = name; w.bip = { x: ins.x, y: ins.y }; out.push(w); }
+      if(!w.layer || w.layer === '0'){ w.layer = lay; w.l0 = 1; if(!w.col || String(w.col).toLowerCase() === String(l0).toLowerCase() || w.bl){ w.col = A.layerHex(lay); w.bl = 1; } }
+      w.grp = gid; w.blk = name; w.bip = { x: ins.x, y: ins.y }; w.bm = bm; out.push(w); }
     return out;
   }
   A.instBlock = instBlock;
@@ -1378,7 +1382,7 @@
   });
   cmd(['UNGROUP', 'UG'], 'Bỏ nhóm', async () => {
     const s = await A.getSel('Chọn nhóm'); const sel = (s.sel || []).filter(e => e.grp); if(!sel.length){ log('Không có nhóm nào.'); return; }
-    A.commit({ rep: transformAll(sel, w => { delete w.grp; delete w.blk; delete w.dimd; delete w.bip; }) }, 'Đã bỏ nhóm');
+    A.commit({ rep: transformAll(sel, w => { delete w.grp; delete w.blk; delete w.dimd; delete w.bip; delete w.bm; delete w.l0; delete w.tbld; }) }, 'Đã bỏ nhóm');
   });
   const CLIP = 'dvd:clip';
   function putClip(sel, base){ try{ localStorage.setItem(CLIP, JSON.stringify({ base, ents: sel.map(e => serializeEnt(e)), t: Date.now(), src: currentName })); log('Đã sao chép ' + sel.length + ' đối tượng vào bộ nhớ tạm'); return true; }catch(_){ say('Bộ nhớ tạm đầy — chọn ít đối tượng hơn.'); return false; } }

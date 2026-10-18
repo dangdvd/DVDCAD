@@ -1,4 +1,4 @@
-# DVDCAD v4c — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4d — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -14,6 +14,16 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   - `@dài<góc` (hoặc `dài<góc`) là theo chiều dài và góc.
   - Chỉ gõ **một số** thì đi theo hướng con trỏ, đúng như cách nhập khoảng cách trực tiếp của AutoCAD. Dùng chung với ORTHO hoặc POLAR rất tiện.
 - Bắt điểm một lần: khi được hỏi điểm, gõ `END`, `MID`, `CEN`, `INT`, `PER`, `TAN`, `NEA`, `QUA`, `NOD`, `INS` hoặc `NON`.
+- `FROM`: chọn điểm gốc rồi gõ độ lệch (`@500,200`) để lấy điểm cách gốc một khoảng.
+- `M2P`: lấy trung điểm giữa 2 điểm bất kỳ.
+- Khi chọn đối tượng, ngoài ALL, P, L, R còn gõ được:
+  - `F`: hàng rào, chọn các đối tượng mà đường gấp khúc cắt qua.
+  - `WP`: đa giác trùm, chỉ chọn đối tượng nằm trọn trong đa giác.
+  - `CP`: đa giác cắt, chọn đối tượng nằm trong hoặc chạm đa giác.
+  - Bấm các đỉnh rồi Enter.
+
+## Nhiều bản vẽ cùng lúc
+Mỗi file mở ra là một **tab** (như AutoCAD). Bấm tab để chuyển. **Ctrl+Tab** chuyển tab kế tiếp. Ctrl+F4, chữ × hoặc bấm chuột giữa vào tab để đóng tab đó. Mọi thay đổi tự lưu theo từng file.
 
 ## Chuột
 - **Lăn chuột**: phóng to hoặc thu nhỏ tại con trỏ. **Giữ chuột giữa**: kéo màn hình. **Kích đúp chuột giữa**: phóng vừa bản vẽ.
@@ -59,6 +69,20 @@ Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thá
 **Ghi chú dẫn:** `MLEADER MLD` (mũi tên + đường dẫn + chữ) · `QLEADER LE` (đường dẫn nhiều đoạn)
 
 **Lớp:** `LAYER LA` (quản lý: tạo lớp, bật/tắt, đóng băng, khoá, màu lớp, **kiểu nét lớp, bề rộng lớp**, lớp hiện hành) · `LAYMCUR` · `LAYISO` / `LAYUNISO` · `LAYOFF` / `LAYON` · `LAYFRZ` / `LAYTHW` · `LAYLCK` / `LAYULK` · `PURGE`
+
+**Sửa khối:** `REFEDIT` / `BEDIT` (hoặc **kích đúp** vào khối)
+- Các đối tượng khác tạm ẩn, chỉ còn khối đang sửa.
+- Sửa, xoá hoặc vẽ thêm bằng mọi lệnh. Nét vẽ thêm sẽ thuộc khối.
+- Bấm **Lưu cho mọi khối** thì **mọi khối cùng tên** trong bản vẽ được cập nhật, kể cả khối xoay hoặc tỉ lệ khác. Bấm **Huỷ thay đổi** để bỏ.
+
+**Bảng:** `TABLE`
+- Nhập số hàng, số cột, hoặc **dán vùng ô copy từ Excel**.
+- Sửa bảng bằng **kích đúp** hoặc `TABLEDIT`. Trong hộp sửa có thể thêm/bớt hàng cột, đổi độ rộng cột, dán Excel vào một ô để trải ra nhiều ô.
+- Bảng di chuyển, xoay, tỉ lệ như một khối.
+
+**Kích thước nhanh:** `QDIM` — chọn hình rồi đặt vị trí, tự ghi chuỗi kích thước liên tục qua mọi điểm đầu mút. Gõ H/V để chọn ngang/dọc.
+
+**Kích đúp** vào kích thước để sửa chữ ghi đè.
 
 **Khối, nhóm, bộ nhớ tạm:** `INSERT I` · `BLOCK B` (lưu vào thư viện khối của bạn, chèn được vào bản vẽ khác) · `GROUP G` · `UNGROUP` · `COPYCLIP` · `CUTCLIP` · `COPYBASE` · `PASTECLIP` · `PASTEORIG` · `SELECTSIMILAR`
 

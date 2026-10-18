@@ -122,6 +122,11 @@
     BOUNDARY: '<path d="M4 4h16v16H4z" stroke-width="2.4"/><circle cx="12" cy="12" r="1.5"/>',
     DONUT: '<circle cx="12" cy="12" r="8" stroke-width="5"/>',
     MEASUREGEOM: '<rect x="4" y="5" width="16" height="14"/><path d="M4 12h16M12 5v14" stroke-dasharray="2 2"/>',
+    TABLE: '<rect x="3" y="4" width="18" height="16"/><path d="M3 9h18M3 14h18M9 9v11M15 9v11"/>',
+    TABLEDIT: '<rect x="3" y="4" width="18" height="16"/><path d="M3 9h18M9 9v11"/>',
+    QDIM: '<path d="M3 6v8M9 6v8M15 6v8M21 6v8M3 11h18"/><path d="M3 19h18" stroke-dasharray="2 2"/>',
+    REFEDIT: '<rect x="3" y="3" width="10" height="10"/><path d="M14 20l6-6 2 2-6 6h-2z"/>',
+    BEDIT: '<rect x="3" y="3" width="10" height="10"/><path d="M14 20l6-6 2 2-6 6h-2z"/>',
     PICKSTYLE: '<rect x="3" y="3" width="18" height="18" stroke-dasharray="3 2"/><path d="M8 8l7 9 1-4 4-1z"/>'
   };
   const ico = (k, cls) => '<svg class="' + (cls || 'ic') + '" viewBox="0 0 24 24">' + (I[k] || I.TOOLS) + '</svg>';
@@ -309,21 +314,22 @@
         col(sm('RECTANG', 'Chữ nhật'), sm('POLYGON', 'Đa giác'), sm('ELLIPSE', 'Elip')), col(sm('HATCH', 'Hatch'), sm('SPLINE', 'Spline'), sm('XLINE', 'Đường dựng')), col(sm('POINT', 'Điểm'), sm('REVCLOUD', 'Mây'), sm('DIVIDE', 'Chia đều'))] },
       { pri: 0, title: 'Sửa', items: [col(sm('MOVE', 'Move'), sm('ROTATE', 'Rotate'), sm('TRIM', 'Trim')), col(sm('COPY', 'Copy'), sm('MIRROR', 'Mirror'), sm('FILLET', 'Fillet')), col(sm('STRETCH', 'Stretch'), sm('SCALE', 'Scale'), sm('ARRAY', 'Array')),
         col(sm('ERASE', 'Erase'), sm('EXPLODE', 'Explode'), sm('OFFSET', 'Offset')), col(sm('EXTEND', 'Extend'), sm('BREAK', 'Break'), sm('MODMORE', 'Thêm ▾', { icon: 'TOOLS', menu: [['CHAMFER', 'Chamfer — vát góc'], ['JOIN', 'Join — nối'], ['LENGTHEN', 'Lengthen — đổi dài'], ['BREAKATPOINT', 'Break at point — tách tại điểm'], ['MATCHPROP', 'Match Properties — sao thuộc tính'], ['ALIGN', 'Align — căn chỉnh theo 2 điểm'], ['OVERKILL', 'Overkill — xoá nét trùng'], ['BOUNDARY', 'Boundary — tạo đường biên kín'], ['DONUT', 'Donut — vành khuyên'], ['DIVIDE', 'Divide — chia đều'], ['MEASURE', 'Measure — đặt điểm theo khoảng'], ['DDEDIT', 'Sửa chữ']] }))] },
-      { pri: 7, title: 'Chú thích', items: [big('TEXT', 'Text\nChữ', { menu: [['TEXT', 'Chữ 1 dòng'], ['MTEXT', 'Chữ nhiều dòng']] }), big('DIMLINEAR', 'Dimension\nKích thước', { menu: [['DIMLINEAR', 'Ngang / dọc'], ['DIMALIGNED', 'Chéo'], ['DIMANGULAR', 'Góc'], ['DIMRADIUS', 'Bán kính'], ['DIMDIAMETER', 'Đường kính'], ['DIMCONTINUE', 'Nối tiếp'], ['DIMBASELINE', 'Cùng gốc']] }), col(sm('MLEADER', 'Leader'), sm('DIMCONTINUE', 'Nối tiếp'), sm('DIMSTYLE', 'Kiểu Dim'))] },
+      { pri: 7, title: 'Chú thích', items: [big('TEXT', 'Text\nChữ', { menu: [['TEXT', 'Chữ 1 dòng'], ['MTEXT', 'Chữ nhiều dòng']] }), big('DIMLINEAR', 'Dimension\nKích thước', { menu: [['DIMLINEAR', 'Ngang / dọc'], ['DIMALIGNED', 'Chéo'], ['DIMANGULAR', 'Góc'], ['DIMRADIUS', 'Bán kính'], ['DIMDIAMETER', 'Đường kính'], ['DIMCONTINUE', 'Nối tiếp'], ['DIMBASELINE', 'Cùng gốc'], ['QDIM', 'Kích thước nhanh (QDIM)']] }), col(sm('MLEADER', 'Leader'), sm('DIMCONTINUE', 'Nối tiếp'), sm('DIMSTYLE', 'Kiểu Dim'))] },
       { pri: 6, title: 'Lớp', items: [big('LAYER', 'Layer\nProperties'), { t: 'ctl', kind: 'layer' }] },
-      { pri: 8, title: 'Khối', items: [big('INSERT', 'Insert\nChèn'), col(sm('BLOCK', 'Tạo khối'), sm('GROUP', 'Nhóm'), sm('UNGROUP', 'Bỏ nhóm'))] },
+      { pri: 8, title: 'Khối', items: [big('INSERT', 'Insert\nChèn'), col(sm('BLOCK', 'Tạo khối'), sm('REFEDIT', 'Sửa khối'), sm('GROUP', 'Nhóm'))] },
       { pri: 4, title: 'Thuộc tính', items: [big('MATCHPROP', 'Match\nProperties'), { t: 'ctl', kind: 'props3' }] },
       { pri: 9, title: 'Tiện ích', items: [big('MEASUREGEOM', 'Measure\nĐo', { menu: [['MEASUREGEOM', 'Đo nhanh (rê chuột)'], ['DIST', 'Khoảng cách'], ['AREA', 'Diện tích'], ['ID', 'Toạ độ điểm'], ['LIST', 'Liệt kê đối tượng'], ['DO', 'Đo nhanh (đánh dấu)']] }), col(sm('QSELECT', 'Quick Select'), sm('SELECTSIMILAR', 'Chọn tương tự', { icon: 'QSELECT' }), sm('ID', 'Toạ độ điểm'))] },
       { pri: 10, title: 'Clipboard', items: [big('PASTECLIP', 'Paste\nDán'), col(sm('COPYCLIP', 'Copy'), sm('CUTCLIP', 'Cut'), sm('COPYBASE', 'Copy gốc'))] }
     ] },
     insert: { name: 'Chèn', panels: [
-      { title: 'Khối', items: [big('INSERT', 'Insert\nChèn khối'), big('BLOCK', 'Create\nTạo khối'), col(sm('BLOCKLIB', 'Thư viện khối', { icon: 'LIST' }), sm('GROUP', 'Nhóm'), sm('UNGROUP', 'Bỏ nhóm'))] },
+      { title: 'Khối', items: [big('INSERT', 'Insert\nChèn khối'), big('BLOCK', 'Create\nTạo khối'), big('REFEDIT', 'Edit\nSửa khối'), col(sm('BLOCKLIB', 'Thư viện khối', { icon: 'LIST' }), sm('GROUP', 'Nhóm'), sm('UNGROUP', 'Bỏ nhóm'))] },
       { title: 'Tham chiếu', items: [big('COMPARE', 'Compare\nSo sánh'), big('OPEN', 'Open\nMở')] },
       { title: 'Dán', items: [big('PASTECLIP', 'Paste\nDán'), col(sm('PASTEORIG', 'Dán đúng toạ độ', { icon: 'PASTECLIP' }), sm('COPYBASE', 'Copy kèm gốc'))] }
     ] },
     annotate: { name: 'Chú thích', panels: [
       { title: 'Chữ', items: [big('MTEXT', 'Multiline\nText'), col(sm('TEXT', 'Chữ 1 dòng'), sm('DDEDIT', 'Sửa chữ', { icon: 'TEXT' }), sm('FIND', 'Tìm chữ')), col(sm('STYLE', 'Kiểu chữ', { icon: 'TEXT' }))] },
-      { title: 'Kích thước', items: [big('DIMLINEAR', 'Linear\nNgang/dọc'), col(sm('DIMALIGNED', 'Chéo'), sm('DIMANGULAR', 'Góc'), sm('DIMRADIUS', 'Bán kính')), col(sm('DIMDIAMETER', 'Đường kính'), sm('DIMCONTINUE', 'Nối tiếp'), sm('DIMBASELINE', 'Cùng gốc')), big('DIMSTYLE', 'Dim\nStyle')] },
+      { title: 'Bảng', items: [big('TABLE', 'Table\nBảng')] },
+      { title: 'Kích thước', items: [big('DIMLINEAR', 'Linear\nNgang/dọc'), big('QDIM', 'Quick\nDim nhanh'), col(sm('DIMALIGNED', 'Chéo'), sm('DIMANGULAR', 'Góc'), sm('DIMRADIUS', 'Bán kính')), col(sm('DIMDIAMETER', 'Đường kính'), sm('DIMCONTINUE', 'Nối tiếp'), sm('DIMBASELINE', 'Cùng gốc')), big('DIMSTYLE', 'Dim\nStyle')] },
       { title: 'Ghi chú dẫn', items: [big('MLEADER', 'Multileader\nGhi chú dẫn'), col(sm('QLEADER', 'Dẫn nhiều đoạn'))] },
       { title: 'Hatch', items: [big('HATCH', 'Hatch\nTô vật liệu'), col(sm('HATCHSET', 'Mẫu & tỉ lệ', { icon: 'SETTINGS' }))] },
       { title: 'Đánh dấu (không sửa file)', items: [big('DO', 'Quick\nĐo nhanh', { icon: 'MEASURE' }), big('NOTE', 'Markup\nGhi chú', { icon: 'NOTE' }), big('REVCLOUD', 'Revcloud\nMây')] }
