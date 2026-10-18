@@ -213,6 +213,37 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v4w)
+**Kích thước**
+- `DIM` — kích thước thông minh như AutoCAD 2016+: bấm vào đường → kích thước thẳng / chéo; đường tròn → đường kính; cung → bán kính; bấm tiếp đường thứ hai (hoặc từ khoá Góc) → kích thước góc; bấm chỗ trống hoặc bắt điểm → kích thước theo 2 điểm (tự ngang / dọc theo vị trí đặt). Lặp lại tới khi Enter / Esc.
+- `DIMANGULAR`: chọn đường nào trước cũng được.
+
+**Tường MLINE**
+- `MLEDIT` — sửa chỗ giao của đường đôi: **Chữ thập kín / hở / liền**, **Chữ T kín / hở** (thân chữ T tự kéo dài / tỉa tới mép tường ngang, mép tường ngang được mở đúng bề rộng), **Góc** (2 tường gặp nhau, mép ngoài nối mép ngoài, mép trong nối mép trong). Nắp đầu tường ở chỗ nối được bỏ.
+- **MLINE trong file AutoCAD** (DXF / DWG) nay hiện đúng thành đường đôi (trước đây bị bỏ qua) và dùng được MLEDIT.
+
+**Thuộc tính khối**
+- `ATTSYNC` — đồng bộ mọi bản chèn của khối theo định nghĩa: thêm thuộc tính mới (giá trị mặc định), bỏ thuộc tính thừa, giữ giá trị đã nhập; vị trí / cỡ theo tỉ lệ từng bản chèn.
+- `BATTMAN` — bảng quản lý thuộc tính khối: sửa lời nhắc, giá trị mặc định, đổi thứ tự, xoá thuộc tính → áp dụng cho mọi bản chèn (và định nghĩa trong thư viện của tôi).
+- Mở DXF: giữ định nghĩa thuộc tính (ATTDEF) của khối → `INSERT` khối của file có hỏi giá trị thuộc tính như AutoCAD.
+
+**Ghi chú dẫn**
+- `MLEADEREDIT` — thêm / bỏ mũi tên của ghi chú dẫn (một nội dung chỉ vào nhiều chỗ).
+- `MLEADERALIGN` — căn các ghi chú thẳng hàng theo ghi chú mẫu (mặc định dọc, hoặc theo hướng chỉ định).
+- `MLEADERCOLLECT` — gom nhiều ghi chú thành một (nối các dòng chữ, giữ đủ mũi tên).
+
+**Đa tuyến có độ rộng**
+- `PLINE` thêm **W** (độ rộng đầu / cuối) và **H** (nửa độ rộng) — vẽ nét đậm, mũi tên vát như AutoCAD.
+- `PEDIT` → **W**: đổi độ rộng cả đa tuyến (0 = nét mảnh). `TRACE` vẽ nét rộng.
+- Lưu DXF giữ độ rộng (mã 40 / 41); đa tuyến rộng di chuyển / xoay / tỉ lệ / đối xứng đúng phần tô.
+
+**3D và tiện ích**
+- `3DSCALE` — tỉ lệ khối 3D cả chiều cao quanh điểm gốc (X, Y, Z).
+- `FILTER` — lọc chọn nhiều điều kiện cùng lúc: loại, lớp (dùng * ?), màu (ACI / #rrggbb / bylayer), kiểu nét, tên khối, chữ chứa, chiều dài, bán kính, cao chữ; đảo ngược; lưu bộ lọc để dùng lại.
+- `PASTEBLOCK` — dán bộ nhớ tạm thành một khối (tên A$C…).
+- `LIMITS` — giới hạn bản vẽ; **BẬT** thì không cho bấm điểm ngoài giới hạn; ghi vào $LIMMIN / $LIMMAX khi lưu DXF.
+- `POLAR` — bật / tắt bắt góc cực, đặt góc bước. `VISUALSTYLES` — chọn kiểu hiển thị 3D. `DWGCOMPARE` — so sánh 2 bản vẽ.
+
 ## Bổ sung (v4v) — xem 3D file DWG 2007 trở lên
 - Khối 3D (3DSOLID) trong file **DWG 2007 trở lên** nay đọc được (trước đây bị bỏ qua nên bấm 3D chỉ thấy nét 2D). Ví dụ một bản vẽ tầng có 196 khối tường, sàn, cột, cầu thang: hiện đủ trong chế độ 3D.
 - Khối trên lớp đóng băng / tắt vẫn ẩn như AutoCAD (bật lớp trong bảng Lớp để thấy).
@@ -476,3 +507,5 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Layout chỉ chứa khung tên và khung nhìn. Muốn ghi chú thêm thì vẽ ở Model.
 - Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
 - Kiểu nét phức: chữ và hình trong nét hiện đúng (hình của ltypeshp.shx vẽ gần đúng: tròn, vuông, gạch, zigzag, batting; hình SHX khác hiện dạng vòng tròn nhỏ).. Lưu DXF R2000 ghi đủ chữ trong nét; hình trong nét ghi đúng số hình chuẩn của ltypeshp.shx (130 TRACK1, 131 ZIG, 132 BOX, 133 CIRC1, 134 BAT, 135 AMZIGZAG) và vẽ đúng hình theo định nghĩa SHP.
+- MLEDIT dùng cho đường đôi vẽ bằng `MLINE` của DVDCAD và MLINE trong file AutoCAD (DXF đã thử; DWG đọc theo dữ liệu LibreDWG). Đường đôi khép kín chưa sửa được. Chưa có kiểu nối Chữ T liền, Cắt bỏ / Nối lại đoạn, thêm / bớt đỉnh. Nắp đầu theo kiểu MLINESTYLE của file AutoCAD chưa vẽ.
+- Đa tuyến có độ rộng: đoạn cong có độ rộng được ghi DXF thành nhiều đoạn thẳng nhỏ (vẫn đúng hình). Sửa đỉnh / bo góc đa tuyến rộng sẽ đưa về nét mảnh.

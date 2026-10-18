@@ -93,7 +93,7 @@
     if(yr >= 2013){ P(9, '$REQUIREDVERSIONS'); P(160, 0); } P(9, '$LASTSAVEDBY'); P(1, 'DVDCAD');
     P(9, '$INSBASE'); P(10, (A.drawBase && A.drawBase.x) || 0); P(20, (A.drawBase && A.drawBase.y) || 0); P(30, 0);
     P(9, '$EXTMIN'); P(10, ext.x0); P(20, ext.y0); P(30, 0); P(9, '$EXTMAX'); P(10, ext.x1); P(20, ext.y1); P(30, 0);
-    P(9, '$LIMMIN'); P(10, 0); P(20, 0); P(9, '$LIMMAX'); P(10, 420); P(20, 297);
+    const LIM = A.limits || { x0: 0, y0: 0, x1: 420, y1: 297 }; P(9, '$LIMMIN'); P(10, LIM.x0); P(20, LIM.y0); P(9, '$LIMMAX'); P(10, LIM.x1); P(20, LIM.y1); if(A.limits && A.limits.on){ P(9, '$LIMCHECK'); P(70, 1); }
     P(9, '$LTSCALE'); P(40, LTSCALE || 1); P(9, '$CELTSCALE'); P(40, A.LS.celts || 1); P(9, '$CLAYER'); P(8, dxfStr(A.LS.cur || '0'));
     P(9, '$CELWEIGHT'); P(370, -1); P(9, '$LWDISPLAY'); P(290, 1); P(9, '$MEASUREMENT'); P(70, (typeof unitToMM === 'function' && (unitToMM() === 25.4 || unitToMM() === 304.8)) ? 0 : 1);
     if(typeof insunits !== 'undefined' && insunits){ P(9, '$INSUNITS'); P(70, insunits); }
@@ -158,6 +158,12 @@
       const head = (t, sub, hh) => { wrote = true; const h = hh || H(); P(0, t); P(5, h); P(330, owner); P(100, 'AcDbEntity'); P(8, ly); if(elt && t !== 'HATCH' && t !== 'TEXT' && t !== 'MTEXT') P(6, elt); if(aci !== 256) P(62, aci); if(tc != null) P(420, tc); if(lw != null) P(370, lw); if(e.lts && Math.abs(e.lts - 1) > 1e-9 && t !== 'TEXT' && t !== 'MTEXT') P(48, e.lts); if(sub) P(100, sub); return h; };
       const xd = () => { if(o.inBlock || o.dimBlock) return; const pr = {}; for(const k of XKEYS) if(e[k] != null && e[k] !== '' && !(k === 'mt' && e.type !== 'TEXT')) pr[k] = e[k]; const js = Object.keys(pr).length ? JSON.stringify(pr) : null;
         if(!e.rgn && !js) return; P(1001, 'DVDCAD'); if(e.rgn) P(1000, 'RGN' + (e.grp && e.blk === '*REGION' ? ':' + e.grp : '')); if(js){ for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); } };
+      // đa tuyến có độ rộng: độ rộng đầu / cuối từng đỉnh (40 / 41) lấy lại từ các tứ giác tô
+      const widthPoly = e2 => { const V = e2.vertices, q = e2.wq, key = p => Math.round(p.x * 1e5) + ',' + Math.round(p.y * 1e5); const m = new Map();
+        for(const Q of q){ if(Q.length < 4) continue; const a = { x: (Q[0].x + Q[3].x) / 2, y: (Q[0].y + Q[3].y) / 2 }, b = { x: (Q[1].x + Q[2].x) / 2, y: (Q[1].y + Q[2].y) / 2 }; m.set(key(a) + '|' + key(b), [Math.hypot(Q[0].x - Q[3].x, Q[0].y - Q[3].y), Math.hypot(Q[1].x - Q[2].x, Q[1].y - Q[2].y)]); }
+        let cl = !!e2.closed, n = V.length; if(!cl && n > 2 && Math.hypot(V[0].x - V[n - 1].x, V[0].y - V[n - 1].y) < 1e-9){ cl = true; n--; }
+        head('LWPOLYLINE', 'AcDbPolyline'); P(90, n); P(70, cl ? 1 : 0);
+        for(let i = 0; i < n; i++){ const a = V[i], b = V[(i + 1) % V.length]; const w = (i < n - 1 || cl) ? m.get(key(a) + '|' + key(b)) : null; P(10, a.x); P(20, a.y); if(w){ P(40, w[0]); P(41, w[1]); } } };
       const lwpoly = (verts, closed) => { if(verts.length < 2) return; head('LWPOLYLINE', 'AcDbPolyline'); P(90, verts.length); P(70, closed ? 1 : 0); P(43, 0); for(const v of verts){ P(10, v.x); P(20, v.y); if(v.bulge) P(42, v.bulge); } };
       const just = t => ({ hj: t.ha === 'center' ? 1 : (t.ha === 'right' || t.ha === 'end') ? 2 : 0, vj: t.va === 'bottom' ? 1 : t.va === 'middle' ? 2 : t.va === 'top' ? 3 : 0 });
       const textBody = (t, val) => { const { hj, vj } = just(t); P(10, t.x); P(20, t.y); P(30, 0); P(40, t.h || 2.5); P(1, dxfStr(val)); if(t.rot) P(50, t.rot); if(t.xs && Math.abs(Math.abs(t.xs) - 1) > 1e-3) P(41, Math.abs(t.xs)); if(t.style && stUsed.has(t.style)) P(7, dxfStr(t.style)); if(t.xs < 0) P(71, 2); if(hj) P(72, hj); if(hj || vj){ P(11, t.x); P(21, t.y); P(31, 0); } return { hj, vj }; };
@@ -167,7 +173,7 @@
         case 'CIRCLE': head('CIRCLE', 'AcDbCircle'); P(10, e.cx); P(20, e.cy); P(30, 0); P(40, e.r); break;
         case 'ARC': head('ARC', 'AcDbCircle'); P(10, e.cx); P(20, e.cy); P(30, 0); P(40, e.r); P(100, 'AcDbArc'); P(50, e.a1); P(51, e.a2); break;
         case 'POINT': head('POINT', 'AcDbPoint'); P(10, e.x); P(20, e.y); P(30, 0); break;
-        case 'POLYLINE': { if(e.wipe && !o.inBlock && (e.vertices || []).length >= 3){ wipeout(e, head); break; } const bv = A.bvOf ? A.bvOf(e) : null; lwpoly(bv && bv.length >= 2 ? bv : (e.vertices || []), !!e.closed); break; }
+        case 'POLYLINE': { if(e.wq && e.wq.length && (e.vertices || []).length >= 2){ widthPoly(e); break; } if(e.wipe && !o.inBlock && (e.vertices || []).length >= 3){ wipeout(e, head); break; } const bv = A.bvOf ? A.bvOf(e) : null; lwpoly(bv && bv.length >= 2 ? bv : (e.vertices || []), !!e.closed); break; }
         case 'IMAGE': try{ lwpoly(imgCorners(e), true); }catch(_){} break;
         case 'TEXT': {
           if(!e.text) break; const txt = String(e.text);
@@ -248,7 +254,7 @@
       if(D.k === 'lin'){ const ph = (D.phi || 0) * D2R, ux = Math.cos(ph), uy = Math.sin(ph), nx = -uy, ny = ux; const d2 = (D.L.x - D.p2.x) * nx + (D.L.y - D.p2.y) * ny;
         common({ x: D.p2.x + nx * d2, y: D.p2.y + ny * d2 }, 0); P(100, 'AcDbAlignedDimension'); P(13, D.p1.x); P(23, D.p1.y); P(33, 0); P(14, D.p2.x); P(24, D.p2.y); P(34, 0); P(50, D.phi || 0); P(100, 'AcDbRotatedDimension'); }
       else if(D.k === 'ang'){ const R = Math.max(Math.hypot(D.L.x - D.V.x, D.L.y - D.V.y), 1e-9); const aL = Math.atan2(D.L.y - D.V.y, D.L.x - D.V.x); let r1 = D.d1, sw = 0;
-        for(const a1 of [D.d1, D.d1 + Math.PI]) for(const a2 of [D.d2, D.d2 + Math.PI]){ const w = G.norm(a2 - a1); if(w < 1e-9 || w > Math.PI) continue; if(G.norm(aL - a1) <= w && !sw){ r1 = a1; sw = w; } }
+        for(const [u1, u2] of [[D.d1, D.d2], [D.d2, D.d1]]) for(const a1 of [u1, u1 + Math.PI]) for(const a2 of [u2, u2 + Math.PI]){ const w = G.norm(a2 - a1); if(w < 1e-9 || w > Math.PI) continue; if(G.norm(aL - a1) <= w && !sw){ r1 = a1; sw = w; } }
         common(D.L, 5); P(100, 'AcDb3PointAngularDimension'); P(13, D.V.x + Math.cos(r1) * R); P(23, D.V.y + Math.sin(r1) * R); P(33, 0); P(14, D.V.x + Math.cos(r1 + sw) * R); P(24, D.V.y + Math.sin(r1 + sw) * R); P(34, 0); P(15, D.V.x); P(25, D.V.y); P(35, 0); }
       else { const ux0 = D.L.x - D.c.x, uy0 = D.L.y - D.c.y, L0 = Math.hypot(ux0, uy0) || 1, ux = ux0 / L0, uy = uy0 / L0; const q = { x: D.c.x + ux * D.r, y: D.c.y + uy * D.r };
         if(D.k === 'rad'){ common(D.c, 4); P(100, 'AcDbRadialDimension'); P(15, q.x); P(25, q.y); P(35, 0); P(40, Math.abs(L0 - D.r)); }

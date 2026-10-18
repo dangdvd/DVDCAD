@@ -33,7 +33,8 @@
   function mlineEnts(P, closed, S, just){
     const offs = MLS.offs.map(v => v * S), mx = Math.max(...offs), mn = Math.min(...offs);
     const sh = just === 'T' ? -mx : just === 'B' ? -mn : 0; const lines = offs.map(o => offsetOpen(P, o + sh, closed));
-    const out = lines.map(v => ({ type: 'POLYLINE', closed, vertices: v }));
+    const rk = offs.map((o, i) => i).sort((i, j) => offs[i] - offs[j]); const mlk = []; rk.forEach((i, r) => { mlk[i] = r; });   // mlk: thứ tự đường từ phải sang trái (cho MLEDIT)
+    const out = lines.map((v, i) => ({ type: 'POLYLINE', closed, vertices: v, mlk: mlk[i] }));
     if(!closed && MLS.caps && lines.length > 1){ const iT = offs.indexOf(mx), iB = offs.indexOf(mn); for(const k of [0, P.length - 1]) out.push({ type: 'LINE', x1: lines[iT][k].x, y1: lines[iT][k].y, x2: lines[iB][k].x, y2: lines[iB][k].y }); }
     return out;
   }

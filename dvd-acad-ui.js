@@ -476,11 +476,11 @@
   const M_ARR = [['ARRAYRECT', 'Rectangular Array', 'Mảng chữ nhật'], ['ARRAYPATH', 'Path Array', 'Mảng theo đường'], ['ARRAYPOLAR', 'Polar Array', 'Mảng tròn']];
   const M_DO = [['DRAWORDER|F', 'Bring to Front', 'Đưa lên trên cùng'], ['DRAWORDER|B', 'Send to Back', 'Đưa xuống dưới cùng'], ['DRAWORDER|A', 'Bring Above Objects', 'Đưa lên trên đối tượng'], ['DRAWORDER|U', 'Send Under Objects', 'Đưa xuống dưới đối tượng'], ['TEXTTOFRONT', 'Bring Text and Dimensions to Front', 'Đưa chữ, kích thước lên trên'], ['HATCHTOBACK', 'Send Hatches to Back', 'Đưa hatch xuống dưới']];
   const M_TEXT = [['MTEXT', 'Multiline Text', 'Chữ nhiều dòng'], ['TEXT', 'Single Line', 'Chữ một dòng']];
-  const M_DIM = [['DIMLINEAR', 'Linear', 'Ngang / dọc'], ['DIMALIGNED', 'Aligned', 'Chéo'], ['DIMANGULAR', 'Angular', 'Góc'], ['DIMARC', 'Arc Length', 'Dài cung'], ['DIMRADIUS', 'Radius', 'Bán kính'], ['DIMDIAMETER', 'Diameter', 'Đường kính'], ['DIMORDINATE', 'Ordinate', 'Toạ độ']];
-  const M_LEAD = [['MLEADER', 'Multileader', 'Ghi chú dẫn'], ['QLEADER', 'Leader', 'Dẫn nhiều đoạn']];
+  const M_DIM = [['DIM', 'Dimension', 'Kích thước thông minh'], ['DIMLINEAR', 'Linear', 'Ngang / dọc'], ['DIMALIGNED', 'Aligned', 'Chéo'], ['DIMANGULAR', 'Angular', 'Góc'], ['DIMARC', 'Arc Length', 'Dài cung'], ['DIMRADIUS', 'Radius', 'Bán kính'], ['DIMDIAMETER', 'Diameter', 'Đường kính'], ['DIMORDINATE', 'Ordinate', 'Toạ độ']];
+  const M_LEAD = [['MLEADER', 'Multileader', 'Ghi chú dẫn'], ['QLEADER', 'Leader', 'Dẫn nhiều đoạn'], ['MLEADEREDIT', 'Add / Remove Leader', 'Thêm / bỏ mũi tên'], ['MLEADERALIGN', 'Align', 'Căn thẳng hàng'], ['MLEADERCOLLECT', 'Collect', 'Gom ghi chú']];
   const M_CONT = [['DIMCONTINUE', 'Continue', 'Nối tiếp'], ['DIMBASELINE', 'Baseline', 'Cùng gốc']];
   const M_MEA = [['MEASUREGEOM', 'Quick', 'Đo nhanh'], ['DIST', 'Distance', 'Khoảng cách'], ['AREA', 'Area', 'Diện tích'], ['ID', 'ID Point', 'Toạ độ điểm'], ['LIST', 'List', 'Liệt kê']];
-  const M_PASTE = [['PASTECLIP', 'Paste', 'Dán'], ['PASTEORIG', 'Paste to Original Coordinates', 'Dán đúng toạ độ']];
+  const M_PASTE = [['PASTECLIP', 'Paste', 'Dán'], ['PASTEORIG', 'Paste to Original Coordinates', 'Dán đúng toạ độ'], ['PASTEBLOCK', 'Paste as Block', 'Dán thành khối']];
   const M_ZOOM = [['ZE', 'Extents', 'Vừa bản vẽ'], ['ZW', 'Window', 'Theo khung'], ['ZP', 'Previous', 'Khung trước'], ['ZIN', 'In', 'Phóng to'], ['ZOUT', 'Out', 'Thu nhỏ']];
   const M_PRIM = [['BOX', 'Box', 'Hộp'], ['CYLINDER', 'Cylinder', 'Trụ'], ['CONE', 'Cone', 'Nón'], ['SPHERE', 'Sphere', 'Cầu'], ['PYRAMID', 'Pyramid', 'Chóp'], ['WEDGE', 'Wedge', 'Nêm'], ['TORUS', 'Torus', 'Xuyến']];
   const M_EXT = [['EXTRUDE', 'Extrude', 'Đùn'], ['REVOLVE', 'Revolve', 'Xoay tròn'], ['SWEEP', 'Sweep', 'Quét'], ['LOFT', 'Loft', 'Chuyển tiếp']];

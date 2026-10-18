@@ -395,8 +395,23 @@
     CLEANSCREENON: '<rect class="fd" x="2" y="3" width="20" height="18" rx="1"/><path d="M6 9V7h2M18 9V7h-2M6 15v2h2M18 15v2h-2" class="a" stroke-width="1.8"/>',
     BASE: '<rect x="3" y="3" width="14" height="14" stroke-dasharray="2 1.5"/><path class="y" d="M3 21v-6M0 18h6" stroke-width="1.8"/>' + O(3, 18, 'pa'),
     SELECT: '<rect class="a" x="3" y="3" width="14" height="14" stroke-dasharray="3 2"/><path class="fd" d="M11 9l9 4-4 1.5 3 4.5-2 1-3-4.5-3 3z"/><path d="M11 9l9 4-4 1.5 3 4.5-2 1-3-4.5-3 3z"/>',
+    /* ---------- v4w (vẽ mới, không lấy từ bộ icon của Autodesk) ---------- */
+    DIM: '<path d="M4 19V8M20 19V8"/><path class="a" d="M4 11h16"/>' + AR(12, 11, 4, 11, 'a') + AR(12, 11, 20, 11, 'a') + '<path class="y" d="M15 21l2-6 2 4 2-1-1.5 3z"/><circle class="fy" cx="12" cy="5" r="2"/>',
+    MLEDIT: '<path d="M2 9h20M2 15h7M15 15h7M9 15v7M15 15v7"/><path class="a" d="M9 15h6" stroke-dasharray="1.5 1.5"/>',
+    ATTSYNC: '<rect class="fd" x="3" y="3" width="9" height="9" rx="1"/><rect x="3" y="3" width="9" height="9" rx="1"/><path class="a" d="M5 7h5"/><rect class="fd" x="12" y="12" width="9" height="9" rx="1"/><rect x="12" y="12" width="9" height="9" rx="1"/><path class="a" d="M14 16h5"/><path class="g" d="M15 4a5 5 0 0 1 4 5M9 20a5 5 0 0 1-4-5" stroke-width="1.6"/>',
+    BATTMAN: '<rect class="fd" x="3" y="3" width="18" height="18" rx="1"/><path d="M3 8h18M3 13h18M3 18h18M9 3v18"/><path class="a" d="M5 5.5h2M11 5.5h7M11 10.5h5M11 15.5h6"/>',
+    MLEADEREDIT: '<path class="a" d="M3 20l8-8h10M4 6l7 6"/><path class="fa" d="M3 20l1-4 3 3zM4 6l4 1-2 2.5z"/><path d="M13 8h8"/><path class="g" d="M17 15v6M14 18h6" stroke-width="1.8"/>',
+    MLEADERALIGN: '<path class="a" d="M3 6l6 2h5M3 13l6 1h5M3 20l6-2h5"/><path class="y" d="M14 3v19" stroke-dasharray="2 1.5"/><path d="M16 6h5M16 13h5M16 19h5"/>',
+    MLEADERCOLLECT: '<path class="a" d="M3 5l9 7M3 19l9-7M3 12h9h3"/><path class="fa" d="M3 5l3.6 1.4-1.6 2zM3 19l1.6-3.4 2 1.6z"/><rect class="fd" x="15" y="8" width="7" height="8"/><path d="M15 10.5h7M15 13.5h7"/>',
+    TRACE: '<path class="a" d="M3 18l7-9 4 3 7-6" stroke-width="3.6" stroke-linejoin="miter"/><path d="M3 18l7-9 4 3 7-6" stroke-width=".8" opacity=".7"/>',
+    '3DSCALE': '<path class="fd" d="M3 13l5-3 6 3-5 3z"/><path d="M3 13l5-3 6 3-5 3zM3 13v5l6 3v-5M9 21l5-3v-5"/><path class="a" d="M9 7l5-3 8 4-5 3zM9 7v8M22 8v9l-5 3"/>' + AR(12, 12, 20, 4, 'y'),
+    FILTER: '<path class="fd" d="M3 4h18l-7 8v7l-4 2v-9z"/><path d="M3 4h18l-7 8v7l-4 2v-9z"/><path class="a" d="M6 7h12"/>',
+    PASTEBLOCK: '<rect class="fd" x="4" y="4" width="13" height="17" rx="1"/><rect x="4" y="4" width="13" height="17" rx="1"/><path d="M8 4V2.5h5V4"/><rect class="fa3" x="11" y="11" width="10" height="10"/><rect class="a" x="11" y="11" width="10" height="10"/><path class="a" d="M11 11l10 10M21 11L11 21" opacity=".6"/>',
+    LIMITS: '<rect class="y" x="3" y="5" width="18" height="14" stroke-dasharray="3 2"/><path d="M7 15l4-5 3 3 3-4" class="a"/>' + O(3, 19, 'pa') + O(21, 5, 'pa'),
+    POLAR: '<circle cx="12" cy="12" r="9" opacity=".4"/><path class="a" d="M12 12h9M12 12l6.4-6.4M12 12V3" stroke-dasharray="2 1.5"/><path class="y" d="M12 12L19 5" stroke-width="1.8"/>' + O(12, 12, 'pa'),
+    VISUALSTYLES: '<path class="fd" d="M4 8l8-4 8 4-8 4z"/><path class="fa3" d="M4 8v9l8 4v-9z"/><path class="fy" d="M20 8v9l-8 4v-9z" opacity=".6"/><path d="M4 8l8-4 8 4-8 4zM4 8v9l8 4 8-4V8M12 12v9"/>',
     COUNT_: ''
   };
-  delete I.COUNT_; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.DATALINKURL = I.DATALINK; I.DXFVERSION = I.DXFOUT; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
+  delete I.COUNT_; I.DIMSMART = I.DIM; I.MLE = I.MLEADEREDIT; I.DWGCOMPARE = I.COMPARE; I.VSCURRENT = I.VISUALSTYLES; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.DATALINKURL = I.DATALINK; I.DXFVERSION = I.DXFOUT; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
   window.DVDIcons = I;
 })();

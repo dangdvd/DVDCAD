@@ -96,6 +96,7 @@
       if(M.frame){ const lines = String(text).split('\n'); const w = Math.max(...lines.map(l => [...l].length)) * h * 0.72 + h * 0.8, hh = lines.length * h * 1.5 + h * 0.4; const x0 = dir > 0 ? lx : lx - w, y0 = last.y - hh / 2; out.push({ type: 'POLYLINE', vertices: [{ x: x0, y: y0 }, { x: x0 + w, y: y0 }, { x: x0 + w, y: y0 + hh }, { x: x0, y: y0 + hh }], closed: true }); } }
     return out;
   }
+  A.leaderEnts = leaderEnts; A.leaderTxtH = txtH;
   async function leaderCmd(multi){
     const h = txtH();
     const r1 = await A.getPoint('Chỉ định vị trí đầu mũi tên'); if(!r1.pt) return;
@@ -111,7 +112,7 @@
     try{ text = await askText({ title: 'Nội dung ghi chú', value: '', multiline: true }); }catch(_){ text = prompt('Nội dung ghi chú', ''); }
     if(text == null) return;
     const ents = leaderEnts(pts, String(text).replace(/\r/g, ''), h); const gid = A.newGroupId('L');
-    for(const e of ents){ A.newProps(e); delete e.lt; e.grp = gid; e.blk = '*LEADER'; }
+    for(const e of ents){ A.newProps(e); delete e.lt; e.grp = gid; e.blk = '*LEADER'; if(e.type === 'TEXT') e.ldp = pts.map(p => ({ x: p.x, y: p.y })); }   // ldp: các điểm đường dẫn (để MLEADEREDIT / ALIGN / COLLECT dựng lại)
     A.commit({ add: ents }, 'Đã thêm ghi chú dẫn');
   }
   cmd(['MLEADER', 'MLD', 'LEADER', 'LEAD'], 'Ghi chú có mũi tên (multileader)', () => leaderCmd(false));

@@ -62,27 +62,36 @@
     out[out.length - 1] = { x: P.x, y: P.y };
     return out;
   }
-  cmd(['PLINE', 'PL'], 'Vẽ đa tuyến (A = cung, L = thẳng, C = đóng, U = lùi)', async () => {
+  cmd(['PLINE', 'PL'], 'Vẽ đa tuyến (A = cung, L = thẳng, C = đóng, U = lùi, W = độ rộng, H = nửa độ rộng)', async () => {
     let r = await A.getPoint('Chỉ định điểm đầu'); if(!r.pt) return;
     const V = [r.pt], lens = [1]; let arcMode = false, closed = false; const BV = [{ x: r.pt.x, y: r.pt.y }], lensB = [1];
+    let wS = MEM.plw || 0, wE = MEM.plw || 0;   // độ rộng đầu / cuối của đoạn kế tiếp (như PLINEWID)
+    const setW = async half => { const k = half ? 0.5 : 1; const a = await A.getDist(half ? 'Nửa độ rộng đầu' : 'Độ rộng đầu', { def: wS * k, base: V[V.length - 1] }); if(a.num == null || a.num < 0) return; const b = await A.getDist(half ? 'Nửa độ rộng cuối' : 'Độ rộng cuối', { def: a.num, base: V[V.length - 1] }); if(b.num == null || b.num < 0) return; wS = a.num / k; wE = b.num / k; MEM.plw = wE; remember(); };
     const dirNow = () => { if(V.length >= 2){ const a = V[V.length - 2], b = V[V.length - 1], L = dist(a, b) || 1; return { x: (b.x - a.x) / L, y: (b.y - a.y) / L }; } return { x: 1, y: 0 }; };
     const preview = (g, p) => { if(V.length > 1) g.poly(V, false, '#e8eef7'); if(arcMode){ const a = tangentArc(V[V.length - 1], dirNow(), p); if(a) g.poly(a, false, '#e8eef7'); } };
     for(;;){
-      const kw = arcMode ? [{ k: 'L', t: 'Thẳng' }, { k: 'C', t: 'Đóng' }, { k: 'U', t: 'Hoàn tác' }] : [{ k: 'A', t: 'Cung' }, { k: 'C', t: 'Đóng' }, { k: 'U', t: 'Hoàn tác' }];
+      const kw = (arcMode ? [{ k: 'L', t: 'Thẳng' }, { k: 'C', t: 'Đóng' }, { k: 'U', t: 'Hoàn tác' }] : [{ k: 'A', t: 'Cung' }, { k: 'C', t: 'Đóng' }, { k: 'U', t: 'Hoàn tác' }]).concat([{ k: 'W', t: 'Độ rộng' }, { k: 'H', t: 'Nửa độ rộng' }]);
       r = await A.getPoint(arcMode ? 'Chỉ định điểm cuối cung' : 'Chỉ định điểm tiếp theo', { base: V[V.length - 1], kw: V.length >= 3 ? kw : kw.filter(k => k.k !== 'C'), preview, rubber: !arcMode });
       if(r.none) break;
       if(r.kw === 'A'){ arcMode = true; continue; }
       if(r.kw === 'L'){ arcMode = false; continue; }
+      if(r.kw === 'W' || r.kw === 'H'){ await setW(r.kw === 'H'); continue; }
       if(r.kw === 'U'){ if(lens.length > 1){ lens.pop(); V.length = lens[lens.length - 1]; lensB.pop(); BV.length = lensB[lensB.length - 1]; delete BV[BV.length - 1].bulge; } continue; }
       if(r.kw === 'C'){ closed = true; break; }
       if(r.pt){
-        if(arcMode){ const a = tangentArc(V[V.length - 1], dirNow(), r.pt); if(!a) continue; for(let i = 1; i < a.length; i++) V.push(a[i]); if(a.sw) BV[BV.length - 1].bulge = Math.tan(a.sw / 4); BV.push({ x: r.pt.x, y: r.pt.y }); }
-        else { if(dist(V[V.length - 1], r.pt) < 1e-12) continue; V.push(r.pt); BV.push({ x: r.pt.x, y: r.pt.y }); }
+        if(arcMode){ const a = tangentArc(V[V.length - 1], dirNow(), r.pt); if(!a) continue; for(let i = 1; i < a.length; i++) V.push(a[i]); if(a.sw) BV[BV.length - 1].bulge = Math.tan(a.sw / 4); BV[BV.length - 1].sw = wS; BV[BV.length - 1].ew = wE; BV.push({ x: r.pt.x, y: r.pt.y }); }
+        else { if(dist(V[V.length - 1], r.pt) < 1e-12) continue; V.push(r.pt); BV[BV.length - 1].sw = wS; BV[BV.length - 1].ew = wE; BV.push({ x: r.pt.x, y: r.pt.y }); }
+        wS = wE;
         lens.push(V.length); lensB.push(BV.length);
       }
     }
-    if(V.length >= 2){ const e = mk('POLYLINE', { vertices: V.map(p => ({ x: p.x, y: p.y })), closed }); if(BV.some(p => p.bulge) && A.setBV) A.setBV(e, BV); A.commit({ add: [e] }); }
+    if(V.length >= 2){
+      if(closed && BV.length >= 2){ BV[BV.length - 1].sw = wS; BV[BV.length - 1].ew = wE; }
+      if(BV.some(p => p.sw > 0 || p.ew > 0) && typeof polyWidthQuads === 'function'){   // đa tuyến có độ rộng (tô đặc như AutoCAD)
+        const raw = BV.map(p => ({ x: p.x, y: p.y, bulge: p.bulge || 0, sw: p.sw || 0, ew: p.ew || 0 })); const e = mk('POLYLINE', { vertices: expandPolyline(raw, closed), closed: false, wq: polyWidthQuads(raw, closed) }); A.commit({ add: [e] }); return; }
+      const e = mk('POLYLINE', { vertices: V.map(p => ({ x: p.x, y: p.y })), closed }); if(BV.some(p => p.bulge) && A.setBV) A.setBV(e, BV); A.commit({ add: [e] }); }
   });
+  A.widthPoly = (raw, closed) => ({ type: 'POLYLINE', vertices: expandPolyline(raw, closed), closed: false, wq: polyWidthQuads(raw, closed) });
 
   const rectPts = (a, b) => [{ x: a.x, y: a.y }, { x: b.x, y: a.y }, { x: b.x, y: b.y }, { x: a.x, y: b.y }];
   cmd(['RECTANG', 'REC', 'RECTANGLE'], 'Vẽ hình chữ nhật (D = theo kích thước)', async () => {
@@ -737,8 +746,11 @@
     }
     for(;;){
       hl([e]);
-      const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: 'C', t: e.closed ? 'Mở' : 'Đóng' }, { k: 'J', t: 'Nối' }, { k: 'R', t: 'Đảo chiều' }, { k: 'X', t: 'Thoát' }] });
+      const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: 'C', t: e.closed ? 'Mở' : 'Đóng' }, { k: 'J', t: 'Nối' }, { k: 'W', t: 'Độ rộng' }, { k: 'R', t: 'Đảo chiều' }, { k: 'X', t: 'Thoát' }] });
       if(k.none || k.kw === 'X') break;
+      if(k.kw === 'W'){ const d = await A.getDist('Độ rộng mới cho cả đa tuyến (0 = nét mảnh)', { def: 0 }); if(d.num == null || d.num < 0) continue; const w = copyOf(e);
+        if(d.num > 0){ const src = (A.bvOf && A.bvOf(e)) || e.vertices; const raw = src.map(p => ({ x: p.x, y: p.y, bulge: p.bulge || 0, sw: d.num, ew: d.num })); const cl = !!e.closed; w.vertices = expandPolyline(raw, cl); w.closed = false; w.wq = polyWidthQuads(raw, cl); delete w.bv; delete w.bvs; }
+        else delete w.wq; A.commit({ rep: [[e, w]] }, 'Đã đổi độ rộng đa tuyến'); e = w; continue; }
       if(k.kw === 'C'){ const w = copyOf(e); w.closed = !w.closed; delete w.wq; A.commit({ rep: [[e, w]] }); e = w; continue; }
       if(k.kw === 'R'){ const w = copyOf(e); if(!A.bvReverse(w, !!w.closed)){ w.vertices = w.vertices.slice().reverse(); delete w.wq; } A.commit({ rep: [[e, w]] }); e = w; continue; }
       if(k.kw === 'J'){ if(e.closed){ log('Đa tuyến kín — mở ra trước khi nối.'); continue; } const s = await A.getSel('Chọn đối tượng cần nối vào', { pre: false }); const res = doJoin([e].concat((s.sel || []).filter(x => x !== e))); if(res){ const m = res.find(x => x.type === 'POLYLINE') || res[0]; if(m) e = m; } continue; }
@@ -1070,12 +1082,14 @@
     const r = await A.getPoint('Chỉ định vị trí đường kích thước', { rubber: false, preview: (g, p) => g.ents(dimRadEnts(e, p, dia).ents) }); hl([]); if(!r.pt) return;
     const d = dimRadEnts(e, r.pt, dia); A.commit({ add: finishDim(d.ents, d.val, dia ? 'đường kính' : 'bán kính', { k: dia ? 'dia' : 'rad', c: { x: e.cx, y: e.cy }, r: e.r, L: r.pt, ov: null }) }); log('Kích thước = ' + d.txt);
   }
+  A.makeDimRad = (e, L, dia) => { const d = dimRadEnts(e, L, dia); return finishDim(d.ents, d.val, dia ? 'đường kính' : 'bán kính', { k: dia ? 'dia' : 'rad', c: { x: e.cx, y: e.cy }, r: e.r, L, ov: null }); };
+  A.dimRadPreview = (e, L, dia) => dimRadEnts(e, L, dia).ents;
   cmd(['DIMRADIUS', 'DRA', 'DIMRAD'], 'Kích thước bán kính', () => dimRadCmd(false));
   cmd(['DIMDIAMETER', 'DDI', 'DIMDIA'], 'Kích thước đường kính', () => dimRadCmd(true));
   function dimAngEnts(V, d1, d2, L, ov){
     const t = dimTxt(); const R = Math.max(dist(V, L), t);
     const aL = ang(V, L); const cand = [];
-    for(const r1 of [d1, d1 + Math.PI]) for(const r2 of [d2, d2 + Math.PI]){ const sw = G.norm(r2 - r1); if(sw < 1e-9 || sw > Math.PI) continue; if(G.norm(aL - r1) <= sw) cand.push({ a1: r1, sw }); }
+    for(const [u, v] of [[d1, d2], [d2, d1]]) for(const r1 of [u, u + Math.PI]) for(const r2 of [v, v + Math.PI]){ const sw = G.norm(r2 - r1); if(sw < 1e-9 || sw > Math.PI) continue; if(G.norm(aL - r1) <= sw) cand.push({ a1: r1, sw }); }   // cả 2 chiều (chọn đường nào trước cũng được)
     if(!cand.length) return null; const c = cand[0];
     const out = [{ type: 'ARC', cx: V.x, cy: V.y, r: R, a1: c.a1 * R2D, a2: (c.a1 + c.sw) * R2D }];
     const p1 = { x: V.x + R * Math.cos(c.a1), y: V.y + R * Math.sin(c.a1) }, p2 = { x: V.x + R * Math.cos(c.a1 + c.sw), y: V.y + R * Math.sin(c.a1 + c.sw) };
@@ -1094,6 +1108,9 @@
     const r = await A.getPoint('Chỉ định vị trí cung kích thước', { rubber: false, preview: (g, p) => { const d = dimAngEnts(V, d1, d2, p); if(d) g.ents(d.ents); } }); hl([]); if(!r.pt) return;
     const d = dimAngEnts(V, d1, d2, r.pt); if(!d) return; A.commit({ add: finishDim(d.ents, d.val, 'góc', { k: 'ang', V, d1, d2, L: r.pt, ov: null }) }); log('Góc = ' + d.txt);
   });
+  A.makeDimAng = (V, d1, d2, L) => { const d = dimAngEnts(V, d1, d2, L); return d ? finishDim(d.ents, d.val, 'góc', { k: 'ang', V, d1, d2, L, ov: null }) : null; };
+  A.dimAngPreview = (V, d1, d2, L) => { const d = dimAngEnts(V, d1, d2, L); return d ? d.ents : []; };
+  A.dimLinPreview = (p1, p2, L, phi) => { const d = dimLinearEnts(p1, p2, L, phi); return d ? d.ents : []; };
   DVDCmd.register(['DIMSTYLE', 'D', 'DST', 'DDIM'], 'Kiểu kích thước (cao chữ, mũi tên, số lẻ…)', () => openDimStyle());
   function openDimStyle(){
     dimTxt();
@@ -1360,10 +1377,11 @@
   const saveLib = o => { try{ localStorage.setItem(LIBK, JSON.stringify(o)); return true; }catch(_){ say('Bộ nhớ đầy — không lưu được khối.'); return false; } };
   function fileBlockNames(){ const b = window._dvdBlocks || {}; return Object.keys(b).filter(n => n && !n.startsWith('*') && !/^_/.test(n)).sort((a, b2) => a.localeCompare(b2, undefined, { numeric: true })); }
   const blkCache = new Map();
+  A.blockLib = lib; A.saveBlockLib = o => { const r = saveLib(o); blkCache.clear(); return r; }; A.fileBlockNames = () => fileBlockNames(); A.blockPrims = (n, s) => blockPrims(n, s);
   function blockPrims(name, src){
     const ck = src + '|' + name; if(blkCache.has(ck)) return blkCache.get(ck);
     let out = null;
-    if(src === 'file'){ const defs = window._dvdBlocks || {}; const d = defs[name]; if(d){ const prims = resolveBlocks(d.entities, defs); out = { base: d.base || { x: 0, y: 0 }, prims }; } }
+    if(src === 'file'){ const defs = window._dvdBlocks || {}; const d = defs[name]; if(d){ const prims = resolveBlocks(d.entities, defs); if(d.attdefs) for(const a of d.attdefs){ const q = deep(a); if(!q.col) try{ q.col = resolveColor(q.aci, q.layer); }catch(_){} prims.push(q); } out = { base: d.base || { x: 0, y: 0 }, prims }; } }
     else { const L = lib()[name]; if(L) out = { base: L.base, prims: L.ents }; }
     if(out) blkCache.set(ck, out);
     return out;
@@ -1447,6 +1465,7 @@
   const CLIP = 'dvd:clip';
   function putClip(sel, base){ try{ localStorage.setItem(CLIP, JSON.stringify({ base, ents: sel.map(e => serializeEnt(e)), t: Date.now(), src: currentName })); log('Đã sao chép ' + sel.length + ' đối tượng vào bộ nhớ tạm'); return true; }catch(_){ say('Bộ nhớ tạm đầy — chọn ít đối tượng hơn.'); return false; } }
   const getClip = () => { try{ return JSON.parse(localStorage.getItem(CLIP) || 'null'); }catch(_){ return null; } };
+  A.getClip = getClip; A.remapGroups = remapGroups;
   cmd(['COPYCLIP'], 'Sao chép vào bộ nhớ tạm (Ctrl+C)', async () => { const s = await A.getSel('Chọn đối tượng'); const sel = s.sel || []; if(!sel.length) return; const bb = bboxOf(sel); putClip(sel, { x: bb.x0, y: bb.y0 }); });
   cmd(['CUTCLIP'], 'Cắt vào bộ nhớ tạm (Ctrl+X)', async () => { const s = await A.getSel('Chọn đối tượng'); const sel = s.sel || []; if(!sel.length) return; const bb = bboxOf(sel); if(putClip(sel, { x: bb.x0, y: bb.y0 })) A.commit({ del: sel }); clearSelSafe(); });
   cmd(['COPYBASE'], 'Sao chép kèm điểm gốc (Ctrl+Shift+C)', async () => { const s = await A.getSel('Chọn đối tượng'); const sel = s.sel || []; if(!sel.length) return; const b = await A.getPoint('Chỉ định điểm gốc'); if(!b.pt) return; putClip(sel, b.pt); });
