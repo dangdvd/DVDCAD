@@ -326,13 +326,13 @@
     setPropsOn(palWanted && hasDrawing());
     palSig = ''; if(palWanted) refreshPalette(true);
   }
-  const TYPE_VN = { LINE: 'Đường thẳng', CIRCLE: 'Đường tròn', ARC: 'Cung tròn', POLYLINE: 'Đa tuyến', TEXT: 'Chữ', ELLIPSE: 'Elip', SOLID: 'Vùng tô', HATCH: 'Hatch (mặt cắt)', POINT: 'Điểm', INSERT: 'Khối', XLINE: 'Đường dựng' };
+  const TYPE_VN = { LINE: 'Đường thẳng', CIRCLE: 'Đường tròn', ARC: 'Cung tròn', POLYLINE: 'Đa tuyến', TEXT: 'Chữ', ELLIPSE: 'Elip', SOLID: 'Vùng tô', HATCH: 'Hatch (mặt cắt)', POINT: 'Điểm', INSERT: 'Khối', XLINE: 'Đường dựng', SOLID3D: 'Khối 3D', IMAGE: 'Ảnh' };
   let _uid = new WeakMap(), _uidN = 0; const uid = o => { if(!_uid.has(o)) _uid.set(o, ++_uidN); return _uid.get(o); };
   function polyLen(v, closed){ let s = 0; for(let i = 1; i < v.length; i++) s += Math.hypot(v[i].x - v[i - 1].x, v[i].y - v[i - 1].y); if(closed && v.length > 2) s += Math.hypot(v[0].x - v[v.length - 1].x, v[0].y - v[v.length - 1].y); return s; }
   function polyArea(v){ let s = 0; for(let i = 0; i < v.length; i++){ const a = v[i], b = v[(i + 1) % v.length]; s += a.x * b.y - b.x * a.y; } return Math.abs(s) / 2; }
   const layerNames = () => { try{ if(ACAD() && ACAD().layerNames) return ACAD().layerNames(); }catch(_){} try{ return layerList.map(l => l.name); }catch(_){ return ['0']; } };
   const lyOpts = (cur, extra) => { const set = new Set(layerNames()); if(cur != null) set.add(cur); return (extra || '') + [...set].map(n => '<option' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>').join(''); };
-  const NOLT = { TEXT: 1, HATCH: 1, SOLID: 1, POINT: 1 };
+  const NOLT = { TEXT: 1, HATCH: 1, SOLID: 1, POINT: 1, SOLID3D: 1 };
   const ltOpts = (cur, mixed) => { const A = ACAD(); const names = A && A.ltNames ? A.ltNames() : ['CONTINUOUS']; cur = mixed ? '*' : (cur || 'BYLAYER');
     const all = ['BYLAYER', 'BYBLOCK'].concat(names); if(!mixed && !all.includes(cur)) all.push(cur);
     return (mixed ? '<option value="*" selected>*nhiều*</option>' : '') + all.map(n => '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + esc(n === 'BYLAYER' ? 'ByLayer' : n === 'BYBLOCK' ? 'ByBlock' : n === 'CONTINUOUS' ? 'Continuous (liền)' : n) + '</option>').join('') + '<option value="OTHER">Tải thêm kiểu nét…</option>'; };
@@ -429,10 +429,20 @@
         h += F('Số vòng biên', '', String((e.loops || []).length), true) + F('Diện tích ≈', '', Math.abs(ar), true);
         break; }
       case 'POINT': h += F('X', 'x', e.x) + F('Y', 'y', e.y); break;
+      case 'SOLID3D': {
+        const KN = { ext: 'Khối đùn / hộp', cone: (e.r2 != null && Math.abs(e.r2 - e.r) < 1e-12) ? 'Khối trụ' : 'Khối nón', sph: 'Khối cầu' };
+        h += F('Loại', '', KN[e.k] || e.k, true);
+        if(e.k === 'sph') h += F('Tâm X', 'cx', e.cx) + F('Tâm Y', 'cy', e.cy) + F('Tâm Z', 'z0', e.z0 || 0) + F('Bán kính', 'r', e.r);
+        else { if(e.k === 'cone') h += F('Tâm X', 'cx', e.cx) + F('Tâm Y', 'cy', e.cy) + F('Bán kính đáy', 'r', e.r) + F('Bán kính đỉnh', 'r2', e.r2 != null ? e.r2 : e.r);
+          h += F('Cao độ đáy (Z)', 'z0', e.z0 || 0) + F('Chiều cao', 'h', e.h || 0); }
+        { const A2 = ACAD(); if(A2 && A2.volumeOf) h += F('Thể tích', '', A2.volumeOf(e), true); }
+        h += '<div class="act"><button data-a="view3d">Xem 3D</button></div>';
+        break; }
       default: { const bb = entBBox(e); if(bb) h += F('Rộng', '', bb.x1 - bb.x0, true) + F('Cao', '', bb.y1 - bb.y0, true); }
     }
     if(!editable) h += '<div class="pe">Đang xem layout — chuyển về Model để sửa.</div>';
     palBody.innerHTML = h; bindSingle(e);
+    const b3 = palBody.querySelector('[data-a="view3d"]'); if(b3) b3.addEventListener('click', () => { const A2 = ACAD(); if(A2 && A2.open3D) A2.open3D(); });
   }
   function pickColor(cb, cur){ const i = document.createElement('input'); i.type = 'color'; i.value = /^#[0-9a-f]{6}$/i.test(cur || '') ? cur : '#ffffff'; i.style.cssText = 'position:fixed;left:-100px;top:0;opacity:0'; document.body.appendChild(i); i.addEventListener('change', () => { cb(i.value); i.remove(); }); i.addEventListener('blur', () => setTimeout(() => i.remove(), 400)); i.click(); }
   function commitSingle(e, fn){
@@ -483,6 +493,7 @@
           else if(f === 'xs'){ if(v > 0.05 && v < 20){ if(Math.abs(v - 1) < 1e-6) delete w.xs; else w.xs = v; } }
           else if(f === 'ea'){ const a = Math.hypot(w.mx, w.my) || 1; if(v > 0){ const b = a * (w.ratio || 1); w.mx *= v / a; w.my *= v / a; w.ratio = Math.min(1, b / v); } }
           else if(f === 'eb'){ const a = Math.hypot(w.mx, w.my) || 1; if(v > 0 && v <= a) w.ratio = v / a; }
+          else if(f === 'r2'){ if(v >= 0) w.r2 = v; }
           else if(f === 'v0x' || f === 'v0y'){ if(w.vertices && w.vertices[0]) w.vertices[0][f === 'v0x' ? 'x' : 'y'] = v; }
           else w[f] = v;
         });

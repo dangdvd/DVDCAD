@@ -1,4 +1,4 @@
-# DVDCAD v4e — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4f — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -133,6 +133,27 @@ Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thá
 
 **Xem / file:** `ZOOM Z` (E, W, P, số, O) · `PAN` · `REGEN RE` · `NEW` · `OPEN` · `QSAVE` · `SAVEAS` · `EXPORT/PLOT` · `DSETTINGS DS` · `UNITS` · `FIND` · `COMPARE` · `DRIVE` · `SHARE`
 
+## 3D (tab ribbon "3D", nút **3D** cạnh nút phóng to)
+**Tạo khối:**
+- `BOX` — hộp: 2 góc đáy + chiều cao.
+- `CYLINDER CYL` — trụ. `CONE` — nón (bán kính đỉnh > 0 thành nón cụt). `SPHERE` — cầu.
+- `EXTRUDE EXT` — đùn hình kín: đa tuyến kín, đường tròn, elip, hatch (giữ lỗ). Chiều cao âm thì đùn xuống.
+- `PRESSPULL PP` — bấm vào trong một vùng kín rồi nhập chiều cao.
+- `WALL3D` (`TUONG`) — chọn đường trục tường trên mặt bằng, nhập bề dày và chiều cao, ra tường 3D.
+
+Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCALE, MIRROR, ARRAY, ERASE dùng được như hình 2D. Bảng thuộc tính sửa được cao độ đáy, chiều cao, bán kính và xem thể tích.
+
+**Xem 3D:** `3DORBIT` (`3DO`, `VIEW3D`) hoặc nút **3D**.
+- Chuột: kéo trái để xoay, kéo phải/giữa hoặc Shift+kéo để dời, lăn để phóng, kích đúp để vừa màn hình.
+- Điện thoại: 1 ngón xoay, 2 ngón dời và phóng.
+- ViewCube: bấm mặt để xem Trên, Trước, Phải… Nút ⌂ về góc ISO.
+- Góc nhìn chuẩn: Trên, Trước, Phải, Trái, Sau, 4 góc ISO. Gõ thẳng được `VIEWTOP`, `VIEWFRONT`, `VIEWSWISO`…
+- Kiểu hiển thị: Khung dây, Tô bóng, Tô bóng + cạnh, X-quang.
+- Phối cảnh hoặc song song. Bật/tắt nét 2D ở cao độ 0.
+- Esc hoặc "✕ 2D" để về bản vẽ.
+
+**Xuất:** ảnh PNG, `EXPORTSTL` (in 3D, đơn vị mm), `EXPORTOBJ` (+ file MTL màu, mở bằng SketchUp, Blender, 3ds Max). Lưu DXF thì khối 3D thành mặt **3DFACE**, AutoCAD mở được. File DXF/DWG có 3DFACE cũng xem 3D được.
+
 ## In bản vẽ (PLOT, Ctrl+P)
 Hộp thoại giống AutoCAD:
 - **Khổ giấy:** A4 đến A0, chọn ngang hoặc dọc.
@@ -167,7 +188,8 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Hatch dò biên theo các nét **đang hiện trên màn hình**. Phóng tới vùng cần tô trước khi bấm.
 - Đa tuyến có đoạn cong được lưu dạng nhiều đoạn thẳng nhỏ.
 - **Không lưu được DWG.** Chưa có bộ ghi DWG miễn phí nào chạy trong trình duyệt đủ tin cậy. AutoCAD mở file DXF bình thường và lưu lại thành DWG được (Save As).
-- **Không có 3D** (khối, mặt, render). DVDCAD là phần mềm 2D.
+- **3D ở mức cơ bản:** có hộp, trụ, nón, cầu, đùn, tường. Chưa có cộng/trừ khối (UNION, SUBTRACT), xoay tròn (REVOLVE), UCS 3D, vật liệu và render. Khối 3D lưu ra DXF thành các mặt tam giác 3DFACE. Mở lại trong DVDCAD thì xem được nhưng không còn sửa được chiều cao như khối gốc.
+- ACIS solid (3DSOLID) trong file DWG/DXF của AutoCAD chưa đọc được. Chỉ đọc mặt 3DFACE.
 - Layout chỉ chứa khung tên và khung nhìn. Muốn ghi chú thêm thì vẽ ở Model.
 - Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
 - Kiểu nét phức (chèn chữ/hình trong nét) hiện dạng nét đứt thường.
