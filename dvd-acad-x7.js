@@ -35,17 +35,17 @@
     VP.active = 0; Object.assign(view, VP.tiles[0].view); view.rot = 0; redraw(); return true;
   }
   A.vports = { set: setVports, get state(){ return VP; }, activate: i => activateTile(i) };
-  function activateTile(i){ if(!multi() || i === VP.active || !VP.tiles[i]) return; VP.tiles[VP.active].view = { scale: view.scale, offsetX: view.offsetX, offsetY: view.offsetY }; VP.active = i; Object.assign(view, VP.tiles[i].view); redraw(); }
+  function activateTile(i){ if(!multi() || i === VP.active || !VP.tiles[i]) return; VP.tiles[VP.active].view = { scale: view.scale, offsetX: view.offsetX, offsetY: view.offsetY, rot: view.rot || 0 }; VP.active = i; Object.assign(view, VP.tiles[i].view); view.rot = VP.tiles[i].view.rot || 0; try{ updateCompass(); }catch(_){} redraw(); }
   const _drawVP = window.draw;
   window.draw = function(){
     if(!multi() || (typeof _exporting !== 'undefined' && _exporting)) return _drawVP.apply(this, arguments);
     const dpr = window.devicePixelRatio || 1; const act = { scale: view.scale, offsetX: view.offsetX, offsetY: view.offsetY, rot: view.rot };
-    VP.tiles[VP.active].view = { scale: act.scale, offsetX: act.offsetX, offsetY: act.offsetY };
+    VP.tiles[VP.active].view = { scale: act.scale, offsetX: act.offsetX, offsetY: act.offsetY, rot: act.rot || 0 };
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#11151b'; ctx.fillRect(0, 0, W(), H());
     let r;
     VP.tiles.forEach((t, i) => {
       const R = rectOf(t); const isAct = i === VP.active;
-      Object.assign(view, t.view); view.rot = 0;
+      Object.assign(view, t.view); view.rot = t.view.rot || 0;
       ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.beginPath(); ctx.rect(R.x + 1, R.y + 1, R.w - 2, R.h - 2); ctx.clip();
       const svE = _exporting; if(!isAct) _exporting = true;
       try{ const x = _drawVP.apply(this, arguments); if(isAct) r = x; } finally { _exporting = svE; ctx.restore(); }
@@ -255,7 +255,7 @@
     WIPEOUTFRAME: { d: 'Khung vùng che (0 tắt, 1 hiện & in, 2 hiện không in)', get: () => WIPEFRAME, set: v => { WIPEFRAME = Math.max(0, Math.min(2, +v | 0)); try{ localStorage.setItem('dvd:wipeframe', String(WIPEFRAME)); draw(); }catch(_){} } },
     INSUNITS: { d: 'Đơn vị bản vẽ (4 mm, 5 cm, 6 m, 1 inch, 2 feet)', get: () => insunits, set: v => { insunits = +v | 0; try{ draw(); }catch(_){} } },
     ARRAYASSOCIATIVITY: { d: 'Mảng mới là mảng liên kết (0/1)', get: () => A.MEM.arrAssoc ? 1 : 0, set: v => { A.MEM.arrAssoc = !!+v; } },
-    MIRRTEXT: { d: 'Lật chữ khi đối xứng (DVDCAD luôn giữ chữ đọc được = 0)', get: () => 0, set: () => log('DVDCAD giữ MIRRTEXT = 0 (chữ không bị lật).') },
+    MIRRTEXT: { d: 'Lật chữ khi đối xứng MIRROR (0 = giữ chữ đọc được, 1 = lật cả chữ)', get: () => window.MIRRTEXT ? 1 : 0, set: v => { window.MIRRTEXT = +v ? 1 : 0; try{ localStorage.setItem('dvd:mirrtext', String(window.MIRRTEXT)); }catch(_){} } },
     TILEMODE: { d: 'Đang ở Model (1) hay Layout (0) — chỉ đọc', get: () => { try{ return isModelView() ? 1 : 0; }catch(_){ return 1; } }, set: () => log('Chuyển Model/Layout bằng tab dưới màn hình.') },
     DATE: { d: 'Ngày giờ hiện tại — chỉ đọc', s: 1, get: () => new Date().toLocaleString('vi-VN'), set: () => {} },
     DWGNAME: { d: 'Tên bản vẽ — chỉ đọc', s: 1, get: () => docName(), set: () => {} },
@@ -351,6 +351,10 @@
   /* =====================================================================
      9) DIMBREAK — ngắt đường kích thước / đường gióng tại chỗ cắt nét khác
      ===================================================================== */
+  // truy vấn theo hình học SẮP áp dụng (trong lúc commit) — để chỗ ngắt / hatch tính theo vị trí mới
+  function pendQuery(bb){ const P = A._pend; let L = A.queryBox(bb[0], bb[1], bb[2], bb[3], 3000); if(!P) return L;
+    L = L.filter(o => !P.del.has(o)).map(o => P.rep.get(o) || o); for(const a of P.add){ const b = entBBox(a); if(b && !(b.x1 < bb[0] || b.x0 > bb[2] || b.y1 < bb[1] || b.y0 > bb[3])) L.push(a); } for(const [o, w] of P.rep){ if(L.includes(w)) continue; const b = entBBox(w); if(b && !(b.x1 < bb[0] || b.x0 > bb[2] || b.y1 < bb[1] || b.y0 > bb[3])) L.push(w); } return L; }
+  A.pendQuery = pendQuery;
   if(A.dimRegenFrom){
     const _dr = A.dimRegenFrom;
     A.dimRegenFrom = function(w){
@@ -362,7 +366,7 @@
           const L = Math.hypot(e.x2 - e.x1, e.y2 - e.y1); if(L < 1e-9){ res.push(e); continue; }
           const seg = { t: 's', ax: e.x1, ay: e.y1, bx: e.x2, by: e.y2, u0: 0, u1: L };
           const bb = [Math.min(e.x1, e.x2), Math.min(e.y1, e.y2), Math.max(e.x1, e.x2), Math.max(e.y1, e.y2)]; const ts = [];
-          for(const o of A.queryBox(bb[0], bb[1], bb[2], bb[3], 3000)){ if(o.grp === w.grp || o.type === 'TEXT' || o.type === 'HATCH') continue; const c = G.curveOf(o); if(!c) continue; for(const p of c.pieces) for(const q of G.xPieces(seg, p)) if(q.ua > gap * 0.3 && q.ua < L - gap * 0.3) ts.push(q.ua); }
+          for(const o of pendQuery(bb)){ if(o.grp === w.grp || o.type === 'TEXT' || o.type === 'HATCH') continue; const c = G.curveOf(o); if(!c) continue; for(const p of c.pieces) for(const q of G.xPieces(seg, p)) if(q.ua > gap * 0.3 && q.ua < L - gap * 0.3) ts.push(q.ua); }
           if(!ts.length){ res.push(e); continue; }
           ts.sort((a, b) => a - b); let s0 = 0; const ux = (e.x2 - e.x1) / L, uy = (e.y2 - e.y1) / L;
           const piece = (a, b) => { if(b - a > 1e-9) res.push(Object.assign({}, e, { x1: e.x1 + ux * a, y1: e.y1 + uy * a, x2: e.x1 + ux * b, y2: e.y1 + uy * b })); };

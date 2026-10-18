@@ -373,6 +373,12 @@
     DIMBREAK: '<path d="M4 20V6M20 20V6"/><path class="a" d="M4 10h6M14 10h6"/><path class="r" d="M12 3v18"/>',
     OPTIONS: GEAR(12, 12, 5.5),
     STATUS: '<rect class="fd" x="3" y="3" width="18" height="18" rx="1"/><path class="a" d="M7 16v-4M11 16V8M15 16v-6"/>',
+    /* ---------- v4o ---------- */
+    TOOLPALETTES: '<rect class="fd" x="3" y="2" width="12" height="20" rx="1"/><path d="M3 6h12"/><rect class="a" x="5" y="8" width="3.5" height="3.5"/><rect class="a" x="9.5" y="8" width="3.5" height="3.5"/><rect class="a" x="5" y="13" width="3.5" height="3.5"/><path class="y" d="M17 6h4v14h-4"/>',
+    ADCENTER: '<path class="fy" d="M2.5 5h6l2 2H21v12H2.5z"/><path d="M2.5 5h6l2 2H21v12H2.5z"/><rect class="fa2" x="9" y="10" width="7" height="6"/><circle class="fy" cx="12.5" cy="13" r="1.6"/>',
+    PDFIMPORT: DOC + '<path class="r" d="M7 12v5M7 12h1.5a1.5 1.5 0 0 1 0 3H7M11 12v5h1a2.5 2.5 0 0 0 0-5zM16 12h-1.5v5M14.5 14.5H16" stroke-width="1.2"/>',
+    SYMBOL: '<circle cx="12" cy="12" r="8"/><path class="a" d="M12 4l3 12-3-2-3 2z"/><path class="fa2" d="M12 4l3 12-3-2z"/>',
+    SPELLBROWSER: '<path d="M3 15L7 4h1.5l4 11M4.6 11h6"/><path class="r" d="M3 19c1-1 2 1 3 0s2 1 3 0 2 1 3 0"/><circle class="a" cx="18" cy="15" r="4"/><path class="a" d="M14 15h8M18 11c1.5 1.5 1.5 6.5 0 8"/>',
     COUNT_: ''
   };
   delete I.COUNT_;

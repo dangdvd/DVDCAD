@@ -108,6 +108,20 @@
       const r = parseDXF(typeof data === 'string' ? data : new TextDecoder().decode(data)); return { ents: mergeText(resolveBlocks(r.entities, r.blocks)), lt: Object.assign({}, LAYER_LT), lts: LTSCALE };
     } finally { [LAYER_COLORS, HIDDEN_LAYERS, LAYER_LT, LAYER_LW, LTYPES, LTSCALE, STYLE_FONTS, STYLE_WF] = sv; }
   }
+  // DesignCenter: đọc file nguồn, giữ ngữ cảnh lớp/kiểu nét của file đó để chèn khối đúng màu
+  A.dcLoad = async function(kind, data){
+    const sv = [LAYER_COLORS, HIDDEN_LAYERS, LAYER_LT, LAYER_LW, LTYPES, LTSCALE, STYLE_FONTS, STYLE_WF]; let ctxG = null, blocks = {}, nEnt = 0;
+    try{
+      if(kind === 'dwg'){ const lib = await getLibreDwg(); const ptr = lib.dwg_read_data(data.slice(0), _DwgType.DWG); if(ptr == null) throw new Error('dwg'); const dbx = lib.convert(ptr); try{ lib.dwg_free(ptr); }catch(_){}
+        buildLayerColors(dbx); const recs = (dbx.tables && dbx.tables.BLOCK_RECORD && dbx.tables.BLOCK_RECORD.entries) || []; blocks = buildBlockDefs(dbx, recs); nEnt = (dbx.entities || []).length; }
+      else { const r = parseDXF(typeof data === 'string' ? data : new TextDecoder().decode(data)); blocks = r.blocks || {}; nEnt = (r.entities || []).length; }
+      ctxG = [LAYER_COLORS, HIDDEN_LAYERS, LAYER_LT, LAYER_LW, LTYPES, LTSCALE, STYLE_FONTS, STYLE_WF];
+    } finally { [LAYER_COLORS, HIDDEN_LAYERS, LAYER_LT, LAYER_LW, LTYPES, LTSCALE, STYLE_FONTS, STYLE_WF] = sv; }
+    const names = Object.keys(blocks).filter(n => n && !n.startsWith('*') && !/^_/.test(n) && (blocks[n].entities || []).length).sort();
+    return { names, nEnt, layers: Object.assign({}, ctxG[0]), layerLT: Object.assign({}, ctxG[2]), ltypes: Object.assign({}, ctxG[4]), count: n => (blocks[n] && blocks[n].entities || []).length,
+      make(name, x, y, sc, rot){ const sv2 = [LAYER_COLORS, HIDDEN_LAYERS, LAYER_LT, LAYER_LW, LTYPES, LTSCALE, STYLE_FONTS, STYLE_WF]; [LAYER_COLORS, HIDDEN_LAYERS, LAYER_LT, LAYER_LW, LTYPES, LTSCALE, STYLE_FONTS, STYLE_WF] = ctxG;
+        try{ return resolveBlocks([{ type: 'INSERT', layer: '0', name, ix: x, iy: y, sx: sc || 1, sy: sc || 1, rot: rot || 0, cols: 1, rows: 1, csp: 0, rsp: 0 }], blocks, true); } finally { [LAYER_COLORS, HIDDEN_LAYERS, LAYER_LT, LAYER_LW, LTYPES, LTSCALE, STYLE_FONTS, STYLE_WF] = sv2; } } };
+  };
   function placeRef(ents, X, refLT){
     const r = (X.rot || 0) * D2R, c = Math.cos(r) * (X.sc || 1), s = Math.sin(r) * (X.sc || 1); const M = { a: c, b: s, c: -s, d: c, e: X.ins.x, f: X.ins.y };
     const pre = X.name.replace(/\.[^.]+$/, '') + '|'; const out = [];

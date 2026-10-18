@@ -1,4 +1,4 @@
-# DVDCAD v4n — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4o — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -212,6 +212,29 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 **Khác:** `VIEW` (lưu/gọi góc nhìn 2D đặt tên), `CAL` (máy tính: `2*(3+4)^2`, `sqrt`, `sin/cos/tan` theo độ, `pi`; kết quả chép vào clipboard), `PUBLISH` (in nhiều layout ra một PDF nhiều trang).
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
+
+## Bổ sung (v4o)
+**Kiểm tra chính tả tiếng Việt chạy offline:** `SPELL` kiểm tra theo quy tắc ghép vần tiếng Việt (âm đầu, vần, dấu thanh, c/k, g/gh, ng/ngh, qu…) — không cần từ điển của máy. Gợi ý lấy từ các từ đúng trong bản vẽ và từ vựng xây dựng thường dùng. Mỗi từ: **Thay** / **Bỏ qua** / **+ Từ điển** (từ điển riêng lưu trên máy). Có tuỳ chọn kiểm tra cả từ không dấu. `SPELLBROWSER` dùng bộ kiểm tra của trình duyệt như trước.
+
+**VPORTS:** mỗi khung nhìn xoay được riêng (xoay quanh tâm khung), giữ góc xoay khi chuyển khung.
+
+**Hatch liên kết vùng ghép:** hatch trong vùng kín ghép từ nhiều đoạn thẳng / cung / đa tuyến cũng tự liên kết; sửa một trong các nét biên thì vùng tô dựng lại theo.
+
+**DIMBREAK:**
+- Chỗ ngắt tự cập nhật khi nét cắt qua bị dời / sửa / xoá.
+- Dùng được cho cả kích thước có sẵn trong file DWG/DXF dạng nét rời; **R** trả lại nét gốc.
+
+**MIRRTEXT:** `MIRRTEXT 1` thì MIRROR lật cả chữ như AutoCAD (ghi ra DXF đúng cờ chữ ngược); mặc định 0.
+
+**Tool Palettes** (`TOOLPALETTES`, **Ctrl+3**, tab View): bảng nổi kéo được với 4 thẻ:
+- **Lệnh** — lệnh hay dùng.
+- **Ký hiệu** — mũi tên Bắc, đầu trục, cao độ (mặt đứng / mặt bằng), ký hiệu mặt cắt, chi tiết, độ dốc, mũi tên cầu thang, tam giác sửa đổi, cửa đi 1 / 2 cánh, cửa sổ, cột, bàn cầu, lavabo. Ký hiệu chú thích tự theo tỉ lệ chú thích (CANNOSCALE); cửa, thiết bị theo kích thước thật.
+- **Hatch** — bấm mẫu để tô ngay. **Khối** — thư viện khối của bạn.
+- Lệnh `SYMBOL` để chèn ký hiệu từ dòng lệnh.
+
+**DesignCenter** (`ADCENTER`, `DC`, **Ctrl+2**): mở một bản vẽ DWG/DXF khác, chèn **khối** của file đó vào bản vẽ hiện hành (giữ đúng màu, lớp), thêm **lớp**, nạp **kiểu nét**.
+
+**Nhập PDF** (`PDFIMPORT`, tab Insert → Import): đọc PDF vector (bản in từ AutoCAD, Revit…) thành nét (lớp PDF_Geometry), chữ (PDF_Text), vùng tô (PDF_Solid Fills); chọn trang, tỉ lệ 1:N, điểm chèn. Giữ màu nét. PDF ảnh quét không có nét vector thì không nhập được.
 
 ## Bổ sung (v4n)
 **Nhiều khung nhìn trong Model:** `VPORTS` — chia màn hình 1, 2 (dọc/ngang), 3, 4 khung (View → Model Viewports). Bấm vào khung để làm hiện hành; mỗi khung phóng, kéo, ZE riêng. **J** = gộp về một khung.
