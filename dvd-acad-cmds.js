@@ -1518,7 +1518,7 @@
   A.aciNear = aciNear;
   function dxfStr(s){ return String(s).replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }
   window.entitiesToDXF = function(ents){
-    if(A.dxfR2000 && A.dxfVer !== 'R12') return A.dxfR2000(ents);   // mặc định: DXF R2000 (dvd-acad-dxf.js)
+    if(A.dxfR2000 && A.dxfVer !== 'R12') return A.dxfR2000(ents);   // mặc định: DXF 2018 (dvd-acad-dxf.js)
     ents = ents.filter(e => e && !e.xr);   // tham chiếu ngoài (XREF) không ghi vào file
     const L = []; const P = (c, v) => { L.push(String(c)); let s; if(typeof v === 'number') s = (c >= 10 && c < 60) ? _fmtReal(v) : String(v | 0); else s = String(v); L.push(s); };
     const layers = new Set(A.layerNames().filter(n => !n.includes('|'))); for(const e of ents) layers.add(String(e.layer || '0'));

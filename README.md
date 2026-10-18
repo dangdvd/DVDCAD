@@ -4,6 +4,10 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v4u: lưu DXF 2018
+- Mặc định ghi DXF 2018 (AC1032): CLASSES, MATERIAL, MLEADERSTYLE, SCALELIST… như AutoCAD 2018; chữ UTF-8, màu RGB. `DXFVERSION`: 2018 / 2013 / 2010 / 2007 / 2004 / 2000 / Tự động / R12.
+- Đọc DXF: màu RGB của lớp, giữ lớp rỗng.
+
 ## v4t: DXF giữ thêm màu RGB, WIPEOUT, thứ tự vẽ, ràng buộc
 - Màu RGB (420, tự lên R2004), WIPEOUT thật, thứ tự vẽ theo thứ tự file, HATCH DOTS/EARTH/AR-CONC có đường mẫu.
 - XDATA + XRECORD DVDCAD_DATA: ràng buộc tham số, khối động, chú thích theo tỉ lệ… mở lại còn nguyên.

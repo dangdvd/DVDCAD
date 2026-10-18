@@ -1,4 +1,4 @@
-/* DVDCAD v4s — GHI DXF R2000 (AC1015)
+/* DVDCAD v4s — GHI DXF R2000 (AC1015) · v4u: mặc định DXF 2018 (AC1032), chọn được 2013/2010/2007/2004/2000/R12
    Có handle, mã lớp con (subclass), BLOCK_RECORD, OBJECTS (dictionary, layout) như AutoCAD 2000 trở lên.
    Giữ được so với R12: bề rộng nét từng đối tượng / lớp (370), LWPOLYLINE có cung, MTEXT nhiều dòng, HATCH thật (đặc + mẫu),
    ELLIPSE, XLINE / RAY, kiểu nét phức (chữ / hình trong nét), khối + thuộc tính, kích thước DIMENSION, XDATA DVDCAD. */
@@ -7,8 +7,13 @@
   const A = window.DVDAcad; if(!A || A._dxf2000) return; A._dxf2000 = true;
   const G = A.G, D2R = Math.PI / 180, R2D = 180 / Math.PI, TAU = Math.PI * 2;
   const VK = 'dvd:dxfver';
-  A.dxfVer = (() => { try{ return localStorage.getItem(VK) || 'AUTO'; }catch(_){ return 'AUTO'; } })();
-  A.setDxfVer = v => { A.dxfVer = /^(R12|R2000|R2004|R2007)$/.test(v) ? v : 'AUTO'; try{ localStorage.setItem(VK, A.dxfVer); }catch(_){} };
+  // mã phiên bản; 'AUTO' = R2000, tự lên R2004 khi có màu RGB (kiểu cũ trước v4u)
+  const ACV = { R2000: 'AC1015', R2004: 'AC1018', R2007: 'AC1021', R2010: 'AC1024', R2013: 'AC1027', R2018: 'AC1032' };
+  const YR = { R2000: 2000, R2004: 2004, R2007: 2007, R2010: 2010, R2013: 2013, R2018: 2018 };
+  const VOK = /^(R12|R2000|R2004|R2007|R2010|R2013|R2018|AUTO)$/;
+  A.dxfVer = (() => { try{ let v = localStorage.getItem(VK); if(v === 'AUTO' && !localStorage.getItem(VK + '18')){ v = 'R2018'; localStorage.setItem(VK, v); }   // v4u: mặc định cũ (Tự động) → 2018
+      try{ localStorage.setItem(VK + '18', '1'); }catch(_){} return v && VOK.test(v) ? v : 'R2018'; }catch(_){ return 'R2018'; } })();
+  A.setDxfVer = v => { A.dxfVer = VOK.test(v) ? v : 'R2018'; try{ localStorage.setItem(VK, A.dxfVer); localStorage.setItem(VK + '18', '1'); }catch(_){} };
   const hexRGB = h => { let s = String(h || '').replace('#', ''); if(s.length === 3) s = s.split('').map(c => c + c).join(''); const n = parseInt(s, 16); return /^[0-9a-f]{6}$/i.test(s) ? n : null; };
   const isAciColor = h => { const n = hexRGB(h); if(n == null) return true; const a = A.aciNear(h); return (ACI_RGB[a] >>> 0) === n; };
   // thuộc tính riêng của DVDCAD ghi kèm (XDATA) để mở lại trong DVDCAD còn nguyên
@@ -38,15 +43,18 @@
     ents = ents.filter(e => e && !e.xr && !e.vh);
     ents = ents.map((e, i) => [e, i]).sort((a, b) => ((a[0].dord | 0) - (b[0].dord | 0)) || (a[1] - b[1])).map(x => x[0]);   // thứ tự vẽ (DRAWORDER) = thứ tự trong file
     const needTC = ents.some(e => e.col && !e.bl && !isAciColor(e.col) && String(e.col).toLowerCase() !== String(A.layerHex(e.layer || '0')).toLowerCase()) || [...new Set(ents.map(e => e.layer || '0'))].some(l => !isAciColor(A.layerHex(l)));
-    const V2007 = A.dxfVer === 'R2007'; UTF8 = V2007;
-    const V2004 = V2007 || A.dxfVer === 'R2004' || (A.dxfVer !== 'R2000' && needTC);
-    A.lastDxfVer = V2007 ? 'R2007' : V2004 ? 'R2004' : 'R2000';
+    const VR = ACV[A.dxfVer] ? A.dxfVer : (A.dxfVer === 'AUTO' && needTC) ? 'R2004' : A.dxfVer === 'AUTO' ? 'R2000' : 'R2018';
+    const yr = YR[VR]; const V2007 = yr >= 2007; UTF8 = V2007;   // R2007+: chữ UTF-8, vật liệu, kiểu ghi chú (MLEADERSTYLE)…
+    const V2004 = yr >= 2004;
+    A.lastDxfVer = VR;
     const hasWipe = ents.some(e => e.wipe && e.type === 'POLYLINE');
     const L = []; const P = (c, v) => { L.push(String(c)); L.push(typeof v === 'number' ? (isReal(c) ? fr(v) : String(Math.round(v))) : String(v)); };
     let hseq = 0x20; const H = () => (hseq++).toString(16).toUpperCase();
     const ext = bbox(ents) || { x0: 0, y0: 0, x1: 100, y1: 100 };
     // ---------- handles cố định ----------
     const hRoot = H(), hGroupD = H(), hLayoutD = H(), hMlsD = H(), hPsetD = H(), hPsnD = H(), hPsnNormal = H(), hMlsStd = H();
+    // R2007+ (2010/2013/2018): từ điển & đối tượng bắt buộc như AutoCAD tạo
+    const N7 = V2007 ? { color: H(), mat: H(), mByBlock: H(), mByLayer: H(), mGlobal: H(), mlds: H(), mldStd: H(), scl: H(), sc11: H(), tbs: H(), vis: H() } : null;
     const hT = {}; for(const t of ['VPORT', 'LTYPE', 'LAYER', 'STYLE', 'VIEW', 'UCS', 'APPID', 'DIMSTYLE', 'BLOCK_RECORD']) hT[t] = H();
     const hBRmodel = H(), hBRpaper = H(), hLayModel = H(), hLayPaper = H(), hBlkModel = H(), hEndModel = H(), hBlkPaper = H(), hEndPaper = H();
     // ---------- lớp / kiểu nét / kiểu chữ ----------
@@ -81,7 +89,8 @@
     let dn = 0; for(const d of dims.values()) d.bn = '*D' + (++dn);
     // ---------- HEADER ----------
     P(0, 'SECTION'); P(2, 'HEADER');
-    P(9, '$ACADVER'); P(1, V2007 ? 'AC1021' : V2004 ? 'AC1018' : 'AC1015'); P(9, '$ACADMAINTVER'); P(70, 20); P(9, '$DWGCODEPAGE'); P(3, 'ANSI_1252');
+    P(9, '$ACADVER'); P(1, ACV[VR]); P(9, '$ACADMAINTVER'); if(yr >= 2018) P(90, 4); else P(70, { 2007: 25, 2010: 6, 2013: 105 }[yr] || 20); P(9, '$DWGCODEPAGE'); P(3, 'ANSI_1252');
+    if(yr >= 2013){ P(9, '$REQUIREDVERSIONS'); P(160, 0); } P(9, '$LASTSAVEDBY'); P(1, 'DVDCAD');
     P(9, '$INSBASE'); P(10, (A.drawBase && A.drawBase.x) || 0); P(20, (A.drawBase && A.drawBase.y) || 0); P(30, 0);
     P(9, '$EXTMIN'); P(10, ext.x0); P(20, ext.y0); P(30, 0); P(9, '$EXTMAX'); P(10, ext.x1); P(20, ext.y1); P(30, 0);
     P(9, '$LIMMIN'); P(10, 0); P(20, 0); P(9, '$LIMMAX'); P(10, 420); P(20, 297);
@@ -91,8 +100,14 @@
     P(9, '$PSLTSCALE'); P(70, 1); P(9, '$HANDSEED'); const seedAt = L.length + 1; P(5, 'FFFF');
     P(0, 'ENDSEC');
     P(0, 'SECTION'); P(2, 'CLASSES');
-    if(hasWipe){ P(0, 'CLASS'); P(1, 'WIPEOUTVARIABLES'); P(2, 'AcDbWipeoutVariables'); P(3, 'WipeOut|AutoCAD Express Tool|expresstools@autodesk.com'); P(90, 0); P(280, 0); P(281, 0);
-      P(0, 'CLASS'); P(1, 'WIPEOUT'); P(2, 'AcDbWipeout'); P(3, 'WipeOut|AutoCAD Express Tool|expresstools@autodesk.com'); P(90, 127); P(280, 0); P(281, 1); }
+    const cls = (n, cpp, app, fl, ent) => { P(0, 'CLASS'); P(1, n); P(2, cpp); P(3, app); P(90, fl); if(V2004) P(91, 0); P(280, 0); P(281, ent ? 1 : 0); };
+    if(V2007){ const ODBX = 'ObjectDBX Classes';
+      for(const c of [['ACDBDICTIONARYWDFLT', 'AcDbDictionaryWithDefault', ODBX, 0], ['SUN', 'AcDbSun', 'SCENEOE', 1153], ['VISUALSTYLE', 'AcDbVisualStyle', ODBX, 4095], ['MATERIAL', 'AcDbMaterial', ODBX, 1153],
+        ['SCALE', 'AcDbScale', ODBX, 1153], ['TABLESTYLE', 'AcDbTableStyle', ODBX, 4095], ['MLEADERSTYLE', 'AcDbMLeaderStyle', 'ACDB_MLEADERSTYLE_CLASS', 4095], ['DICTIONARYVAR', 'AcDbDictionaryVar', ODBX, 0],
+        ['CELLSTYLEMAP', 'AcDbCellStyleMap', ODBX, 1152], ['MENTALRAYRENDERSETTINGS', 'AcDbMentalRayRenderSettings', 'SCENEOE', 1024], ['ACDBDETAILVIEWSTYLE', 'AcDbDetailViewStyle', ODBX, 1025],
+        ['ACDBSECTIONVIEWSTYLE', 'AcDbSectionViewStyle', ODBX, 1025], ['RASTERVARIABLES', 'AcDbRasterVariables', 'ISM', 0], ['ACDBPLACEHOLDER', 'AcDbPlaceHolder', ODBX, 0], ['LAYOUT', 'AcDbLayout', ODBX, 0]]) cls(c[0], c[1], c[2], c[3]); }
+    if(hasWipe){ cls('WIPEOUTVARIABLES', 'AcDbWipeoutVariables', 'WipeOut|AutoCAD Express Tool|expresstools@autodesk.com', 0);
+      cls('WIPEOUT', 'AcDbWipeout', 'WipeOut|AutoCAD Express Tool|expresstools@autodesk.com', 127, true); }
     P(0, 'ENDSEC');
     // ---------- TABLES ----------
     P(0, 'SECTION'); P(2, 'TABLES');
@@ -112,7 +127,7 @@
     A.lsSync && A.lsSync();
     table('LAYER', layers.size, () => { for(const ly of layers){ const aci = A.aciNear(A.layerHex(ly)); let fl = 0; if(A.LS.frozen.has(ly)) fl |= 1; if(A.LS.locked.has(ly)) fl |= 4;
       rec('LAYER', layH.get(ly), 'AcDbLayerTableRecord'); P(2, dxfStr(ly)); P(70, fl); P(62, A.LS.off.has(ly) ? -aci : aci); if(V2004 && !isAciColor(A.layerHex(ly))) P(420, hexRGB(A.layerHex(ly))); const llt = String(A.layerLT(ly) || '').toUpperCase(); P(6, ltOk.has(llt) ? dxfStr(llt) : 'Continuous');
-      const lw = lwStd(A.layerLW ? A.layerLW(ly) : 0); P(370, lw != null ? lw : -3); P(390, hPsnNormal); } });
+      const lw = lwStd(A.layerLW ? A.layerLW(ly) : 0); P(370, lw != null ? lw : -3); P(390, hPsnNormal); if(N7) P(347, N7.mGlobal); } });
     table('STYLE', 1 + stUsed.size + (hStShx ? 1 : 0), () => {
       rec('STYLE', hStStd, 'AcDbTextStyleTableRecord'); P(2, 'Standard'); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'arial.ttf'); P(4, '');
       for(const [n, o] of stUsed){ rec('STYLE', o.h, 'AcDbTextStyleTableRecord'); P(2, dxfStr(n)); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, o.f); P(4, ''); }
@@ -124,10 +139,11 @@
       () => { P(100, 'AcDbDimStyleTable'); P(71, 1); P(340, hDsStd); });
     const allBlocks = [...blockDefs.values(), ...dims.values()];
     table('BLOCK_RECORD', 2 + allBlocks.length, () => {
-      rec('BLOCK_RECORD', hBRmodel, 'AcDbBlockTableRecord'); P(2, '*Model_Space'); P(340, hLayModel);
-      rec('BLOCK_RECORD', hBRpaper, 'AcDbBlockTableRecord'); P(2, '*Paper_Space'); P(340, hLayPaper);
-      for(const D of blockDefs.values()){ rec('BLOCK_RECORD', D.hBR, 'AcDbBlockTableRecord'); P(2, dxfStr(D.name)); P(340, '0'); }
-      for(const d of dims.values()){ rec('BLOCK_RECORD', d.hBR, 'AcDbBlockTableRecord'); P(2, d.bn); P(340, '0'); } });
+      const brx = () => { if(V2007){ P(70, (typeof insunits !== 'undefined' && insunits) | 0); P(280, 1); P(281, 0); } };   // R2007+: đơn vị chèn, cho phép phá khối
+      rec('BLOCK_RECORD', hBRmodel, 'AcDbBlockTableRecord'); P(2, '*Model_Space'); P(340, hLayModel); brx();
+      rec('BLOCK_RECORD', hBRpaper, 'AcDbBlockTableRecord'); P(2, '*Paper_Space'); P(340, hLayPaper); brx();
+      for(const D of blockDefs.values()){ rec('BLOCK_RECORD', D.hBR, 'AcDbBlockTableRecord'); P(2, dxfStr(D.name)); P(340, '0'); brx(); }
+      for(const d of dims.values()){ rec('BLOCK_RECORD', d.hBR, 'AcDbBlockTableRecord'); P(2, d.bn); P(340, '0'); brx(); } });
     P(0, 'ENDSEC');
     // ---------- đối tượng ----------
     const span = Math.max(ext.x1 - ext.x0, ext.y1 - ext.y0, 1);
@@ -243,6 +259,8 @@
     const dict = (h, owner, entries, hard) => { P(0, 'DICTIONARY'); P(5, h); if(owner !== '0'){ P(102, '{ACAD_REACTORS'); P(330, owner); P(102, '}'); } P(330, owner); P(100, 'AcDbDictionary'); if(hard) P(280, 1); P(281, 1); for(const [k, v] of entries){ P(3, k); P(350, v); } };
     const hWv = hasWipe ? H() : null; const xdat = dvdData(ents); const hXr = xdat ? H() : null;
     const rootE = [['ACAD_GROUP', hGroupD], ['ACAD_LAYOUT', hLayoutD], ['ACAD_MLINESTYLE', hMlsD], ['ACAD_PLOTSETTINGS', hPsetD], ['ACAD_PLOTSTYLENAME', hPsnD]]; if(hWv) rootE.push(['ACAD_WIPEOUT_VARS', hWv]); if(hXr) rootE.push(['DVDCAD_DATA', hXr]);
+    if(N7) rootE.push(['ACAD_COLOR', N7.color], ['ACAD_MATERIAL', N7.mat], ['ACAD_MLEADERSTYLE', N7.mlds], ['ACAD_SCALELIST', N7.scl], ['ACAD_TABLESTYLE', N7.tbs], ['ACAD_VISUALSTYLE', N7.vis]);
+    rootE.sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
     dict(hRoot, '0', rootE);
     if(hWv){ P(0, 'WIPEOUTVARIABLES'); P(5, hWv); P(102, '{ACAD_REACTORS'); P(330, hRoot); P(102, '}'); P(330, hRoot); P(100, 'AcDbWipeoutVariables'); P(70, (typeof WIPEFRAME !== 'undefined' && WIPEFRAME === 0) ? 0 : 1); }
     if(hXr){ P(0, 'XRECORD'); P(5, hXr); P(102, '{ACAD_REACTORS'); P(330, hRoot); P(102, '}'); P(330, hRoot); P(100, 'AcDbXrecord'); P(280, 1); P(1, 'DVDCAD1'); for(let k = 0; k < xdat.length; k += 240) P(300, xdat.slice(k, k + 240)); }
@@ -257,16 +275,28 @@
       P(100, 'AcDbPlotSettings'); P(1, ''); P(2, 'none_device'); P(4, ''); P(6, ''); P(40, 0); P(41, 0); P(42, 0); P(43, 0); P(44, 0); P(45, 0); P(46, 0); P(47, 0); P(48, 0); P(49, 0); P(140, 0); P(141, 0); P(142, 1); P(143, 1); P(70, name === 'Model' ? 1712 : 688); P(72, 1); P(73, 0); P(74, 5); P(7, ''); P(75, 16); P(147, 1); P(148, 0); P(149, 0);
       P(100, 'AcDbLayout'); P(1, name); P(70, flags); P(71, tab); P(10, 0); P(20, 0); P(11, 420); P(21, 297); P(12, 0); P(22, 0); P(32, 0); P(14, ext.x0); P(24, ext.y0); P(34, 0); P(15, ext.x1); P(25, ext.y1); P(35, 0); P(146, 0); P(13, 0); P(23, 0); P(33, 0); P(16, 1); P(26, 0); P(36, 0); P(17, 0); P(27, 1); P(37, 0); P(76, 0); P(330, br); };
     layout(hLayModel, 'Model', 1, 0, hBRmodel); layout(hLayPaper, 'Layout1', 1, 1, hBRpaper);
+    if(N7){ dict(N7.color, hRoot, []); dict(N7.tbs, hRoot, []); dict(N7.vis, hRoot, []);
+      dict(N7.mat, hRoot, [['ByBlock', N7.mByBlock], ['ByLayer', N7.mByLayer], ['Global', N7.mGlobal]]);
+      const material = (h, name) => { P(0, 'MATERIAL'); P(5, h); P(102, '{ACAD_REACTORS'); P(330, N7.mat); P(102, '}'); P(330, N7.mat); P(100, 'AcDbMaterial'); P(1, name); P(2, '');
+        P(70, 0); P(40, 1); P(71, 1); P(41, 1); P(91, -1023410177); P(42, 1); P(72, 1); P(3, ''); P(73, 1); P(74, 1); P(75, 1); P(44, 0.5); P(73, 0); P(45, 1); P(46, 1); P(77, 1); P(4, ''); P(78, 1); P(79, 1); P(170, 1); P(48, 1); P(171, 1); P(6, '');
+        P(172, 1); P(173, 1); P(174, 1); P(140, 1); P(141, 1); P(175, 1); P(7, ''); P(176, 1); P(177, 1); P(178, 1); P(143, 1); P(179, 1); P(8, ''); P(270, 1); P(271, 1); P(272, 1); P(145, 1); P(146, 1); P(273, 1); P(9, ''); P(274, 1); P(275, 1); P(276, 1);
+        P(42, 1); P(72, 1); P(3, ''); P(73, 1); P(74, 1); P(75, 1); P(94, 63); };
+      material(N7.mByBlock, 'ByBlock'); material(N7.mByLayer, 'ByLayer'); material(N7.mGlobal, 'Global');
+      dict(N7.mlds, hRoot, [['Standard', N7.mldStd]]);
+      P(0, 'MLEADERSTYLE'); P(5, N7.mldStd); P(102, '{ACAD_REACTORS'); P(330, N7.mlds); P(102, '}'); P(330, N7.mlds); P(100, 'AcDbMLeaderStyle'); P(179, 2); P(170, 2); P(171, 1); P(172, 0); P(90, 2); P(40, 0); P(41, 0); P(173, 1); P(91, -1056964608); P(92, -2); P(290, 1); P(42, 2); P(291, 1); P(43, 8);
+      P(3, 'Standard'); P(44, dt); P(300, ''); P(342, hStStd); P(174, 1); P(175, 1); P(176, 0); P(178, 1); P(93, -1056964608); P(45, dt); P(292, 0); P(297, 0); P(46, dt); P(94, -1056964608); P(47, 1); P(49, 1); P(140, 1); P(294, 1); P(141, 0); P(177, 0); P(142, 1); P(295, 0); P(296, 0); P(143, 3.75); P(271, 0); P(272, 9); P(273, 9);
+      dict(N7.scl, hRoot, [['A0', N7.sc11]]);
+      P(0, 'SCALE'); P(5, N7.sc11); P(102, '{ACAD_REACTORS'); P(330, N7.scl); P(102, '}'); P(330, N7.scl); P(100, 'AcDbScale'); P(70, 0); P(300, '1:1'); P(140, 1); P(141, 1); P(290, 1); }
     P(0, 'ENDSEC'); P(0, 'EOF');
     L[seedAt] = hseq.toString(16).toUpperCase();
     return L.join('\r\n') + '\r\n';
   }
   A.dxfR2000 = writeR2000;
   // lệnh chọn phiên bản DXF khi lưu
-  DVDCmd.register(['DXFVERSION', 'DXFVER', 'PHIENBANDXF'], 'Phiên bản DXF khi lưu: Tự động (R2000, hoặc R2004 khi có màu RGB), R2000, R2004, R2007 (chữ UTF-8), R12 (phần mềm cũ)', () => A.run('DXFVERSION', async () => {
-    const lab = { AUTO: 'Tự động', R2000: 'R2000', R2004: 'R2004 (màu RGB)', R2007: 'R2007 (chữ UTF-8)', R12: 'R12 (cũ)' };
-    const r = await A.getKw('Lưu DXF theo phiên bản', { kw: [{ k: 'T', t: 'Tự động' }, { k: '2000', t: 'R2000' }, { k: '2004', t: 'R2004 (màu RGB)' }, { k: '2007', t: 'R2007 (chữ UTF-8)' }, { k: 'R12', t: 'R12 (cũ)' }], def: lab[A.dxfVer] || 'Tự động' });
-    if(r.kw) A.setDxfVer(r.kw === 'R12' ? 'R12' : r.kw === '2000' ? 'R2000' : r.kw === '2004' ? 'R2004' : r.kw === '2007' ? 'R2007' : 'AUTO'); A.log('Lưu DXF: ' + (lab[A.dxfVer] || A.dxfVer));
+  DVDCmd.register(['DXFVERSION', 'DXFVER', 'PHIENBANDXF'], 'Phiên bản DXF khi lưu: 2018 (mặc định), 2013, 2010, 2007, 2004, 2000, Tự động (2000/2004), R12 (phần mềm cũ)', () => A.run('DXFVERSION', async () => {
+    const lab = { R2018: 'DXF 2018', R2013: 'DXF 2013', R2010: 'DXF 2010', R2007: 'DXF 2007', R2004: 'DXF 2004', R2000: 'DXF 2000', AUTO: 'Tự động (2000/2004)', R12: 'R12 (cũ)' };
+    const r = await A.getKw('Lưu DXF theo phiên bản', { kw: [{ k: '2018', t: '2018 (mặc định)' }, { k: '2013', t: '2013' }, { k: '2010', t: '2010' }, { k: '2007', t: '2007' }, { k: '2004', t: '2004' }, { k: '2000', t: '2000' }, { k: 'T', t: 'Tự động 2000/2004' }, { k: 'R12', t: 'R12 (cũ)' }], def: lab[A.dxfVer] || 'DXF 2018' });
+    if(r.kw) A.setDxfVer(r.kw === 'R12' ? 'R12' : r.kw === 'T' ? 'AUTO' : 'R' + r.kw); A.log('Lưu DXF: ' + (lab[A.dxfVer] || A.dxfVer));
   }), { engine: true });
   try{ DVDCmd.refresh && DVDCmd.refresh(); }catch(_){}
 })();

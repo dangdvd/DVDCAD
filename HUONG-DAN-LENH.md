@@ -213,6 +213,13 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v4u) — lưu DXF 2018
+Lưu DXF (Ctrl+S, SAVEAS, xuất DXF, gửi máy chủ DWG) nay mặc định ghi **DXF 2018 (AC1032)** — đúng định dạng AutoCAD 2018–2025 lưu ra.
+- Có đủ phần AutoCAD 2018 cần: CLASSES, vật liệu ByBlock / ByLayer / Global, kiểu ghi chú dẫn MLEADERSTYLE Standard, danh sách tỉ lệ (1:1), từ điển màu / kiểu bảng / kiểu hiển thị; lớp gắn vật liệu, khối ghi đơn vị chèn.
+- **Chữ tiếng Việt ghi thẳng UTF-8** (không còn mã \U+), **màu RGB** luôn ghi được (không phải đổi phiên bản).
+- `DXFVERSION` chọn: **2018** (mặc định), 2013, 2010, 2007, 2004, 2000, Tự động (2000 / 2004 như bản cũ), R12. Máy đang để "Tự động" (mặc định cũ) được chuyển sang 2018 một lần; đã chọn phiên bản khác thì giữ nguyên.
+- **Mở DXF:** đọc **màu RGB của lớp** (đối tượng theo lớp hiện đúng màu RGB) và giữ cả **lớp rỗng** (lớp chưa có đối tượng) như AutoCAD.
+
 ## Bổ sung (v4t)
 **DXF giữ thêm:**
 - **Màu RGB** (true color, mã 420): bản vẽ có màu RGB thì tự lưu DXF **R2004**; mở lại giữ đúng màu.
@@ -450,14 +457,14 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Lưu DXF ngay trong app. Lưu **DWG** cần máy chủ chuyển đổi (`SAVEDWG`, xem trên).
 - Khối lưu ra DXF thành BLOCK + INSERT (kèm thuộc tính ATTDEF/ATTRIB); kích thước thẳng, bán kính, đường kính lưu thành DIMENSION. Kích thước góc lưu thành DIMENSION 3 điểm; bản khối bị sửa riêng lưu thành khối biến thể (TÊN$1…). Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước. Kích thước không bám theo khi chỉ sửa riêng đường hình.
 - Kích thước thẳng/chéo có sẵn trong file DWG/DXF cũng kéo ô nắm và STRETCH được. Khi sửa, kích thước được vẽ lại theo kiểu của DVDCAD: giữ cao chữ, số lẻ, mũi tên/gạch chéo. Kích thước góc và bán kính của file gốc chỉ chọn theo cụm.
-- DXF lưu mặc định **Tự động**: R2000, hoặc R2004 khi có màu RGB. `DXFVERSION` chọn R2007 (chữ UTF-8, hợp phần mềm khác ngoài AutoCAD) hoặc R12 (phần mềm rất cũ).
+- DXF lưu mặc định **2018 (AC1032)**, chữ UTF-8, màu RGB. `DXFVERSION` chọn 2013 / 2010 / 2007 / 2004 / 2000, Tự động (2000/2004) hoặc R12 (phần mềm rất cũ). AutoCAD 2017 trở về trước không mở được file 2018 — chọn phiên bản thấp hơn.
 - Hatch dò biên trong màn hình trước, không thấy biên kín thì tự mở rộng phạm vi dò (tới 40 lần màn hình).
 - Đa tuyến có cung giữ đúng cung khi di chuyển, xoay, lật, tỉ lệ, OFFSET, sửa bằng ô nắm và lưu DXF. TRIM, BREAK, EXTEND, JOIN, FILLET / CHAMFER đa tuyến, REVERSE cũng giữ cung. Cung ở đầu đa tuyến chưa EXTEND được (kéo ô nắm hoặc LENGTHEN).
 - Vùng (REGION) lưu ra DXF dạng đa tuyến kín kèm dữ liệu DVDCAD (mở lại trong DVDCAD vẫn là vùng; AutoCAD thấy đa tuyến). Spline / elip trong phép toán vùng được chia thành đoạn thẳng nhỏ.
 - DATALINK tự đọc lại file Excel trên Chrome / Edge máy tính. Trên iPhone / iPad / Safari: dùng `DATALINKURL` (Google Sheets / link CSV) để tự cập nhật, hoặc chọn lại file khi chạy DATALINKUPDATE.
 - Trình duyệt không tự ghi được DWG: `SAVEDWG` gửi DXF tới máy chủ ODA của bạn. Không có máy chủ thì lưu DXF, AutoCAD mở bình thường.
 - Ràng buộc tham số và định nghĩa khối động ghi kèm trong DXF (R2000+, mục DVDCAD_DATA) — mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này. Khối động lưu ra thành khối thường ở trạng thái hiện tại. Khối động trong file AutoCAD hiện đúng trạng thái đang lưu nhưng chưa đổi được tham số gốc của AutoCAD.
-- Vùng che ghi thành WIPEOUT, thứ tự vẽ ghi theo thứ tự trong file (AutoCAD hiện đúng trên/dưới). Chú thích theo tỉ lệ ghi thành chữ thường cho AutoCAD (DVDCAD mở lại vẫn theo tỉ lệ). Màu RGB ghi đúng (DXF tự lên R2004 khi bản vẽ có màu RGB). Màu RGB riêng của **lớp** khi mở file chỉ đọc theo màu ACI.
+- Vùng che ghi thành WIPEOUT, thứ tự vẽ ghi theo thứ tự trong file (AutoCAD hiện đúng trên/dưới). Chú thích theo tỉ lệ ghi thành chữ thường cho AutoCAD (DVDCAD mở lại vẫn theo tỉ lệ). Màu RGB ghi đúng, cả màu RGB của lớp khi mở lại. Màu sách màu (color book) đọc theo màu RGB tương ứng.
 - 3D chưa có: bo cạnh tuỳ ý trên khối sau cộng/trừ (chỉ bo được hộp, khối đùn, trụ), render dò tia chất lượng ảnh chụp.
 - Khối sau UNION/SUBTRACT là lưới tam giác: mặt cong hiện dạng nhiều mặt phẳng nhỏ.
 - Khối ACIS (3DSOLID) của AutoCAD trong DXF đọc được: mặt phẳng, mặt trụ, nón, cầu, xuyến. Mặt cong tự do (spline, bo cạnh của AutoCAD) hiện gần đúng theo đường biên. Khối đọc vào thành khối lưới, lưu lại là 3DFACE. Đọc 3DSOLID từ file **DWG** đang thử nghiệm.
