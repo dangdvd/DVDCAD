@@ -5,7 +5,7 @@
      ngay lần đầu mở một file .dwg khi có mạng -> các lần sau dùng offline được.
    Đổi số phiên bản CACHE bên dưới mỗi khi cập nhật file để buộc làm mới.
    HTML dùng network-first: có mạng luôn lấy bản mới nhất, mất mạng mới dùng cache. */
-const CACHE = 'dvdcad-v4y';
+const CACHE = 'dvdcad-v4z';
 const CORE = [
   './',
   './index.html',
@@ -18,7 +18,7 @@ const CORE = [
   './dvd-config.js',
   './dvd-collab-core.js',
   './dvd-cloud.js',
-  './dvd-cmd.js','./dvd-acad-core.js','./dvd-acad-cmds.js','./dvd-icons.js','./dvd-acad-ui.js','./dvd-acad-more.js','./dvd-acad-ext.js','./dvd-acad-pro.js','./dvd-acad-3d.js','./dvd-acad-3dx.js','./dvd-acad-3dy.js','./dvd-acad-x2.js', './dvd-acad-x3.js', './dvd-acad-x4.js', './dvd-acad-x5.js', './dvd-acad-x6.js', './dvd-acad-x7.js', './dvd-acad-x8.js', './dvd-acad-x9.js', './dvd-acad-dxf.js','./dvd-acad-x10.js','./dvd-acad-x11.js','./dvd-acad-x12.js','./dvd-acis.js','./vendor/three.min.js'
+  './dvd-cmd.js','./dvd-acad-core.js','./dvd-acad-cmds.js','./dvd-icons.js','./dvd-acad-ui.js','./dvd-acad-more.js','./dvd-acad-ext.js','./dvd-acad-pro.js','./dvd-acad-3d.js','./dvd-acad-3dx.js','./dvd-acad-3dy.js','./dvd-acad-x2.js', './dvd-acad-x3.js', './dvd-acad-x4.js', './dvd-acad-x5.js', './dvd-acad-x6.js', './dvd-acad-x7.js', './dvd-acad-x8.js', './dvd-acad-x9.js', './dvd-acad-dxf.js','./dvd-acad-x10.js','./dvd-acad-x11.js','./dvd-acad-x12.js','./dvd-acad-x13.js','./dvd-acis.js','./vendor/three.min.js'
 ];
 
 self.addEventListener('install', (e) => {

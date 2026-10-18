@@ -213,6 +213,33 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v4z)
+**Công cụ chữ** (như Express Tools)
+- `TJUST`: đổi canh lề (L, C, R, TL…BR, MC) mà chữ không dời.
+- `TORIENT`: xoay chữ về góc cho trước, hoặc Enter để lật chữ bị ngược cho dễ đọc. Giữ tâm chữ.
+- `TSCALE`: đổi cỡ nhiều chữ theo hệ số hoặc chiều cao mới, giữ điểm đặt.
+- `TEXTFIT`: co / giãn bề rộng chữ cho vừa tới điểm chỉ định.
+- `TCIRCLE`: khung tròn / khe bo 2 đầu / chữ nhật quanh chữ (ghi số hiệu trục, phòng…).
+
+**Thuộc tính, liên kết**
+- `ATTIPEDIT`: sửa tại chỗ một thuộc tính khối. `BATTORDER`: mở BATTMAN để đổi thứ tự.
+- `XLIST`: xem loại / lớp / màu / kiểu nét / khối chứa của đối tượng nằm trong khối.
+- `CHURLS`: đổi / xoá siêu liên kết.
+
+**Kích thước, sửa hình**
+- `DIMEX` / `DIMIM`: xuất / nhập kiểu kích thước ra file `.dvddim` để dùng chung giữa các máy.
+- `MSTRETCH`: kéo giãn bằng nhiều khung cắt cùng lúc (VD nới cả 2 đầu bản vẽ một lần).
+
+**3D → bản vẽ 2D**
+- `VIEWBASE` (`HINHCHIEU`): dựng 3 hình chiếu đứng / bằng / cạnh từ khối 3D. Đã khử nét khuất, tỉ lệ 1:1.
+  - **Góc chiếu thứ nhất (TCVN / ISO):** hình bằng đặt dưới, hình cạnh (nhìn từ trái) đặt bên phải.
+  - **Góc chiếu thứ ba:** hình bằng đặt trên.
+
+**Dòng lệnh, script**
+- `MULTIPLE`: lặp lại một lệnh liên tục tới khi bấm Esc.
+- `HISTORY` / `TEXTSCR`: cửa sổ lịch sử dòng lệnh, sao chép được.
+- `DELAY`: tạm dừng trong file script `.scr`. `TEXTSTYLE`: như STYLE.
+
 ## Bổ sung (v4y) — mở file dung lượng lớn
 **Tối ưu file lớn** (thử với file DXF 37 MB: 200 nghìn đối tượng, nổ khối thành 600 nghìn nét; mở trong khoảng 3 giây trên máy thử)
 - Đọc DXF không còn tách cả file thành mảng dòng, bỏ các mã không dùng (100, 102, 330, 360) → bộ nhớ tạm khi đọc giảm khoảng một nửa (file 37 MB: 174 MB còn 86 MB). Quan trọng nhất trên iPhone.

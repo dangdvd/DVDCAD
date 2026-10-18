@@ -458,7 +458,7 @@
   }
 
   // STRETCH
-  function inBox(p, b){ return p.x >= b.minx && p.x <= b.maxx && p.y >= b.miny && p.y <= b.maxy; }
+  function inBox(p, b){ if(b.list) return b.list.some(x => inBox(p, x)); return p.x >= b.minx && p.x <= b.maxx && p.y >= b.miny && p.y <= b.maxy; }   // b.list: nhiều khung (MSTRETCH)
   function stretchEnt(w, box, dx, dy){
     const mv = p => { if(inBox(p, box)){ p.x += dx; p.y += dy; } };
     if(w.tbld){ if(inBox(w.tbld.o, box)) translateEnt(w, dx, dy); return; }
@@ -477,6 +477,7 @@
       case 'TEXT': case 'POINT': case 'XLINE': if(inBox({ x: w.x, y: w.y }, box)) translateEnt(w, dx, dy); break;
     }
   }
+  A.stretchEnt = stretchEnt;
   cmd(['STRETCH', 'S'], 'Kéo giãn: chọn bằng khung cắt, các đỉnh trong khung bị dời', async () => {
     const r = await A.getSel('Chọn đối tượng cần kéo giãn bằng khung cắt (kéo phải → trái)', { wantWindow: true, pre: false });
     const box = r.window ? r.window.box : null; let sel = r.sel || []; if(!sel.length){ log('Không có đối tượng.'); return; }

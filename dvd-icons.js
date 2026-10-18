@@ -437,8 +437,24 @@
     VPMIN: '<rect class="fd" x="3" y="3" width="18" height="18" rx="1"/><rect x="3" y="3" width="18" height="18" rx="1"/><path class="y" d="M15 9h-4V5M15 9l5-5M9 15h4v4M9 15l-5 5"/>',
     MSPACE: '<path class="fd" d="M3 9l9-5 9 5-9 5z"/><path d="M3 9l9-5 9 5-9 5z"/><path class="a" d="M3 14l9 5 9-5" />',
     PSPACE: '<path class="fd" d="M5 3h14v18H5z"/><path d="M5 3h14v18H5z"/><rect class="a" x="8" y="6" width="8" height="7"/><path d="M8 16h8M8 18.5h5"/>',
+    /* ---------- v4z (vẽ mới) ---------- */
+    TJUST: '<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/><circle class="fy" cx="12" cy="12" r="2.2"/>',
+    TORIENT: '<path d="M5 17l3.5-10h1L13 17M6.3 13.5h5.4"/><path class="a" d="M15 6a6 6 0 0 1 4 9M19 15l-.5-3.2L16 14" stroke-width="1.6"/>',
+    TSCALE: '<path d="M3 18l2.5-7h.8L9 18M3.8 15.5h4.4"/><path d="M11 19l4-12h1l4 12M12.5 15h6"/><path class="a" d="M4 5h6M8 3l2 2-2 2" stroke-width="1.5"/>',
+    TEXTFIT: '<path d="M6 14l2.5-7h1L12 14M6.9 11.5h4.2"/><path class="a" d="M3 18h18M3 16v4M21 16v4"/><path class="y" d="M14 11h6M18 9l2 2-2 2" stroke-width="1.5"/>',
+    TCIRCLE: '<rect class="a" x="2" y="7" width="20" height="10" rx="5"/><path d="M7 15l2-6h1l2 6M7.8 13h3.4M14 9v6M14 9h2.5a1.5 1.5 0 0 1 0 3H14M14 12h3a1.5 1.5 0 0 1 0 3h-3"/>',
+    MULTIPLE: '<circle cx="7" cy="12" r="3"/><circle cx="12" cy="12" r="3" opacity=".7"/><circle cx="17" cy="12" r="3" opacity=".45"/><path class="a" d="M4 20h16M17 18l3 2-3 2" stroke-width="1.5"/>',
+    HISTORY: '<rect class="fd" x="3" y="3" width="18" height="18" rx="1"/><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M6 8h12M6 11h12M6 14h8"/><path class="a" d="M6 17.5h3M10 17.5h1" stroke-width="1.8"/>',
+    ATTIPEDIT: '<rect class="fd" x="3" y="8" width="13" height="9" rx="1"/><rect x="3" y="8" width="13" height="9" rx="1"/><path class="a" d="M5.5 12.5h6"/><path class="y" d="M14 19l1-3 5-5 2 2-5 5z"/>',
+    XLIST: '<rect x="3" y="3" width="12" height="12" stroke-dasharray="2 1.5"/><circle class="fa" cx="9" cy="9" r="2.5"/><rect class="fd" x="12" y="12" width="9" height="9" rx="1"/><rect x="12" y="12" width="9" height="9" rx="1"/><path class="a" d="M14 15h5M14 18h3"/>',
+    CHURLS: CHAIN + '<path class="y" d="M15 21l1-3 4-4 2 2-4 4z"/>',
+    DELAY: '<circle class="fd" cx="12" cy="13" r="8"/><circle cx="12" cy="13" r="8"/><path class="a" d="M12 8v5l3 2M10 3h4"/>',
+    DIMEX: '<path d="M3 15V7M15 15V7"/><path class="a" d="M3 10h12"/><path class="g" d="M18 9v10M15 16l3 3 3-3" stroke-width="1.6"/>',
+    DIMIM: '<path d="M3 15V7M15 15V7"/><path class="a" d="M3 10h12"/><path class="g" d="M18 21V11M15 14l3-3 3 3" stroke-width="1.6"/>',
+    MSTRETCH: '<rect class="a" x="2" y="4" width="7" height="7" stroke-dasharray="2 1.5"/><rect class="a" x="13" y="13" width="7" height="7" stroke-dasharray="2 1.5"/><path d="M4 18h6v-6M14 6h6v6"/><path class="y" d="M9 15l3 0M12 15l-1.5-1.5M12 15l-1.5 1.5"/>',
+    VIEWBASE: '<rect class="fd" x="3" y="3" width="9" height="6"/><rect x="3" y="3" width="9" height="6"/><rect class="fa3" x="3" y="13" width="9" height="8"/><rect class="a" x="3" y="13" width="9" height="8"/><rect class="fd" x="15" y="3" width="6" height="6"/><rect x="15" y="3" width="6" height="6"/><path d="M7.5 9v4M12 6h3" stroke-dasharray="1.2 1.2" opacity=".6"/>',
     COUNT_: ''
   };
-  delete I.COUNT_; I.PAGESETUP = I.PLOT; I.FILLMODE = I.FILL; I.MS = I.MSPACE; I.PS = I.PSPACE; I.DJL = I.DIMJOGLINE; I.RCP = I.REVCLOUDPROPERTIES; I.XPLODE = I.EXPLODE; I.ARRAYCLASSIC = I.ARRAYRECT || I.ARRAY; I.HGB = I.HATCHGENERATEBOUNDARY; I.DIMSMART = I.DIM; I.MLE = I.MLEADEREDIT; I.DWGCOMPARE = I.COMPARE; I.VSCURRENT = I.VISUALSTYLES; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.DATALINKURL = I.DATALINK; I.DXFVERSION = I.DXFOUT; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
+  delete I.COUNT_; I.TEXTSCR = I.HISTORY; I.COMMANDHISTORY = I.HISTORY; I.BATTORDER = I.BATTMAN; I.TEXTSTYLE = I.STYLE; I.VIEWS3 = I.VIEWBASE; I.HINHCHIEU = I.VIEWBASE; I.PAGESETUP = I.PLOT; I.FILLMODE = I.FILL; I.MS = I.MSPACE; I.PS = I.PSPACE; I.DJL = I.DIMJOGLINE; I.RCP = I.REVCLOUDPROPERTIES; I.XPLODE = I.EXPLODE; I.ARRAYCLASSIC = I.ARRAYRECT || I.ARRAY; I.HGB = I.HATCHGENERATEBOUNDARY; I.DIMSMART = I.DIM; I.MLE = I.MLEADEREDIT; I.DWGCOMPARE = I.COMPARE; I.VSCURRENT = I.VISUALSTYLES; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.DATALINKURL = I.DATALINK; I.DXFVERSION = I.DXFOUT; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
   window.DVDIcons = I;
 })();

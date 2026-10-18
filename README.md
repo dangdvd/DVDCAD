@@ -4,6 +4,10 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v4z: công cụ chữ, VIEWBASE, MSTRETCH…
+- `dvd-acad-x13.js`: TJUST, TORIENT, TSCALE, TEXTFIT, TCIRCLE, MULTIPLE, HISTORY/TEXTSCR, ATTIPEDIT, XLIST, CHURLS, DELAY, DIMEX/DIMIM, MSTRETCH, VIEWBASE (3 hình chiếu, góc chiếu 1 / 3), BATTORDER, TEXTSTYLE.
+- Kiểm thử: e2e_v4 sửa phép so sánh chữ (bảng Thuộc tính hiện tên loại bằng chữ HOA qua CSS); e2e_test cũ (giao diện trước v4) đã thay bằng e2e_v4.
+
 ## v4y: mở file dung lượng lớn + lệnh mới
 - Đọc DXF không tách dòng, bỏ mã thừa (bộ nhớ tạm khi đọc file 37 MB: 174 → 86 MB). Giới hạn 2 triệu (máy tính) / 400 nghìn (điện thoại) đối tượng, có thông báo (trước bị cắt im lặng ở 200 nghìn).
 - Phóng / dời bằng ảnh tạm của lớp nét rồi vẽ lại khi ngừng. Gom nét theo kiểu, ctx.arc cho tròn / cung, chữ không save/restore, chữ nhỏ thành vệt.
