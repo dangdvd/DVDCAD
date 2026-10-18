@@ -22,9 +22,9 @@
   /* =====================================================================
      1) CÀI ĐẶT TRỢ GIÚP VẼ (lưu trên máy)
      ===================================================================== */
-  const OS_ALL = ['end', 'mid', 'cen', 'qua', 'int', 'per', 'tan', 'nea', 'nod', 'ins'];
-  const OS_NAME = { end: 'Điểm cuối', mid: 'Trung điểm', cen: 'Tâm', qua: 'Góc phần tư', int: 'Giao điểm', per: 'Vuông góc', tan: 'Tiếp tuyến', nea: 'Gần nhất', nod: 'Nút', ins: 'Điểm chèn' };
-  const OS_KEY = { END: 'end', ENDP: 'end', MID: 'mid', CEN: 'cen', QUA: 'qua', INT: 'int', PER: 'per', TAN: 'tan', NEA: 'nea', NOD: 'nod', INS: 'ins', NON: 'none', NONE: 'none' };
+  const OS_ALL = ['end', 'mid', 'cen', 'gce', 'qua', 'int', 'ext', 'per', 'tan', 'par', 'nea', 'nod', 'ins'];
+  const OS_NAME = { end: 'Điểm cuối', mid: 'Trung điểm', cen: 'Tâm', qua: 'Góc phần tư', int: 'Giao điểm', per: 'Vuông góc', tan: 'Tiếp tuyến', nea: 'Gần nhất', nod: 'Nút', ins: 'Điểm chèn', ext: 'Kéo dài', par: 'Song song', gce: 'Tâm hình học' };
+  const OS_KEY = { END: 'end', ENDP: 'end', MID: 'mid', CEN: 'cen', QUA: 'qua', INT: 'int', PER: 'per', TAN: 'tan', NEA: 'nea', NOD: 'nod', INS: 'ins', EXT: 'ext', PAR: 'par', GCE: 'gce', GCEN: 'gce', NON: 'none', NONE: 'none' };
   const SET = Object.assign({
     osnap: true, osm: ['end', 'mid', 'cen', 'int', 'per', 'qua', 'nod', 'ins'],
     ortho: false, polar: true, polarAng: 45, otrack: true, grid: true, snap: false, snapSp: 0, dyn: true,
@@ -365,14 +365,17 @@
      7) BẮT ĐIỂM (OSNAP)
      ===================================================================== */
   let osOverride = null;   // bắt điểm 1 lần (gõ END, MID...) hoặc 'none'
-  const PRI = { end: 0, int: 1, mid: 2, cen: 3, qua: 4, per: 5, tan: 6, nod: 7, ins: 8, nea: 9 };
+  const PRI = { end: 0, int: 1, mid: 2, cen: 3, gce: 3.5, qua: 4, per: 5, tan: 6, nod: 7, ins: 8, ext: 8.5, par: 8.7, nea: 9 };
+  // đường đã rê qua đầu mút (cho bắt điểm Kéo dài / Song song như AutoCAD)
+  const EXTL = []; const noteLine = (ax, ay, bx, by) => { const k = ax + ',' + ay + ',' + bx + ',' + by; const i = EXTL.findIndex(q => q.k === k); if(i >= 0) EXTL.splice(i, 1); EXTL.unshift({ k, ax, ay, bx, by }); if(EXTL.length > 6) EXTL.pop(); };
+  A.extLines = EXTL;
   function osnapFind(w, sp, base, touch){
     const modes = osOverride ? (osOverride === 'none' ? [] : [osOverride]) : (SET.osnap ? SET.osm : []);
     if(!modes.length) return null;
     const M = new Set(modes);
     const ap = (touch ? 22 : SET.aperture) / view.scale;
     const cands = queryBox(w.x - ap, w.y - ap, w.x + ap, w.y + ap, 400);
-    if(!cands.length) return null;
+    if(!cands.length && !(EXTL.length && (M.has('ext') || M.has('par')))) return null;
     let best = null;
     const consider = (x, y, type, d, extra) => {
       if(!isFinite(x) || !isFinite(y)) return;
@@ -387,6 +390,9 @@
       if(e.type === 'TEXT'){ if(M.has('ins')) consider(e.x, e.y, 'ins'); continue; }
       if(e.type === 'HATCH') continue;
       const c = curveOf(e); if(!c) continue; curves.push(c);
+      if((M.has('ext') || M.has('par')) && (c.kind === 'line' || c.kind === 'poly')){ for(const p of c.pieces){ if(p.t !== 's') continue; const d = Math.min(Math.hypot(p.ax - w.x, p.ay - w.y), Math.hypot(p.bx - w.x, p.by - w.y)); const dl = nearOnPiece(p, w); if(d < ap || (M.has('par') && Math.hypot(dl.x - w.x, dl.y - w.y) < ap * 0.6)) noteLine(p.ax, p.ay, p.bx, p.by); } }
+      if(M.has('gce') && c.kind === 'poly' && c.closed && e.type === 'POLYLINE'){ const V = e.vertices; let A2 = 0, gx = 0, gy = 0; for(let i = 0; i < V.length; i++){ const a = V[i], b = V[(i + 1) % V.length]; const f = a.x * b.y - b.x * a.y; A2 += f; gx += (a.x + b.x) * f; gy += (a.y + b.y) * f; }
+        if(Math.abs(A2) > 1e-12){ gx /= 3 * A2; gy /= 3 * A2; const ed = nearOnCurve(c, w); consider(gx, gy, 'gce', Math.min(Math.hypot(gx - w.x, gy - w.y), (ed ? ed.d : Infinity) + ap * 0.35)); } }
       if(c.kind === 'line'){
         if(M.has('end')){ consider(e.x1, e.y1, 'end'); consider(e.x2, e.y2, 'end'); }
         if(M.has('mid')) consider((e.x1 + e.x2) / 2, (e.y1 + e.y2) / 2, 'mid');
@@ -422,6 +428,10 @@
       }
       if(M.has('nea')){ const q = nearOnCurve(c, w); if(q) consider(q.x, q.y, 'nea', q.d); }
     }
+    // Kéo dài: điểm trên phần kéo dài của đoạn đã rê qua đầu mút
+    if(M.has('ext')) for(const L of EXTL){ const dx = L.bx - L.ax, dy = L.by - L.ay, L2 = dx * dx + dy * dy; if(L2 < 1e-18) continue; const f = ((w.x - L.ax) * dx + (w.y - L.ay) * dy) / L2; if(f > -1e-9 && f < 1 + 1e-9) continue; if(f < -60 || f > 61) continue; const x = L.ax + dx * f, y = L.ay + dy * f; consider(x, y, 'ext', Math.hypot(x - w.x, y - w.y), { ext: L }); }
+    // Song song: từ điểm gốc, hướng song song với đoạn đã rê qua
+    if(base && M.has('par') && !best) for(const L of EXTL){ const dx = L.bx - L.ax, dy = L.by - L.ay, Ln = Math.hypot(dx, dy); if(Ln < 1e-12) continue; const ux = dx / Ln, uy = dy / Ln; const t = (w.x - base.x) * ux + (w.y - base.y) * uy; if(Math.abs(t) < ap) continue; const x = base.x + ux * t, y = base.y + uy * t; const dd = Math.hypot(x - w.x, y - w.y); if(dd < ap * 0.8) consider(x, y, 'par', dd, { par: L }); }
     if(M.has('int') && curves.length >= 1){
       // các piece gần con trỏ
       const near = [];
@@ -588,6 +598,9 @@
       case 'nea': c2.moveTo(P.x - s, P.y - s); c2.lineTo(P.x + s, P.y - s); c2.lineTo(P.x - s, P.y + s); c2.lineTo(P.x + s, P.y + s); c2.closePath(); break;
       case 'nod': c2.arc(P.x, P.y, s, 0, TAU); c2.moveTo(P.x - s * .7, P.y - s * .7); c2.lineTo(P.x + s * .7, P.y + s * .7); c2.moveTo(P.x + s * .7, P.y - s * .7); c2.lineTo(P.x - s * .7, P.y + s * .7); break;
       case 'ins': c2.rect(P.x - s, P.y - s, s, s); c2.rect(P.x, P.y, s, s); break;
+      case 'ext': c2.moveTo(P.x - s, P.y + s); c2.lineTo(P.x + s, P.y - s); c2.moveTo(P.x - s * .3, P.y - s * .3); c2.lineTo(P.x + s * .3, P.y + s * .3); break;
+      case 'par': c2.moveTo(P.x - s, P.y + s * .3); c2.lineTo(P.x - s * .2, P.y - s); c2.moveTo(P.x + s * .2, P.y + s); c2.lineTo(P.x + s, P.y - s * .3); break;
+      case 'gce': c2.moveTo(P.x, P.y - s); c2.lineTo(P.x + s, P.y + s * .7); c2.lineTo(P.x - s, P.y + s * .7); c2.closePath(); c2.moveTo(P.x + 2, P.y + s * .1); c2.arc(P.x, P.y + s * .1, 2, 0, TAU); break;
     }
     c2.stroke(); c2.restore();
   }
@@ -631,7 +644,12 @@
     if(acq.length && r && r.type !== 'sel'){ cC.save(); cC.strokeStyle = 'rgba(80,255,130,.95)'; cC.lineWidth = 1.4; for(const a of acq){ const P = toScreen(a.x, a.y); cC.beginPath(); cC.moveTo(P.x - 4, P.y); cC.lineTo(P.x + 4, P.y); cC.moveTo(P.x, P.y - 4); cC.lineTo(P.x, P.y + 4); cC.stroke(); } cC.restore(); }
     // dấu bắt điểm
     if(lastPt && lastPt.snap && (mouseIn || lastTouch) && r && r.type !== 'sel'){
-      const P = toScreen(lastPt.snap.x, lastPt.snap.y); drawMarker(cC, P, lastPt.snap.type);
+      const P = toScreen(lastPt.snap.x, lastPt.snap.y);
+      const sn = lastPt.snap; if(sn.ext || sn.par){ const L = sn.ext || sn.par; cC.save(); cC.strokeStyle = 'rgba(80,255,130,.9)'; cC.setLineDash([3, 4]); cC.lineWidth = 1.2; cC.beginPath();
+        if(sn.ext){ const a = toScreen(L.ax, L.ay), b = toScreen(L.bx, L.by); const near = Math.hypot(a.x - P.x, a.y - P.y) < Math.hypot(b.x - P.x, b.y - P.y) ? a : b; cC.moveTo(near.x, near.y); cC.lineTo(P.x, P.y); }
+        else { const B = r && r.base ? toScreen(r.base.x, r.base.y) : P; cC.moveTo(B.x, B.y); cC.lineTo(P.x, P.y); const a = toScreen(L.ax, L.ay), b = toScreen(L.bx, L.by), m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; cC.stroke(); cC.setLineDash([]); cC.beginPath(); cC.moveTo(m.x - 5, m.y + 5); cC.lineTo(m.x - 1, m.y - 5); cC.moveTo(m.x + 1, m.y + 5); cC.lineTo(m.x + 5, m.y - 5); }
+        cC.stroke(); cC.restore(); }
+      drawMarker(cC, P, lastPt.snap.type);
       if(deskUI()) tipBox(cC, P.x + 12, P.y + 12, OS_NAME[lastPt.snap.type] || lastPt.snap.type);
     }
     // khung chọn

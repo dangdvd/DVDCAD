@@ -466,11 +466,11 @@
   const col = (...items) => ({ t: 'col', items });
   const ctl = (kind) => ({ t: 'ctl', kind });
   const S = o => Object.assign({ split: true }, o);
-  const M_CIRCLE = [['CIRCLE', 'Center, Radius', 'Tâm, bán kính'], ['CIRCLE|2P', '2-Point', '2 điểm'], ['CIRCLE|3P', '3-Point', '3 điểm']];
+  const M_CIRCLE = [['CIRCLE', 'Center, Radius', 'Tâm, bán kính'], ['CIRCLE|2P', '2-Point', '2 điểm'], ['CIRCLE|3P', '3-Point', '3 điểm'], ['CIRCLE|TTR', 'Tan, Tan, Radius', 'Tiếp, tiếp, bán kính'], ['CIRCLE|TTT', 'Tan, Tan, Tan', 'Tiếp xúc 3 đối tượng']];
   const M_ARC = [['ARC', '3-Point', '3 điểm'], ['ARC|C', 'Center, Start, End', 'Tâm, đầu, cuối']];
   const M_RECT = [['RECTANG', 'Rectangle', 'Chữ nhật'], ['POLYGON', 'Polygon', 'Đa giác đều']];
   const M_ELL = [['ELLIPSE', 'Axis, End', 'Elip theo trục'], ['ELLIPSE|C', 'Center', 'Elip theo tâm']];
-  const M_HATCH = [['HATCH', 'Hatch', 'Tô vật liệu'], ['BOUNDARY', 'Boundary', 'Tạo đường biên'], ['HATCHSET', 'Hatch Settings', 'Mẫu & tỉ lệ hatch']];
+  const M_HATCH = [['HATCH', 'Hatch', 'Tô vật liệu'], ['BOUNDARY', 'Boundary', 'Tạo đường biên'], ['GRADIENT', 'Gradient', 'Tô chuyển màu'], ['HATCHEDIT', 'Edit Hatch', 'Sửa hatch'], ['HATCHSET', 'Hatch Settings', 'Mẫu & tỉ lệ hatch']];
   const M_TRIM = [['TRIM', 'Trim', 'Cắt'], ['EXTEND', 'Extend', 'Kéo dài']];
   const M_FIL = [['FILLET', 'Fillet', 'Bo góc'], ['CHAMFER', 'Chamfer', 'Vát góc'], ['BLEND', 'Blend Curves', 'Nối cong trơn']];
   const M_ARR = [['ARRAYRECT', 'Rectangular Array', 'Mảng chữ nhật'], ['ARRAYPATH', 'Path Array', 'Mảng theo đường'], ['ARRAYPOLAR', 'Polar Array', 'Mảng tròn']];
@@ -487,24 +487,24 @@
   const M_BOOL = [['UNION', 'Union', 'Cộng khối'], ['SUBTRACT', 'Subtract', 'Trừ khối'], ['INTERSECT', 'Intersect', 'Giao khối']];
   const M_LDC = [['DCHORIZONTAL', 'Horizontal', 'Ngang'], ['DCVERTICAL', 'Vertical', 'Dọc']];
   const M_REV = [['REVCLOUD', 'Revision Cloud', 'Khoanh mây'], ['WIPEOUT', 'Wipeout', 'Vùng che']];
-  const LAYMORE = [sm('LAYOFF', 'Off', 'Tắt lớp'), sm('LAYFRZ', 'Freeze', 'Đóng băng lớp'), sm('LAYLCK', 'Lock', 'Khoá lớp'), sm('LAYULK', 'Unlock', 'Mở khoá lớp'), sm('LAYON', 'Turn All Layers On', 'Bật tất cả lớp'), sm('LAYTHW', 'Thaw All Layers', 'Rã băng tất cả'), sm('LAYMCUR', 'Make Current', 'Đặt làm hiện hành'), sm('LAYISO', 'Isolate', 'Cô lập lớp'), sm('LAYUNISO', 'Unisolate', 'Bỏ cô lập'), sm('LAYMRG', 'Merge', 'Gộp lớp'), sm('LAYDEL', 'Delete', 'Xoá lớp'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer')];
+  const LAYMORE = [sm('LAYOFF', 'Off', 'Tắt lớp'), sm('LAYFRZ', 'Freeze', 'Đóng băng lớp'), sm('LAYLCK', 'Lock', 'Khoá lớp'), sm('LAYULK', 'Unlock', 'Mở khoá lớp'), sm('LAYON', 'Turn All Layers On', 'Bật tất cả lớp'), sm('LAYTHW', 'Thaw All Layers', 'Rã băng tất cả'), sm('LAYMCUR', 'Make Current', 'Đặt làm hiện hành'), sm('LAYISO', 'Isolate', 'Cô lập lớp'), sm('LAYUNISO', 'Unisolate', 'Bỏ cô lập'), sm('LAYMRG', 'Merge', 'Gộp lớp'), sm('LAYDEL', 'Delete', 'Xoá lớp'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer'), sm('LAYCUR', 'Change to Current Layer', 'Đổi sang lớp hiện hành'), sm('LAYMCH', 'Match Layer', 'Chuyển theo lớp đích'), sm('COPYTOLAYER', 'Copy Objects to New Layer', 'Sao chép sang lớp khác'), sm('LAYWALK', 'Layer Walk', 'Duyệt lớp'), sm('LAYERP', 'Previous', 'Thiết lập lớp trước'), sm('LAYERSTATE', 'Layer States', 'Trạng thái lớp')];
   const P_LAYERS = { id: 'layers', en: 'Layers', vi: 'Lớp', pri: 6, items: [big('LAYER', 'Layer\nProperties', 'Quản lý\nlớp'), ctl('layer')], more: LAYMORE };
   const P_PROPS = { id: 'props', en: 'Properties', vi: 'Thuộc tính', pri: 4, items: [big('MATCHPROP', 'Match\nProperties', 'Sao\nthuộc tính'), ctl('props3')], more: [sm('PROPERTIES', 'Properties Palette', 'Bảng thuộc tính'), sm('LIST', 'List', 'Liệt kê'), sm('LINETYPE', 'Linetype Manager', 'Quản lý kiểu nét'), sm('LWEIGHT', 'Lineweight Settings', 'Cài đặt bề rộng nét'), sm('LTSCALE', 'Linetype Scale', 'Tỉ lệ kiểu nét')] };
   const RIB = {
     home: { en: 'Home', vi: 'Trang chủ', panels: [
       { id: 'draw', en: 'Draw', vi: 'Vẽ', pri: 0, items: [big('LINE', 'Line', 'Đường\nthẳng'), big('PLINE', 'Polyline', 'Đa\ntuyến'), big('CIRCLE', 'Circle', 'Đường\ntròn', S({ menu: M_CIRCLE, keep: 1 })), big('ARC', 'Arc', 'Cung\ntròn', S({ menu: M_ARC, keep: 1 })),
         col(ic('RECTANG', 'Rectangle', 'Chữ nhật', S({ menu: M_RECT })), ic('ELLIPSE', 'Ellipse', 'Elip', S({ menu: M_ELL })), ic('HATCH', 'Hatch', 'Tô hatch', S({ menu: M_HATCH }))), col(ic('SPLINE', 'Spline Fit', 'Spline'), ic('XLINE', 'Construction Line', 'Đường dựng'), ic('POINT', 'Multiple Points', 'Nhiều điểm'))],
-        more: [sm('SPLINE', 'Spline Fit', 'Đường cong spline'), sm('XLINE', 'Construction Line', 'Đường dựng'), sm('RAY', 'Ray', 'Tia'), sm('POINT', 'Multiple Points', 'Nhiều điểm'), sm('DIVIDE', 'Divide', 'Chia đều'), sm('MEASURE', 'Measure', 'Chia theo khoảng'), sm('BOUNDARY', 'Boundary', 'Tạo đường biên'), sm('WIPEOUT', 'Wipeout', 'Vùng che'), sm('REVCLOUD', 'Revision Cloud', 'Khoanh mây'), sm('DONUT', 'Donut', 'Vành khuyên'), sm('MLINE', 'Multiline', 'Đường đôi'), sm('POLYGON', 'Polygon', 'Đa giác đều')] },
+        more: [sm('SPLINE', 'Spline Fit', 'Đường cong spline'), sm('XLINE', 'Construction Line', 'Đường dựng'), sm('RAY', 'Ray', 'Tia'), sm('POINT', 'Multiple Points', 'Nhiều điểm'), sm('DIVIDE', 'Divide', 'Chia đều'), sm('MEASURE', 'Measure', 'Chia theo khoảng'), sm('BOUNDARY', 'Boundary', 'Tạo đường biên'), sm('WIPEOUT', 'Wipeout', 'Vùng che'), sm('REVCLOUD', 'Revision Cloud', 'Khoanh mây'), sm('DONUT', 'Donut', 'Vành khuyên'), sm('MLINE', 'Multiline', 'Đường đôi'), sm('POLYGON', 'Polygon', 'Đa giác đều'), sm('SOLID', '2D Solid', 'Tô đặc 2D'), sm('SKETCH', 'Sketch', 'Vẽ phác tay'), sm('HELIX', 'Helix', 'Xoắn ốc'), sm('BREAKLINE', 'Break-line Symbol', 'Đường cắt ngắn'), sm('GRADIENT', 'Gradient', 'Tô chuyển màu')] },
       { id: 'modify', en: 'Modify', vi: 'Sửa', pri: 0, items: [col(sm('MOVE', 'Move', 'Di chuyển'), sm('COPY', 'Copy', 'Sao chép'), sm('STRETCH', 'Stretch', 'Kéo giãn')), col(sm('ROTATE', 'Rotate', 'Xoay'), sm('MIRROR', 'Mirror', 'Đối xứng'), sm('SCALE', 'Scale', 'Tỉ lệ')),
         col(sm('TRIM', 'Trim', 'Cắt', S({ menu: M_TRIM })), sm('FILLET', 'Fillet', 'Bo góc', S({ menu: M_FIL })), sm('ARRAYRECT', 'Array', 'Mảng', S({ menu: M_ARR }))),
         col(ic('ERASE', 'Erase', 'Xoá'), ic('EXPLODE', 'Explode', 'Phá khối'), ic('OFFSET', 'Offset', 'Song song')), col(ic('DRAWORDER|F', 'Draworder', 'Thứ tự vẽ', S({ menu: M_DO })), ic('BREAKATPOINT', 'Break at Point', 'Tách tại điểm'), ic('JOIN', 'Join', 'Nối'))],
-        more: [sm('BREAK', 'Break', 'Bẻ gãy'), sm('BREAKATPOINT', 'Break at Point', 'Tách tại điểm'), sm('JOIN', 'Join', 'Nối'), sm('CHAMFER', 'Chamfer', 'Vát góc'), sm('BLEND', 'Blend Curves', 'Nối cong trơn'), sm('LENGTHEN', 'Lengthen', 'Đổi chiều dài'), sm('PEDIT', 'Edit Polyline', 'Sửa đa tuyến'), sm('REVERSE', 'Reverse', 'Đảo chiều'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer'), sm('ALIGN', 'Align', 'Căn chỉnh'), sm('OVERKILL', 'Delete Duplicate Objects', 'Xoá nét trùng'), sm('DRAWORDER|F', 'Draworder', 'Thứ tự vẽ', { menu: M_DO })] },
+        more: [sm('BREAK', 'Break', 'Bẻ gãy'), sm('BREAKATPOINT', 'Break at Point', 'Tách tại điểm'), sm('JOIN', 'Join', 'Nối'), sm('CHAMFER', 'Chamfer', 'Vát góc'), sm('BLEND', 'Blend Curves', 'Nối cong trơn'), sm('LENGTHEN', 'Lengthen', 'Đổi chiều dài'), sm('PEDIT', 'Edit Polyline', 'Sửa đa tuyến'), sm('REVERSE', 'Reverse', 'Đảo chiều'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer'), sm('ALIGN', 'Align', 'Căn chỉnh'), sm('OVERKILL', 'Delete Duplicate Objects', 'Xoá nét trùng'), sm('DRAWORDER|F', 'Draworder', 'Thứ tự vẽ', { menu: M_DO }), sm('EXTRIM', 'Extended Trim', 'Cắt theo đường kín'), sm('COPYM', 'Multiple Copy', 'Sao chép nhiều'), sm('SPLINEDIT', 'Edit Spline', 'Sửa spline'), sm('HATCHEDIT', 'Edit Hatch', 'Sửa hatch'), sm('CHPROP', 'Change Properties', 'Đổi thuộc tính'), sm('FLATTEN', 'Flatten', 'Làm phẳng')] },
       { id: 'annot', en: 'Annotation', vi: 'Chú thích', pri: 7, items: [big('MTEXT', 'Text', 'Chữ', S({ menu: M_TEXT })), big('DIMLINEAR', 'Dimension', 'Kích\nthước', S({ menu: M_DIM })),
         col(sm('MLEADER', 'Leader', 'Ghi chú dẫn', S({ menu: M_LEAD })), sm('TABLE', 'Table', 'Bảng'), sm('DIMSTYLE', 'Dimension Style', 'Kiểu kích thước'))],
-        more: [sm('STYLE', 'Text Style', 'Kiểu chữ'), sm('QDIM', 'Quick Dimension', 'Kích thước nhanh'), sm('DIMCONTINUE', 'Continue', 'Nối tiếp'), sm('DIMBASELINE', 'Baseline', 'Cùng gốc'), sm('CENTERMARK', 'Center Mark', 'Dấu tâm'), sm('CENTERLINE', 'Centerline', 'Đường tâm'), sm('ANNOTATIVE', 'Annotative', 'Chú thích theo tỉ lệ')] },
+        more: [sm('STYLE', 'Text Style', 'Kiểu chữ'), sm('QDIM', 'Quick Dimension', 'Kích thước nhanh'), sm('DIMCONTINUE', 'Continue', 'Nối tiếp'), sm('DIMBASELINE', 'Baseline', 'Cùng gốc'), sm('CENTERMARK', 'Center Mark', 'Dấu tâm'), sm('CENTERLINE', 'Centerline', 'Đường tâm'), sm('ANNOTATIVE', 'Annotative', 'Chú thích theo tỉ lệ'), sm('DIMJOGGED', 'Jogged', 'Bán kính gấp khúc'), sm('TOLERANCE', 'Tolerance', 'Dung sai hình học'), sm('FIELD', 'Field', 'Trường tự cập nhật')] },
       P_LAYERS,
       { id: 'block', en: 'Block', vi: 'Khối', pri: 8, items: [big('INSERT', 'Insert', 'Chèn\nkhối'), col(sm('BLOCK', 'Create', 'Tạo khối'), sm('REFEDIT', 'Edit', 'Sửa khối'), sm('EATTEDIT', 'Edit Attributes', 'Sửa thuộc tính'))],
-        more: [sm('ATTDEF', 'Define Attributes', 'Định nghĩa thuộc tính'), sm('BLOCKLIB', 'Blocks Library', 'Thư viện khối'), sm('BPARAMETER', 'Block Parameters', 'Tham số khối động'), sm('BDYN', 'Dynamic State', 'Trạng thái khối động')] },
+        more: [sm('ATTDEF', 'Define Attributes', 'Định nghĩa thuộc tính'), sm('BLOCKLIB', 'Blocks Library', 'Thư viện khối'), sm('BPARAMETER', 'Block Parameters', 'Tham số khối động'), sm('BDYN', 'Dynamic State', 'Trạng thái khối động'), sm('WBLOCK', 'Write Block', 'Ghi khối ra file'), sm('RENAME', 'Rename', 'Đổi tên')] },
       P_PROPS,
       { id: 'groups', en: 'Groups', vi: 'Nhóm', pri: 9, items: [big('GROUP', 'Group', 'Nhóm'), col(sm('UNGROUP', 'Ungroup', 'Bỏ nhóm'), sm('PICKSTYLE', 'Group Selection', 'Chọn cả nhóm'))] },
       { id: 'util', en: 'Utilities', vi: 'Tiện ích', pri: 9, items: [big('MEASUREGEOM', 'Measure', 'Đo', S({ menu: M_MEA })), col(sm('QSELECT', 'Quick Select', 'Chọn nhanh'), sm('SELECTALL', 'Select All', 'Chọn tất cả'), sm('COUNT', 'Count', 'Đếm khối'))],
@@ -513,15 +513,15 @@
     ] },
     insert: { en: 'Insert', vi: 'Chèn', panels: [
       { id: 'iblock', en: 'Block', vi: 'Khối', items: [big('INSERT', 'Insert', 'Chèn\nkhối'), big('EATTEDIT', 'Edit\nAttribute', 'Sửa\nthuộc tính'), col(sm('BLOCKLIB', 'Blocks Library', 'Thư viện khối'), sm('GROUP', 'Group', 'Nhóm'), sm('UNGROUP', 'Ungroup', 'Bỏ nhóm'))] },
-      { id: 'bdef', en: 'Block Definition', vi: 'Định nghĩa khối', items: [big('BLOCK', 'Create\nBlock', 'Tạo\nkhối'), col(sm('ATTDEF', 'Define Attributes', 'Định nghĩa thuộc tính'), sm('REFEDIT', 'Block Editor', 'Sửa khối'), sm('ATTEXPORT', 'Extract Attributes', 'Xuất thuộc tính'))] },
+      { id: 'bdef', en: 'Block Definition', vi: 'Định nghĩa khối', items: [big('BLOCK', 'Create\nBlock', 'Tạo\nkhối'), big('WBLOCK', 'Write\nBlock', 'Ghi khối\nra file'), col(sm('ATTDEF', 'Define Attributes', 'Định nghĩa thuộc tính'), sm('REFEDIT', 'Block Editor', 'Sửa khối'), sm('ATTEXPORT', 'Extract Attributes', 'Xuất thuộc tính'))] },
       { id: 'bdyn', en: 'Dynamic Block', vi: 'Khối động', items: [big('BPARAMETER', 'Block\nParameters', 'Tham số\nđộng'), col(sm('BDYN', 'Dynamic State', 'Đổi trạng thái'), sm('REFCLOSE', 'Close Block Editor', 'Đóng sửa khối'))] },
       { id: 'ref', en: 'Reference', vi: 'Tham chiếu', items: [big('XATTACH', 'Attach', 'Gắn\nXREF'), col(sm('IMAGEATTACH', 'Attach Image', 'Gắn ảnh nền'), sm('IMAGEADJUST', 'Adjust', 'Chỉnh ảnh'), sm('XREF', 'External References', 'Quản lý XREF'))] },
-      { id: 'data', en: 'Linking & Extraction', vi: 'Dữ liệu', items: [big('ATTEXPORT', 'Extract\nData', 'Trích\ndữ liệu'), big('TABLE', 'Table', 'Bảng')] }
+      { id: 'data', en: 'Linking & Extraction', vi: 'Dữ liệu', items: [big('ATTEXPORT', 'Extract\nData', 'Trích\ndữ liệu'), big('TABLE', 'Table', 'Bảng'), big('FIELD', 'Field', 'Trường'), col(sm('UPDATEFIELD', 'Update Fields', 'Cập nhật trường'))] }
     ] },
     annotate: { en: 'Annotate', vi: 'Chú thích', panels: [
-      { id: 'text', en: 'Text', vi: 'Chữ', pri: 1, items: [big('MTEXT', 'Multiline\nText', 'Chữ\nnhiều dòng', S({ menu: M_TEXT })), col(sm('FIND', 'Find Text', 'Tìm chữ'), sm('DDEDIT', 'Edit Text', 'Sửa chữ'), sm('STYLE', 'Text Style', 'Kiểu chữ'))],
-        more: [sm('SCALETEXT', 'Scale Text', 'Đổi cỡ chữ'), sm('JUSTIFYTEXT', 'Justify Text', 'Canh lề chữ'), sm('TXT2MTXT', 'Convert to MText', 'Gộp thành chữ nhiều dòng')] },
-      { id: 'dims', en: 'Dimensions', vi: 'Kích thước', pri: 0, items: [big('DIMLINEAR', 'Dimension', 'Kích\nthước', S({ menu: M_DIM })), col(sm('QDIM', 'Quick', 'Nhanh'), sm('DIMCONTINUE', 'Continue', 'Nối tiếp', S({ menu: M_CONT })), sm('DIMORDINATE', 'Ordinate', 'Toạ độ')), big('DIMSTYLE', 'Dimension\nStyle', 'Kiểu\nkích thước')],
+      { id: 'text', en: 'Text', vi: 'Chữ', pri: 1, items: [big('MTEXT', 'Multiline\nText', 'Chữ\nnhiều dòng', S({ menu: M_TEXT })), col(sm('FINDREPLACE', 'Find & Replace', 'Tìm & thay'), sm('DDEDIT', 'Edit Text', 'Sửa chữ'), sm('STYLE', 'Text Style', 'Kiểu chữ')), col(sm('TEXTALIGN', 'Text Align', 'Căn thẳng chữ'), sm('FIELD', 'Field', 'Trường'), sm('UPDATEFIELD', 'Update Fields', 'Cập nhật trường'))],
+        more: [sm('SCALETEXT', 'Scale Text', 'Đổi cỡ chữ'), sm('JUSTIFYTEXT', 'Justify Text', 'Canh lề chữ'), sm('TXT2MTXT', 'Convert to MText', 'Gộp thành chữ nhiều dòng'), sm('TCOUNT', 'Auto Number', 'Đánh số chữ'), sm('TEXTMASK', 'Text Mask', 'Che nền chữ'), sm('ARCTEXT', 'Arc Aligned Text', 'Chữ theo cung'), sm('FIND', 'Find Text', 'Tìm chữ')] },
+      { id: 'dims', en: 'Dimensions', vi: 'Kích thước', pri: 0, items: [big('DIMLINEAR', 'Dimension', 'Kích\nthước', S({ menu: M_DIM })), col(sm('QDIM', 'Quick', 'Nhanh'), sm('DIMCONTINUE', 'Continue', 'Nối tiếp', S({ menu: M_CONT })), sm('DIMORDINATE', 'Ordinate', 'Toạ độ')), col(ic('DIMSPACE', 'Adjust Space', 'Giãn đều kích thước'), ic('DIMTEDIT', 'Text Position', 'Dời chữ kích thước'), ic('DIMEDIT', 'Dimension Edit', 'Sửa kích thước')), col(ic('DIMJOGGED', 'Jogged', 'Bán kính gấp khúc'), ic('TOLERANCE', 'Tolerance', 'Dung sai hình học'), ic('CENTERMARK', 'Center Mark', 'Dấu tâm')), big('DIMSTYLE', 'Dimension\nStyle', 'Kiểu\nkích thước')],
         more: [sm('DIMALIGNED', 'Aligned', 'Chéo'), sm('DIMANGULAR', 'Angular', 'Góc'), sm('DIMARC', 'Arc Length', 'Dài cung'), sm('DIMRADIUS', 'Radius', 'Bán kính'), sm('DIMDIAMETER', 'Diameter', 'Đường kính')] },
       { id: 'cl', en: 'Centerlines', vi: 'Đường tâm', pri: 5, items: [big('CENTERMARK', 'Center\nMark', 'Dấu\ntâm'), big('CENTERLINE', 'Centerline', 'Đường\ntâm')] },
       { id: 'lead', en: 'Leaders', vi: 'Ghi chú dẫn', pri: 4, items: [big('MLEADER', 'Multileader', 'Ghi chú\ndẫn'), col(sm('QLEADER', 'Leader', 'Dẫn nhiều đoạn'))] },
@@ -539,7 +539,7 @@
     ] },
     view: { en: 'View', vi: 'Hiển thị', panels: [
       { id: 'nav', en: 'Navigate 2D', vi: 'Điều hướng', pri: 0, items: [big('PAN', 'Pan', 'Kéo\nmàn hình'), big('ZE', 'Extents', 'Vừa\nbản vẽ', S({ menu: M_ZOOM })), col(sm('ROTVIEW', 'Rotate View 90°', 'Xoay 90°'), sm('ROTRESET', 'Reset Rotation', 'Về hướng gốc'), sm('BOOKMARK', 'Bookmarks', 'Vị trí đã lưu'))] },
-      { id: 'named', en: 'Named Views', vi: 'Góc nhìn', pri: 4, items: [big('VIEW', 'View\nManager', 'Góc nhìn\nđặt tên')] },
+      { id: 'named', en: 'Named Views', vi: 'Góc nhìn', pri: 4, items: [big('VIEW', 'View\nManager', 'Góc nhìn\nđặt tên'), col(sm('PLAN', 'Plan View', 'Về mặt bằng'))] },
       { id: 'disp', en: 'Visual', vi: 'Hiển thị', pri: 3, items: [col(sm('TGRID', 'Grid', 'Lưới', { icon: 'GRID', tog: 'grid' }), sm('TLWT', 'Lineweight', 'Bề rộng nét', { icon: 'LWT' }), sm('TBG', 'Background', 'Nền tối/trắng', { icon: 'BG' })), col(sm('LINETYPE', 'Linetypes', 'Kiểu nét'), sm('LTSCALE', 'Linetype Scale', 'Tỉ lệ nét'), sm('LWEIGHT', 'Lineweight Settings', 'Bề rộng nét…')), big('DISPLAY', 'Display\nOptions', 'Tuỳ chọn\nhiển thị')] },
       { id: 'iso', en: 'Isolate', vi: 'Cô lập', pri: 5, items: [big('ISOLATEOBJECTS', 'Isolate\nObjects', 'Cô lập\nđối tượng'), col(sm('HIDEOBJECTS', 'Hide Objects', 'Ẩn đối tượng'), sm('UNISOLATEOBJECTS', 'End Isolation', 'Hiện lại tất cả'))] },
       { id: 'pal', en: 'Palettes', vi: 'Bảng', pri: 6, items: [big('PROPERTIES', 'Properties', 'Thuộc\ntính'), col(sm('LAYER', 'Layer Properties', 'Quản lý lớp'), sm('CMDLINE', 'Command Line', 'Dòng lệnh'), sm('HISTORY', 'Command History', 'Lịch sử lệnh'))] },
@@ -549,8 +549,10 @@
     manage: { en: 'Manage', vi: 'Quản lý', panels: [
       { id: 'draft', en: 'Drafting', vi: 'Trợ giúp vẽ', items: [big('DSETTINGS', 'Drafting\nSettings', 'Cài đặt\nbắt điểm'), col(sm('TOSNAP', 'Object Snap', 'Bắt điểm', { tog: 'osnap' }), sm('TORTHO', 'Ortho Mode', 'Vuông góc', { tog: 'ortho' }), sm('TPOLAR', 'Polar Tracking', 'Góc cực', { tog: 'polar' }))] },
       { id: 'units', en: 'Units', vi: 'Đơn vị', items: [big('UNITS', 'Units', 'Đơn vị'), col(sm('CALIB', 'Calibrate Scale', 'Tỉ lệ đo'), sm('CAL', 'QuickCalc', 'Máy tính'))] },
-      { id: 'clean', en: 'Cleanup', vi: 'Dọn dẹp', items: [big('PURGE', 'Purge', 'Dọn\nlớp trống'), big('OVERKILL', 'Overkill', 'Xoá\nnét trùng'), col(sm('LAYMRG', 'Layer Merge', 'Gộp lớp'), sm('LAYDEL', 'Layer Delete', 'Xoá lớp'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer'))] },
+      { id: 'clean', en: 'Cleanup', vi: 'Dọn dẹp', items: [big('PURGE', 'Purge', 'Dọn\nlớp trống'), big('OVERKILL', 'Overkill', 'Xoá\nnét trùng'), big('AUDIT', 'Audit', 'Kiểm tra\nlỗi'), col(sm('LAYMRG', 'Layer Merge', 'Gộp lớp'), sm('LAYDEL', 'Layer Delete', 'Xoá lớp'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer'))] },
       { id: 'mutil', en: 'Utilities', vi: 'Tiện ích', items: [big('COUNT', 'Count', 'Đếm\nkhối'), big('QSELECT', 'Quick\nSelect', 'Chọn\nnhanh')] },
+      { id: 'apps', en: 'Applications', vi: 'Ứng dụng', items: [big('SCRIPT', 'Run\nScript', 'Chạy\nscript'), col(sm('ALIASEDIT', 'Edit Aliases', 'Lệnh tắt (PGP)'), sm('CAL', 'QuickCalc', 'Máy tính'))] },
+      { id: 'dwg', en: 'Drawing', vi: 'Bản vẽ', items: [big('DWGPROPS', 'Drawing\nProperties', 'Thông tin\nbản vẽ'), col(sm('RENAME', 'Rename', 'Đổi tên'), sm('TIME', 'Time', 'Thời gian'), sm('LAYERSTATE', 'Layer States', 'Trạng thái lớp'))] },
       { id: 'help', en: 'Help', vi: 'Trợ giúp', items: [big('HELP', 'Command\nList', 'Danh sách\nlệnh')] }
     ] },
     output: { en: 'Output', vi: 'Xuất', panels: [
@@ -563,6 +565,15 @@
       { id: 'gdrive', en: 'Google Drive', vi: 'Google Drive', items: [big('DRIVE', 'Drive', 'Drive'), col(sm('DOPEN', 'Open from Drive', 'Mở từ Drive'), sm('DUP', 'Upload Drawing', 'Tải bản vẽ lên'), sm('DSAVE', 'Save DXF to Drive', 'Lưu DXF lên Drive'))] },
       { id: 'cmp', en: 'Compare', vi: 'So sánh', items: [big('COMPARE', 'DWG\nCompare', 'So sánh\nbản vẽ')] },
       { id: 'cmark', en: 'Markup', vi: 'Đánh dấu', items: [col(sm('NOTE', 'Markup Note', 'Ghi chú'), sm('DO', 'Quick Measure', 'Đo đánh dấu'), sm('REVCLOUD', 'Revision Cloud', 'Khoanh mây'))] }
+    ] },
+    express: { en: 'Express Tools', vi: 'Express Tools', panels: [
+      { id: 'xblk', en: 'Blocks', vi: 'Khối', items: [big('BURST', 'Explode\nAttributes', 'Phá khối\ngiữ chữ'), col(sm('NCOPY', 'Copy Nested Objects', 'Chép nét trong khối'), sm('WBLOCK', 'Write Block', 'Ghi khối ra file'), sm('BLOCKLIB', 'Blocks Library', 'Thư viện khối'))] },
+      { id: 'xtxt', en: 'Text', vi: 'Chữ', items: [big('TCOUNT', 'Auto\nNumber', 'Đánh số\nchữ'), col(sm('TEXTMASK', 'Mask', 'Che nền chữ'), sm('TEXTUNMASK', 'Unmask', 'Bỏ che'), sm('ARCTEXT', 'Arc-Aligned', 'Chữ theo cung')), col(sm('TXT2MTXT', 'Convert to MText', 'Gộp chữ'), sm('JUSTIFYTEXT', 'Justify', 'Canh lề'), sm('SCALETEXT', 'Scale Text', 'Đổi cỡ chữ'))] },
+      { id: 'xmod', en: 'Modify', vi: 'Sửa', items: [big('EXTRIM', 'Extended\nTrim', 'Cắt theo\nđường kín'), col(sm('COPYM', 'Multiple Copy', 'Sao chép nhiều'), sm('FLATTEN', 'Flatten', 'Làm phẳng'), sm('OVERKILL', 'Delete Duplicates', 'Xoá nét trùng'))] },
+      { id: 'xdraw', en: 'Draw', vi: 'Vẽ', items: [big('BREAKLINE', 'Break-line\nSymbol', 'Đường\ncắt ngắn'), col(sm('REVCLOUD', 'Revision Cloud', 'Khoanh mây'), sm('HELIX', 'Helix', 'Xoắn ốc'))] },
+      { id: 'xlay', en: 'Layers', vi: 'Lớp', items: [big('LAYWALK', 'Layer\nWalk', 'Duyệt\nlớp'), col(sm('LAYMRG', 'Merge', 'Gộp lớp'), sm('LAYDEL', 'Delete', 'Xoá lớp'), sm('COPYTOLAYER', 'Copy to Layer', 'Chép sang lớp')), col(sm('LAYCUR', 'Change to Current', 'Về lớp hiện hành'), sm('LAYMCH', 'Match Layer', 'Theo lớp đích'), sm('LAYERP', 'Previous', 'Lớp trước'))] },
+      { id: 'xlayout', en: 'Layout', vi: 'Layout', items: [col(sm('WIPEOUTFRAME', 'Toggle Frames', 'Khung vùng che', { icon: 'WIPEOUT' }), sm('TEXTMASK', 'Text Mask', 'Che nền chữ'))] },
+      { id: 'xtools', en: 'Tools', vi: 'Công cụ', items: [big('ALIASEDIT', 'Command\nAliases', 'Lệnh\ntắt'), col(sm('SCRIPT', 'Run Script', 'Chạy script'), sm('AUDIT', 'Audit', 'Kiểm tra lỗi'), sm('FINDREPLACE', 'Find & Replace', 'Tìm & thay'))] }
     ] },
     /* ---------- không gian 3D Modeling ---------- */
     home3d: { en: 'Home', vi: 'Trang chủ', panels: [
@@ -593,8 +604,8 @@
     ] }
   };
   const WS = {
-    draft: { en: 'Drafting & Annotation', vi: 'Vẽ 2D & Chú thích', tabs: ['home', 'insert', 'annotate', 'param', 'view', 'manage', 'output', 'collab'] },
-    m3d: { en: '3D Modeling', vi: 'Mô hình 3D', tabs: ['home3d', 'solid', 'visualize', 'param', 'insert', 'annotate', 'view', 'manage', 'output', 'collab'] }
+    draft: { en: 'Drafting & Annotation', vi: 'Vẽ 2D & Chú thích', tabs: ['home', 'insert', 'annotate', 'param', 'view', 'manage', 'output', 'collab', 'express'] },
+    m3d: { en: '3D Modeling', vi: 'Mô hình 3D', tabs: ['home3d', 'solid', 'visualize', 'param', 'insert', 'annotate', 'view', 'manage', 'output', 'collab', 'express'] }
   };
   let WSK = 'draft', LANG = 'en';
   try{ const w = localStorage.getItem('dvd:ws'); if(WS[w]) WSK = w; const l = localStorage.getItem('dvd:riblang'); if(l === 'vi' || l === 'en') LANG = l; }catch(_){}
@@ -606,6 +617,7 @@
     'CIRCLE|3P': () => { run('CIRCLE'); setTimeout(() => A.input('3P'), 30); },
     'ARC|C': () => { run('ARC'); setTimeout(() => A.input('C'), 30); },
     'ELLIPSE|C': () => { run('ELLIPSE'); setTimeout(() => A.input('C'), 30); },
+    'CIRCLE|TTR': () => run('CIRCLETTR'), 'CIRCLE|TTT': () => run('CIRCLETTT'),
     'DRAWORDER|F': () => runKw('DRAWORDER', 'F'), 'DRAWORDER|B': () => runKw('DRAWORDER', 'B'), 'DRAWORDER|A': () => runKw('DRAWORDER', 'A'), 'DRAWORDER|U': () => runKw('DRAWORDER', 'U'),
     WSPACE: () => { const b = document.querySelector('[data-c="WSPACE"]') || $('acWS'); const r = b.getBoundingClientRect(); wsMenu(r.left, r.bottom + 2); },
     ZE: () => { A.pushView && A.pushView(); fitView(); }, ZW: () => run('ZOOM'), ZP: () => A.prevView && A.prevView(),

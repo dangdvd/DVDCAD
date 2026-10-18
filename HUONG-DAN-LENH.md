@@ -1,4 +1,4 @@
-# DVDCAD v4l — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4m — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -212,6 +212,41 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 **Khác:** `VIEW` (lưu/gọi góc nhìn 2D đặt tên), `CAL` (máy tính: `2*(3+4)^2`, `sqrt`, `sin/cos/tan` theo độ, `pi`; kết quả chép vào clipboard), `PUBLISH` (in nhiều layout ra một PDF nhiều trang).
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
+
+## Lệnh bổ sung (v4m)
+**Bắt điểm mới:** `EXT` (Kéo dài — rê qua đầu mút một đoạn rồi đi theo phần kéo dài của nó), `PAR` (Song song — rê qua một đoạn, rồi vẽ song song với đoạn đó), `GCE` (Tâm hình học của đa tuyến kín). Gõ trong lúc chọn điểm hoặc bật trong Drafting Settings.
+
+**Vẽ:**
+- `CIRCLE` ▾ thêm **Tan, Tan, Radius** (`CIRCLETTR`, `TTR`) và **Tan, Tan, Tan** (`CIRCLETTT`, đường tròn tiếp xúc 3 đối tượng).
+- `SOLID` (`SO`) — tô đặc tam giác/tứ giác nối tiếp như AutoCAD. `SKETCH` — vẽ phác tay. `HELIX` — xoắn ốc. `BREAKLINE` — đường cắt ngắn có ký hiệu gãy.
+- `GRADIENT` (`GD`) — tô chuyển màu (tuyến tính / toả tròn, chọn 2 màu, góc).
+
+**Sửa:**
+- `EXTRIM` — chọn đường kín, bấm phía cần cắt: mọi nét cắt qua đường kín bị cắt bỏ phía đó.
+- `COPYM` — sao chép nhiều: **R** lặp lại, **D** chia đều, **M** theo khoảng, **A** mảng.
+- `SPLINEDIT` (`SPE`) — đóng/mở, sửa/thêm/xoá điểm qua, đảo chiều, chuyển thành đa tuyến.
+- `HATCHEDIT` (`HE`) — đổi mẫu, tỉ lệ, góc, tô đặc, chuyển màu của hatch có sẵn.
+- `CHPROP` (`CHANGE`) — đổi màu (số ACI / tên / #rrggbb), lớp, kiểu nét, tỉ lệ nét, bề rộng nét qua dòng lệnh.
+- `FLATTEN` — khối 3D thành nét 2D hình chiếu bằng. `BURST` — phá khối, thuộc tính thành chữ thường. `NCOPY` — chép nét nằm trong khối ra ngoài.
+
+**Chữ & bảng:**
+- `FINDREPLACE` (`REPLACE`) — tìm và thay thế chữ trong chữ, thuộc tính khối, kích thước, bảng.
+- `TCOUNT` — đánh số thứ tự (theo X, Y hoặc thứ tự chọn; thay / thêm trước / thêm sau / thay ký tự #).
+- `TEXTMASK` / `TEXTUNMASK` — che nền dưới chữ. `ARCTEXT` — chữ uốn theo cung. `TEXTALIGN` (`TA`) — căn thẳng nhiều chữ.
+- `FIELD` — chèn trường tự cập nhật: ngày, tên bản vẽ, người vẽ, tiêu đề, **diện tích / chiều dài đối tượng** (đổi ra m², m). Sửa đối tượng rồi gõ `UPDATEFIELD`. Trường có nền xám (không in).
+- **Bảng có công thức** như AutoCAD: ô bắt đầu bằng `=`, vd `=B2*C2`, `=SUM(D2:D8)`, `=AVERAGE(A1:B4)`, `MIN`, `MAX`, `COUNT`.
+
+**Kích thước:** `DIMSPACE` (giãn đều các kích thước song song, A = tự động), `DIMTEDIT` (dời chữ / canh trái, phải, giữa), `DIMEDIT` (chữ mới với `<>` = số đo, về gốc, khôi phục số đo), `DIMJOGGED` (bán kính gấp khúc), `TOLERANCE` (khung dung sai hình học GD&T).
+
+**Lớp:** `LAYCUR` (đổi sang lớp hiện hành), `LAYMCH` (theo lớp đối tượng đích), `COPYTOLAYER` (sao chép sang lớp khác, có thể dời), `LAYWALK` (duyệt lớp — chỉ hiện lớp đang chọn), `LAYERP` (trả lại thiết lập lớp trước), `LAYERSTATE` (`LAS` — lưu / gọi lại trạng thái lớp).
+
+**Khối & file:** `WBLOCK` (`W` — ghi đối tượng / khối / toàn bản vẽ ra DXF riêng), `RENAME` (đổi tên lớp, khối).
+
+**Tiện ích:**
+- `ALIASEDIT` — đặt lệnh tắt riêng hoặc **nhập file acad.pgp** của bạn (dòng `CC, *COPY`).
+- `SCRIPT` — chạy file script AutoCAD `.scr` (dấu cách = Enter như AutoCAD).
+- `AUDIT` (kiểm tra & sửa lỗi bản vẽ), `DWGPROPS` (tiêu đề, người vẽ, thống kê), `TIME`, `PLAN`.
+- Tab ribbon **Express Tools** gom các lệnh Express quen thuộc (BURST, NCOPY, TCOUNT, TEXTMASK, ARCTEXT, EXTRIM, COPYM, FLATTEN, BREAKLINE, LAYWALK, ALIASEDIT…).
 
 ## Giao diện ribbon giống AutoCAD (v4l)
 Bố cục tab, bảng và biểu tượng theo AutoCAD để người dùng AutoCAD tìm lệnh ở đúng chỗ quen thuộc.
