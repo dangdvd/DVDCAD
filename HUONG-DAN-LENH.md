@@ -1,4 +1,4 @@
-# DVDCAD v4i — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4j — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -196,6 +196,22 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 - **Esc** huỷ lệnh đang chạy. Bấm Esc lần nữa để về 2D. Cảnh 3D tự cập nhật sau mỗi lệnh và sau Undo/Redo.
 
 **Xuất:** ảnh PNG, `EXPORTSTL` (in 3D, đơn vị mm), `EXPORTOBJ` (+ file MTL màu, mở bằng SketchUp, Blender, 3ds Max). Lưu DXF thì khối 3D thành mặt **3DFACE**, AutoCAD mở được. File DXF lưu từ DVDCAD mở lại vẫn là khối (sửa tiếp chiều cao, bán kính, vật liệu). File DXF/DWG có 3DFACE, file DXF có lưới POLYFACE / POLYGON MESH / MESH (SketchUp, Revit, AutoCAD xuất ra) cũng xem 3D được.
+
+## Lệnh bổ sung (v4j)
+**Vẽ & sửa:**
+- `MLINE ML` — đường đôi (tường): **J** canh lề Trên/Giữa/Dưới, **S** tỉ lệ = bề rộng (mặc định 220), **C** đóng, **U** bỏ đoạn. Kết quả là một nhóm, EXPLODE để tách. `MLSTYLE` đặt vị trí các đường (vd tường có lớp trát: `0.5, 0.42, -0.42, -0.5`) và bật/tắt nắp đầu.
+- `ARRAYPATH` — mảng theo đường dẫn (đường, đa tuyến, cung, tròn): chia đều số lượng hoặc theo khoảng cách, có/không xoay theo hướng đường.
+- `BLEND` — nối đầu 2 đường bằng đường cong trơn. `REVERSE` — đảo chiều. `SETBYLAYER` — đưa màu, kiểu nét, bề rộng nét về ByLayer.
+
+**Kích thước:** `DIMORDINATE DOR` (toạ độ X/Y; kéo dọc ra X, kéo ngang ra Y; **G** đặt gốc), `DIMARC` (dài cung, có ký hiệu ⌒), `CENTERMARK CM` (dấu tâm + đường tâm), `CENTERLINE CL` (đường tâm giữa 2 đường).
+
+**Chữ:** `SCALETEXT` (đổi cỡ nhiều chữ), `JUSTIFYTEXT` (đổi canh lề mà chữ không xê dịch), `TXT2MTXT` (gộp nhiều dòng chữ đơn thành chữ nhiều dòng).
+
+**Lớp:** `LAYMRG` (gộp lớp), `LAYDEL` (xoá lớp và mọi đối tượng trên lớp).
+
+**Khác:** `VIEW` (lưu/gọi góc nhìn 2D đặt tên), `CAL` (máy tính: `2*(3+4)^2`, `sqrt`, `sin/cos/tan` theo độ, `pi`; kết quả chép vào clipboard), `PUBLISH` (in nhiều layout ra một PDF nhiều trang).
+
+**3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
 ## In bản vẽ (PLOT, Ctrl+P)
 Hộp thoại giống AutoCAD:

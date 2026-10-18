@@ -984,7 +984,7 @@
     }
   }
   A.makeDimLinear = (p1, p2, L, phi, kind) => { const d = dimLinearEnts(p1, p2, L, phi); if(!d) return null; return finishDim(d.ents, d.meas, kind || 'nhanh', { k: 'lin', p1, p2, L, phi, ov: null }); };
-  A.dimTxt = () => dimTxt();
+  A.dimTxt = () => dimTxt(); A.finishDim = finishDim; A.arrowAt = arrowAt; A.dimFmt = v => dimFmt(v); A.dimReadable = readable;
   cmd(['DIMLINEAR', 'DLI', 'DIMLIN'], 'Kích thước ngang/dọc (thật, trong bản vẽ)', () => dimLinearCmd(false));
   cmd(['DIMALIGNED', 'DAL', 'DIMALI'], 'Kích thước chéo theo 2 điểm', () => dimLinearCmd(true));
   async function dimChain(baseline){
