@@ -4,6 +4,9 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v4v: xem 3D file DWG 2007+
+- Đọc dữ liệu ACIS nhị phân (SAB) của 3DSOLID trong DWG 2007 trở lên (`libredwg-web.js`: chép theo `sab_size` từ bộ nhớ WASM) → chế độ 3D hiện đủ khối.
+
 ## v4u: lưu DXF 2018
 - Mặc định ghi DXF 2018 (AC1032): CLASSES, MATERIAL, MLEADERSTYLE, SCALELIST… như AutoCAD 2018; chữ UTF-8, màu RGB. `DXFVERSION`: 2018 / 2013 / 2010 / 2007 / 2004 / 2000 / Tự động / R12.
 - Đọc DXF: màu RGB của lớp, giữ lớp rỗng.

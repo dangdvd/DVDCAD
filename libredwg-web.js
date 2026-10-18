@@ -5310,7 +5310,14 @@ class LibreEntityConverter {
         try {
           const v = this.libredwg.dwg_dynapi_entity_value(entity_tio, "acis_data");
           let ver = 0; try { ver = this.libredwg.dwg_dynapi_entity_value(entity_tio, "version").data; } catch (_) {}
-          return { type: "3DSOLID", ...commonAttrs, acisVersion: ver, acis: v ? (v.bin || v.data) : null };
+          let acis = v ? (v.bin || v.data) : null;
+          // DWG 2007+: dữ liệu SAB nhị phân → con trỏ trong bộ nhớ WASM, chép ra theo sab_size
+          if (typeof acis === "number" && acis > 0) {
+            let n = 0; try { n = this.libredwg.dwg_dynapi_entity_value(entity_tio, "sab_size").data | 0; } catch (_) {}
+            const H8 = this.libredwg.HEAPU8;
+            acis = (n > 0 && H8 && acis + n <= H8.length) ? H8.slice(acis, acis + n) : null;
+          }
+          return { type: "3DSOLID", ...commonAttrs, acisVersion: ver, acis };
         } catch (_) { return void 0; }
       } else if (fixedtype == Dwg_Object_Type.DWG_TYPE_ARC) {
         return this.convertArc(entity_tio, commonAttrs);

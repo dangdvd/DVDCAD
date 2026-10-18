@@ -213,6 +213,10 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v4v) — xem 3D file DWG 2007 trở lên
+- Khối 3D (3DSOLID) trong file **DWG 2007 trở lên** nay đọc được (trước đây bị bỏ qua nên bấm 3D chỉ thấy nét 2D). Ví dụ một bản vẽ tầng có 196 khối tường, sàn, cột, cầu thang: hiện đủ trong chế độ 3D.
+- Khối trên lớp đóng băng / tắt vẫn ẩn như AutoCAD (bật lớp trong bảng Lớp để thấy).
+
 ## Bổ sung (v4u) — lưu DXF 2018
 Lưu DXF (Ctrl+S, SAVEAS, xuất DXF, gửi máy chủ DWG) nay mặc định ghi **DXF 2018 (AC1032)** — đúng định dạng AutoCAD 2018–2025 lưu ra.
 - Có đủ phần AutoCAD 2018 cần: CLASSES, vật liệu ByBlock / ByLayer / Global, kiểu ghi chú dẫn MLEADERSTYLE Standard, danh sách tỉ lệ (1:1), từ điển màu / kiểu bảng / kiểu hiển thị; lớp gắn vật liệu, khối ghi đơn vị chèn.
@@ -467,7 +471,7 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Vùng che ghi thành WIPEOUT, thứ tự vẽ ghi theo thứ tự trong file (AutoCAD hiện đúng trên/dưới). Chú thích theo tỉ lệ ghi thành chữ thường cho AutoCAD (DVDCAD mở lại vẫn theo tỉ lệ). Màu RGB ghi đúng, cả màu RGB của lớp khi mở lại. Màu sách màu (color book) đọc theo màu RGB tương ứng.
 - 3D chưa có: bo cạnh tuỳ ý trên khối sau cộng/trừ (chỉ bo được hộp, khối đùn, trụ), render dò tia chất lượng ảnh chụp.
 - Khối sau UNION/SUBTRACT là lưới tam giác: mặt cong hiện dạng nhiều mặt phẳng nhỏ.
-- Khối ACIS (3DSOLID) của AutoCAD trong DXF đọc được: mặt phẳng, mặt trụ, nón, cầu, xuyến. Mặt cong tự do (spline, bo cạnh của AutoCAD) hiện gần đúng theo đường biên. Khối đọc vào thành khối lưới, lưu lại là 3DFACE. Đọc 3DSOLID từ file **DWG** đang thử nghiệm.
+- Khối ACIS (3DSOLID) của AutoCAD trong DXF đọc được: mặt phẳng, mặt trụ, nón, cầu, xuyến. Mặt cong tự do (spline, bo cạnh của AutoCAD) hiện gần đúng theo đường biên. Khối đọc vào thành khối lưới, lưu lại là 3DFACE. Đọc 3DSOLID từ file **DWG** được (đã thử file DWG 2007); khối mặt cong tự do hiện gần đúng.
 - UCS ở DVDCAD chỉ dùng cho lệnh tạo khối 3D. Nét 2D luôn vẽ trên mặt bằng XY.
 - Layout chỉ chứa khung tên và khung nhìn. Muốn ghi chú thêm thì vẽ ở Model.
 - Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
