@@ -1,4 +1,4 @@
-# DVDCAD v4f — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4g — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -141,6 +141,23 @@ Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thá
 - `PRESSPULL PP` — bấm vào trong một vùng kín rồi nhập chiều cao.
 - `WALL3D` (`TUONG`) — chọn đường trục tường trên mặt bằng, nhập bề dày và chiều cao, ra tường 3D.
 
+- `PYRAMID` — chóp đáy đa giác đều. `WEDGE` — nêm (ram dốc). `TORUS` — xuyến.
+- `REVOLVE REV` — xoay biên dạng kín quanh trục. Mặc định **Đứng**: trục vẽ trên mặt bằng thành phương Z (cột, chậu, con tiện). Chọn **Nằm** để giống AutoCAD.
+- `SWEEP` — quét biên dạng (tròn, đa tuyến kín) dọc đường dẫn: ống, dầm, lan can, gờ chỉ. Căn tâm hoặc đáy biên dạng vào đường dẫn.
+- `ELEV` — cao độ Z đặt khối mới (ví dụ 3000 để dựng mái trên tường).
+
+**Sửa khối:**
+- `UNION UNI` (cộng), `SUBTRACT SU` (trừ: khoét lỗ, cắt bớt), `INTERSECT IN` (lấy phần giao).
+- `SLICE SL` — cắt khối bằng mặt phẳng đứng qua 2 điểm, giữ một phía hoặc cả hai.
+- `3DMOVE` — dời cả theo phương Z. `3DROTATE` — xoay quanh trục X, Y, Z hoặc trục nằm qua 2 điểm. `MIRROR3D` — lật trên/dưới qua mặt ngang hoặc đối xứng qua mặt đứng.
+- Khối sau khi cộng/trừ/xoay 3D thành **khối lưới**: vẫn dời, xoay, tỉ lệ, đối xứng, cộng/trừ tiếp được.
+
+**Vật liệu & hiển thị:**
+- `MATERIALS` (`MAT`) — gán vật liệu: bê tông, gạch xây, gạch lát, gỗ, đá, ngói, cỏ, sơn trắng, kính, kim loại, nước. Bảng thuộc tính cũng đổi được.
+- `RENDER` — khung 3D kiểu **Thực tế**: vân vật liệu, ánh sáng, bóng đổ.
+- `SECTIONPLANE` — mặt cắt ngang, kéo thanh trượt để đổi cao độ cắt (xem bên trong nhà).
+- `FLATSHOT` hoặc nút **Chiếu 2D** trong khung 3D — chiếu mô hình thành nét 2D theo góc nhìn hiện tại (mặt đứng, mặt bên, ISO), **đã bỏ nét khuất**, đúng tỉ lệ 1:1. Bấm điểm đặt là xong.
+
 Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCALE, MIRROR, ARRAY, ERASE dùng được như hình 2D. Bảng thuộc tính sửa được cao độ đáy, chiều cao, bán kính và xem thể tích.
 
 **Xem 3D:** `3DORBIT` (`3DO`, `VIEW3D`) hoặc nút **3D**.
@@ -152,7 +169,7 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 - Phối cảnh hoặc song song. Bật/tắt nét 2D ở cao độ 0.
 - Esc hoặc "✕ 2D" để về bản vẽ.
 
-**Xuất:** ảnh PNG, `EXPORTSTL` (in 3D, đơn vị mm), `EXPORTOBJ` (+ file MTL màu, mở bằng SketchUp, Blender, 3ds Max). Lưu DXF thì khối 3D thành mặt **3DFACE**, AutoCAD mở được. File DXF/DWG có 3DFACE cũng xem 3D được.
+**Xuất:** ảnh PNG, `EXPORTSTL` (in 3D, đơn vị mm), `EXPORTOBJ` (+ file MTL màu, mở bằng SketchUp, Blender, 3ds Max). Lưu DXF thì khối 3D thành mặt **3DFACE**, AutoCAD mở được. File DXF lưu từ DVDCAD mở lại vẫn là khối (sửa tiếp chiều cao, bán kính, vật liệu). File DXF/DWG có 3DFACE, file DXF có lưới POLYFACE / POLYGON MESH / MESH (SketchUp, Revit, AutoCAD xuất ra) cũng xem 3D được.
 
 ## In bản vẽ (PLOT, Ctrl+P)
 Hộp thoại giống AutoCAD:
@@ -188,8 +205,9 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Hatch dò biên theo các nét **đang hiện trên màn hình**. Phóng tới vùng cần tô trước khi bấm.
 - Đa tuyến có đoạn cong được lưu dạng nhiều đoạn thẳng nhỏ.
 - **Không lưu được DWG.** Chưa có bộ ghi DWG miễn phí nào chạy trong trình duyệt đủ tin cậy. AutoCAD mở file DXF bình thường và lưu lại thành DWG được (Save As).
-- **3D ở mức cơ bản:** có hộp, trụ, nón, cầu, đùn, tường. Chưa có cộng/trừ khối (UNION, SUBTRACT), xoay tròn (REVOLVE), UCS 3D, vật liệu và render. Khối 3D lưu ra DXF thành các mặt tam giác 3DFACE. Mở lại trong DVDCAD thì xem được nhưng không còn sửa được chiều cao như khối gốc.
-- ACIS solid (3DSOLID) trong file DWG/DXF của AutoCAD chưa đọc được. Chỉ đọc mặt 3DFACE.
+- 3D chưa có: UCS 3D (vẽ trên mặt nghiêng), LOFT, bo/vát cạnh khối (FILLETEDGE), đèn và camera tuỳ chỉnh, render ra ảnh chất lượng cao. Mặt cắt chưa tô kín mặt cắt.
+- Khối sau UNION/SUBTRACT là lưới tam giác: mặt cong hiện dạng nhiều mặt phẳng nhỏ.
+- Khối ACIS (3DSOLID) do AutoCAD tạo chưa đọc được (định dạng đóng). Đọc được 3DFACE, lưới POLYFACE và lưới MESH. Trong AutoCAD, đổi khối sang lưới bằng `CONVTOMESH` rồi lưu DXF là DVDCAD xem được. File DWG chỉ đọc 3DFACE.
 - Layout chỉ chứa khung tên và khung nhìn. Muốn ghi chú thêm thì vẽ ở Model.
 - Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
 - Kiểu nét phức (chèn chữ/hình trong nét) hiện dạng nét đứt thường.

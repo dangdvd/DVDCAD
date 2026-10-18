@@ -150,7 +150,24 @@
     EXPORTOBJ: '<path d="M4 8l8-4 8 4v9l-8 4-8-4z"/><path d="M8 11h8M8 14h5"/>',
     VIEWTOP: '<rect x="5" y="5" width="14" height="14"/><path d="M5 5l14 14" stroke-dasharray="2 2"/>',
     VIEWFRONT: '<rect x="4" y="9" width="16" height="11"/><path d="M4 9l3-4h13l-3 4"/>',
-    VIEWSWISO: '<path d="M4 8l8-4 8 4v9l-8 4-8-4z" stroke-dasharray="2 2"/><path d="M4 8l8 4 8-4M12 12v9"/>'
+    VIEWSWISO: '<path d="M4 8l8-4 8 4v9l-8 4-8-4z" stroke-dasharray="2 2"/><path d="M4 8l8 4 8-4M12 12v9"/>',
+    UNION: '<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/><path d="M12 7v10" stroke-dasharray="2 2"/>',
+    SUBTRACT: '<rect x="3" y="6" width="13" height="12"/><circle cx="16" cy="12" r="5" stroke-dasharray="2 2"/>',
+    INTERSECT: '<circle cx="9" cy="12" r="6" stroke-dasharray="2 2"/><circle cx="15" cy="12" r="6" stroke-dasharray="2 2"/><path d="M12 7a6 6 0 0 1 0 10a6 6 0 0 1 0-10z" fill="currentColor" fill-opacity=".35"/>',
+    SLICE: '<path d="M4 8l8-4 8 4v9l-8 4-8-4z"/><path d="M3 21L21 3" stroke-width="2"/>',
+    REVOLVE: '<path d="M12 3v18" stroke-dasharray="3 2"/><path d="M12 5c4 0 5 3 3 6s0 7 2 8h-5"/><path d="M12 5c-4 0-5 3-3 6s0 7-2 8h5" opacity=".5"/>',
+    SWEEP: '<path d="M3 18c4 0 5-12 9-12s5 8 9 8"/><circle cx="3" cy="18" r="2"/><circle cx="21" cy="14" r="2"/>',
+    TORUS: '<ellipse cx="12" cy="12" rx="9" ry="5"/><ellipse cx="12" cy="12" rx="4" ry="1.8"/>',
+    PYRAMID: '<path d="M12 3L3 18l9 3 9-3z"/><path d="M12 3v18"/>',
+    WEDGE: '<path d="M3 18h18L3 6z"/><path d="M3 18l4 3h18l-4-3M21 18v0"/>',
+    '3DMOVE': '<path d="M12 2v20M2 12h20M12 2l-3 3M12 2l3 3M22 12l-3-3M22 12l-3 3"/><path d="M5 19l14-14" stroke-dasharray="2 2"/>',
+    '3DROTATE': '<ellipse cx="12" cy="12" rx="9" ry="4"/><path d="M12 3v18"/><path d="M19 9l2 3-3 1"/>',
+    MIRROR3D: '<path d="M3 12h18" stroke-dasharray="3 2"/><path d="M8 4l4 5 4-5zM8 20l4-5 4 5z"/>',
+    ELEV: '<path d="M4 20h16M12 20V5M8 9l4-4 4 4"/>',
+    MATERIALS: '<circle cx="12" cy="12" r="9"/><circle cx="9" cy="9" r="2" fill="currentColor"/><circle cx="15" cy="10" r="1.6"/><circle cx="10" cy="15" r="1.6"/>',
+    RENDER: '<path d="M12 3l2.5 6 6.5.5-5 4 1.6 6.5L12 16.5 6.4 20l1.6-6.5-5-4 6.5-.5z"/>',
+    SECTIONPLANE: '<path d="M4 8l8-4 8 4v9l-8 4-8-4z"/><path d="M2 13l10 4 10-4" stroke-width="2"/>',
+    FLATSHOT: '<path d="M4 8l8-4 8 4v9l-8 4-8-4z" stroke-dasharray="2 2"/><rect x="7" y="9" width="10" height="8"/>'
   };
   const ico = (k, cls) => '<svg class="' + (cls || 'ic') + '" viewBox="0 0 24 24">' + (I[k] || I.TOOLS) + '</svg>';
   A.ICONS = I; A.ico = ico;
@@ -366,10 +383,11 @@
       { title: 'Layout', items: [big('LAYOUT', 'New Layout\nLayout mới'), col(sm('MVIEW', 'Khung nhìn (MVIEW)'), sm('VPEDIT', 'Tỉ lệ khung nhìn'), sm('LAYOUTS', 'Danh sách layout', { icon: 'LAYOUT' })), big('CLEAN', 'Clean\nToàn màn hình')] }
     ] },
     m3d: { name: '3D', panels: [
-      { title: 'Khối cơ bản', items: [big('BOX', 'Box\nHộp'), big('CYLINDER', 'Cylinder\nTrụ'), col(sm('CONE', 'Nón'), sm('SPHERE', 'Cầu'))] },
-      { title: 'Tạo từ 2D', items: [big('EXTRUDE', 'Extrude\nĐùn'), big('PRESSPULL', 'Presspull\nKéo vùng'), big('WALL3D', 'Wall 3D\nDựng tường')] },
-      { title: 'Xem', items: [big('3DORBIT', 'Orbit\nXem 3D'), col(sm('VIEWTOP', 'Trên'), sm('VIEWFRONT', 'Trước'), sm('VIEWSWISO', 'ISO Tây Nam'))] },
-      { title: 'Xuất 3D', items: [col(sm('EXPORTSTL', 'Xuất STL'), sm('EXPORTOBJ', 'Xuất OBJ'), sm('DXFOUT', 'DXF (3DFACE)', { icon: 'EXPORT' }))] }
+      { pri: 0, title: 'Khối cơ bản', items: [big('BOX', 'Box\nHộp'), big('CYLINDER', 'Cylinder\nTrụ'), col(sm('CONE', 'Nón'), sm('SPHERE', 'Cầu'), sm('PYRAMID', 'Chóp')), col(sm('WEDGE', 'Nêm'), sm('TORUS', 'Xuyến'), sm('ELEV', 'Cao độ Z'))] },
+      { pri: 1, title: 'Tạo từ 2D', items: [big('EXTRUDE', 'Extrude\nĐùn'), big('PRESSPULL', 'Presspull\nKéo vùng'), col(sm('REVOLVE', 'Xoay tròn'), sm('SWEEP', 'Quét'), sm('WALL3D', 'Dựng tường'))] },
+      { pri: 2, title: 'Sửa khối', items: [big('UNION', 'Union\nCộng'), big('SUBTRACT', 'Subtract\nTrừ'), col(sm('INTERSECT', 'Giao'), sm('SLICE', 'Cắt khối'), sm('3DMOVE', 'Dời 3D')), col(sm('3DROTATE', 'Xoay 3D'), sm('MIRROR3D', 'Đối xứng 3D'))] },
+      { pri: 3, title: 'Xem', items: [big('3DORBIT', 'Orbit\nXem 3D'), big('RENDER', 'Render\nThực tế'), col(sm('MATERIALS', 'Vật liệu'), sm('SECTIONPLANE', 'Mặt cắt'), sm('FLATSHOT', 'Chiếu 2D')), col(sm('VIEWTOP', 'Trên'), sm('VIEWFRONT', 'Trước'), sm('VIEWSWISO', 'ISO Tây Nam'))] },
+      { pri: 8, title: 'Xuất 3D', items: [col(sm('EXPORTSTL', 'Xuất STL'), sm('EXPORTOBJ', 'Xuất OBJ'), sm('DXFOUT', 'DXF (3DFACE)', { icon: 'EXPORT' }))] }
     ] },
     manage: { name: 'Quản lý', panels: [
       { title: 'Trợ giúp vẽ', items: [big('DSETTINGS', 'Drafting\nSettings', { icon: 'SETTINGS' }), col(sm('TOSNAP', 'OSNAP', { icon: 'ID', tog: 'osnap' }), sm('TORTHO', 'ORTHO', { icon: 'LINE', tog: 'ortho' }), sm('TPOLAR', 'POLAR', { icon: 'DIMANGULAR', tog: 'polar' }))] },

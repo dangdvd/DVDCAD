@@ -430,12 +430,14 @@
         break; }
       case 'POINT': h += F('X', 'x', e.x) + F('Y', 'y', e.y); break;
       case 'SOLID3D': {
-        const KN = { ext: 'Khối đùn / hộp', cone: (e.r2 != null && Math.abs(e.r2 - e.r) < 1e-12) ? 'Khối trụ' : 'Khối nón', sph: 'Khối cầu' };
+        const KN = { mesh: 'Khối lưới (sau cộng/trừ, xoay, quét…)', ext: 'Khối đùn / hộp', cone: (e.r2 != null && Math.abs(e.r2 - e.r) < 1e-12) ? 'Khối trụ' : 'Khối nón', sph: 'Khối cầu' };
         h += F('Loại', '', KN[e.k] || e.k, true);
         if(e.k === 'sph') h += F('Tâm X', 'cx', e.cx) + F('Tâm Y', 'cy', e.cy) + F('Tâm Z', 'z0', e.z0 || 0) + F('Bán kính', 'r', e.r);
+        else if(e.k === 'mesh'){ let z0 = Infinity, z1 = -Infinity; const v = e.v || []; for(let i = 2; i < v.length; i += 3){ if(v[i] < z0) z0 = v[i]; if(v[i] > z1) z1 = v[i]; } h += F('Số mặt tam giác', '', String((e.f || []).length / 3), true) + F('Z thấp nhất', '', z0, true) + F('Z cao nhất', '', z1, true); }
         else { if(e.k === 'cone') h += F('Tâm X', 'cx', e.cx) + F('Tâm Y', 'cy', e.cy) + F('Bán kính đáy', 'r', e.r) + F('Bán kính đỉnh', 'r2', e.r2 != null ? e.r2 : e.r);
           h += F('Cao độ đáy (Z)', 'z0', e.z0 || 0) + F('Chiều cao', 'h', e.h || 0); }
-        { const A2 = ACAD(); if(A2 && A2.volumeOf) h += F('Thể tích', '', A2.volumeOf(e), true); }
+        { const A2 = ACAD(); if(A2 && A2.volumeOf) h += F('Thể tích', '', Math.abs(A2.volumeOf(e)), true);
+          if(A2 && A2.MATS) h += '<div class="r"><label>Vật liệu</label><select data-f="mat"' + (editable ? '' : ' disabled') + '><option value="">Theo màu</option>' + Object.keys(A2.MATS).map(k => '<option value="' + k + '"' + (e.mat === k ? ' selected' : '') + '>' + esc(A2.MATS[k].n) + '</option>').join('') + '</select></div>'; }
         h += '<div class="act"><button data-a="view3d">Xem 3D</button></div>';
         break; }
       default: { const bb = entBBox(e); if(bb) h += F('Rộng', '', bb.x1 - bb.x0, true) + F('Cao', '', bb.y1 - bb.y0, true); }
@@ -482,6 +484,7 @@
         if(f === 'lts'){ const v = num(el.value); if(!(v > 0)){ say('Tỉ lệ phải > 0.'); palSig = ''; refreshPalette(true); return; } commitSingle(e, w => { if(Math.abs(v - 1) < 1e-12) delete w.lts; else w.lts = v; }); return; }
         if(f === 'text'){ commitSingle(e, w => { w.text = el.value; }); return; }
         if(f === 'ha'){ commitSingle(e, w => { w.ha = el.value; }); return; }
+        if(f === 'mat'){ commitSingle(e, w => { if(el.value) w.mat = el.value; else delete w.mat; }); return; }
         if(f === 'tstyle'){ const A2 = ACAD(); if(!el.value || !A2 || !A2.TS.list[el.value]) return; commitSingle(e, w => A2.tsApply(w, el.value)); return; }
         if(f === 'pat'){ commitSingle(e, w => { w.pat = el.value; w.solid = el.value === 'SOLID'; }); return; }
         const v = num(el.value); if(!isFinite(v)){ say('Giá trị không hợp lệ.'); palSig = ''; refreshPalette(true); return; }

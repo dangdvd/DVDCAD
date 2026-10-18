@@ -43,7 +43,7 @@
   function curveOf(e){
     if(!e) return null;
     if(e.type === 'IMAGE'){ const c = curveOf({ type: 'POLYLINE', closed: true, vertices: imgCorners(e) }); if(c) c.e = e; return c; }
-    if(e.type === 'SOLID3D'){ const c = e.k === 'ext' ? curveOf({ type: 'POLYLINE', closed: true, vertices: e.pts || [] }) : curveOf({ type: 'CIRCLE', cx: e.cx, cy: e.cy, r: e.r }); if(c) c.e = e; return c; }
+    if(e.type === 'SOLID3D'){ const c = e.pts ? curveOf({ type: 'POLYLINE', closed: true, vertices: e.pts || [] }) : curveOf({ type: 'CIRCLE', cx: e.cx, cy: e.cy, r: e.r }); if(c) c.e = e; return c; }
     switch(e.type){
       case 'LINE': {
         const L = Math.hypot(e.x2 - e.x1, e.y2 - e.y1);
@@ -905,7 +905,7 @@
       case 'TEXT': case 'POINT': case 'XLINE': return [{ x: e.x, y: e.y, r: 'mv' }];
       case 'HATCH': { const b = entBBox(e); return b ? [{ x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2, r: 'mv' }] : []; }
       case 'IMAGE': { const c = imgCorners(e); return [{ x: c[0].x, y: c[0].y, r: 'mv' }, { x: c[2].x, y: c[2].y, r: 'isc' }]; }
-      case 'SOLID3D': { if(e.k === 'ext'){ const v = e.pts || []; let x = 0, y = 0; for(const q of v){ x += q.x; y += q.y; } return v.length ? [{ x: x / v.length, y: y / v.length, r: 'mv' }] : []; } return [{ x: e.cx, y: e.cy, r: 'mv' }, { x: e.cx + e.r, y: e.cy, r: 's3r' }]; }
+      case 'SOLID3D': { if(e.pts){ const v = e.pts || []; let x = 0, y = 0; for(const q of v){ x += q.x; y += q.y; } return v.length ? [{ x: x / v.length, y: y / v.length, r: 'mv' }] : []; } return [{ x: e.cx, y: e.cy, r: 'mv' }, { x: e.cx + e.r, y: e.cy, r: 's3r' }]; }
     }
     return [];
   }
@@ -1253,7 +1253,7 @@
     if(e.bm) e.bm = Object.assign({}, e.bm, { e: e.bm.e + dx, f: e.bm.f + dy });
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(const p of lp){ p.x += dx; p.y += dy; } return; }
     if(e.type === 'XLINE' || e.type === 'IMAGE'){ e.x += dx; e.y += dy; return; }
-    if(e.type === 'SOLID3D'){ const f = p => ({ x: p.x + dx, y: p.y + dy }); if(e.pts){ e.pts = e.pts.map(f); e.holes = (e.holes || []).map(h => h.map(f)); } if(e.cx != null){ e.cx += dx; e.cy += dy; } return; }
+    if(e.type === 'SOLID3D'){ const f = p => ({ x: p.x + dx, y: p.y + dy }); xfV3(e, f); if(e.pts){ e.pts = e.pts.map(f); e.holes = (e.holes || []).map(h => h.map(f)); } if(e.cx != null){ e.cx += dx; e.cy += dy; } return; }
     return _tr.apply(this, arguments);
   };
   const _rot = window.rotateEnt;
@@ -1267,7 +1267,7 @@
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(let i = 0; i < lp.length; i++) lp[i] = _rotPt(lp[i], c, a); e.pang = (e.pang || 0) + deg; return; }
     if(e.type === 'XLINE'){ const q = _rotPt({ x: e.x, y: e.y }, c, a); e.x = q.x; e.y = q.y; const v = rotV(e.dx, e.dy, a); e.dx = v.x; e.dy = v.y; return; }
     if(e.type === 'IMAGE'){ const q = _rotPt({ x: e.x, y: e.y }, c, a); e.x = q.x; e.y = q.y; e.rot = (e.rot || 0) + deg; return; }
-    if(e.type === 'SOLID3D'){ const f = p => _rotPt(p, c, a); if(e.pts){ e.pts = e.pts.map(f); e.holes = (e.holes || []).map(h => h.map(f)); } if(e.cx != null){ const q = f({ x: e.cx, y: e.cy }); e.cx = q.x; e.cy = q.y; } return; }
+    if(e.type === 'SOLID3D'){ const f = p => _rotPt(p, c, a); xfV3(e, f); if(e.pts){ e.pts = e.pts.map(f); e.holes = (e.holes || []).map(h => h.map(f)); } if(e.cx != null){ const q = f({ x: e.cx, y: e.cy }); e.cx = q.x; e.cy = q.y; } return; }
     return _rot.apply(this, arguments);
   };
   const _scl = window.scaleEnt;
@@ -1280,7 +1280,7 @@
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(let i = 0; i < lp.length; i++) lp[i] = _sclPt(lp[i], c, f); if(e.psc) e.psc *= f; return; }
     if(e.type === 'XLINE'){ const q = _sclPt({ x: e.x, y: e.y }, c, f); e.x = q.x; e.y = q.y; return; }
     if(e.type === 'IMAGE'){ const q = _sclPt({ x: e.x, y: e.y }, c, f); e.x = q.x; e.y = q.y; e.w *= f; e.h *= f; return; }
-    if(e.type === 'SOLID3D'){ const g = p => _sclPt(p, c, f); if(e.pts){ e.pts = e.pts.map(g); e.holes = (e.holes || []).map(h => h.map(g)); } if(e.cx != null){ const q = g({ x: e.cx, y: e.cy }); e.cx = q.x; e.cy = q.y; e.r *= f; if(e.r2 != null) e.r2 *= f; } e.z0 = (e.z0 || 0) * f; if(e.h != null) e.h *= f; return; }
+    if(e.type === 'SOLID3D'){ const g = p => _sclPt(p, c, f); xfV3(e, g, f); if(e.pts){ e.pts = e.pts.map(g); e.holes = (e.holes || []).map(h => h.map(g)); } if(e.cx != null){ const q = g({ x: e.cx, y: e.cy }); e.cx = q.x; e.cy = q.y; e.r *= f; if(e.r2 != null) e.r2 *= f; } e.z0 = (e.z0 || 0) * f; if(e.h != null) e.h *= f; return; }
     return _scl.apply(this, arguments);
   };
   const _mir = window.mirrorAcross;
@@ -1296,7 +1296,7 @@
     if(e.type === 'ELLIPSE'){ const q = R({ x: e.cx, y: e.cy }); e.cx = q.x; e.cy = q.y; const v = RV({ x: e.mx, y: e.my }); e.mx = v.x; e.my = v.y; const p1 = e.p1 || 0, p2 = e.p2 == null ? TAU : e.p2; e.p1 = -p2; e.p2 = -p1; return true; }
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(let i = 0; i < lp.length; i++) lp[i] = R(lp[i]); e.pang = 2 * th - (e.pang || 0); return true; }
     if(e.type === 'XLINE'){ const q = R({ x: e.x, y: e.y }); e.x = q.x; e.y = q.y; const v = RV({ x: e.dx, y: e.dy }); e.dx = v.x; e.dy = v.y; return true; }
-    if(e.type === 'SOLID3D'){ if(e.pts){ e.pts = e.pts.map(R); e.holes = (e.holes || []).map(h => h.map(R)); } if(e.cx != null){ const q = R({ x: e.cx, y: e.cy }); e.cx = q.x; e.cy = q.y; } return true; }
+    if(e.type === 'SOLID3D'){ xfV3(e, R, 1, true); if(e.pts){ e.pts = e.pts.map(R); e.holes = (e.holes || []).map(h => h.map(R)); } if(e.cx != null){ const q = R({ x: e.cx, y: e.cy }); e.cx = q.x; e.cy = q.y; } return true; }
     if(e.type === 'IMAGE'){ const c4 = imgCorners(e).map(R); e.x = c4[1].x; e.y = c4[1].y; e.rot = Math.atan2(c4[0].y - c4[1].y, c4[0].x - c4[1].x) * R2D; return true; }
     return _mir.apply(this, arguments);
   };
