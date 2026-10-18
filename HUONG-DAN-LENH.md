@@ -1,4 +1,4 @@
-# DVDCAD v4j — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4k — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -213,6 +213,36 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Lệnh bổ sung (v4k)
+**Thứ tự vẽ & vùng che:**
+- `DRAWORDER DR` — đưa đối tượng lên trên cùng (**F**), xuống dưới cùng (**B**), trên (**A**) hoặc dưới (**U**) một đối tượng khác. `TEXTTOFRONT` đưa chữ / kích thước lên trên, `HATCHTOBACK` đưa mọi hatch xuống dưới.
+- `WIPEOUT WO` — vùng che: bấm các điểm, hoặc **D** chọn đa tuyến kín có sẵn. Vùng che tô bằng màu nền, che các nét nằm dưới nó (nền khung tên, chỗ ghi chú). `WIPEOUTFRAME` bật/tắt khung viền (**F** trong WIPEOUT: bật / tắt / hiện nhưng không in). Đọc được WIPEOUT trong file DWG/DXF.
+
+**Chú thích theo tỉ lệ (annotative):**
+- `CANNOSCALE` — đặt tỉ lệ chú thích 1:N (hoặc bấm ô **▲ 1:N** ở thanh trạng thái). Chữ / kích thước chú thích tự đổi cỡ để luôn cao đúng số mm trên giấy. **A** = chữ, kích thước mới tự là chú thích.
+- `ANNOTATIVE` — bật/tắt chú thích cho chữ, kích thước chọn (cao trên giấy = cao hiện tại ÷ N). Trong khung nhìn của layout, chữ chú thích hiện đúng cao trên giấy theo tỉ lệ của khung nhìn đó.
+
+**Ràng buộc tham số (tab ribbon "Tham số"):**
+- Hình học: `GCHORIZONTAL` (ngang), `GCVERTICAL` (dọc), `GCPARALLEL` (song song), `GCPERPENDICULAR` (vuông góc), `GCCOLLINEAR` (thẳng hàng), `GCCOINCIDENT` (trùng điểm — bấm gần đầu đoạn hoặc tâm), `GCEQUAL` (bằng nhau), `GCCONCENTRIC` (đồng tâm), `GCTANGENT` (tiếp xúc), `GCFIX` (cố định). Lệnh chung `GEOMCONSTRAINT`. Như AutoCAD: đối tượng chọn trước đứng yên, đối tượng chọn sau dời theo.
+- Kích thước: `DCALIGNED` (dài thẳng), `DCHORIZONTAL`, `DCVERTICAL`, `DCRADIUS`, `DCDIAMETER`, `DCANGULAR`. Lệnh chung `DIMCONSTRAINT`. Mỗi ràng buộc có tên (d1, rad1, ang1…). Giá trị có thể là biểu thức theo tên khác, vd `d1*2`, `d1+300`.
+- `AUTOCONSTRAIN` — tự thêm ràng buộc trùng điểm và ngang/dọc cho các đối tượng chọn.
+- `PARAMETERS` — bảng tham số: sửa giá trị hoặc biểu thức rồi bấm Áp dụng, hình vẽ đổi theo. Xoá từng ràng buộc bằng nút ✕.
+- `DELCONSTRAINT` — xoá mọi ràng buộc của đối tượng chọn. `CONSTRAINTBAR` — hiện/ẩn ký hiệu ràng buộc.
+- Sau khi có ràng buộc, mọi cách sửa (MOVE, ô nắm, STRETCH, bảng Thuộc tính…) đều giữ ràng buộc: đối tượng liên quan tự điều chỉnh. Undo hoàn tác cả nhóm. Ràng buộc dùng cho đường thẳng, đa tuyến (không cong), đường tròn, cung.
+
+**Khối động (tab Chèn → Khối động):**
+- `BPARAMETER` — chọn khối rồi thêm tham số:
+  - **V** Hiển thị: đặt tên trạng thái, chọn các nét của khối sẽ hiện ở trạng thái đó. Chạy lại để thêm trạng thái khác. Các bản khác cùng tên tự nhận.
+  - **L** Kéo giãn: chỉ điểm gốc (phần cố định) và điểm đầu kéo, đặt tên (vd Dai). Khi đổi giá trị, các điểm nằm quá nửa đoạn sẽ dời theo hướng kéo.
+  - **F** Lật: cho phép lật ngang / dọc quanh điểm gốc khối.
+  - **X** Bỏ mọi tham số động của khối.
+- Đổi trạng thái: chọn khối → bảng **Thuộc tính** có mục "Khối động" (danh sách trạng thái, ô độ dài, nút Lật); hoặc lệnh `BDYN`.
+- Định nghĩa khối động lưu trên máy theo tên khối nên dùng được cho mọi bản vẽ chèn khối đó.
+
+**Lưu DWG:**
+- `SAVEDWG` (`DWGOUT`) — lưu ra file **DWG** qua máy chủ chuyển đổi của bạn. `DWGSERVER` để đặt địa chỉ máy chủ.
+- Chuẩn bị một lần trên máy tính: cài **ODA File Converter** (miễn phí) và **Node.js**, chạy `node server-dwg.js` (file có trong repo; đặt biến `ODA` trỏ tới ODAFileConverter). Điện thoại dùng được nếu cùng mạng với máy tính đó (nhập `http://<IP máy tính>:8787/convert`).
+
 ## In bản vẽ (PLOT, Ctrl+P)
 Hộp thoại giống AutoCAD:
 - **Khổ giấy:** A4 đến A0, chọn ngang hoặc dọc.
@@ -240,13 +270,15 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - **Bản vẽ mới** (`NEW`, Ctrl+N) dùng đơn vị mm và được lưu trong mục "Gần đây".
 
 ## Khác với AutoCAD
-- Chỉ lưu được **DXF**. File DWG mở để xem và sửa được, nhưng khi lưu sẽ thành DXF.
+- Lưu DXF ngay trong app. Lưu **DWG** cần máy chủ chuyển đổi (`SAVEDWG`, xem trên).
 - Kích thước và khối được lưu ra DXF dạng nét rời. Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước. Kích thước không bám theo khi chỉ sửa riêng đường hình.
 - Kích thước thẳng/chéo có sẵn trong file DWG/DXF cũng kéo ô nắm và STRETCH được. Khi sửa, kích thước được vẽ lại theo kiểu của DVDCAD: giữ cao chữ, số lẻ, mũi tên/gạch chéo. Kích thước góc và bán kính của file gốc chỉ chọn theo cụm.
 - Bề rộng nét theo từng đối tượng không ghi được vào DXF R12 (AutoCAD vẫn đọc được kiểu nét).
 - Hatch dò biên theo các nét **đang hiện trên màn hình**. Phóng tới vùng cần tô trước khi bấm.
 - Đa tuyến có đoạn cong được lưu dạng nhiều đoạn thẳng nhỏ.
-- **Không lưu được DWG.** Chưa có bộ ghi DWG miễn phí nào chạy trong trình duyệt đủ tin cậy. AutoCAD mở file DXF bình thường và lưu lại thành DWG được (Save As).
+- Trình duyệt không tự ghi được DWG: `SAVEDWG` gửi DXF tới máy chủ ODA của bạn. Không có máy chủ thì lưu DXF, AutoCAD mở bình thường.
+- Ràng buộc tham số và khối động lưu trên máy (theo bản vẽ / tên khối), không ghi vào DXF. Khối động trong file AutoCAD hiện đúng trạng thái đang lưu nhưng chưa đổi được tham số gốc của AutoCAD.
+- Vùng che, thứ tự vẽ và chú thích theo tỉ lệ ghi ra DXF dạng nét thường.
 - 3D chưa có: bo cạnh tuỳ ý trên khối sau cộng/trừ (chỉ bo được hộp, khối đùn, trụ), render dò tia chất lượng ảnh chụp.
 - Khối sau UNION/SUBTRACT là lưới tam giác: mặt cong hiện dạng nhiều mặt phẳng nhỏ.
 - Khối ACIS (3DSOLID) của AutoCAD trong DXF đọc được: mặt phẳng, mặt trụ, nón, cầu, xuyến. Mặt cong tự do (spline, bo cạnh của AutoCAD) hiện gần đúng theo đường biên. Khối đọc vào thành khối lưới, lưu lại là 3DFACE. Đọc 3DSOLID từ file **DWG** đang thử nghiệm.

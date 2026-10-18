@@ -174,7 +174,7 @@
      3) TRUY VẤN NHANH THEO HỘP BAO (dùng mảng số của app)
      ===================================================================== */
   function ensureBB(){ try{ if(bbDirty || bbN !== entities.length || !bbX0) buildBBoxCache(); }catch(_){} }
-  const isHiddenE = e => hiddenUserLayers.has(e.layer || '0') || !!(OBJ_HIDE && OBJ_HIDE.has(e));
+  const isHiddenE = e => !!e.vh || hiddenUserLayers.has(e.layer || '0') || !!(OBJ_HIDE && OBJ_HIDE.has(e));
   A.isHiddenE = isHiddenE;
   function queryBox(x0, y0, x1, y1, max, opt){
     ensureBB(); const out = []; max = max || 1e9; opt = opt || {};

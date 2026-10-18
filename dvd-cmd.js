@@ -382,7 +382,8 @@
         h += '<div class="r"><label>Tỉ lệ kiểu nét</label><input data-m="lts"' + ro + ' value="' + (sc.size > 1 ? '*nhiều*' : esc(fmt([...sc][0]))) + '"></div>';
         h += '<div class="r"><label>Bề rộng nét</label><select data-m="lw"' + (editable ? '' : ' disabled') + '>' + lwOpts([...lws][0], lws.size > 1) + '</select></div>'; }
       if(grpIds.size) h += '<div class="act"><button data-a="explode">Phá nhóm/khối</button></div>';
-      palBody.innerHTML = h; bindMulti(s); return;
+      const ex = window.DVDPalExtra ? window.DVDPalExtra(s, editable) : null; if(ex && ex.html) h += ex.html;
+      palBody.innerHTML = h; bindMulti(s); if(ex && ex.bind) ex.bind(palBody); return;
     }
     const e = s[0];
     h += '<div class="grp">' + esc(TYPE_VN[e.type] || e.type) + (e.userAdded ? ' · do bạn vẽ' : '') + '</div>';

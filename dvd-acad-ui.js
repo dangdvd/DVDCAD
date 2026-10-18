@@ -109,6 +109,34 @@
     LTSCALE: '<path d="M3 8h4M10 8h4M17 8h4"/><path d="M3 16h8M14 16h7"/><path d="M12 10v4M10 12.5l2 2 2-2"/>',
     LWEIGHT: '<path d="M3 6h18" stroke-width="1"/><path d="M3 12h18" stroke-width="2.5"/><path d="M3 18h18" stroke-width="4"/>',
     QSELECT: '<path d="M4 4h16l-6 8v6l-4 2v-8z"/>',
+    WIPEOUT: '<path d="M4 6h16v12H4z" stroke-dasharray="3 2"/><path d="M7 9h10v6H7z" fill="currentColor" fill-opacity=".15"/>',
+    TEXTTOFRONT: '<rect x="3" y="8" width="13" height="12" fill="currentColor" fill-opacity=".2"/><path d="M8 4h12M14 4v10"/>',
+    HATCHTOBACK: '<rect x="8" y="3" width="13" height="13"/><path d="M3 9l6-6M3 15l12-12M3 21l18-18" stroke-width="1" opacity=".6"/>',
+    CANNOSCALE: '<path d="M4 18h16M4 18v-4M8 18v-2M12 18v-4M16 18v-2M20 18v-4"/><path d="M6 10l3-6 3 6M7 8h4"/>',
+    ANNOTATIVE: '<path d="M5 18l4-12 4 12M6.5 14h5"/><path d="M15 14h6M18 11v6"/>',
+    SAVEDWG: '<path d="M5 3h11l4 4v14H5z"/><path d="M8 14h2.5a2 2 0 0 1 0 4H8zM13 14l1 4 1-3 1 3 1-4"/>',
+    DWGSERVER: '<rect x="4" y="4" width="16" height="6" rx="1"/><rect x="4" y="14" width="16" height="6" rx="1"/><circle cx="8" cy="7" r=".8" fill="currentColor"/><circle cx="8" cy="17" r=".8" fill="currentColor"/>',
+    GEOMCONSTRAINT: '<path d="M4 20L20 4"/><rect x="2" y="17" width="5" height="5"/><rect x="17" y="2" width="5" height="5"/>',
+    GCHORIZONTAL: '<path d="M3 12h18"/><circle cx="4" cy="12" r="1.6" fill="currentColor"/><circle cx="20" cy="12" r="1.6" fill="currentColor"/>',
+    GCVERTICAL: '<path d="M12 3v18"/><circle cx="12" cy="4" r="1.6" fill="currentColor"/><circle cx="12" cy="20" r="1.6" fill="currentColor"/>',
+    GCPARALLEL: '<path d="M4 18L14 4M10 20L20 6"/>',
+    GCPERPENDICULAR: '<path d="M5 20h15M8 20V5"/><path d="M8 16h4v4"/>',
+    GCCOINCIDENT: '<path d="M3 20l9-8M12 12l9 8M12 12V3"/><circle cx="12" cy="12" r="2" fill="currentColor"/>',
+    GCCOLLINEAR: '<path d="M3 19l5-5M11 11l3-3M17 5l4-4"/>',
+    GCEQUAL: '<path d="M5 9h14M5 15h14"/>',
+    GCCONCENTRIC: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
+    GCTANGENT: '<circle cx="11" cy="13" r="7"/><path d="M3 6h18"/>',
+    GCFIX: '<rect x="6" y="11" width="12" height="9" rx="1"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    AUTOCONSTRAIN: '<path d="M4 20L20 4"/><path d="M15 15l2 4 2-4 4-2-4-2-2-4-2 4-4 2z" fill="currentColor" fill-opacity=".3" transform="scale(.6) translate(10 10)"/>',
+    DIMCONSTRAINT: '<path d="M3 6v10M21 6v10M3 11h18"/><rect x="9" y="15" width="6" height="6" rx="1"/><path d="M10.5 15v-1.5a1.5 1.5 0 0 1 3 0V15"/>',
+    DCALIGNED: '<path d="M4 16L16 4M7 19L19 7"/><path d="M6 18l-2-2M18 6l-2-2"/>',
+    DCRADIUS: '<circle cx="12" cy="12" r="8"/><path d="M12 12l6-6"/>',
+    DCANGULAR: '<path d="M4 20h16M4 20L16 6"/><path d="M12 20a8 8 0 0 0-2-5"/>',
+    PARAMETERS: '<path d="M4 5h4M4 12h4M4 19h4"/><path d="M11 5h9M11 12h9M11 19h9" stroke-dasharray="2 2"/>',
+    DELCONSTRAINT: '<path d="M4 20L20 4"/><path d="M14 14l6 6M20 14l-6 6"/>',
+    CONSTRAINTBAR: '<rect x="3" y="8" width="5" height="5"/><rect x="10" y="8" width="5" height="5"/><path d="M17 10.5h4"/>',
+    BPARAMETER: '<rect x="3" y="3" width="12" height="12"/><path d="M15 15l6 6M18 21h3v-3"/><circle cx="15" cy="15" r="1.5" fill="currentColor"/>',
+    BDYN: '<rect x="3" y="6" width="12" height="12"/><path d="M18 9v6M16 11l2-2 2 2M16 13l2 2 2-2"/>',
     DRAWORDER: '<rect x="3" y="3" width="11" height="11"/><rect x="10" y="10" width="11" height="11" fill="currentColor" fill-opacity=".35"/>',
     MLEADER: '<path d="M3 21l8-8h10"/><path d="M3 21l1.5-4.5L7.5 19.5z" fill="currentColor"/><path d="M13 9h8M13 5h8"/>',
     QLEADER: '<path d="M3 21l8-8h10"/><path d="M3 21l1.5-4.5L7.5 19.5z" fill="currentColor"/><path d="M13 9h8M13 5h8"/>',
@@ -377,7 +405,7 @@
       { pri: 0, title: 'Vẽ', items: [big('LINE', 'Line\nĐường'), big('PLINE', 'Polyline\nĐa tuyến'), big('CIRCLE', 'Circle\nTròn', { menu: [['CIRCLE', 'Tâm, bán kính'], ['CIRCLE|2P', '2 điểm'], ['CIRCLE|3P', '3 điểm']] }), big('ARC', 'Arc\nCung', { menu: [['ARC', '3 điểm'], ['ARC|C', 'Tâm, đầu, cuối']] }),
         col(sm('RECTANG', 'Chữ nhật'), sm('POLYGON', 'Đa giác'), sm('ELLIPSE', 'Elip')), col(sm('HATCH', 'Hatch'), sm('SPLINE', 'Spline'), sm('XLINE', 'Đường dựng')), col(sm('POINT', 'Điểm'), sm('REVCLOUD', 'Mây'), sm('MLINE', 'Đường đôi'))] },
       { pri: 0, title: 'Sửa', items: [col(sm('MOVE', 'Move'), sm('ROTATE', 'Rotate'), sm('TRIM', 'Trim')), col(sm('COPY', 'Copy'), sm('MIRROR', 'Mirror'), sm('FILLET', 'Fillet')), col(sm('STRETCH', 'Stretch'), sm('SCALE', 'Scale'), sm('ARRAY', 'Array')),
-        col(sm('ERASE', 'Erase'), sm('EXPLODE', 'Explode'), sm('OFFSET', 'Offset')), col(sm('EXTEND', 'Extend'), sm('BREAK', 'Break'), sm('MODMORE', 'Thêm ▾', { icon: 'TOOLS', menu: [['CHAMFER', 'Chamfer — vát góc'], ['JOIN', 'Join — nối'], ['LENGTHEN', 'Lengthen — đổi dài'], ['BREAKATPOINT', 'Break at point — tách tại điểm'], ['MATCHPROP', 'Match Properties — sao thuộc tính'], ['ALIGN', 'Align — căn chỉnh theo 2 điểm'], ['OVERKILL', 'Overkill — xoá nét trùng'], ['BOUNDARY', 'Boundary — tạo đường biên kín'], ['DONUT', 'Donut — vành khuyên'], ['DIVIDE', 'Divide — chia đều'], ['MEASURE', 'Measure — đặt điểm theo khoảng'], ['DDEDIT', 'Sửa chữ'], ['ARRAYPATH', 'Array path — mảng theo đường'], ['BLEND', 'Blend — nối cong trơn'], ['REVERSE', 'Reverse — đảo chiều'], ['SETBYLAYER', 'SetByLayer — về ByLayer'], ['CENTERLINE', 'Centerline — đường tâm'], ['CENTERMARK', 'Center mark — dấu tâm']] }))] },
+        col(sm('ERASE', 'Erase'), sm('EXPLODE', 'Explode'), sm('OFFSET', 'Offset')), col(sm('EXTEND', 'Extend'), sm('BREAK', 'Break'), sm('MODMORE', 'Thêm ▾', { icon: 'TOOLS', menu: [['CHAMFER', 'Chamfer — vát góc'], ['JOIN', 'Join — nối'], ['LENGTHEN', 'Lengthen — đổi dài'], ['BREAKATPOINT', 'Break at point — tách tại điểm'], ['MATCHPROP', 'Match Properties — sao thuộc tính'], ['ALIGN', 'Align — căn chỉnh theo 2 điểm'], ['OVERKILL', 'Overkill — xoá nét trùng'], ['BOUNDARY', 'Boundary — tạo đường biên kín'], ['DONUT', 'Donut — vành khuyên'], ['DIVIDE', 'Divide — chia đều'], ['MEASURE', 'Measure — đặt điểm theo khoảng'], ['DDEDIT', 'Sửa chữ'], ['ARRAYPATH', 'Array path — mảng theo đường'], ['BLEND', 'Blend — nối cong trơn'], ['REVERSE', 'Reverse — đảo chiều'], ['SETBYLAYER', 'SetByLayer — về ByLayer'], ['CENTERLINE', 'Centerline — đường tâm'], ['CENTERMARK', 'Center mark — dấu tâm'], ['DRAWORDER', 'Draworder — thứ tự vẽ'], ['WIPEOUT', 'Wipeout — vùng che']] }))] },
       { pri: 7, title: 'Chú thích', items: [big('TEXT', 'Text\nChữ', { menu: [['TEXT', 'Chữ 1 dòng'], ['MTEXT', 'Chữ nhiều dòng']] }), big('DIMLINEAR', 'Dimension\nKích thước', { menu: [['DIMLINEAR', 'Ngang / dọc'], ['DIMALIGNED', 'Chéo'], ['DIMANGULAR', 'Góc'], ['DIMRADIUS', 'Bán kính'], ['DIMDIAMETER', 'Đường kính'], ['DIMCONTINUE', 'Nối tiếp'], ['DIMBASELINE', 'Cùng gốc'], ['QDIM', 'Kích thước nhanh (QDIM)']] }), col(sm('MLEADER', 'Leader'), sm('DIMCONTINUE', 'Nối tiếp'), sm('DIMSTYLE', 'Kiểu Dim'))] },
       { pri: 6, title: 'Lớp', items: [big('LAYER', 'Layer\nProperties'), { t: 'ctl', kind: 'layer' }] },
       { pri: 8, title: 'Khối', items: [big('INSERT', 'Insert\nChèn'), col(sm('BLOCK', 'Tạo khối'), sm('REFEDIT', 'Sửa khối'), sm('GROUP', 'Nhóm'))] },
@@ -387,6 +415,7 @@
     ] },
     insert: { name: 'Chèn', panels: [
       { title: 'Khối', items: [big('INSERT', 'Insert\nChèn khối'), big('BLOCK', 'Create\nTạo khối'), big('REFEDIT', 'Edit\nSửa khối'), col(sm('BLOCKLIB', 'Thư viện khối', { icon: 'LIST' }), sm('GROUP', 'Nhóm'), sm('UNGROUP', 'Bỏ nhóm'))] },
+      { title: 'Khối động', items: [big('BPARAMETER', 'Parameter\nTham số động'), col(sm('BDYN', 'Đổi trạng thái'), sm('REFEDIT', 'Sửa khối'))] },
       { title: 'Thuộc tính khối', items: [big('ATTDEF', 'Define\nĐịnh nghĩa'), col(sm('EATTEDIT', 'Sửa thuộc tính'), sm('ATTEXPORT', 'Xuất CSV'))] },
       { title: 'Tham chiếu', items: [big('XATTACH', 'Attach\nGắn XREF'), big('IMAGEATTACH', 'Image\nẢnh nền'), col(sm('XREF', 'Quản lý XREF'), sm('IMAGEADJUST', 'Chỉnh ảnh'), sm('COMPARE', 'So sánh'))] },
       { title: 'Dán', items: [big('PASTECLIP', 'Paste\nDán'), col(sm('PASTEORIG', 'Dán đúng toạ độ', { icon: 'PASTECLIP' }), sm('COPYBASE', 'Copy kèm gốc'))] }
@@ -398,7 +427,14 @@
       { title: 'Sửa chữ', items: [col(sm('SCALETEXT', 'Đổi cỡ chữ', { icon: 'TEXT' }), sm('JUSTIFYTEXT', 'Canh lề chữ', { icon: 'TEXT' }), sm('TXT2MTXT', 'Gộp dòng chữ', { icon: 'MTEXT' }))] },
       { title: 'Ghi chú dẫn', items: [big('MLEADER', 'Multileader\nGhi chú dẫn'), col(sm('QLEADER', 'Dẫn nhiều đoạn'))] },
       { title: 'Hatch', items: [big('HATCH', 'Hatch\nTô vật liệu'), col(sm('HATCHSET', 'Mẫu & tỉ lệ', { icon: 'SETTINGS' }))] },
+      { title: 'Che & thứ tự', items: [big('WIPEOUT', 'Wipeout\nVùng che'), col(sm('DRAWORDER', 'Thứ tự vẽ'), sm('TEXTTOFRONT', 'Chữ lên trên'), sm('HATCHTOBACK', 'Hatch xuống dưới')), col(sm('WIPEOUTFRAME', 'Khung vùng che', { icon: 'WIPEOUT' }))] },
+      { title: 'Tỉ lệ chú thích', items: [big('CANNOSCALE', 'Anno Scale\nTỉ lệ chú thích'), col(sm('ANNOTATIVE', 'Gán chú thích theo TL'))] },
       { title: 'Đánh dấu (không sửa file)', items: [big('DO', 'Quick\nĐo nhanh', { icon: 'MEASURE' }), big('NOTE', 'Markup\nGhi chú', { icon: 'NOTE' }), big('REVCLOUD', 'Revcloud\nMây')] }
+    ] },
+    param: { name: 'Tham số', panels: [
+      { pri: 0, title: 'Hình học', items: [big('AUTOCONSTRAIN', 'Auto\nTự ràng buộc'), col(sm('GCCOINCIDENT', 'Trùng điểm'), sm('GCHORIZONTAL', 'Ngang'), sm('GCVERTICAL', 'Dọc')), col(sm('GCPARALLEL', 'Song song'), sm('GCPERPENDICULAR', 'Vuông góc'), sm('GCCOLLINEAR', 'Thẳng hàng')), col(sm('GCEQUAL', 'Bằng nhau'), sm('GCCONCENTRIC', 'Đồng tâm'), sm('GCTANGENT', 'Tiếp xúc')), col(sm('GCFIX', 'Cố định'), sm('CONSTRAINTBAR', 'Hiện/ẩn ký hiệu'))] },
+      { pri: 1, title: 'Kích thước', items: [big('DCALIGNED', 'Aligned\nThẳng'), col(sm('DCHORIZONTAL', 'Ngang', { icon: 'DIMLINEAR' }), sm('DCVERTICAL', 'Dọc', { icon: 'DIMLINEAR' }), sm('DCANGULAR', 'Góc')), col(sm('DCRADIUS', 'Bán kính'), sm('DCDIAMETER', 'Đường kính', { icon: 'DCRADIUS' }))] },
+      { pri: 2, title: 'Quản lý', items: [big('PARAMETERS', 'Parameters\nBảng tham số'), col(sm('DELCONSTRAINT', 'Xoá ràng buộc'))] }
     ] },
     view: { name: 'Hiển thị', panels: [
       { title: 'Điều hướng', items: [big('ZE', 'Extents\nVừa bản vẽ'), big('ZW', 'Window\nKhung'), col(sm('ZIN', 'Phóng to'), sm('ZOUT', 'Thu nhỏ'), sm('ZP', 'Khung trước')), col(sm('ROTVIEW', 'Xoay 90°'), sm('ROTRESET', 'Về hướng gốc', { icon: 'ROTVIEW' }), sm('BOOKMARK', 'Vị trí đã lưu')), col(sm('VIEW', 'Góc nhìn đặt tên', { icon: 'LAYOUT' }))] },
@@ -419,13 +455,13 @@
     manage: { name: 'Quản lý', panels: [
       { title: 'Trợ giúp vẽ', items: [big('DSETTINGS', 'Drafting\nSettings', { icon: 'SETTINGS' }), col(sm('TOSNAP', 'OSNAP', { icon: 'ID', tog: 'osnap' }), sm('TORTHO', 'ORTHO', { icon: 'LINE', tog: 'ortho' }), sm('TPOLAR', 'POLAR', { icon: 'DIMANGULAR', tog: 'polar' }))] },
       { title: 'Đơn vị & đo', items: [big('CALIB', 'Units\nTỉ lệ & đơn vị'), big('COUNT', 'Count\nĐếm khối'), col(sm('CAL', 'Máy tính', { icon: 'MEASUREGEOM' }), sm('LAYMRG', 'Gộp lớp', { icon: 'LAYER' }), sm('LAYDEL', 'Xoá lớp', { icon: 'LAYER' }))] },
-      { title: 'Xuất', items: [big('PLOT', 'Plot\nIn bản vẽ'), big('PUBLISH', 'Publish\nIn hàng loạt', { icon: 'PLOT' }), col(sm('EXPORT', 'Xuất ảnh/PDF', { icon: 'EXPORT' }), sm('DXFOUT', 'Xuất DXF', { icon: 'EXPORT' }), sm('SAVEAS', 'Lưu thành DXF'))] },
+      { title: 'Xuất', items: [big('PLOT', 'Plot\nIn bản vẽ'), big('PUBLISH', 'Publish\nIn hàng loạt', { icon: 'PLOT' }), col(sm('EXPORT', 'Xuất ảnh/PDF', { icon: 'EXPORT' }), sm('DXFOUT', 'Xuất DXF', { icon: 'EXPORT' }), sm('SAVEAS', 'Lưu thành DXF')), col(sm('SAVEDWG', 'Lưu DWG'), sm('DWGSERVER', 'Máy chủ DWG'))] },
       { title: 'Trợ giúp', items: [big('HELP', 'Commands\nDanh sách lệnh')] }
     ] },
     online: { name: 'Online · Drive', panels: [
       { title: 'Google Drive', items: [big('DRIVE', 'Drive\nMở/Lưu'), col(sm('DOPEN', 'Mở từ Drive', { icon: 'OPEN' }), sm('DUP', 'Tải bản vẽ lên', { icon: 'EXPORT' }), sm('DSAVE', 'Lưu DXF lên Drive', { icon: 'SAVE' }))] },
       { title: 'Chia sẻ & cộng tác', items: [big('SHARE', 'Share\nChia sẻ link'), big('COLLAB', 'Collaborate\nCùng sửa'), col(sm('SYNC', 'Đồng bộ ngay'), sm('DSET', 'Cài đặt Google', { icon: 'SETTINGS' }))] },
-      { title: 'Máy tính', items: [big('SAVE', 'Save\nLưu (Ctrl+S)'), big('SAVEAS', 'Save As\nLưu thành')] }
+      { title: 'Máy tính', items: [big('SAVE', 'Save\nLưu (Ctrl+S)'), big('SAVEAS', 'Save As\nLưu thành'), big('SAVEDWG', 'DWG\nLưu DWG')] }
     ] }
   };
   // hành động ngoài dòng lệnh
