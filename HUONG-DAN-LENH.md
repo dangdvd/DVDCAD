@@ -1,4 +1,4 @@
-# DVDCAD v4b — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4c — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -22,6 +22,7 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   - Trái → phải (xanh dương) chỉ chọn đối tượng nằm trọn trong khung.
   - Phải → trái (xanh lá, nét đứt) chọn mọi đối tượng chạm khung.
 - **Ô nắm xanh (grip)**: bấm vào một ô thì ô chuyển đỏ và bắt đầu **kéo giãn**. Bấm **Space** để đổi lần lượt sang Di chuyển, Xoay, Tỉ lệ, Đối xứng. Gõ `C` để tạo bản sao.
+- **Đa tuyến** có thêm ô nắm ở giữa mỗi đoạn. Kéo ô giữa thì dời cả đoạn. Sau khi bấm ô giữa, chọn `[Thêm đỉnh]`. Sau khi bấm ô ở đỉnh, chọn `[Xoá đỉnh]`.
 - **Kích đúp** vào chữ để sửa nội dung, vào đối tượng khác để mở Thuộc tính.
 - **Khối và kích thước chọn theo cụm** như AutoCAD: bấm một nét trong khối là chọn cả khối. Khối chỉ có một ô nắm ở điểm chèn. **Ctrl+Shift+A** bật/tắt chế độ này (chọn từng nét).
 - **Rê chuột** lên đối tượng khoảng 1 giây sẽ hiện ô gợi ý: loại, màu, lớp, kiểu nét. Rê chuột lên nút trên ribbon sẽ hiện tên lệnh, mô tả và lệnh tắt.
@@ -34,6 +35,7 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 | F8 | ORTHO (giữ Shift = tạm thời) | F9 | SNAP bước lưới |
 | F10 | POLAR góc cực | F11 | OTRACK truy bắt |
 | F12 | DYN nhập động | Ctrl+1 | Bảng Thuộc tính |
+| Ctrl+P | In bản vẽ (Plot) | | |
 | Ctrl+Z / Y | Hoàn tác / làm lại | Ctrl+C / X / V | Sao chép / cắt / dán (dùng được giữa các bản vẽ) |
 | Ctrl+Shift+C / V | Sao chép kèm điểm gốc / dán đúng toạ độ | Ctrl+N / O / S | Mới / mở / lưu |
 | Ctrl+Shift+S | Lưu thành DXF | Ctrl+P | In / xuất |
@@ -44,9 +46,9 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thái để chọn nhanh bước góc hoặc loại điểm bắt.
 
 ## Danh sách lệnh
-**Vẽ:** `LINE L` · `PLINE PL` (A = cung, C = đóng) · `RECTANG REC` (D = kích thước) · `CIRCLE C` (D, 2P, 3P) · `ARC A` (3 điểm, C = tâm) · `ELLIPSE EL` · `POLYGON POL` · `POINT PO` · `XLINE XL` · `RAY` · `SPLINE SPL` · `REVCLOUD RC` · `TEXT T/DT` · `MTEXT MT` · `HATCH H` (bấm điểm trong vùng kín; S = chọn đường kín; T = mẫu và tỉ lệ)
+**Vẽ:** `BOUNDARY BO` (bấm trong vùng kín → đa tuyến kín) · `DONUT` · `LINE L` · `PLINE PL` (A = cung, C = đóng) · `RECTANG REC` (D = kích thước) · `CIRCLE C` (D, 2P, 3P) · `ARC A` (3 điểm, C = tâm) · `ELLIPSE EL` · `POLYGON POL` · `POINT PO` · `XLINE XL` · `RAY` · `SPLINE SPL` · `REVCLOUD RC` · `TEXT T/DT` · `MTEXT MT` · `HATCH H` (bấm điểm trong vùng kín; S = chọn đường kín; T = mẫu và tỉ lệ)
 
-**Sửa:** `ALIGN AL` (căn theo 2 cặp điểm: dời + xoay, có thể tỉ lệ) · `MOVE M` · `COPY CO` · `ROTATE RO` (C = sao chép, R = tham chiếu) · `SCALE SC` · `MIRROR MI` · `OFFSET O` (T = đi qua) · `ARRAY AR` (chữ nhật hoặc tròn) · `STRETCH S` (khung cắt) · `TRIM TR` · `EXTEND EX` (bấm phần cần bỏ hoặc kéo dài; giữ Shift để đổi qua lại) · `FILLET F` (R, P = cả đa tuyến, bán kính 0 = nối góc) · `CHAMFER CHA` · `BREAK BR` · `BREAKATPOINT BRP` · `JOIN J` · `EXPLODE X` · `LENGTHEN LEN` · `PEDIT PE` · `ERASE E` · `OOPS` · `MATCHPROP MA` · `DDEDIT ED`
+**Sửa:** `OVERKILL` (xoá nét trùng, gộp đoạn thẳng chồng nhau) · `ALIGN AL` (căn theo 2 cặp điểm: dời + xoay, có thể tỉ lệ) · `MOVE M` · `COPY CO` · `ROTATE RO` (C = sao chép, R = tham chiếu) · `SCALE SC` · `MIRROR MI` · `OFFSET O` (T = đi qua) · `ARRAY AR` (chữ nhật hoặc tròn) · `STRETCH S` (khung cắt) · `TRIM TR` · `EXTEND EX` (bấm phần cần bỏ hoặc kéo dài; giữ Shift để đổi qua lại) · `FILLET F` (R, P = cả đa tuyến, bán kính 0 = nối góc) · `CHAMFER CHA` · `BREAK BR` · `BREAKATPOINT BRP` · `JOIN J` · `EXPLODE X` · `LENGTHEN LEN` · `PEDIT PE` · `ERASE E` · `OOPS` · `MATCHPROP MA` · `DDEDIT ED`
 
 **Kích thước** (nét thật trong bản vẽ, xuất DXF được): `DIMLINEAR DLI` · `DIMALIGNED DAL` · `DIMRADIUS DRA` · `DIMDIAMETER DDI` · `DIMANGULAR DAN` · `DIMCONTINUE DCO` · `DIMBASELINE DBA` · `DIMSTYLE D` (cao chữ, gạch chéo hoặc mũi tên, số lẻ, hệ số, lớp)
 - Kích thước vẽ bằng DVDCAD **sửa được như AutoCAD**:
@@ -66,9 +68,32 @@ Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thá
 
 **Chọn:** `QSELECT` (chọn nhanh theo loại, lớp, màu, kiểu nét, nội dung chữ, cao chữ, chiều dài, bán kính) · `SELECTSIMILAR` · `PICKSTYLE`
 
-**Hỏi / đo:** `DIST DI` · `AREA AA` (O = chọn đối tượng) · `ID` · `LIST LI` · `DIVIDE DIV` · `MEASURE ME` · `DO` (đo nhanh, lưu dạng đánh dấu)
+**Kiểu chữ:** `STYLE ST`
+- Chọn font (Arial, Times New Roman, Tahoma…) và hệ số rộng. Kiểu hiện hành dùng cho TEXT, MTEXT, ghi chú dẫn và kích thước mới.
+- Bảng Thuộc tính đổi được kiểu chữ và hệ số rộng của từng chữ.
+- Chữ trong file DWG/DXF dùng font TrueType (kể cả VNI-Times, .VnTime) hiện theo đúng họ font.
+
+**Ẩn tạm:**
+- `ISOLATEOBJECTS` chỉ hiện các đối tượng đã chọn. `HIDEOBJECTS` ẩn các đối tượng đã chọn. `UNISOLATEOBJECTS` hiện lại tất cả.
+- Thanh trạng thái có biểu tượng bóng đèn. Bóng đèn chuyển đỏ khi đang ẩn bớt đối tượng.
+
+**Hỏi / đo:** `MEASUREGEOM MEA` (đo nhanh: rê chuột thấy ngay khoảng cách ngang/dọc tới các cạnh xung quanh) · `DIST DI` · `AREA AA` (O = chọn đối tượng) · `ID` · `LIST LI` · `DIVIDE DIV` · `MEASURE ME` · `DO` (đo nhanh, lưu dạng đánh dấu)
 
 **Xem / file:** `ZOOM Z` (E, W, P, số, O) · `PAN` · `REGEN RE` · `NEW` · `OPEN` · `QSAVE` · `SAVEAS` · `EXPORT/PLOT` · `DSETTINGS DS` · `UNITS` · `FIND` · `COMPARE` · `DRIVE` · `SHARE`
+
+## In bản vẽ (PLOT, Ctrl+P)
+Hộp thoại giống AutoCAD:
+- **Khổ giấy:** A4 đến A0, chọn ngang hoặc dọc.
+- **Vùng in:**
+  - Toàn bản vẽ (Extents).
+  - Đang hiện trên màn hình (Display).
+  - Khung chọn (Window): bấm "Chọn khung trên bản vẽ" rồi chỉ 2 góc.
+- **Tỉ lệ:** khít khổ giấy, hoặc in **đúng tỉ lệ 1:N** (1:50, 1:100…). Bản vẽ đơn vị mm thì 1:100 nghĩa là 1 m thật = 10 mm trên giấy. Nếu hình lớn hơn khổ giấy, hộp thoại báo trước.
+- **Kiểu in:** đen trắng (monochrome), màu, hoặc thang xám. Tuỳ chọn **in bề rộng nét** theo mm thật trên giấy (mặc định 0.25 mm).
+- **Xem trước** ngay trong hộp thoại.
+- **Xuất:** PDF đúng khổ giấy, gửi máy in, hoặc ảnh PNG.
+
+Trên điện thoại vẫn dùng nút Xuất như cũ.
 
 ## Lưu & mở
 - Mọi thay đổi **tự lưu trên máy**, gắn với đúng file đó.
@@ -76,6 +101,7 @@ Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thá
 - File DXF xuất ra giữ:
   - Bảng lớp (màu, bật/tắt, đóng băng, khoá, kiểu nét) và màu ByLayer.
   - Bảng kiểu nét, kiểu nét từng đối tượng và LTSCALE.
+  - Kiểu chữ (font TrueType) của chữ.
   - Chữ tiếng Việt (mã Unicode).
   - Hatch, được tách thành nét hoặc vùng đặc.
   - Kích thước và khối, dạng nét rời.

@@ -410,7 +410,9 @@
         break;
       case 'ELLIPSE': { const a = Math.hypot(e.mx, e.my); h += F('Tâm X', 'cx', e.cx) + F('Tâm Y', 'cy', e.cy) + F('Bán trục lớn', 'ea', a) + F('Bán trục nhỏ', 'eb', a * (e.ratio || 1)) + F('Góc trục (°)', '', (Math.atan2(e.my, e.mx) * 180 / Math.PI + 360) % 360, true); break; }
       case 'TEXT':
-        h += F('Nội dung', 'text', e.text || '') + F('Cao chữ', 'h', e.h || 0) + F('Góc xoay (°)', 'rot', e.rot || 0) + F('Vị trí X', 'x', e.x) + F('Vị trí Y', 'y', e.y);
+        { const A2 = ACAD(); const names = A2 && A2.TS ? Object.keys(A2.TS.list) : []; const cur = e.style || ''; const opts = names.slice(); if(cur && !opts.includes(cur)) opts.unshift(cur);
+          if(opts.length) h += '<div class="r"><label>Kiểu chữ</label><select data-f="tstyle"' + (editable ? '' : ' disabled') + '>' + (cur ? '' : '<option value="" selected>(theo file)</option>') + opts.map(n => '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + esc(n) + (A2.TS.list[n] ? ' — ' + esc(A2.TS.list[n].font) : '') + '</option>').join('') + '</select></div>'; }
+        h += F('Nội dung', 'text', e.text || '') + F('Cao chữ', 'h', e.h || 0) + F('Hệ số rộng', 'xs', e.xs || 1) + F('Góc xoay (°)', 'rot', e.rot || 0) + F('Vị trí X', 'x', e.x) + F('Vị trí Y', 'y', e.y);
         h += '<div class="r"><label>Canh lề</label><select data-f="ha"' + (editable ? '' : ' disabled') + '>' + [['left', 'Trái'], ['center', 'Giữa'], ['right', 'Phải']].map(([v, t]) => '<option value="' + v + '"' + ((e.ha || 'left') === v ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></div>';
         break;
       case 'POLYLINE': {
@@ -470,6 +472,7 @@
         if(f === 'lts'){ const v = num(el.value); if(!(v > 0)){ say('Tỉ lệ phải > 0.'); palSig = ''; refreshPalette(true); return; } commitSingle(e, w => { if(Math.abs(v - 1) < 1e-12) delete w.lts; else w.lts = v; }); return; }
         if(f === 'text'){ commitSingle(e, w => { w.text = el.value; }); return; }
         if(f === 'ha'){ commitSingle(e, w => { w.ha = el.value; }); return; }
+        if(f === 'tstyle'){ const A2 = ACAD(); if(!el.value || !A2 || !A2.TS.list[el.value]) return; commitSingle(e, w => A2.tsApply(w, el.value)); return; }
         if(f === 'pat'){ commitSingle(e, w => { w.pat = el.value; w.solid = el.value === 'SOLID'; }); return; }
         const v = num(el.value); if(!isFinite(v)){ say('Giá trị không hợp lệ.'); palSig = ''; refreshPalette(true); return; }
         commitSingle(e, w => {
@@ -477,6 +480,7 @@
           else if(f === 'lang'){ const L = Math.hypot(w.x2 - w.x1, w.y2 - w.y1), a = v * Math.PI / 180; w.x2 = w.x1 + L * Math.cos(a); w.y2 = w.y1 + L * Math.sin(a); }
           else if(f === 'dia'){ if(v > 0) w.r = v / 2; }
           else if(f === 'r' || f === 'h' || f === 'psc'){ if(v > 0) w[f] = v; }
+          else if(f === 'xs'){ if(v > 0.05 && v < 20){ if(Math.abs(v - 1) < 1e-6) delete w.xs; else w.xs = v; } }
           else if(f === 'ea'){ const a = Math.hypot(w.mx, w.my) || 1; if(v > 0){ const b = a * (w.ratio || 1); w.mx *= v / a; w.my *= v / a; w.ratio = Math.min(1, b / v); } }
           else if(f === 'eb'){ const a = Math.hypot(w.mx, w.my) || 1; if(v > 0 && v <= a) w.ratio = v / a; }
           else if(f === 'v0x' || f === 'v0y'){ if(w.vertices && w.vertices[0]) w.vertices[0][f === 'v0x' ? 'x' : 'y'] = v; }
@@ -516,7 +520,7 @@
     if(k === 'n'){ run('NEW'); return true; }
     if(k === 'a' && e.shiftKey){ const A = ACAD(); if(A) A.toggle('pickGroup'); return true; }
     if(k === 'a'){ selectAll(); return true; }
-    if(k === 'p'){ const b = $('exportBtn'); if(b) b.click(); return true; }
+    if(k === 'p'){ if(ALIAS.get('PLOT') && document.documentElement.classList.contains('acad')) run('PLOT'); else { const b = $('exportBtn'); if(b) b.click(); } return true; }
     if(k === '1'){ togglePalette(); return true; }
     if(k === '9'){ toggleBar(); return true; }
     if(k === '0'){ document.documentElement.classList.toggle('acad-clean'); setTimeout(() => { try{ resize(); }catch(_){} }, 30); return true; }

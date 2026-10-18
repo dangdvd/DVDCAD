@@ -172,7 +172,8 @@
      3) TRUY VẤN NHANH THEO HỘP BAO (dùng mảng số của app)
      ===================================================================== */
   function ensureBB(){ try{ if(bbDirty || bbN !== entities.length || !bbX0) buildBBoxCache(); }catch(_){} }
-  const isHiddenE = e => hiddenUserLayers.has(e.layer || '0');
+  const isHiddenE = e => hiddenUserLayers.has(e.layer || '0') || !!(OBJ_HIDE && OBJ_HIDE.has(e));
+  A.isHiddenE = isHiddenE;
   function queryBox(x0, y0, x1, y1, max, opt){
     ensureBB(); const out = []; max = max || 1e9; opt = opt || {};
     for(let i = 0; i < bbN; i++){
@@ -874,7 +875,10 @@
       case 'CIRCLE': return [{ x: e.cx, y: e.cy, r: 'c' }].concat([0, 1, 2, 3].map(k => ({ x: e.cx + e.r * Math.cos(k * Math.PI / 2), y: e.cy + e.r * Math.sin(k * Math.PI / 2), r: 'q' })));
       case 'ARC': { const c = curveOf(e); const a = c.at(0), b = c.at(c.u1), m = c.at(c.u1 / 2); return [{ x: a.x, y: a.y, r: 'a1' }, { x: b.x, y: b.y, r: 'a2' }, { x: m.x, y: m.y, r: 'am' }, { x: e.cx, y: e.cy, r: 'c' }]; }
       case 'ELLIPSE': { const c = curveOf(e); const out = [{ x: e.cx, y: e.cy, r: 'c' }]; [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2].forEach((t, i) => { const q = c.at(t); out.push({ x: q.x, y: q.y, r: i % 2 ? 'eb' : 'ea' }); }); return out; }
-      case 'POLYLINE': { const v = e.vertices || []; if(v.length > 400) return [{ x: v[0].x, y: v[0].y, r: 'v0' }, { x: v[v.length - 1].x, y: v[v.length - 1].y, r: 'v' + (v.length - 1) }]; return v.map((q, i) => ({ x: q.x, y: q.y, r: 'v' + i })); }
+      case 'POLYLINE': { const v = e.vertices || []; if(v.length > 400) return [{ x: v[0].x, y: v[0].y, r: 'v0' }, { x: v[v.length - 1].x, y: v[v.length - 1].y, r: 'v' + (v.length - 1) }];
+        const out = v.map((q, i) => ({ x: q.x, y: q.y, r: 'v' + i }));
+        if(v.length <= 100){ const m = e.closed ? v.length : v.length - 1; for(let i = 0; i < m; i++){ const a = v[i], b = v[(i + 1) % v.length]; out.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, r: 'pm' + i }); } }   // ô nắm giữa đoạn (đa chức năng như AutoCAD)
+        return out; }
       case 'SOLID': return (e.pts || []).map((q, i) => ({ x: q.x, y: q.y, r: 'v' + i }));
       case 'TEXT': case 'POINT': case 'XLINE': return [{ x: e.x, y: e.y, r: 'mv' }];
       case 'HATCH': { const b = entBBox(e); return b ? [{ x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2, r: 'mv' }] : []; }
@@ -900,6 +904,7 @@
       case 'ea': { const a = Math.hypot(w.mx, w.my), b = a * (w.ratio || 1); const vx = to.x - w.cx, vy = to.y - w.cy, L = Math.hypot(vx, vy); if(L < 1e-12) return; if(b <= L){ w.mx = vx; w.my = vy; w.ratio = b / L; } else { w.mx = -vy / L * b; w.my = vx / L * b; w.ratio = L / b; } return; }
       case 'eb': { const a = Math.hypot(w.mx, w.my); const L = Math.hypot(to.x - w.cx, to.y - w.cy); if(L < 1e-12) return; if(L <= a) w.ratio = L / a; else { const ux = w.mx / a, uy = w.my / a; w.mx = -uy * L; w.my = ux * L; w.ratio = a / L; } return; }
     }
+    if(role.startsWith('pm') && w.type === 'POLYLINE'){ const i = +role.slice(2), v = w.vertices; const j = (i + 1) % v.length; if(v[i] && v[j]){ v[i] = { x: v[i].x + dx, y: v[i].y + dy }; v[j] = { x: v[j].x + dx, y: v[j].y + dy }; } delete w.wq; return; }
     if(role[0] === 'v'){ const i = +role.slice(1); const vs = w.type === 'POLYLINE' ? w.vertices : w.pts; if(vs && vs[i]){ vs[i] = { x: to.x, y: to.y }; if(w.type === 'POLYLINE' && w.closed && i === 0 && vs.length > 1){ const l = vs[vs.length - 1]; if(Math.hypot(l.x - from.x, l.y - from.y) < 1e-9) vs[vs.length - 1] = { x: to.x, y: to.y }; } } delete w.wq; }
   }
   const GRIP_MAX = 400;
@@ -931,12 +936,20 @@
         else if(m === 'SC'){ const f = num != null ? num : Math.hypot(p.x - base.x, p.y - base.y); if(f > 1e-12) scaleEnt(w, f, base); }
         else if(m === 'MI'){ if(Math.hypot(p.x - base.x, p.y - base.y) > 1e-12) mirrorAcross(w, base, p); }
       };
+      // ô nắm của đa tuyến: thêm / xoá đỉnh (như grip đa chức năng của AutoCAD)
+      let plHot = null; for(const e of sel){ if(e.type !== 'POLYLINE') continue; const g = gripsOf(e).find(near); if(g){ plHot = { e, r: g.r }; break; } }
       for(;;){
         const M = GMODES[mi];
-        const r = await A.getPoint('** ' + M.n + (copy ? ' (nhiều bản)' : '') + ' ** ' + M.p, { base, num: M.k === 'RO' || M.k === 'SC', kw: [{ k: 'ST', t: 'Kéo giãn' }, { k: 'MO', t: 'Di chuyển' }, { k: 'RO', t: 'Xoay' }, { k: 'SC', t: 'Tỉ lệ' }, { k: 'MI', t: 'Đối xứng' }, { k: 'C', t: 'Sao chép' }, { k: 'B', t: 'Điểm gốc' }, { k: 'X', t: 'Thoát' }],
+        const kw = [{ k: 'ST', t: 'Kéo giãn' }, { k: 'MO', t: 'Di chuyển' }, { k: 'RO', t: 'Xoay' }, { k: 'SC', t: 'Tỉ lệ' }, { k: 'MI', t: 'Đối xứng' }, { k: 'C', t: 'Sao chép' }, { k: 'B', t: 'Điểm gốc' }, { k: 'X', t: 'Thoát' }];
+        if(plHot && M.k === 'ST'){ if(plHot.r.startsWith('pm')) kw.unshift({ k: 'TD', t: 'Thêm đỉnh' }); else if((plHot.e.vertices || []).length > 2) kw.unshift({ k: 'XD', t: 'Xoá đỉnh' }); }
+        const r = await A.getPoint('** ' + M.n + (copy ? ' (nhiều bản)' : '') + ' ** ' + M.p, { base, num: M.k === 'RO' || M.k === 'SC', kw,
           preview: (g, p) => g.xform(sel, w => xf(w, M.k, p)) });
         if(r.none){ mi = (mi + 1) % GMODES.length; continue; }
         if(r.kw === 'X') return;
+        if(r.kw === 'XD' && plHot){ const w = G.clone(plHot.e); const i = +plHot.r.slice(1); w.vertices.splice(i, 1); delete w.wq; A.commit({ rep: [[plHot.e, w]] }, 'Đã xoá đỉnh'); result = sel.map(e => e === plHot.e ? w : e); return; }
+        if(r.kw === 'TD' && plHot){ const i = +plHot.r.slice(2); const mk = p => { const w = G.clone(plHot.e); w.vertices.splice(i + 1, 0, { x: p.x, y: p.y }); delete w.wq; return w; };
+          const r2 = await A.getPoint('** THÊM ĐỈNH ** Chỉ định vị trí đỉnh mới', { base: hot, preview: (g, p) => g.ent(mk(p)) }); if(!r2.pt) return;
+          const w = mk(r2.pt); A.commit({ rep: [[plHot.e, w]] }, 'Đã thêm đỉnh'); result = sel.map(e => e === plHot.e ? w : e); return; }
         if(r.kw === 'C'){ copy = !copy; continue; }
         if(r.kw === 'B'){ const b = await A.getPoint('Chỉ định điểm gốc'); if(b.pt) base = b.pt; continue; }
         if(r.kw){ const j = GMODES.findIndex(m => m.k === r.kw); if(j >= 0) mi = j; continue; }

@@ -1470,7 +1470,11 @@
     A.lsSync();
     for(const ly of layers){ const aci = aciNear(A.layerHex(ly)); let fl = 0; if(A.LS.frozen.has(ly)) fl |= 1; if(A.LS.locked.has(ly)) fl |= 4; P(0, 'LAYER'); P(2, dxfStr(ly)); P(70, fl); P(62, A.LS.off.has(ly) ? -aci : aci); const llt = A.layerLT(ly); P(6, ltOk.has(llt) ? dxfStr(llt) : 'CONTINUOUS'); }
     P(0, 'ENDTAB');
-    P(0, 'TABLE'); P(2, 'STYLE'); P(70, 1); P(0, 'STYLE'); P(2, 'STANDARD'); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'arial.ttf'); P(4, ''); P(0, 'ENDTAB');
+    const stUsed = new Map(); for(const e of ents){ if(e.type === 'TEXT' && e.style && e.ff && A.FONT_FILE && A.FONT_FILE[e.ff] && !stUsed.has(e.style)) stUsed.set(e.style, A.FONT_FILE[e.ff]); }
+    stUsed.delete('STANDARD');
+    P(0, 'TABLE'); P(2, 'STYLE'); P(70, 1 + stUsed.size); P(0, 'STYLE'); P(2, 'STANDARD'); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'arial.ttf'); P(4, '');
+    for(const [n, f] of stUsed){ P(0, 'STYLE'); P(2, dxfStr(n)); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, f); P(4, ''); }
+    P(0, 'ENDTAB');
     P(0, 'ENDSEC');
     P(0, 'SECTION'); P(2, 'ENTITIES');
     const span = Math.max(ext.x1 - ext.x0, ext.y1 - ext.y0, 1);
@@ -1491,7 +1495,7 @@
           const hj = e.ha === 'center' ? 1 : (e.ha === 'right' || e.ha === 'end') ? 2 : 0; const vj = e.va === 'bottom' ? 1 : e.va === 'middle' ? 2 : e.va === 'top' ? 3 : 0;
           const th = rr * D2R, lh = h * 1.3, dx = Math.sin(th) * lh, dy = -Math.cos(th) * lh;
           for(let i = 0; i < lines.length; i++){ const s = lines[i]; if(!s.trim()) continue; const x = e.x + dx * i, y = e.y + dy * i;
-            head('TEXT'); P(10, x); P(20, y); P(30, 0); P(40, h); P(1, dxfStr(s)); if(rr) P(50, rr); if(e.xs && Math.abs(e.xs - 1) > 1e-3) P(41, e.xs); if(hj) P(72, hj); if(vj) P(73, vj); if(hj || vj){ P(11, x); P(21, y); P(31, 0); } }
+            head('TEXT'); P(10, x); P(20, y); P(30, 0); P(40, h); P(1, dxfStr(s)); if(e.style && stUsed.has(e.style)) P(7, dxfStr(e.style)); if(rr) P(50, rr); if(e.xs && Math.abs(e.xs - 1) > 1e-3) P(41, e.xs); if(hj) P(72, hj); if(vj) P(73, vj); if(hj || vj){ P(11, x); P(21, y); P(31, 0); } }
           break; }
         case 'POLYLINE': poly(e.vertices || [], !!e.closed); break;
         case 'SOLID': { const p = e.pts || []; if(p.length >= 3){ head('SOLID'); P(10, p[0].x); P(20, p[0].y); P(30, 0); P(11, p[1].x); P(21, p[1].y); P(31, 0); P(12, p[2].x); P(22, p[2].y); P(32, 0); const q = p[3] || p[2]; P(13, q.x); P(23, q.y); P(33, 0); } break; }

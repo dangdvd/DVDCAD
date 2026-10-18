@@ -4,6 +4,17 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v4c: in theo tỉ lệ, kiểu chữ, công cụ sửa
+- **PLOT (Ctrl+P)** như AutoCAD:
+  - Khổ A4 đến A0, ngang hoặc dọc.
+  - Vùng in: Extents, Display hoặc Window.
+  - In **đúng tỉ lệ 1:N** hoặc khít giấy.
+  - Kiểu in đen trắng, màu hoặc thang xám, có in bề rộng nét.
+  - Xem trước; xuất PDF đúng khổ, gửi máy in hoặc ảnh PNG.
+- **Kiểu chữ (STYLE):** chọn font và hệ số rộng. Đọc và ghi kiểu chữ TrueType trong DXF. Chữ VNI-Times / .VnTime hiện bằng Times New Roman.
+- **Đa tuyến:** ô nắm giữa đoạn, thêm đỉnh và xoá đỉnh.
+- **Lệnh mới:** `OVERKILL`, `BOUNDARY`, `DONUT`, `MEASUREGEOM` (đo nhanh khi rê chuột), `ISOLATEOBJECTS` / `HIDEOBJECTS` / `UNISOLATEOBJECTS`.
+
 ## v4b: kiểu nét, khối & kích thước giống AutoCAD hơn
 - **Kiểu nét (linetype)**: đọc bảng LTYPE, LTSCALE, kiểu nét theo lớp, ByBlock và tỉ lệ riêng từng đối tượng từ DWG/DXF. Nét tâm, nét khuất, nét đứt hiện đúng. Có Linetype Manager, LTSCALE, và 3 ô Màu, Bề rộng, Kiểu nét trên ribbon. Kiểu nét được ghi khi xuất DXF.
 - **Khối/kích thước của file chọn theo cụm**, mỗi khối một ô nắm ở điểm chèn. **Ctrl+Shift+A** chuyển sang chọn từng nét. Đối tượng lớp 0 trong khối mang lớp của khối.
