@@ -4,6 +4,11 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v4y: mở file dung lượng lớn + lệnh mới
+- Đọc DXF không tách dòng, bỏ mã thừa (bộ nhớ tạm khi đọc file 37 MB: 174 → 86 MB). Giới hạn 2 triệu (máy tính) / 400 nghìn (điện thoại) đối tượng, có thông báo (trước bị cắt im lặng ở 200 nghìn).
+- Phóng / dời bằng ảnh tạm của lớp nét rồi vẽ lại khi ngừng. Gom nét theo kiểu, ctx.arc cho tròn / cung, chữ không save/restore, chữ nhỏ thành vệt.
+- `dvd-acad-x12.js`: QTEXT, FILL, ATTDISP, RECOVER, DIMREGEN, DIMJOGLINE, DIMINSPECT, GATTE, XEDGES, VPMAX/VPMIN, MSPACE/PSPACE, PAGESETUP.
+
 ## v4x: REVCLOUD như AutoCAD + lệnh mới
 - `dvd-acad-x11.js`: REVCLOUD (cung lồi ra ngoài, cung nhỏ nhất / lớn nhất, Chữ nhật / Đa giác / Tự do / Đối tượng, Thường / Thư pháp, đảo chiều), REVCLOUDPROPERTIES, DIMOVERRIDE, BLOCKREPLACE, MOCORO, TCASE, CDORDER, HATCHGENERATEBOUNDARY, HATCHSETBOUNDARY, LAYTRANS, SHOWURLS, GETSEL, SSX, XPLODE, ARRAYCLASSIC.
 - Đa tuyến rộng có cung: tứ giác tô khít nhau (không răng cưa).

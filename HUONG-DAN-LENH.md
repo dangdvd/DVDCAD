@@ -213,6 +213,31 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v4y) — mở file dung lượng lớn
+**Tối ưu file lớn** (thử với file DXF 37 MB: 200 nghìn đối tượng, nổ khối thành 600 nghìn nét; mở trong khoảng 3 giây trên máy thử)
+- Đọc DXF không còn tách cả file thành mảng dòng, bỏ các mã không dùng (100, 102, 330, 360) → bộ nhớ tạm khi đọc giảm khoảng một nửa (file 37 MB: 174 MB còn 86 MB). Quan trọng nhất trên iPhone.
+- **Trước đây bản vẽ bị cắt im lặng ở 200 nghìn đối tượng.** Nay máy tính hiện tới 2 triệu, iPhone / iPad tới 400 nghìn. Vượt giới hạn thì **có thông báo** chỉ hiện phần đầu.
+- **Phóng / dời mượt** với bản vẽ nặng: trong lúc thao tác dùng ảnh tạm của lớp nét (vài ms mỗi khung). Ngừng tay khoảng 0,16 giây thì vẽ lại đầy đủ, nét sắc.
+- Vẽ nhanh hơn:
+  - Nét cùng màu / bề rộng / kiểu nét được gom thành một lần vẽ, kể cả khi các lớp xen kẽ nhau.
+  - Đường tròn / cung dùng hàm vẽ cung của trình duyệt.
+  - Chữ không còn lưu / khôi phục trạng thái canvas từng chữ.
+  - Chữ nhỏ dưới 4 px hiện thành vệt mờ.
+  - Bản vẽ trên 300 nghìn nét bỏ qua nét nhỏ hơn 1 px.
+- File DXF trên 3 MB: hiện thông báo "Đang mở file … MB" trong lúc đọc.
+- `QTEXT` (chữ hiện thành khung) và `FILL` Tắt (hatch chỉ hiện biên) giúp vẽ còn nhanh hơn với bản vẽ rất nặng.
+
+**Lệnh mới**
+- `QTEXT`, `FILL`: xem ở trên. `ATTDISP`: ẩn / hiện thuộc tính khối.
+- `RECOVER`: mở file DXF / DWG bị lỗi rồi tự chạy `AUDIT` kiểm tra và sửa.
+- `DIMJOGLINE`: ký hiệu gấp khúc trên đường kích thước (kích thước không đúng tỉ lệ). Bấm vị trí đặt; từ khoá Bỏ để xoá.
+- `DIMINSPECT`: khung kiểm tra cho kích thước (nhãn | giá trị | tần suất, VD "KT | 1000 | 100%"); Bỏ khung.
+- `DIMREGEN`: dựng lại toàn bộ kích thước. Ký hiệu gấp khúc và khung kiểm tra vẫn giữ khi kéo nắm, DIMREGEN, lưu DXF.
+- `GATTE`: đổi giá trị một thuộc tính cho mọi bản chèn cùng khối (VD đổi mác bê tông cho mọi cột).
+- `XEDGES`: lấy cạnh khối 3D thành đường 2D (hình chiếu bằng).
+- `VPMAX` / `VPMIN`: phóng khung nhìn của layout ra cả màn hình để xem / sửa ở Model, rồi quay lại layout.
+- `MSPACE` / `PSPACE`: chuyển Model ↔ layout giấy. `PAGESETUP`: mở hộp thoại In.
+
 ## Bổ sung (v4x)
 **REVCLOUD — khoanh mây như AutoCAD**
 - Sửa lỗi cung bị lật vào trong: cung luôn **lồi ra ngoài**. Mây là đa tuyến có cung thật, lưu DXF ra LWPOLYLINE có cung.
@@ -536,3 +561,5 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - MLEDIT dùng cho đường đôi vẽ bằng `MLINE` của DVDCAD và MLINE trong file AutoCAD (DXF đã thử; DWG đọc theo dữ liệu LibreDWG). Đường đôi khép kín chưa sửa được. Chưa có kiểu nối Chữ T liền, Cắt bỏ / Nối lại đoạn, thêm / bớt đỉnh. Nắp đầu theo kiểu MLINESTYLE của file AutoCAD chưa vẽ.
 - Đa tuyến có độ rộng: đoạn cong có độ rộng được ghi DXF thành nhiều đoạn thẳng nhỏ (vẫn đúng hình). Sửa đỉnh / bo góc đa tuyến rộng sẽ đưa về nét mảnh.
 - REVCLOUD: chưa có tuỳ chọn Sửa kiểu AutoCAD (vẽ lại một đoạn mây). Dùng `REVCLOUDPROPERTIES` để đổi cung, hoặc vẽ mây mới. Sửa đỉnh mây bằng ô nắm thì mây không còn dựng lại được từ đường dẫn gốc.
+- File rất lớn trên iPhone / iPad chỉ hiện 400 nghìn đối tượng đầu (sau khi nổ khối) để tránh Safari bị tắt vì hết bộ nhớ. Muốn xem đủ, mở trên máy tính hoặc tách bản vẽ. File DWG lớn vẫn tốn bộ nhớ hơn DXF (bộ giải mã LibreDWG).
+- Vẽ lại đầy đủ bản vẽ hàng trăm nghìn nét vẫn mất khoảng 1–2 giây (máy thử không có GPU, máy thật thường nhanh hơn). Phóng / dời thì dùng ảnh tạm nên mượt.

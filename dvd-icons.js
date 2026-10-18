@@ -423,8 +423,22 @@
     SHOWURLS: CHAIN.replace('class="g"', 'class="a"') + '<path d="M3 20h18" opacity=".5"/>',
     GETSEL: '<rect class="a" x="3" y="3" width="13" height="13" stroke-dasharray="3 2"/><path class="fd" d="M7 11l3 1-1 3zM12 6l2 2-2 2-2-2z"/><path d="M14 13l7 3-3 1 2 3-1.5 1-2-3-2.5 2z" class="fy"/>',
     SSX: '<circle class="fa" cx="6" cy="6" r="3"/><circle class="a" cx="16" cy="7" r="3"/><circle class="a" cx="8" cy="17" r="3"/><path class="y" d="M17 14l4 2-2 .8 1.5 2.5-1.2.7-1.5-2.5-1.6 1.5z"/>',
+    /* ---------- v4y (vẽ mới) ---------- */
+    QTEXT: '<rect x="3" y="7" width="13" height="5" stroke-dasharray="2 1.5"/><rect x="3" y="14" width="9" height="4" stroke-dasharray="2 1.5"/><path class="a" d="M18 5v14M15.5 5h5"/>',
+    FILL: '<path class="fa3" d="M3 5h12v12H3z"/><path d="M3 5h12v12H3z"/><path class="y" d="M17 8l4 4-3 3-4-4zM18 15c0 2 1.5 3 1.5 4a1.5 1.5 0 0 1-3 0c0-1 1.5-2 1.5-4z"/>',
+    ATTDISP: '<rect class="fd" x="3" y="9" width="10" height="10" rx="1"/><rect x="3" y="9" width="10" height="10" rx="1"/><path class="a" d="M5 6h8"/><path d="M13 12s2-4 4.5-4S22 12 22 12s-2 4-4.5 4S13 12 13 12z"/><circle class="fa" cx="17.5" cy="12" r="1.3"/>',
+    RECOVER: '<path class="fd" d="M5 3h9l4 4v14H5z"/><path d="M5 3h9l4 4v14H5z"/><path class="g" d="M8 14a4 4 0 1 0 1.2-2.9M8 9.5v2.5h2.5" stroke-width="1.6"/>',
+    DIMREGEN: '<path d="M4 17V8M20 17V8"/><path class="a" d="M4 11h16"/>' + AR(12, 11, 4, 11, 'a') + AR(12, 11, 20, 11, 'a') + '<path class="g" d="M15 20a4 4 0 1 1 3-6M18 11v3h-3" stroke-width="1.5" transform="translate(0 1)"/>',
+    DIMJOGLINE: '<path d="M4 18V7M20 18V7"/><path class="a" d="M4 11h6l1.5-3 1.5 6 1.5-3H20"/>' + AR(10, 11, 4, 11, 'a') + AR(14, 11, 20, 11, 'a'),
+    DIMINSPECT: '<rect class="a" x="2" y="8" width="20" height="8" rx="4"/><path d="M8 8v8M16 8v8"/><path class="y" d="M10 12h4" stroke-width="1.6"/>',
+    GATTE: '<rect class="fd" x="2" y="4" width="8" height="7" rx="1"/><rect x="2" y="4" width="8" height="7" rx="1"/><rect class="fd" x="14" y="4" width="8" height="7" rx="1"/><rect x="14" y="4" width="8" height="7" rx="1"/><rect class="fd" x="8" y="14" width="8" height="7" rx="1"/><rect x="8" y="14" width="8" height="7" rx="1"/><path class="a" d="M4 7.5h4M16 7.5h4M10 17.5h4" stroke-width="1.6"/>',
+    XEDGES: '<path class="fd" d="M4 8l8-4 8 4-8 4z"/><path d="M4 8v8l8 4 8-4V8" opacity=".5"/><path class="a" d="M4 8l8-4 8 4-8 4zM12 12v8" stroke-width="1.6"/>',
+    VPMAX: '<rect class="fd" x="3" y="3" width="18" height="18" rx="1"/><rect x="3" y="3" width="18" height="18" rx="1"/><path class="a" d="M9 9h6v6H9z"/><path class="y" d="M14 4h6v6M20 4l-5 5M10 20H4v-6M4 20l5-5"/>',
+    VPMIN: '<rect class="fd" x="3" y="3" width="18" height="18" rx="1"/><rect x="3" y="3" width="18" height="18" rx="1"/><path class="y" d="M15 9h-4V5M15 9l5-5M9 15h4v4M9 15l-5 5"/>',
+    MSPACE: '<path class="fd" d="M3 9l9-5 9 5-9 5z"/><path d="M3 9l9-5 9 5-9 5z"/><path class="a" d="M3 14l9 5 9-5" />',
+    PSPACE: '<path class="fd" d="M5 3h14v18H5z"/><path d="M5 3h14v18H5z"/><rect class="a" x="8" y="6" width="8" height="7"/><path d="M8 16h8M8 18.5h5"/>',
     COUNT_: ''
   };
-  delete I.COUNT_; I.RCP = I.REVCLOUDPROPERTIES; I.XPLODE = I.EXPLODE; I.ARRAYCLASSIC = I.ARRAYRECT || I.ARRAY; I.HGB = I.HATCHGENERATEBOUNDARY; I.DIMSMART = I.DIM; I.MLE = I.MLEADEREDIT; I.DWGCOMPARE = I.COMPARE; I.VSCURRENT = I.VISUALSTYLES; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.DATALINKURL = I.DATALINK; I.DXFVERSION = I.DXFOUT; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
+  delete I.COUNT_; I.PAGESETUP = I.PLOT; I.FILLMODE = I.FILL; I.MS = I.MSPACE; I.PS = I.PSPACE; I.DJL = I.DIMJOGLINE; I.RCP = I.REVCLOUDPROPERTIES; I.XPLODE = I.EXPLODE; I.ARRAYCLASSIC = I.ARRAYRECT || I.ARRAY; I.HGB = I.HATCHGENERATEBOUNDARY; I.DIMSMART = I.DIM; I.MLE = I.MLEADEREDIT; I.DWGCOMPARE = I.COMPARE; I.VSCURRENT = I.VISUALSTYLES; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.DATALINKURL = I.DATALINK; I.DXFVERSION = I.DXFOUT; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
   window.DVDIcons = I;
 })();

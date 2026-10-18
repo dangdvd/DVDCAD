@@ -948,17 +948,37 @@
   // dựng lại hình của 1 kích thước từ định nghĩa (giữ kiểu dim lúc tạo) — dùng khi kéo grip / di chuyển / kéo giãn
   function dimBuild(d){
     return withStyle(d.s, () => {
-      if(d.k === 'lin'){ const r = dimLinearEnts(d.p1, d.p2, d.L, d.phi, d.ov, d.tx); return r ? { ents: r.ents, val: r.meas, kind: 'thẳng' } : null; }
-      if(d.k === 'rad' || d.k === 'dia'){ const r = dimRadEnts({ cx: d.c.x, cy: d.c.y, r: d.r }, d.L, d.k === 'dia', d.ov); return { ents: r.ents, val: r.val, kind: d.k === 'dia' ? 'đường kính' : 'bán kính' }; }
-      if(d.k === 'ang'){ const r = dimAngEnts(d.V, d.d1, d.d2, d.L, d.ov); return r ? { ents: r.ents, val: r.val, kind: 'góc' } : null; }
+      if(d.k === 'lin'){ const r = dimLinearEnts(d.p1, d.p2, d.L, d.phi, d.ov, d.tx); return r ? dimDecor(d, { ents: r.ents, val: r.meas, kind: 'thẳng', a: r.a, b: r.b }) : null; }
+      if(d.k === 'rad' || d.k === 'dia'){ const r = dimRadEnts({ cx: d.c.x, cy: d.c.y, r: d.r }, d.L, d.k === 'dia', d.ov); return dimDecor(d, { ents: r.ents, val: r.val, kind: d.k === 'dia' ? 'đường kính' : 'bán kính' }); }
+      if(d.k === 'ang'){ const r = dimAngEnts(d.V, d.d1, d.d2, d.L, d.ov); return r ? dimDecor(d, { ents: r.ents, val: r.val, kind: 'góc' }) : null; }
       return null;
     });
+  }
+  // trang trí kích thước: ký hiệu gấp khúc (DIMJOGLINE, d.jog = vị trí 0…1 trên đường kích thước) và khung kiểm tra (DIMINSPECT, d.insp = { lab, rate })
+  function dimDecor(d, r){
+    if(!r || !r.ents) return r; const t = r.ents.find(e => e.type === 'TEXT'); const th = (t && t.h) || dimTxt();
+    if(d.jog != null && r.a && r.b){ const f = Math.max(0.05, Math.min(0.95, +d.jog || 0.5)), a = r.a, b = r.b, L = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / L, uy = (b.y - a.y) / L, nx = -uy, ny = ux;
+      const P = { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f }, w = th * 0.75, h = th * 0.9;
+      r.ents.push({ type: 'POLYLINE', closed: false, vertices: [{ x: P.x - ux * w * 1.2, y: P.y - uy * w * 1.2 }, { x: P.x - ux * w * 0.3 + nx * h * 0.5, y: P.y - uy * w * 0.3 + ny * h * 0.5 }, { x: P.x + ux * w * 0.3 - nx * h * 0.5, y: P.y + uy * w * 0.3 - ny * h * 0.5 }, { x: P.x + ux * w * 1.2, y: P.y + uy * w * 1.2 }] }); }
+    if(d.insp && t){ const lab = String(d.insp.lab || ''), rate = String(d.insp.rate || ''); const cw = th * 0.62, pad = th * 0.45;
+      const w0 = [...String(t.text || '')].length * cw + 2 * pad, w1 = lab ? [...lab].length * cw + 2 * pad : 0, w2 = rate ? [...rate].length * cw + 2 * pad : 0;
+      const ro = (t.rot || 0) * D2R, ux = Math.cos(ro), uy = Math.sin(ro), vx = -uy, vy = ux; const ha = t.ha || 'center';
+      const xoff = ha === 'left' ? w0 / 2 - pad : (ha === 'right' || ha === 'end') ? -(w0 / 2 - pad) : 0, yoff = t.va === 'middle' ? 0 : t.va === 'top' ? -th * 0.5 : th * 0.36;
+      const C = { x: t.x + ux * xoff + vx * yoff, y: t.y + uy * xoff + vy * yoff }; const at = (lx, ly) => ({ x: C.x + ux * lx + vx * ly, y: C.y + uy * lx + vy * ly });
+      const R = th * 0.8, xl = -w0 / 2 - w1, xr = w0 / 2 + w2; const V = [];
+      for(let k = 0; k <= 8; k++){ const g = -Math.PI / 2 + Math.PI * k / 8; V.push(at(xr - R + R * Math.cos(g) + (w2 ? 0 : 0), R * Math.sin(g))); }
+      for(let k = 0; k <= 8; k++){ const g = Math.PI / 2 + Math.PI * k / 8; V.push(at(xl + R + R * Math.cos(g), R * Math.sin(g))); }
+      r.ents.push({ type: 'POLYLINE', closed: true, vertices: V });
+      const mkT = (lx, s) => { const p = at(lx, 0); return { type: 'TEXT', x: p.x, y: p.y, h: th, rot: t.rot || 0, text: s, ha: 'center', va: 'middle', dimx: 1 }; };
+      if(lab){ const p1 = at(-w0 / 2, -R), p2 = at(-w0 / 2, R); r.ents.push({ type: 'LINE', x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y }, mkT(-w0 / 2 - w1 / 2, lab)); }
+      if(rate){ const p1 = at(w0 / 2, -R), p2 = at(w0 / 2, R); r.ents.push({ type: 'LINE', x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y }, mkT(w0 / 2 + w2 / 2, rate)); } }
+    return r;
   }
   A.dimBuild = dimBuild;
   // tạo các đối tượng mới thay cho nhóm kích thước, giữ lớp/màu/nhóm của chữ kích thước w
   A.dimRegenFrom = function(w){
     const r = dimBuild(w.dimd); if(!r) return null;
-    return r.ents.map(e => { e.layer = w.layer || '0'; if(w.bl){ e.bl = 1; e.col = A.layerHex(e.layer); } else e.col = w.col; if(w.lw > 0 && e.lw == null) e.lw = w.lw; e.grp = w.grp; e.blk = w.blk || ('*DIM ' + r.kind); if(e.type === 'TEXT'){ e.dimv = r.val; e.dimd = JSON.parse(JSON.stringify(w.dimd)); } return e; });
+    return r.ents.map(e => { e.layer = w.layer || '0'; if(w.bl){ e.bl = 1; e.col = A.layerHex(e.layer); } else e.col = w.col; if(w.lw > 0 && e.lw == null) e.lw = w.lw; e.grp = w.grp; e.blk = w.blk || ('*DIM ' + r.kind); if(e.type === 'TEXT' && !e.dimx){ e.dimv = r.val; e.dimd = JSON.parse(JSON.stringify(w.dimd)); } return e; });
   };
   // các điểm nắm của kích thước (như AutoCAD: gốc đường gióng, đường kích thước, chữ)
   A.dimGrips = function(t){
