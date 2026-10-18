@@ -426,6 +426,7 @@
       if(acc) nv[nv.length - 1].bulge = Math.tan(accSw / 4); else delete nv[nv.length - 1].bulge;
       if(!e.closed){ const last = Object.assign({}, v[n - 1]); delete last.bulge; nv.push(last); }
       if(nv.length < v.length){ e.vertices = nv; nArc++; } }
+    for(const e of out) if(e.type === 'POLYLINE' && e.vertices.some(v => v.bulge) && A.setBV) A.setBV(e, e.vertices);
     if(opt.text){ const tc = await page.getTextContent(); for(const it of tc.items){ if(!it.str || !it.str.trim()) continue; const t = it.transform; const h = Math.hypot(t[2], t[3]) * k; const p = map({ x: t[4], y: t[5] }); const rot = Math.atan2(t[1], t[0]) * R2D; out.push({ type: 'TEXT', x: p.x, y: p.y, h: Math.max(h * 0.75, 1e-6), rot: Math.abs(rot) < 1e-6 ? 0 : rot, text: it.str, layer: 'PDF_Text', col: '#ffffff' }); } }
     return { ents: out, pages: doc.numPages, skipped: nSkip, arcs: nArc, size: [(vb[2] - vb[0]) * k, (vb[3] - vb[1]) * k], page, vb };
   }

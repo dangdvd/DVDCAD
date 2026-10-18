@@ -39,6 +39,24 @@
   const G = A.G = {};
   const norm = a => { a %= TAU; return a < 0 ? a + TAU : a; };
   G.norm = norm;
+  // ĐA TUYẾN CÓ CUNG (bulge): e.bv = đỉnh gốc kèm bulge; e.vertices = điểm đã lấy mẫu (để vẽ, chọn, hatch…); e.bvs = chữ ký để biết bv còn khớp
+  const bvSig = v => { let s = 0; for(let i = 0; i < v.length; i++) s += v[i].x * (1 + (i % 7) * 0.13) + v[i].y * (1.7 + (i % 5) * 0.11); return s; };
+  function bvOf(e){ if(!e || e.type !== 'POLYLINE' || !e.bv || !e.vertices || e.bv.length < 2) return null; const s = bvSig(e.vertices); return Math.abs(s - (e.bvs || 0)) <= 1e-7 * Math.max(1, Math.abs(s)) ? e.bv : null; }
+  function bvExpand(bv, closed){ let v = expandPolyline(bv, !!closed); if(closed && v.length > 2){ const f = v[0], l = v[v.length - 1]; if(Math.abs(f.x - l.x) < 1e-9 && Math.abs(f.y - l.y) < 1e-9) v = v.slice(0, -1); } return v.map(p => ({ x: p.x, y: p.y })); }
+  function setBV(w, bv){ const nb = bv.map(p => { const q = { x: p.x, y: p.y }; if(p.bulge && isFinite(p.bulge) && Math.abs(p.bulge) > 1e-12) q.bulge = p.bulge; return q; });
+    if(!w.closed && nb.length) delete nb[nb.length - 1].bulge;
+    if(!nb.some(p => p.bulge)){ w.vertices = nb; delete w.bv; delete w.bvs; return w; }
+    w.bv = nb; w.vertices = bvExpand(nb, w.closed); w.bvs = bvSig(w.vertices); delete w.wq; return w; }
+  function bvFix(e, bv){ e.bv = bv; e.bvs = bvSig(e.vertices); }   // sau khi biến đổi cả vertices lẫn bv
+  A.bvOf = bvOf; A.setBV = setBV; A.bvSig = bvSig; A.bvExpand = bvExpand; A.bvFix = bvFix;
+  // cung của 1 đoạn có bulge: tâm, bán kính, góc đầu, góc quét (có dấu)
+  function bulgeArc(a, b, bulge){ const ch = Math.hypot(b.x - a.x, b.y - a.y); if(!bulge || ch < 1e-12) return null; const th = 4 * Math.atan(bulge); const r = ch / (2 * Math.sin(th / 2)); const ux = (b.x - a.x) / ch, uy = (b.y - a.y) / ch; const d = r * Math.cos(th / 2);
+    const cx = (a.x + b.x) / 2 - uy * d, cy = (a.y + b.y) / 2 + ux * d; return { cx, cy, r: Math.abs(r), a0: Math.atan2(a.y - cy, a.x - cx), sw: th }; }
+  G.bulgeArc = bulgeArc;
+  G.bulge3 = (a, m, b) => { // bulge của cung đi qua a → m → b
+    const d = 2 * (a.x * (m.y - b.y) + m.x * (b.y - a.y) + b.x * (a.y - m.y)); if(Math.abs(d) < 1e-14) return 0;
+    const ux = ((a.x * a.x + a.y * a.y) * (m.y - b.y) + (m.x * m.x + m.y * m.y) * (b.y - a.y) + (b.x * b.x + b.y * b.y) * (a.y - m.y)) / d, uy = ((a.x * a.x + a.y * a.y) * (b.x - m.x) + (m.x * m.x + m.y * m.y) * (a.x - b.x) + (b.x * b.x + b.y * b.y) * (m.x - a.x)) / d;
+    const n = x => ((x % TAU) + TAU) % TAU; const a0 = Math.atan2(a.y - uy, a.x - ux), am = Math.atan2(m.y - uy, m.x - ux), a1 = Math.atan2(b.y - uy, b.x - ux); let sw = n(a1 - a0); if(n(am - a0) > sw) sw -= TAU; return Math.tan(sw / 4); };
   // Đường cong của 1 đối tượng: tham số u (LINE: 0..1, ARC/CIRCLE: góc kể từ đầu, POLYLINE: chiều dài, ELLIPSE: tham số elip)
   function curveOf(e){
     if(!e) return null;
@@ -396,6 +414,12 @@
       if(c.kind === 'line'){
         if(M.has('end')){ consider(e.x1, e.y1, 'end'); consider(e.x2, e.y2, 'end'); }
         if(M.has('mid')) consider((e.x1 + e.x2) / 2, (e.y1 + e.y2) / 2, 'mid');
+      } else if(c.kind === 'poly' && bvOf(e)){
+        const V = e.bv, n = V.length, ns = e.closed ? n : n - 1;
+        if(M.has('end')) for(const q of V) consider(q.x, q.y, 'end');
+        for(let i = 0; i < ns; i++){ const a = V[i], b = V[(i + 1) % n]; const A2 = a.bulge ? bulgeArc(a, b, a.bulge) : null;
+          if(M.has('mid')){ if(A2){ const t = A2.a0 + A2.sw / 2; consider(A2.cx + A2.r * Math.cos(t), A2.cy + A2.r * Math.sin(t), 'mid'); } else consider((a.x + b.x) / 2, (a.y + b.y) / 2, 'mid'); }
+          if(A2 && M.has('cen')){ const dc = Math.hypot(A2.cx - w.x, A2.cy - w.y); const ne = nearOnCurve(c, w); consider(A2.cx, A2.cy, 'cen', Math.min(dc, (ne ? ne.d : Infinity) + ap * 0.35)); } }
       } else if(c.kind === 'poly'){
         const scr = view.scale;
         for(const p of c.pieces){
@@ -941,7 +965,8 @@
       case 'CIRCLE': return [{ x: e.cx, y: e.cy, r: 'c' }].concat([0, 1, 2, 3].map(k => ({ x: e.cx + e.r * Math.cos(k * Math.PI / 2), y: e.cy + e.r * Math.sin(k * Math.PI / 2), r: 'q' })));
       case 'ARC': { const c = curveOf(e); const a = c.at(0), b = c.at(c.u1), m = c.at(c.u1 / 2); return [{ x: a.x, y: a.y, r: 'a1' }, { x: b.x, y: b.y, r: 'a2' }, { x: m.x, y: m.y, r: 'am' }, { x: e.cx, y: e.cy, r: 'c' }]; }
       case 'ELLIPSE': { const c = curveOf(e); const out = [{ x: e.cx, y: e.cy, r: 'c' }]; [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2].forEach((t, i) => { const q = c.at(t); out.push({ x: q.x, y: q.y, r: i % 2 ? 'eb' : 'ea' }); }); return out; }
-      case 'POLYLINE': { const v = e.vertices || []; if(v.length > 400) return [{ x: v[0].x, y: v[0].y, r: 'v0' }, { x: v[v.length - 1].x, y: v[v.length - 1].y, r: 'v' + (v.length - 1) }];
+      case 'POLYLINE': { const bv = bvOf(e); if(bv && bv.length <= 400){ const out = bv.map((q, i) => ({ x: q.x, y: q.y, r: 'v' + i })); if(bv.length <= 100){ const m = e.closed ? bv.length : bv.length - 1; for(let i = 0; i < m; i++){ const a = bv[i], b = bv[(i + 1) % bv.length]; const A2 = a.bulge ? bulgeArc(a, b, a.bulge) : null; if(A2){ const t = A2.a0 + A2.sw / 2; out.push({ x: A2.cx + A2.r * Math.cos(t), y: A2.cy + A2.r * Math.sin(t), r: 'pm' + i }); } else out.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, r: 'pm' + i }); } } return out; }
+        const v = e.vertices || []; if(v.length > 400) return [{ x: v[0].x, y: v[0].y, r: 'v0' }, { x: v[v.length - 1].x, y: v[v.length - 1].y, r: 'v' + (v.length - 1) }];
         const out = v.map((q, i) => ({ x: q.x, y: q.y, r: 'v' + i }));
         if(v.length <= 100){ const m = e.closed ? v.length : v.length - 1; for(let i = 0; i < m; i++){ const a = v[i], b = v[(i + 1) % v.length]; out.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, r: 'pm' + i }); } }   // ô nắm giữa đoạn (đa chức năng như AutoCAD)
         return out; }
@@ -974,6 +999,10 @@
       case 'ea': { const a = Math.hypot(w.mx, w.my), b = a * (w.ratio || 1); const vx = to.x - w.cx, vy = to.y - w.cy, L = Math.hypot(vx, vy); if(L < 1e-12) return; if(b <= L){ w.mx = vx; w.my = vy; w.ratio = b / L; } else { w.mx = -vy / L * b; w.my = vx / L * b; w.ratio = L / b; } return; }
       case 'eb': { const a = Math.hypot(w.mx, w.my); const L = Math.hypot(to.x - w.cx, to.y - w.cy); if(L < 1e-12) return; if(L <= a) w.ratio = L / a; else { const ux = w.mx / a, uy = w.my / a; w.mx = -uy * L; w.my = ux * L; w.ratio = a / L; } return; }
     }
+    if(w.type === 'POLYLINE' && (role.startsWith('pm') || role[0] === 'v') && bvOf(w)){ const V = w.bv.map(p => Object.assign({}, p)); const n = V.length;
+      if(role.startsWith('pm')){ const i = +role.slice(2), j = (i + 1) % n; if(!V[i] || !V[j]) return; if(V[i].bulge) V[i].bulge = G.bulge3(V[i], to, V[j]); else { V[i] = Object.assign(V[i], { x: V[i].x + dx, y: V[i].y + dy }); V[j] = Object.assign(V[j], { x: V[j].x + dx, y: V[j].y + dy }); } }
+      else { const i = +role.slice(1); if(!V[i]) return; V[i].x = to.x; V[i].y = to.y; }
+      setBV(w, V); return; }
     if(role.startsWith('pm') && w.type === 'POLYLINE'){ const i = +role.slice(2), v = w.vertices; const j = (i + 1) % v.length; if(v[i] && v[j]){ v[i] = { x: v[i].x + dx, y: v[i].y + dy }; v[j] = { x: v[j].x + dx, y: v[j].y + dy }; } delete w.wq; return; }
     if(role[0] === 'v'){ const i = +role.slice(1); const vs = w.type === 'POLYLINE' ? w.vertices : w.pts; if(vs && vs[i]){ vs[i] = { x: to.x, y: to.y }; if(w.type === 'POLYLINE' && w.closed && i === 0 && vs.length > 1){ const l = vs[vs.length - 1]; if(Math.hypot(l.x - from.x, l.y - from.y) < 1e-9) vs[vs.length - 1] = { x: to.x, y: to.y }; } } delete w.wq; }
   }
@@ -1011,11 +1040,15 @@
       for(;;){
         const M = GMODES[mi];
         const kw = [{ k: 'ST', t: 'Kéo giãn' }, { k: 'MO', t: 'Di chuyển' }, { k: 'RO', t: 'Xoay' }, { k: 'SC', t: 'Tỉ lệ' }, { k: 'MI', t: 'Đối xứng' }, { k: 'C', t: 'Sao chép' }, { k: 'B', t: 'Điểm gốc' }, { k: 'X', t: 'Thoát' }];
-        if(plHot && M.k === 'ST'){ if(plHot.r.startsWith('pm')) kw.unshift({ k: 'TD', t: 'Thêm đỉnh' }); else if((plHot.e.vertices || []).length > 2) kw.unshift({ k: 'XD', t: 'Xoá đỉnh' }); }
+        if(plHot && M.k === 'ST'){ if(plHot.r.startsWith('pm')) kw.unshift({ k: 'TD', t: 'Thêm đỉnh' }); else if((bvOf(plHot.e) || plHot.e.vertices || []).length > 2) kw.unshift({ k: 'XD', t: 'Xoá đỉnh' }); }
         const r = await A.getPoint('** ' + M.n + (copy ? ' (nhiều bản)' : '') + ' ** ' + M.p, { base, num: M.k === 'RO' || M.k === 'SC', kw,
           preview: (g, p) => g.xform(sel, w => xf(w, M.k, p)) });
         if(r.none){ mi = (mi + 1) % GMODES.length; continue; }
         if(r.kw === 'X') return;
+        if(r.kw === 'XD' && plHot && bvOf(plHot.e)){ const w = G.clone(plHot.e); const V = w.bv.slice(); const i = +plHot.r.slice(1); V.splice(i, 1); if(V[i - 1]) V[i - 1] = Object.assign({}, V[i - 1], { bulge: 0 }); setBV(w, V); A.commit({ rep: [[plHot.e, w]] }, 'Đã xoá đỉnh'); result = sel.map(e => e === plHot.e ? w : e); return; }
+        if(r.kw === 'TD' && plHot && bvOf(plHot.e)){ const i = +plHot.r.slice(2); const mk = p => { const w = G.clone(plHot.e); const V = w.bv.map(q => Object.assign({}, q)); V[i].bulge = 0; V.splice(i + 1, 0, { x: p.x, y: p.y }); setBV(w, V); return w; };
+          const r2 = await A.getPoint('** THÊM ĐỈNH ** Chỉ định vị trí đỉnh mới', { base: hot, preview: (g, p) => g.ent(mk(p)) }); if(!r2.pt) return;
+          const w = mk(r2.pt); A.commit({ rep: [[plHot.e, w]] }, 'Đã thêm đỉnh'); result = sel.map(e => e === plHot.e ? w : e); return; }
         if(r.kw === 'XD' && plHot){ const w = G.clone(plHot.e); const i = +plHot.r.slice(1); w.vertices.splice(i, 1); delete w.wq; A.commit({ rep: [[plHot.e, w]] }, 'Đã xoá đỉnh'); result = sel.map(e => e === plHot.e ? w : e); return; }
         if(r.kw === 'TD' && plHot){ const i = +plHot.r.slice(2); const mk = p => { const w = G.clone(plHot.e); w.vertices.splice(i + 1, 0, { x: p.x, y: p.y }); delete w.wq; return w; };
           const r2 = await A.getPoint('** THÊM ĐỈNH ** Chỉ định vị trí đỉnh mới', { base: hot, preview: (g, p) => g.ent(mk(p)) }); if(!r2.pt) return;
@@ -1350,6 +1383,12 @@
     if(e.type === 'IMAGE'){ const c4 = imgCorners(e).map(R); e.x = c4[1].x; e.y = c4[1].y; e.rot = Math.atan2(c4[0].y - c4[1].y, c4[0].x - c4[1].x) * R2D; return true; }
     return _mir.apply(this, arguments);
   };
+  // đa tuyến có cung: biến đổi cả đỉnh gốc (bv) cùng điểm lấy mẫu
+  const bvWrap = (name, mk) => { const f = window[name]; window[name] = function(e){ const bv = e && e.type === 'POLYLINE' ? bvOf(e) : null; const r = f.apply(this, arguments); if(bv && e.type === 'POLYLINE' && e.vertices){ const T = mk.apply(null, Array.prototype.slice.call(arguments, 1)); if(T) bvFix(e, bv.map(p => { const q = T.p(p); if(p.bulge) q.bulge = T.flip ? -p.bulge : p.bulge; return q; })); else { delete e.bv; delete e.bvs; } } return r; }; };
+  bvWrap('translateEnt', (dx, dy) => ({ p: p => ({ x: p.x + dx, y: p.y + dy }) }));
+  bvWrap('rotateEnt', (deg, c) => { const a = deg * D2R; return { p: p => _rotPt(p, c, a) }; });
+  bvWrap('scaleEnt', (f, c) => ({ p: p => _sclPt(p, c, f), flip: f < 0 }));
+  bvWrap('mirrorAcross', (Ap, Bp) => { let dx = Bp.x - Ap.x, dy = Bp.y - Ap.y; const L = Math.hypot(dx, dy); if(L < 1e-12) return null; dx /= L; dy /= L; return { p: p => { const wx = p.x - Ap.x, wy = p.y - Ap.y, d = wx * dx + wy * dy; return { x: Ap.x + 2 * d * dx - wx, y: Ap.y + 2 * d * dy - wy }; }, flip: true }; });
   const _ec = window.entCenter;
   window.entCenter = function(e){
     if(e.type === 'ELLIPSE') return { x: e.cx, y: e.cy };

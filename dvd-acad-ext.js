@@ -108,7 +108,8 @@
     const det = M.a * M.d - M.b * M.c, s = Math.sqrt(Math.abs(det)), rot = Math.atan2(M.b, M.a);
     switch(e.type){
       case 'LINE': { const p = ap(M, { x: e.x1, y: e.y1 }), q = ap(M, { x: e.x2, y: e.y2 }); e.x1 = p.x; e.y1 = p.y; e.x2 = q.x; e.y2 = q.y; return e; }
-      case 'POLYLINE': e.vertices = (e.vertices || []).map(p => ap(M, p)); if(e.wq) e.wq = e.wq.map(q => q.map(p => ap(M, p))); return e;
+      case 'POLYLINE': { const bv = A.bvOf ? A.bvOf(e) : null; e.vertices = (e.vertices || []).map(p => ap(M, p)); if(e.wq) e.wq = e.wq.map(q => q.map(p => ap(M, p)));
+        if(bv){ if(similar(M)) A.bvFix(e, bv.map(p => { const q = ap(M, p); if(p.bulge) q.bulge = det < 0 ? -p.bulge : p.bulge; return q; })); else { delete e.bv; delete e.bvs; } } return e; }
       case 'SOLID': e.pts = (e.pts || []).map(p => ap(M, p)); return e;
       case 'HATCH': e.loops = (e.loops || []).map(l => l.map(p => ap(M, p))); if(e.psc) e.psc *= s; if(e.pang != null || e.pat) e.pang = (e.pang || 0) + rot * R2D; return e;
       case 'POINT': { const p = ap(M, e); e.x = p.x; e.y = p.y; return e; }

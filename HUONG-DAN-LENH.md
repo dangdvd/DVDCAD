@@ -213,6 +213,26 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v4q)
+**Đa tuyến có cung giữ đúng cung:** đa tuyến từ file DWG/DXF, PLINE chế độ cung (**A**), vùng, PDF nhập vào… giữ đỉnh gốc và cung (bulge):
+- MOVE, COPY, ROTATE, MIRROR, SCALE, ô nắm giữ nguyên cung. Ô nắm giữa cung kéo để đổi độ cong.
+- OFFSET đa tuyến có cung ra đúng cung (bán kính tăng/giảm), góc vuông nối đúng.
+- Bắt điểm tâm (CEN) và điểm giữa cung (MID) trên đa tuyến.
+- Lưu DXF ghi bulge (mã 42) — AutoCAD mở ra là cung thật.
+
+**Lưu DXF giữ khối và kích thước:**
+- Khối lưu thành BLOCK + INSERT (đúng điểm chèn, tỉ lệ, góc xoay), thuộc tính thành ATTDEF / ATTRIB → AutoCAD nhận ra khối, sửa thuộc tính được.
+- Kích thước thẳng, bán kính, đường kính lưu thành DIMENSION (khối *D + điểm định nghĩa) → AutoCAD nhận là kích thước.
+- Vùng (REGION) có lỗ ghi kèm dữ liệu DVDCAD, mở lại vẫn là vùng.
+
+**HATCH tự mở rộng vùng dò:** bấm trong vùng kín lớn hơn màn hình vẫn tìm đúng biên, không cần phóng ra trước.
+
+**Kiểu nét phức có chữ:** đọc chữ trong kiểu nét từ DXF / DWG (GAS_LINE, HOT_WATER_SUPPLY…) và vẽ chữ dọc theo nét, tự lật cho dễ đọc. LINETYPE → Tải có thêm GAS_LINE, HOT_WATER_SUPPLY, CAP_NUOC (CN), THOAT_NUOC (TN), DIEN (Đ), PCCC (CC).
+
+**DATALINK theo dõi file Excel** (Chrome / Edge máy tính): chọn file một lần, DVDCAD nhớ file gốc. Khi quay lại cửa sổ mà file Excel đã sửa, góc màn hình hiện **“Liên kết dữ liệu đã thay đổi”** → bấm **Cập nhật bảng** là bảng đọc lại file, không phải chọn lại. `DATALINKUPDATE` cũng tự đọc file gốc.
+
+**Kiểu in .ctb xuất ra file:** trong `STYLESMANAGER` bấm **Xuất .ctb** → được file `.ctb` đúng định dạng AutoCAD, chép vào thư mục Plot Styles để dùng chung với AutoCAD.
+
 ## Bổ sung (v4p)
 **Kiểu in theo màu (.ctb):** `STYLESMANAGER` (hoặc `CTB`, `PLOTSTYLE`; Output → Plot → Kiểu in .ctb):
 - **Nhập .ctb** — đọc file kiểu in của AutoCAD (monochrome.ctb, file của công ty…): màu in, bề rộng nét, độ đậm (screening) cho từng màu 1–255.
@@ -393,13 +413,13 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 
 ## Khác với AutoCAD
 - Lưu DXF ngay trong app. Lưu **DWG** cần máy chủ chuyển đổi (`SAVEDWG`, xem trên).
-- Kích thước và khối được lưu ra DXF dạng nét rời. Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước. Kích thước không bám theo khi chỉ sửa riêng đường hình.
+- Khối lưu ra DXF thành BLOCK + INSERT (kèm thuộc tính ATTDEF/ATTRIB); kích thước thẳng, bán kính, đường kính lưu thành DIMENSION. Khối đã bị sửa riêng một bản, kích thước góc vẫn lưu dạng nét rời. Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước. Kích thước không bám theo khi chỉ sửa riêng đường hình.
 - Kích thước thẳng/chéo có sẵn trong file DWG/DXF cũng kéo ô nắm và STRETCH được. Khi sửa, kích thước được vẽ lại theo kiểu của DVDCAD: giữ cao chữ, số lẻ, mũi tên/gạch chéo. Kích thước góc và bán kính của file gốc chỉ chọn theo cụm.
 - Bề rộng nét theo từng đối tượng không ghi được vào DXF R12 (AutoCAD vẫn đọc được kiểu nét).
-- Hatch dò biên theo các nét **đang hiện trên màn hình**. Phóng tới vùng cần tô trước khi bấm.
-- Đa tuyến có đoạn cong được lưu dạng nhiều đoạn thẳng nhỏ.
-- Vùng (REGION) lưu ra DXF dạng đa tuyến kín. Đường cong spline / elip trong phép toán vùng được chia thành đoạn thẳng nhỏ.
-- DATALINK không tự theo dõi file Excel: chạy DATALINKUPDATE và chọn lại file khi file thay đổi. Kiểu in CTB lưu trong trình duyệt (chưa ghi ngược ra file .ctb).
+- Hatch dò biên trong màn hình trước, không thấy biên kín thì tự mở rộng phạm vi dò (tới 40 lần màn hình).
+- Đa tuyến có cung giữ đúng cung khi di chuyển, xoay, lật, tỉ lệ, OFFSET, sửa bằng ô nắm và lưu DXF. Các lệnh cắt (TRIM, BREAK, JOIN, FILLET đa tuyến) đổi phần cong thành nhiều đoạn thẳng nhỏ.
+- Vùng (REGION) lưu ra DXF dạng đa tuyến kín kèm dữ liệu DVDCAD (mở lại trong DVDCAD vẫn là vùng; AutoCAD thấy đa tuyến). Spline / elip trong phép toán vùng được chia thành đoạn thẳng nhỏ.
+- DATALINK tự đọc lại file Excel trên Chrome / Edge máy tính. Trên iPhone / iPad / Safari cần chọn lại file khi chạy DATALINKUPDATE.
 - Trình duyệt không tự ghi được DWG: `SAVEDWG` gửi DXF tới máy chủ ODA của bạn. Không có máy chủ thì lưu DXF, AutoCAD mở bình thường.
 - Ràng buộc tham số và khối động lưu trên máy (theo bản vẽ / tên khối), không ghi vào DXF. Khối động trong file AutoCAD hiện đúng trạng thái đang lưu nhưng chưa đổi được tham số gốc của AutoCAD.
 - Vùng che, thứ tự vẽ và chú thích theo tỉ lệ ghi ra DXF dạng nét thường.
@@ -409,4 +429,4 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - UCS ở DVDCAD chỉ dùng cho lệnh tạo khối 3D. Nét 2D luôn vẽ trên mặt bằng XY.
 - Layout chỉ chứa khung tên và khung nhìn. Muốn ghi chú thêm thì vẽ ở Model.
 - Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
-- Kiểu nét phức (chèn chữ/hình trong nét) hiện dạng nét đứt thường.
+- Kiểu nét phức: chữ trong nét hiện đúng (GAS, HW…); hình (shape SHX) trong nét chưa vẽ. Khi lưu DXF R12, chữ trong nét không được ghi (AutoCAD thấy nét đứt).

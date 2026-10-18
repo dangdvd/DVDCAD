@@ -58,12 +58,13 @@
     const sw = R > 0 ? G.norm(a1 - a0) : -G.norm(a0 - a1);
     const n = Math.max(4, Math.ceil(Math.abs(sw) / (5 * D2R))), rr = Math.abs(R), out = [];
     for(let i = 0; i <= n; i++){ const a = a0 + sw * i / n; out.push({ x: C.x + rr * Math.cos(a), y: C.y + rr * Math.sin(a) }); }
+    out.sw = sw;
     out[out.length - 1] = { x: P.x, y: P.y };
     return out;
   }
   cmd(['PLINE', 'PL'], 'Vẽ đa tuyến (A = cung, L = thẳng, C = đóng, U = lùi)', async () => {
     let r = await A.getPoint('Chỉ định điểm đầu'); if(!r.pt) return;
-    const V = [r.pt], lens = [1]; let arcMode = false, closed = false;
+    const V = [r.pt], lens = [1]; let arcMode = false, closed = false; const BV = [{ x: r.pt.x, y: r.pt.y }], lensB = [1];
     const dirNow = () => { if(V.length >= 2){ const a = V[V.length - 2], b = V[V.length - 1], L = dist(a, b) || 1; return { x: (b.x - a.x) / L, y: (b.y - a.y) / L }; } return { x: 1, y: 0 }; };
     const preview = (g, p) => { if(V.length > 1) g.poly(V, false, '#e8eef7'); if(arcMode){ const a = tangentArc(V[V.length - 1], dirNow(), p); if(a) g.poly(a, false, '#e8eef7'); } };
     for(;;){
@@ -72,15 +73,15 @@
       if(r.none) break;
       if(r.kw === 'A'){ arcMode = true; continue; }
       if(r.kw === 'L'){ arcMode = false; continue; }
-      if(r.kw === 'U'){ if(lens.length > 1){ lens.pop(); V.length = lens[lens.length - 1]; } continue; }
+      if(r.kw === 'U'){ if(lens.length > 1){ lens.pop(); V.length = lens[lens.length - 1]; lensB.pop(); BV.length = lensB[lensB.length - 1]; delete BV[BV.length - 1].bulge; } continue; }
       if(r.kw === 'C'){ closed = true; break; }
       if(r.pt){
-        if(arcMode){ const a = tangentArc(V[V.length - 1], dirNow(), r.pt); if(!a) continue; for(let i = 1; i < a.length; i++) V.push(a[i]); }
-        else { if(dist(V[V.length - 1], r.pt) < 1e-12) continue; V.push(r.pt); }
-        lens.push(V.length);
+        if(arcMode){ const a = tangentArc(V[V.length - 1], dirNow(), r.pt); if(!a) continue; for(let i = 1; i < a.length; i++) V.push(a[i]); if(a.sw) BV[BV.length - 1].bulge = Math.tan(a.sw / 4); BV.push({ x: r.pt.x, y: r.pt.y }); }
+        else { if(dist(V[V.length - 1], r.pt) < 1e-12) continue; V.push(r.pt); BV.push({ x: r.pt.x, y: r.pt.y }); }
+        lens.push(V.length); lensB.push(BV.length);
       }
     }
-    if(V.length >= 2) A.commit({ add: [mk('POLYLINE', { vertices: V.map(p => ({ x: p.x, y: p.y })), closed })] });
+    if(V.length >= 2){ const e = mk('POLYLINE', { vertices: V.map(p => ({ x: p.x, y: p.y })), closed }); if(BV.some(p => p.bulge) && A.setBV) A.setBV(e, BV); A.commit({ add: [e] }); }
   });
 
   const rectPts = (a, b) => [{ x: a.x, y: a.y }, { x: b.x, y: a.y }, { x: b.x, y: b.y }, { x: a.x, y: b.y }];
@@ -369,6 +370,25 @@
     return G.dedup(out);
   }
   G.offsetPoly = offsetPoly;
+  // offset đa tuyến có cung: đoạn thẳng dời theo pháp tuyến, cung đổi bán kính (giữ góc quét)
+  function offsetBV(V, closed, d){
+    const n = V.length, ns = closed ? n : n - 1; const S = [];
+    for(let i = 0; i < ns; i++){ const a = V[i], b = V[(i + 1) % n]; const L = dist(a, b); if(L < 1e-12) continue;
+      if(a.bulge){ const C = G.bulgeArc(a, b, a.bulge); if(!C) continue; const r2 = C.r - d * Math.sign(C.sw); if(!(r2 > 1e-9)) continue; const k = r2 / C.r;
+        S.push({ arc: true, bulge: a.bulge, a: { x: C.cx + (a.x - C.cx) * k, y: C.cy + (a.y - C.cy) * k }, b: { x: C.cx + (b.x - C.cx) * k, y: C.cy + (b.y - C.cy) * k } }); }
+      else { const nx = -(b.y - a.y) / L, ny = (b.x - a.x) / L; S.push({ a: { x: a.x + nx * d, y: a.y + ny * d }, b: { x: b.x + nx * d, y: b.y + ny * d }, ux: (b.x - a.x) / L, uy: (b.y - a.y) / L }); } }
+    if(!S.length) return null;
+    const out = []; const push = (p, bulge) => { const l = out[out.length - 1]; if(l && dist(l, p) < 1e-9){ if(bulge) l.bulge = bulge; return; } out.push({ x: p.x, y: p.y, bulge: bulge || 0 }); };
+    const meet = (s1, s2) => { if(dist(s1.b, s2.a) < 1e-9) return null; if(!s1.arc && !s2.arc){ const den = s1.ux * s2.uy - s1.uy * s2.ux; if(Math.abs(den) < 1e-9) return null; const t = ((s2.a.x - s1.a.x) * s2.uy - (s2.a.y - s1.a.y) * s2.ux) / den; return { x: s1.a.x + s1.ux * t, y: s1.a.y + s1.uy * t }; } return 'gap'; };
+    const m = S.length;
+    for(let i = 0; i < m; i++){ const s = S[i];
+      let start = s.a; if(i > 0 || closed){ const pv = S[(i - 1 + m) % m]; const X = meet(pv, s); if(X && X !== 'gap'){ start = X; } }
+      let end = s.b; if(i < m - 1 || closed){ const nx = S[(i + 1) % m]; const X = meet(s, nx); if(X && X !== 'gap') end = X; else if(X === 'gap'){ push(start, s.arc ? s.bulge : 0); push(end, 0); continue; } }
+      push(start, s.arc ? s.bulge : 0); if(i === m - 1 && !closed) push(end, 0); }
+    if(closed && out.length > 1 && dist(out[0], out[out.length - 1]) < 1e-9) out.pop();
+    return out;
+  }
+  G.offsetBV = offsetBV;
   function offsetEntity(e, d, side){
     if(e.type === 'LINE'){ const L = Math.hypot(e.x2 - e.x1, e.y2 - e.y1); if(L < 1e-12) return null; const nx = -(e.y2 - e.y1) / L, ny = (e.x2 - e.x1) / L; const sd = (side.x - e.x1) * nx + (side.y - e.y1) * ny; const dd = d == null ? sd : (sd >= 0 ? d : -d); const w = copyOf(e); w.x1 += nx * dd; w.y1 += ny * dd; w.x2 += nx * dd; w.y2 += ny * dd; return w; }
     if(e.type === 'CIRCLE' || e.type === 'ARC'){ const dc = Math.hypot(side.x - e.cx, side.y - e.cy); const R = d == null ? dc : (dc > e.r ? e.r + d : e.r - d); if(!(R > 1e-9)) return null; const w = copyOf(e); w.r = R; return w; }
@@ -379,6 +399,8 @@
       let best = null, bd = Infinity; for(const p of c.pieces){ const nq = G.nearOnPiece(p, side); const dd = Math.hypot(nq.x - side.x, nq.y - side.y); if(dd < bd){ bd = dd; best = p; } }
       const sgn = ((best.bx - best.ax) * (side.y - best.ay) - (best.by - best.ay) * (side.x - best.ax)) >= 0 ? 1 : -1;
       const dd = (d == null ? bd : d) * sgn;
+      const bv = e.type === 'POLYLINE' && A.bvOf ? A.bvOf(e) : null;
+      if(bv){ const nb = offsetBV(bv, c.closed, dd); if(nb && nb.length >= 2){ const w = copyOf(e); w.closed = c.closed; delete w.wq; A.setBV(w, nb); return w; } }
       const nv = offsetPoly(V, c.closed, dd); if(!nv || nv.length < 2) return null;
       const w = copyOf(e); w.type = 'POLYLINE'; w.vertices = nv; w.closed = c.closed; delete w.cx; delete w.cy; delete w.mx; delete w.my; delete w.ratio; delete w.p1; delete w.p2; delete w.wq; delete w.spl; return w;
     }
@@ -1163,8 +1185,16 @@
       const r = findBoundaryIn(P, box); last = r;
       if(r.loops){ const lp = r.loops[0]; const m = span * 1e-9; const inside = lp.every(q => q.x > box.minX + m && q.x < box.maxX - m && q.y > box.minY + m && q.y < box.maxY - m); if(inside || (box.minX <= vb.minX && box.maxX >= vb.maxX && box.minY <= vb.minY && box.maxY >= vb.maxY)) return r; }
     }
-    return findBoundaryIn(P, vb);
+    // vùng kín lớn hơn màn hình: mở rộng dần phạm vi dò (không cần phóng ra trước)
+    const inBox = (r, box) => { if(!r || !r.loops) return false; const m = span * 1e-9; return r.loops[0].every(q => q.x > box.minX + m && q.x < box.maxX - m && q.y > box.minY + m && q.y < box.maxY - m); };
+    const r0 = findBoundaryIn(P, vb); if(inBox(r0, vb)) return r0;
+    const ex = bboxOf(modelEntities.length < 300000 ? modelEntities : []) || null;
+    if(ex){ let prev = null; for(const k of [3, 10, 40]){ const h = span * k / 2; const box = { minX: Math.max(ex.x0 - span * 0.01, P.x - h), minY: Math.max(ex.y0 - span * 0.01, P.y - h), maxX: Math.min(ex.x1 + span * 0.01, P.x + h), maxY: Math.min(ex.y1 + span * 0.01, P.y + h) };
+      if(prev && box.minX === prev.minX && box.maxX === prev.maxX && box.minY === prev.minY && box.maxY === prev.maxY) break; prev = box;
+      const r = findBoundaryIn(P, box); if(r.loops && (inBox(r, box) || (box.minX <= ex.x0 && box.maxX >= ex.x1 && box.minY <= ex.y0 && box.maxY >= ex.y1))) return r; if(r.err && /Quá nhiều/.test(r.err)) break; } }
+    return r0;
   }
+  A.findBoundary = findBoundary;
   A.findBoundaryIn = (P, vb, list) => findBoundaryIn(P, vb, list);
   function findBoundaryIn(P, vb, list){
     const span = Math.max(vb.maxX - vb.minX, vb.maxY - vb.minY);
@@ -1485,16 +1515,46 @@
     P(0, 'TABLE'); P(2, 'STYLE'); P(70, 1 + stUsed.size); P(0, 'STYLE'); P(2, 'STANDARD'); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'arial.ttf'); P(4, '');
     for(const [n, f] of stUsed){ P(0, 'STYLE'); P(2, dxfStr(n)); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, f); P(4, ''); }
     P(0, 'ENDTAB');
+    P(0, 'TABLE'); P(2, 'APPID'); P(70, 2); P(0, 'APPID'); P(2, 'ACAD'); P(70, 0); P(0, 'APPID'); P(2, 'DVDCAD'); P(70, 0); P(0, 'ENDTAB');
+    P(0, 'TABLE'); P(2, 'DIMSTYLE'); P(70, 1); P(0, 'DIMSTYLE'); P(2, 'STANDARD'); P(70, 0); P(3, ''); P(4, ''); P(5, ''); P(6, ''); P(7, ''); P(40, 1); P(41, (A.DS && A.dimTxt ? A.dimTxt() * (A.DS.asz || 1) : 2.5)); P(140, (A.dimTxt ? A.dimTxt() : 2.5)); P(0, 'ENDTAB');
+    P(0, 'ENDSEC');
+    // ---- khối (BLOCK + INSERT + thuộc tính) và kích thước (DIMENSION) giữ nguyên dạng khi mở bằng AutoCAD
+    const inSet = new Set(ents); const byGrp = new Map(); for(const e of ents) if(e.grp){ let a = byGrp.get(e.grp); if(!a){ a = []; byGrp.set(e.grp, a); } a.push(e); }
+    const grpCnt = new Map(); if(byGrp.size) for(const x of modelEntities) if(x.grp && byGrp.has(x.grp)) grpCnt.set(x.grp, (grpCnt.get(x.grp) || 0) + 1);
+    const grpAll = gid => { const a = byGrp.get(gid) || []; const n = grpCnt.get(gid) || 0; return a.length === n || n === 0 ? a : null; };
+    const inv = m => { const det = m.a * m.d - m.b * m.c; if(Math.abs(det) < 1e-300) return null; return { a: m.d / det, b: -m.b / det, c: -m.c / det, d: m.a / det, e: (m.c * m.f - m.d * m.e) / det, f: (m.b * m.e - m.a * m.f) / det }; };
+    const clone = o => JSON.parse(JSON.stringify(o));
+    const blockDefs = new Map(), inserts = new Map(), dims = new Map(); const done = new Set();
+    if(ents.length < 200000) for(const [gid, mem0] of byGrp){
+      const mem = grpAll(gid); if(!mem || !mem.length) continue; const f = mem[0];
+      if(f.bm && f.bm.name && !String(f.blk || '').startsWith('*') && !mem.some(x => x.vh || x.type === 'SOLID3D' || x.type === 'IMAGE')){
+        const Mi = inv(f.bm); if(!Mi || mem.some(x => !x.bm || x.bm.name !== f.bm.name)) continue; const nm = String(f.bm.name).replace(/[<>\/":;?*|=`]/g, '_').slice(0, 250); if(!nm) continue;
+        const loc = mem.map(x => { const w = A.xformEnt(clone(x), Mi); return w; }); const bb = bboxOf(loc.filter(x => !x.att)) || { x0: 0, y0: 0, x1: 0, y1: 0 };
+        let D = blockDefs.get(nm);
+        if(!D){ D = { name: nm, ents: loc, n: mem.length, bb, atts: loc.filter(x => x.att) }; blockDefs.set(nm, D); }
+        else { const tol = Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0, 1) * 1e-6; if(D.n !== mem.length || Math.abs(D.bb.x0 - bb.x0) > tol || Math.abs(D.bb.y0 - bb.y0) > tol || Math.abs(D.bb.x1 - bb.x1) > tol || Math.abs(D.bb.y1 - bb.y1) > tol) continue; }
+        inserts.set(gid, { D, m: f.bm, mem }); for(const x of mem) done.add(x); continue; }
+      if(String(f.blk || '').startsWith('*DIM')){ const t = mem.find(x => x.dimd && x.type === 'TEXT'); if(t && /^(lin|rad|dia)$/.test(t.dimd.k)){ dims.set(gid, { t, mem }); for(const x of mem) done.add(x); } }
+    }
+    // bảng ghi chú vùng (REGION) & các mục khác: XDATA DVDCAD để mở lại đúng trong DVDCAD
+    P(0, 'SECTION'); P(2, 'BLOCKS');
+    const emitAll = (list, o) => { for(const e of list) emit(e, o); };
+    for(const D of blockDefs.values()){ P(0, 'BLOCK'); P(8, '0'); P(2, dxfStr(D.name)); P(70, D.atts.length ? 2 : 0); P(10, 0); P(20, 0); P(30, 0); P(3, dxfStr(D.name)); emitAll(D.ents, { inBlock: true }); P(0, 'ENDBLK'); P(8, '0'); }
+    let dn = 0; for(const [gid, d] of dims){ d.bn = '*D' + (++dn); P(0, 'BLOCK'); P(8, '0'); P(2, d.bn); P(70, 1); P(10, 0); P(20, 0); P(30, 0); P(3, d.bn); emitAll(d.mem, { dimBlock: true }); P(0, 'ENDBLK'); P(8, '0'); }
     P(0, 'ENDSEC');
     P(0, 'SECTION'); P(2, 'ENTITIES');
     const span = Math.max(ext.x1 - ext.x0, ext.y1 - ext.y0, 1);
-    for(const e of ents){
-      const ly = dxfStr(String(e.layer || '0'));
+    function emit(e, o){ o = o || {};
+      const ly = dxfStr(String(o.inBlock && e.l0 ? '0' : (e.layer || '0')));
       const byL = e.bl || String(e.col || '').toLowerCase() === String(A.layerHex(e.layer || '0')).toLowerCase();
       const aci = byL ? 256 : aciNear(e.col || '#ffffff');
       const elt = e.lt && (ltOk.has(e.lt) || e.lt === 'CONTINUOUS' || e.lt === 'BYBLOCK') ? dxfStr(e.lt) : null;
       const head = t => { P(0, t); P(8, ly); if(elt && e.type !== 'HATCH' && e.type !== 'TEXT') P(6, elt); if(aci !== 256) P(62, aci); };
-      const poly = (verts, closed) => { if(verts.length < 2) return; head('POLYLINE'); P(66, 1); P(70, closed ? 1 : 0); P(10, 0); P(20, 0); P(30, 0); for(const v of verts){ P(0, 'VERTEX'); P(8, ly); P(10, v.x); P(20, v.y); P(30, 0); } P(0, 'SEQEND'); P(8, ly); };
+      const xd = () => { if(e.rgn && !o.inBlock){ P(1001, 'DVDCAD'); P(1000, 'RGN' + (e.grp && e.blk === '*REGION' ? ':' + e.grp : '')); } };
+      const poly = (verts, closed) => { if(verts.length < 2) return; head('POLYLINE'); P(66, 1); P(70, closed ? 1 : 0); P(10, 0); P(20, 0); P(30, 0); xd(); for(const v of verts){ P(0, 'VERTEX'); P(8, ly); P(10, v.x); P(20, v.y); P(30, 0); if(v.bulge) P(42, v.bulge); } P(0, 'SEQEND'); P(8, ly); };
+      if(e.att && o.inBlock){ const h = e.h || 2.5; P(0, 'ATTDEF'); P(8, ly); if(aci !== 256) P(62, aci); P(10, e.x); P(20, e.y); P(30, 0); P(40, h); P(1, dxfStr(e.text || '')); P(3, dxfStr(e.attp || e.att)); P(2, dxfStr(e.att)); P(70, 0); if(e.rot) P(50, e.rot);
+        const hj = e.ha === 'center' ? 1 : (e.ha === 'right' || e.ha === 'end') ? 2 : 0, vj = e.va === 'bottom' ? 1 : e.va === 'middle' ? 2 : e.va === 'top' ? 3 : 0; if(hj) P(72, hj); if(hj || vj){ P(11, e.x); P(21, e.y); P(31, 0); } if(vj) P(74, vj); return; }
+      if(e.type === 'POLYLINE'){ const bv = A.bvOf ? A.bvOf(e) : null; poly(bv && bv.length >= 2 ? bv : (e.vertices || []), !!e.closed); return; }
       switch(e.type){
         case 'LINE': head('LINE'); P(10, e.x1); P(20, e.y1); P(30, 0); P(11, e.x2); P(21, e.y2); P(31, 0); break;
         case 'CIRCLE': head('CIRCLE'); P(10, e.cx); P(20, e.cy); P(30, 0); P(40, e.r); break;
@@ -1507,7 +1567,6 @@
           for(let i = 0; i < lines.length; i++){ const s = lines[i]; if(!s.trim()) continue; const x = e.x + dx * i, y = e.y + dy * i;
             head('TEXT'); P(10, x); P(20, y); P(30, 0); P(40, h); P(1, dxfStr(s)); if(e.style && stUsed.has(e.style)) P(7, dxfStr(e.style)); if(rr) P(50, rr); if(e.xs && Math.abs(Math.abs(e.xs) - 1) > 1e-3) P(41, Math.abs(e.xs)); if(e.xs < 0) P(71, 2); if(hj) P(72, hj); if(vj) P(73, vj); if(hj || vj){ P(11, x); P(21, y); P(31, 0); } }
           break; }
-        case 'POLYLINE': poly(e.vertices || [], !!e.closed); break;
         case 'IMAGE': try{ poly(imgCorners(e), true); }catch(_){} break;
         case 'SOLID': { const p = e.pts || []; if(p.length >= 3){ head('SOLID'); P(10, p[0].x); P(20, p[0].y); P(30, 0); P(11, p[1].x); P(21, p[1].y); P(31, 0); P(12, p[2].x); P(22, p[2].y); P(32, 0); const q = p[3] || p[2]; P(13, q.x); P(23, q.y); P(33, 0); } break; }
         case 'ELLIPSE': try{ poly(smpEllipse(e), Math.abs(((e.p2 == null ? TAU : e.p2) - (e.p1 || 0)) - TAU) < 1e-3); }catch(_){} break;
@@ -1528,7 +1587,21 @@
           }
           break; }
       }
-    }
+        }
+    for(const e of ents){ if(done.has(e)) continue; emit(e); }
+    for(const ins of inserts.values()){ const m = ins.m; const sx = Math.hypot(m.a, m.b), det = m.a * m.d - m.b * m.c, sy = det / (sx || 1), rot = Math.atan2(m.b, m.a) * R2D; const f = ins.mem[0];
+      const ly = dxfStr(String(m.lay || f.layer || '0')); const atts = ins.mem.filter(x => x.att && x.type === 'TEXT');
+      P(0, 'INSERT'); P(8, ly); if(atts.length) P(66, 1); P(2, dxfStr(ins.D.name)); P(10, m.e); P(20, m.f); P(30, 0); if(Math.abs(sx - 1) > 1e-12) P(41, sx); if(Math.abs(sy - 1) > 1e-12) P(42, sy); if(Math.abs(rot) > 1e-12) P(50, rot);
+      if(atts.length){ for(const a of atts){ const al = a.layer || '0'; P(0, 'ATTRIB'); P(8, dxfStr(al)); const byL2 = a.bl || String(a.col || '').toLowerCase() === String(A.layerHex(al)).toLowerCase(); if(!byL2) P(62, aciNear(a.col || '#ffffff')); P(10, a.x); P(20, a.y); P(30, 0); P(40, a.h || 2.5); P(1, dxfStr(a.text || '')); P(2, dxfStr(a.att)); P(70, 0); if(a.rot) P(50, a.rot);
+          const hj = a.ha === 'center' ? 1 : (a.ha === 'right' || a.ha === 'end') ? 2 : 0, vj = a.va === 'bottom' ? 1 : a.va === 'middle' ? 2 : a.va === 'top' ? 3 : 0; if(hj) P(72, hj); if(hj || vj){ P(11, a.x); P(21, a.y); P(31, 0); } if(vj) P(74, vj); }
+        P(0, 'SEQEND'); P(8, ly); } }
+    for(const d of dims.values()){ const t = d.t, D = t.dimd; const ly = dxfStr(String(t.layer || '0'));
+      P(0, 'DIMENSION'); P(8, ly); P(2, d.bn);
+      if(D.k === 'lin'){ const ph = (D.phi || 0) * D2R, ux = Math.cos(ph), uy = Math.sin(ph), nx = -uy, ny = ux; const d2 = (D.L.x - D.p2.x) * nx + (D.L.y - D.p2.y) * ny;
+        P(10, D.p2.x + nx * d2); P(20, D.p2.y + ny * d2); P(30, 0); P(11, t.x); P(21, t.y); P(31, 0); P(70, 32); if(D.ov) P(1, dxfStr(D.ov)); P(3, 'STANDARD'); P(13, D.p1.x); P(23, D.p1.y); P(33, 0); P(14, D.p2.x); P(24, D.p2.y); P(34, 0); P(50, D.phi || 0); }
+      else { const ux0 = D.L.x - D.c.x, uy0 = D.L.y - D.c.y, L0 = Math.hypot(ux0, uy0) || 1, ux = ux0 / L0, uy = uy0 / L0; const q = { x: D.c.x + ux * D.r, y: D.c.y + uy * D.r };
+        if(D.k === 'rad'){ P(10, D.c.x); P(20, D.c.y); P(30, 0); P(11, t.x); P(21, t.y); P(31, 0); P(70, 32 + 4); if(D.ov) P(1, dxfStr(D.ov)); P(3, 'STANDARD'); P(15, q.x); P(25, q.y); P(35, 0); P(40, Math.abs(L0 - D.r)); }
+        else { P(10, D.c.x - ux * D.r); P(20, D.c.y - uy * D.r); P(30, 0); P(11, t.x); P(21, t.y); P(31, 0); P(70, 32 + 3); if(D.ov) P(1, dxfStr(D.ov)); P(3, 'STANDARD'); P(15, q.x); P(25, q.y); P(35, 0); P(40, 0); } } }
     P(0, 'ENDSEC'); P(0, 'EOF');
     return L.join('\r\n') + '\r\n';
   };
