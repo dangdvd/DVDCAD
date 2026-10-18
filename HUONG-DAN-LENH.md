@@ -213,6 +213,42 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v4p)
+**Kiểu in theo màu (.ctb):** `STYLESMANAGER` (hoặc `CTB`, `PLOTSTYLE`; Output → Plot → Kiểu in .ctb):
+- **Nhập .ctb** — đọc file kiểu in của AutoCAD (monochrome.ctb, file của công ty…): màu in, bề rộng nét, độ đậm (screening) cho từng màu 1–255.
+- **Mới…** — tạo từ mẫu: monochrome, DVD-VN (màu → bề rộng nét kiểu văn phòng VN: đỏ 0.13, vàng 0.18, xanh lá 0.25, lục lam 0.35, xanh dương 0.50, tím 0.30, trắng 0.20, 8/9 0.09), Screening 50%, Màu 8/9 xám nhạt.
+- Sửa từng màu: màu in (theo đối tượng / đen / màu khác), bề rộng nét, độ đậm %. **Áp cho mọi màu…** để đổi hàng loạt.
+- Trong hộp thoại **PLOT**, mục **Kiểu in** có thêm các kiểu `.ctb` đã lưu và nút ✎ để sửa. Bề rộng nét theo CTB chỉ in khi bật “In bề rộng nét”.
+
+**Bảng từ Excel / CSV:**
+- `DATALINK` (`TABLEIMPORT`; Insert → Linking & Extraction, Annotate → Tables): chọn file .xlsx / .xls / .ods / .csv, chọn trang tính, vùng ô (vd `A1:F20`), cao chữ, hàng tên cột, hàng tiêu đề; xem trước rồi chèn bảng.
+- `DATALINKUPDATE`: sửa file Excel xong, chạy lệnh và chọn lại file → các bảng liên kết tới file đó cập nhật nội dung (giữ bề rộng cột, thêm/bớt hàng).
+- `TABLEEXPORT`: xuất bảng ra CSV hoặc Excel (.xlsx).
+
+**Vùng 2D (region):**
+- `REGION`: chọn đa tuyến kín, đường tròn, elip, hoặc các đoạn thẳng / cung / đa tuyến hở nối đầu-cuối thành vòng kín → mỗi vòng thành một vùng (xoá nét gốc).
+- `UNION`, `SUBTRACT`, `INTERSECT`: chọn vùng 2D thì cộng / trừ / lấy giao vùng (kết quả có lỗ được nhóm lại, cung tròn được dựng lại thành cung); chọn khối 3D thì làm như trước.
+- `MASSPROP` chọn vùng: diện tích, chu vi, hộp bao, trọng tâm, mô men quán tính, tích quán tính, bán kính quán tính (tính cả lỗ).
+
+**Xoay lưới / ortho:** `SNAPANG` — nhập góc, **D** lấy theo một đoạn thẳng, **B** đặt điểm gốc. Lưới, SNAP, ORTHO (F8), POLAR và truy bắt đều theo góc mới (vẽ công trình nằm xiên). `SNAPANG 0` để trả về. Thêm lệnh `SNAP` (bật/tắt/bước), `GRID` (bật/tắt/khoảng), `ORTHO`, `SNAPBASE`.
+
+**Sửa đa tuyến bằng nắm kéo:** chọn đa tuyến, **chuột phải** lên ô nắm:
+- Ô nắm đỉnh: **Thêm đỉnh** (sau đỉnh đó), **Xoá đỉnh**.
+- Ô nắm giữa đoạn: **Thêm đỉnh**, **Đổi thành cung** (bấm điểm cung đi qua) / **Đổi thành đoạn thẳng**.
+
+**OFFSET** có thêm tuỳ chọn như AutoCAD: **E** Xoá nguồn (Có/Không), **L** Lớp (Hiện hành / Theo nguồn), **M** Nhiều lần (mỗi lần bấm tạo thêm một bản cách đều từ bản vừa tạo), **U** Hoàn tác. Cài đặt được nhớ cho lần sau.
+
+**Tool Palettes:** kéo một mục thả lên bản vẽ — ký hiệu chèn đúng chỗ thả, khối chèn tại chỗ thả, mẫu hatch thả vào trong vùng kín thì tô vùng đó, lệnh thì chạy lệnh. Bấm như cũ vẫn dùng được.
+
+**PDFIMPORT:** cung và đường tròn trong PDF thành ARC / CIRCLE thật (bắt điểm tâm được), đa tuyến có bo góc giữ đoạn cong. PDF ảnh quét (không có nét vector) tự chèn thành ảnh nền đúng tỉ lệ; hoặc chọn **Ảnh (bản quét)**.
+
+**MLEADERSTYLE:** kiểu ghi chú dẫn — mũi tên tam giác đặc / rỗng / chấm / gạch chéo / không có, cỡ mũi tên, độ dài gờ, cao chữ, khung quanh chữ.
+
+**Lệnh nhỏ:**
+- `COUNT` đếm khối theo tên (cả bản vẽ hoặc vùng chọn), bấm **Chọn** để chọn các khối đó, hoặc chèn bảng thống kê.
+- `DBLIST` (thống kê đối tượng theo loại / lớp), `COLOR` (màu hiện hành: số ACI, ByLayer, tên màu, #rrggbb), `BASE` (điểm gốc chèn).
+- `SELECT`, `JPGOUT` / `PNGOUT` (xuất khung nhìn thành ảnh), `CLEANSCREENON` (**Ctrl+0**), `COPYHIST` (chép lịch sử lệnh).
+
 ## Bổ sung (v4o)
 **Kiểm tra chính tả tiếng Việt chạy offline:** `SPELL` kiểm tra theo quy tắc ghép vần tiếng Việt (âm đầu, vần, dấu thanh, c/k, g/gh, ng/ngh, qu…) — không cần từ điển của máy. Gợi ý lấy từ các từ đúng trong bản vẽ và từ vựng xây dựng thường dùng. Mỗi từ: **Thay** / **Bỏ qua** / **+ Từ điển** (từ điển riêng lưu trên máy). Có tuỳ chọn kiểm tra cả từ không dấu. `SPELLBROWSER` dùng bộ kiểm tra của trình duyệt như trước.
 
@@ -234,7 +270,7 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **DesignCenter** (`ADCENTER`, `DC`, **Ctrl+2**): mở một bản vẽ DWG/DXF khác, chèn **khối** của file đó vào bản vẽ hiện hành (giữ đúng màu, lớp), thêm **lớp**, nạp **kiểu nét**.
 
-**Nhập PDF** (`PDFIMPORT`, tab Insert → Import): đọc PDF vector (bản in từ AutoCAD, Revit…) thành nét (lớp PDF_Geometry), chữ (PDF_Text), vùng tô (PDF_Solid Fills); chọn trang, tỉ lệ 1:N, điểm chèn. Giữ màu nét. PDF ảnh quét không có nét vector thì không nhập được.
+**Nhập PDF** (`PDFIMPORT`, tab Insert → Import): đọc PDF vector (bản in từ AutoCAD, Revit…) thành nét (lớp PDF_Geometry), chữ (PDF_Text), vùng tô (PDF_Solid Fills); chọn trang, tỉ lệ 1:N, điểm chèn. Giữ màu nét. Cung / đường tròn nhập thành ARC / CIRCLE; PDF ảnh quét chèn thành ảnh nền (v4p).
 
 ## Bổ sung (v4n)
 **Nhiều khung nhìn trong Model:** `VPORTS` — chia màn hình 1, 2 (dọc/ngang), 3, 4 khung (View → Model Viewports). Bấm vào khung để làm hiện hành; mỗi khung phóng, kéo, ZE riêng. **J** = gộp về một khung.
@@ -362,6 +398,8 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Bề rộng nét theo từng đối tượng không ghi được vào DXF R12 (AutoCAD vẫn đọc được kiểu nét).
 - Hatch dò biên theo các nét **đang hiện trên màn hình**. Phóng tới vùng cần tô trước khi bấm.
 - Đa tuyến có đoạn cong được lưu dạng nhiều đoạn thẳng nhỏ.
+- Vùng (REGION) lưu ra DXF dạng đa tuyến kín. Đường cong spline / elip trong phép toán vùng được chia thành đoạn thẳng nhỏ.
+- DATALINK không tự theo dõi file Excel: chạy DATALINKUPDATE và chọn lại file khi file thay đổi. Kiểu in CTB lưu trong trình duyệt (chưa ghi ngược ra file .ctb).
 - Trình duyệt không tự ghi được DWG: `SAVEDWG` gửi DXF tới máy chủ ODA của bạn. Không có máy chủ thì lưu DXF, AutoCAD mở bình thường.
 - Ràng buộc tham số và khối động lưu trên máy (theo bản vẽ / tên khối), không ghi vào DXF. Khối động trong file AutoCAD hiện đúng trạng thái đang lưu nhưng chưa đổi được tham số gốc của AutoCAD.
 - Vùng che, thứ tự vẽ và chú thích theo tỉ lệ ghi ra DXF dạng nét thường.

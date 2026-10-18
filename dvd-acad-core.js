@@ -475,6 +475,12 @@
         res.x = base.x + best.ux * best.t; res.y = base.y + best.uy * best.t; res.track = { base, ang: Math.atan2(best.uy * Math.sign(best.t || 1), best.ux * Math.sign(best.t || 1)), d: Math.abs(best.t), ortho: true };
         return res;
       }
+      if(SET.ortho && SET.snapAng){   // SNAPANG: ORTHO theo hệ trục xoay
+        const sa = SET.snapAng * D2R, ux = Math.cos(sa), uy = Math.sin(sa); const dx = w.x - base.x, dy = w.y - base.y; const t1 = dx * ux + dy * uy, t2 = -dx * uy + dy * ux;
+        if(Math.abs(t1) >= Math.abs(t2)){ res.x = base.x + ux * t1; res.y = base.y + uy * t1; res.track = { base, ang: t1 >= 0 ? sa : sa + Math.PI, d: Math.abs(t1), ortho: true }; }
+        else { res.x = base.x - uy * t2; res.y = base.y + ux * t2; res.track = { base, ang: t2 >= 0 ? sa + Math.PI / 2 : sa - Math.PI / 2, d: Math.abs(t2), ortho: true }; }
+        return snapGridMaybe(res, true);
+      }
       if(SET.ortho){
         const dx = w.x - base.x, dy = w.y - base.y;
         if(Math.abs(dx) >= Math.abs(dy)){ res.x = w.x; res.y = base.y; res.track = { base, ang: dx >= 0 ? 0 : Math.PI, d: Math.abs(dx), ortho: true }; }
@@ -486,8 +492,8 @@
     if(SET.otrack && SET.osnap) for(const a of acq) lines.push({ p: a, incs: SET.polar ? SET.polarAng : 90, kind: 'track' });
     const hits = [];
     for(const L of lines){
-      const ang = Math.atan2(w.y - L.p.y, w.x - L.p.x), inc = L.incs * D2R;
-      const a2 = Math.round(ang / inc) * inc, ux = Math.cos(a2), uy = Math.sin(a2);
+      const ang = Math.atan2(w.y - L.p.y, w.x - L.p.x), inc = L.incs * D2R, sOff = (SET.snapAng || 0) * D2R;
+      const a2 = Math.round((ang - sOff) / inc) * inc + sOff, ux = Math.cos(a2), uy = Math.sin(a2);
       const d = (w.x - L.p.x) * ux + (w.y - L.p.y) * uy; if(d <= tol * 0.5) continue;
       const off = Math.abs(-(w.x - L.p.x) * uy + (w.y - L.p.y) * ux);
       if(off <= tol) hits.push({ L, ang: a2, ux, uy, d, off });
@@ -514,6 +520,7 @@
     if(!SET.snap) return res;
     const s = gridSpacing();
     if(along && res.track && res.track.base){ const d = Math.round(res.track.d / s) * s; res.x = res.track.base.x + Math.cos(res.track.ang) * d; res.y = res.track.base.y + Math.sin(res.track.ang) * d; res.track.d = d; return res; }
+    if(SET.snapAng){ const sa = SET.snapAng * D2R, c = Math.cos(sa), si = Math.sin(sa), b = SET.snapBase || { x: 0, y: 0 }; const dx = res.x - b.x, dy = res.y - b.y; const u = Math.round((dx * c + dy * si) / s) * s, v = Math.round((-dx * si + dy * c) / s) * s; res.x = b.x + u * c - v * si; res.y = b.y + u * si + v * c; return res; }
     res.x = Math.round(res.x / s) * s; res.y = Math.round(res.y / s) * s; return res;
   }
   let acqTimer = 0;
@@ -810,6 +817,7 @@
     if(lastPt && lastPt.track && lastPt.track.base === base) return lastPt.track.ang;
     const p = lastPt || (mouse ? toWorld(mouse.x, mouse.y) : null);
     if(!p) return 0; const dx = p.x - base.x, dy = p.y - base.y;
+    if(SET.ortho && SET.snapAng){ const sa = SET.snapAng * D2R, t1 = dx * Math.cos(sa) + dy * Math.sin(sa), t2 = -dx * Math.sin(sa) + dy * Math.cos(sa); return Math.abs(t1) >= Math.abs(t2) ? (t1 >= 0 ? sa : sa + Math.PI) : (t2 >= 0 ? sa + Math.PI / 2 : sa - Math.PI / 2); }
     if(SET.ortho) return Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 0 : Math.PI) : (dy >= 0 ? Math.PI / 2 : -Math.PI / 2);
     return Math.hypot(dx, dy) > 1e-12 ? Math.atan2(dy, dx) : 0;
   }
@@ -1233,6 +1241,12 @@
     if(!SET.grid) return;
     const minor = SET.snap && SET.snapSp > 0 && SET.snapSp * view.scale >= 6 ? SET.snapSp : (function(){ const raw = 14 / view.scale, pow = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 5, 10].map(m => m * pow).find(c => c >= raw) || 10 * pow; })();
     const major = minor * 5; const vb = viewWorldAABB();
+    const sa0 = (SET.snapAng || 0) * D2R;
+    if(sa0){ const c = Math.cos(sa0), si = Math.sin(sa0), b = SET.snapBase || { x: 0, y: 0 }; const L = [[vb.minX, vb.minY], [vb.maxX, vb.minY], [vb.maxX, vb.maxY], [vb.minX, vb.maxY]].map(([x, y]) => ({ u: (x - b.x) * c + (y - b.y) * si, v: -(x - b.x) * si + (y - b.y) * c }));
+      const lb = { u0: Math.min(...L.map(p => p.u)), u1: Math.max(...L.map(p => p.u)), v0: Math.min(...L.map(p => p.v)), v1: Math.max(...L.map(p => p.v)) }; const W2 = (u, v) => toScreen(b.x + u * c - v * si, b.y + u * si + v * c);
+      const dr = (sp, col) => { const u0 = Math.floor(lb.u0 / sp) * sp, u1 = Math.ceil(lb.u1 / sp) * sp, v0 = Math.floor(lb.v0 / sp) * sp, v1 = Math.ceil(lb.v1 / sp) * sp; if((u1 - u0) / sp > 800 || (v1 - v0) / sp > 800) return; ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath(); for(let u = u0; u <= u1 + 1e-9; u += sp){ const a = W2(u, v0), q = W2(u, v1); ctx.moveTo(a.x, a.y); ctx.lineTo(q.x, q.y); } for(let v = v0; v <= v1 + 1e-9; v += sp){ const a = W2(u0, v), q = W2(u1, v); ctx.moveTo(a.x, a.y); ctx.lineTo(q.x, q.y); } ctx.stroke(); ctx.restore(); };
+      dr(minor, plotMode ? 'rgba(0,0,0,.05)' : 'rgba(150,170,200,.07)'); dr(major, plotMode ? 'rgba(0,0,0,.10)' : 'rgba(150,170,200,.15)');
+      const o = W2(0, 0), ax = W2(major * 1000, 0), ay = W2(0, major * 1000); ctx.save(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,90,90,.35)'; ctx.beginPath(); ctx.moveTo(2 * o.x - ax.x, 2 * o.y - ax.y); ctx.lineTo(ax.x, ax.y); ctx.stroke(); ctx.strokeStyle = 'rgba(80,220,120,.35)'; ctx.beginPath(); ctx.moveTo(2 * o.x - ay.x, 2 * o.y - ay.y); ctx.lineTo(ay.x, ay.y); ctx.stroke(); ctx.restore(); return; }
     const draw1 = (sp, col) => { const x0 = Math.floor(vb.minX / sp) * sp, x1 = Math.ceil(vb.maxX / sp) * sp, y0 = Math.floor(vb.minY / sp) * sp, y1 = Math.ceil(vb.maxY / sp) * sp; if((x1 - x0) / sp > 600 || (y1 - y0) / sp > 600) return; ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath(); for(let x = x0; x <= x1 + 1e-9; x += sp){ const a = toScreen(x, y0), b = toScreen(x, y1); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); } for(let y = y0; y <= y1 + 1e-9; y += sp){ const a = toScreen(x0, y), b = toScreen(x1, y); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); } ctx.stroke(); ctx.restore(); };
     draw1(minor, plotMode ? 'rgba(0,0,0,.05)' : 'rgba(150,170,200,.07)');
     draw1(major, plotMode ? 'rgba(0,0,0,.10)' : 'rgba(150,170,200,.15)');

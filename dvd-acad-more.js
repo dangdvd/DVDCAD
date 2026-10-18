@@ -79,16 +79,21 @@
   plain(['QSELECT', 'QSE'], 'Chọn nhanh theo loại & thuộc tính (lớp, màu, kiểu nét, chữ…)', () => { if(A.busy()) A.cancel(true); qselect(); });
 
   /* ===================== MLEADER / QLEADER (ghi chú có mũi tên) ===================== */
-  function txtH(){ try{ const d = A.DS; if(d && d.txt > 0) return d.txt; }catch(_){} try{ return +defaultTextH().toPrecision(3); }catch(_){ return 2.5; } }
+  function txtH(){ try{ const m = A.MLS; if(m && m.th > 0) return m.th; }catch(_){} try{ const d = A.DS; if(d && d.txt > 0) return d.txt; }catch(_){} try{ return +defaultTextH().toPrecision(3); }catch(_){ return 2.5; } }
   function leaderEnts(pts, text, h){
-    const out = []; const s = h * ((A.DS && A.DS.asz) || 1);
+    const out = []; const M = A.MLS || {}; const s = M.asz > 0 ? M.asz : h * ((A.DS && A.DS.asz) || 1); const ak = M.arrow || 'closed';
     const a = pts[0], b = pts[1]; const L = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / L, uy = (b.y - a.y) / L;
-    const bx = a.x + ux * s, by = a.y + uy * s, nx = -uy * s / 6, ny = ux * s / 6;
-    out.push({ type: 'SOLID', pts: [{ x: a.x, y: a.y }, { x: bx + nx, y: by + ny }, { x: bx - nx, y: by - ny }, { x: bx - nx, y: by - ny }] });
+    let bx = a.x + ux * s, by = a.y + uy * s; const nx = -uy * s / 6, ny = ux * s / 6;
+    if(ak === 'closed') out.push({ type: 'SOLID', pts: [{ x: a.x, y: a.y }, { x: bx + nx, y: by + ny }, { x: bx - nx, y: by - ny }, { x: bx - nx, y: by - ny }] });
+    else if(ak === 'open') out.push({ type: 'POLYLINE', vertices: [{ x: bx + nx, y: by + ny }, { x: a.x, y: a.y }, { x: bx - nx, y: by - ny }], closed: false });
+    else if(ak === 'dot'){ out.push({ type: 'HATCH', loops: [Array.from({ length: 16 }, (_, i) => ({ x: a.x + s / 4 * Math.cos(i * Math.PI / 8), y: a.y + s / 4 * Math.sin(i * Math.PI / 8) }))], solid: true }); bx = a.x + ux * s / 4; by = a.y + uy * s / 4; }
+    else if(ak === 'tick'){ const t = s / 2; out.push({ type: 'LINE', x1: a.x - (ux + nx / s * 6) * t * 0.7, y1: a.y - (uy + ny / s * 6) * t * 0.7, x2: a.x + (ux + nx / s * 6) * t * 0.7, y2: a.y + (uy + ny / s * 6) * t * 0.7 }); bx = a.x; by = a.y; }
+    else { bx = a.x; by = a.y; }
     out.push({ type: 'POLYLINE', vertices: [{ x: bx, y: by }].concat(pts.slice(1).map(p => ({ x: p.x, y: p.y }))), closed: false });
-    const last = pts[pts.length - 1], prev = pts[pts.length - 2]; const dir = last.x >= prev.x ? 1 : -1; const land = h * 1.2;
+    const last = pts[pts.length - 1], prev = pts[pts.length - 2]; const dir = last.x >= prev.x ? 1 : -1; const land = h * (M.land > 0 ? M.land : 1.2);
     const lx = last.x + dir * land; out.push({ type: 'LINE', x1: last.x, y1: last.y, x2: lx, y2: last.y });
-    if(text) out.push({ type: 'TEXT', x: lx + dir * h * 0.4, y: last.y, h, rot: 0, text, ha: dir > 0 ? 'left' : 'right', va: 'middle', mt: true });
+    if(text){ out.push({ type: 'TEXT', x: lx + dir * h * 0.4, y: last.y, h, rot: 0, text, ha: dir > 0 ? 'left' : 'right', va: 'middle', mt: true });
+      if(M.frame){ const lines = String(text).split('\n'); const w = Math.max(...lines.map(l => [...l].length)) * h * 0.72 + h * 0.8, hh = lines.length * h * 1.5 + h * 0.4; const x0 = dir > 0 ? lx : lx - w, y0 = last.y - hh / 2; out.push({ type: 'POLYLINE', vertices: [{ x: x0, y: y0 }, { x: x0 + w, y: y0 }, { x: x0 + w, y: y0 + hh }, { x: x0, y: y0 + hh }], closed: true }); } }
     return out;
   }
   async function leaderCmd(multi){

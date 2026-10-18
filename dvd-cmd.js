@@ -581,4 +581,5 @@
   try{ const v = localStorage.getItem('dvd:props'); if(v === '1' || (v == null && fine() && window.innerWidth >= 900)) palWanted = true; }catch(_){}
   updateBar();
   window.DVDCmd = { run: runCommand, commands: CMDS, register, log, refresh: () => { _lastPr = ''; updateBar(); }, toggleHistory, runTransparent, togglePalette, toggleBar, showHelp, refreshPalette: () => { palSig = ''; refreshPalette(true); }, isPaletteOn: () => palWanted, focus: () => { if(input) input.focus(); } };
+  window.DVDCmd.history = () => lines.map(l => l.m);
 })();

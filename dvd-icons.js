@@ -379,8 +379,24 @@
     PDFIMPORT: DOC + '<path class="r" d="M7 12v5M7 12h1.5a1.5 1.5 0 0 1 0 3H7M11 12v5h1a2.5 2.5 0 0 0 0-5zM16 12h-1.5v5M14.5 14.5H16" stroke-width="1.2"/>',
     SYMBOL: '<circle cx="12" cy="12" r="8"/><path class="a" d="M12 4l3 12-3-2-3 2z"/><path class="fa2" d="M12 4l3 12-3-2z"/>',
     SPELLBROWSER: '<path d="M3 15L7 4h1.5l4 11M4.6 11h6"/><path class="r" d="M3 19c1-1 2 1 3 0s2 1 3 0 2 1 3 0"/><circle class="a" cx="18" cy="15" r="4"/><path class="a" d="M14 15h8M18 11c1.5 1.5 1.5 6.5 0 8"/>',
+    /* ---------- v4p ---------- */
+    REGION: '<path class="fa3" d="M3 6h11a6 6 0 0 1 0 12H3z"/><path class="a" d="M3 6h11a6 6 0 0 1 0 12H3z" stroke-width="1.8"/><circle class="fd" cx="9" cy="12" r="2.5"/><circle cx="9" cy="12" r="2.5"/>',
+    DATALINK: '<rect class="fd" x="2" y="3" width="14" height="13"/><path d="M2 7.5h14M2 12h14M7 3v13M11.5 3v13"/><path class="g" d="M2 3h14v4.5H2z" opacity=".5"/>' + CHAIN.replace('class="g"', 'class="a" transform="translate(9 9) scale(.6)"'),
+    DATALINKUPDATE: '<rect class="fd" x="2" y="3" width="14" height="13"/><path d="M2 7.5h14M2 12h14M7 3v13M11.5 3v13"/>' + '<path class="g" d="M21 14a5 5 0 0 1-9 3M12 22v-5h5" stroke-width="1.8"/>',
+    TABLEEXPORT: '<rect class="fd" x="2" y="3" width="14" height="13"/><path d="M2 7.5h14M2 12h14M7 3v13M11.5 3v13"/>' + AR(13, 19, 22, 19, 'y') + AR(13, 19, 13, 19, 'y'),
+    MLEADERSTYLE: '<path class="a" d="M4 20l7-8h9"/><path class="fa" d="M4 20l1-4 2.6 2.4z"/><path d="M12 8h9M12 5h6"/>' + GEAR(18, 18, 2.2),
+    SNAPANG: '<g transform="rotate(-25 12 12)"><path d="M2 8h20M2 12h20M2 16h20M8 2v20M12 2v20M16 2v20" opacity=".45"/></g><path class="a" d="M4 20h16M4 20l14-7" stroke-width="1.6"/><path class="y" d="M12 20a8 8 0 0 0-.8-3.6"/>',
+    SNAP: '<path d="M4 4v16M10 4v16M16 4v16M4 4h16M4 10h16M4 16h16" opacity=".4"/>' + O(10, 10, 'pa') + O(16, 16, 'pa') + '<path class="y" d="M18 21l-2-5 5 2-2 1z"/>',
+    STYLESMANAGER: '<path class="fd" d="M6 3h12v6H6z"/><path d="M6 3h12v6H6z"/><rect class="fd" x="3" y="9" width="18" height="8" rx="1"/><rect x="3" y="9" width="18" height="8" rx="1"/><path class="fd" d="M6 14h12v7H6z"/><path d="M6 14h12v7H6z"/><path class="r" d="M8 17h3"/><path class="g" d="M8 19h5" stroke-width="1.6"/><path class="a" d="M13 17h3" stroke-width="2"/>',
+    DBLIST: '<rect class="fd" x="4" y="2.5" width="16" height="19" rx="1"/><path d="M7 7h10M7 11h10M7 15h10M7 19h6"/><path class="a" d="M4 2.5h16v3H4z"/>',
+    JPGOUT: '<rect class="fd" x="2" y="4" width="16" height="13"/><path class="fg2" d="M2 17l5-6 4 4 3-2 4 4z"/><rect x="2" y="4" width="16" height="13"/>' + AR(14, 20, 22, 20, 'y'),
+    COPYHIST: '<rect class="fd" x="3" y="3" width="12" height="15" rx="1"/><path d="M6 7h6M6 10h6M6 13h4"/><rect class="fd" x="9" y="7" width="12" height="15" rx="1"/><rect class="a" x="9" y="7" width="12" height="15" rx="1"/><path class="a" d="M12 11h6M12 14h6M12 17h4"/>',
+    COLOR: '<circle class="fr" cx="9" cy="9" r="5"/><circle class="fy" cx="15" cy="9" r="5" opacity=".85"/><circle class="fa" cx="12" cy="15" r="5" opacity=".85"/>',
+    CLEANSCREENON: '<rect class="fd" x="2" y="3" width="20" height="18" rx="1"/><path d="M6 9V7h2M18 9V7h-2M6 15v2h2M18 15v2h-2" class="a" stroke-width="1.8"/>',
+    BASE: '<rect x="3" y="3" width="14" height="14" stroke-dasharray="2 1.5"/><path class="y" d="M3 21v-6M0 18h6" stroke-width="1.8"/>' + O(3, 18, 'pa'),
+    SELECT: '<rect class="a" x="3" y="3" width="14" height="14" stroke-dasharray="3 2"/><path class="fd" d="M11 9l9 4-4 1.5 3 4.5-2 1-3-4.5-3 3z"/><path d="M11 9l9 4-4 1.5 3 4.5-2 1-3-4.5-3 3z"/>',
     COUNT_: ''
   };
-  delete I.COUNT_;
+  delete I.COUNT_; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
   window.DVDIcons = I;
 })();

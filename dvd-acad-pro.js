@@ -71,6 +71,7 @@
      ===================================================================== */
   const IMG = new Map(), IMG_LOADING = new Set();
   window.DVDImg = { get(id){ if(!id) return null; const im = IMG.get(id); if(im) return im; if(!IMG_LOADING.has(id)){ IMG_LOADING.add(id); idbGet('img:' + id).then(b => { if(!b) return; const u = URL.createObjectURL(b); const el = new Image(); el.onload = () => { try{ draw(); }catch(_){} }; el.src = u; IMG.set(id, el); }).catch(() => {}); } return null; } };
+  A.imgAdd = async (blob, name) => { const id = uid('I'); await idbPut('img:' + id, blob); const u = URL.createObjectURL(blob); const el = new Image(); await new Promise(r => { el.onload = r; el.onerror = r; el.src = u; }); IMG.set(id, el); return { id, el, name }; };
   cmd(['IMAGEATTACH', 'IAT', 'IMAGE', 'IM'], 'Chèn ảnh nền (ảnh chụp, bản scan) vào bản vẽ', async () => {
     const f = await pickFile('image/*'); if(!f){ return; }
     const id = uid('I'); await idbPut('img:' + id, f);

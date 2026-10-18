@@ -361,14 +361,23 @@
   async function pdfToEnts(data, pageNo, opt){
     const L = await loadPdfJs(); const doc = await L.getDocument({ data, isEvalSupported: false }).promise; const page = await doc.getPage(Math.max(1, Math.min(doc.numPages, pageNo || 1)));
     const OPS = L.OPS; const ol = await page.getOperatorList(); const vb = page.view || [0, 0, 0, 0]; const k = opt.k; const org = opt.org || { x: 0, y: 0 };
-    const map = p => ({ x: org.x + (p.x - vb[0]) * k, y: org.y + (p.y - vb[1]) * k });
+    const map = p => { const q = { x: org.x + (p.x - vb[0]) * k, y: org.y + (p.y - vb[1]) * k }; if(p.bulge) q.bulge = p.bulge; return q; };
+    const flat = v => { if(!v.some(p => p.bulge)) return v; const o = []; for(let i = 0; i < v.length; i++){ const a = v[i], b = v[(i + 1) % v.length]; o.push({ x: a.x, y: a.y }); if(a.bulge && (i < v.length - 1 || true)){ try{ const arc = bulgeArcPoints(a, b, a.bulge); for(let j = 1; j < arc.length - 1; j++) o.push({ x: arc[j].x, y: arc[j].y }); }catch(_){} } } return o; };
+    // cung Bezier bậc 3 gần đúng cung tròn → trả bulge (null nếu không phải cung)
+    const arcFit = (p0, p1, p2, p3) => { const B = t => { const u = 1 - t; return { x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x, y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y }; };
+      const m = B(0.5); const ax = p0.x, ay = p0.y, bx = m.x, by = m.y, cx = p3.x, cy = p3.y; const d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by)); const chord = Math.hypot(cx - ax, cy - ay); if(Math.abs(d) < 1e-12 || chord < 1e-9) return null;
+      const ux = ((ax * ax + ay * ay) * (by - cy) + (bx * bx + by * by) * (cy - ay) + (cx * cx + cy * cy) * (ay - by)) / d, uy = ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx) + (cx * cx + cy * cy) * (bx - ax)) / d; const r = Math.hypot(ax - ux, ay - uy); if(!(r > 1e-9) || r > chord * 1e3) return null;
+      for(const t of [0.12, 0.25, 0.38, 0.62, 0.75, 0.88]){ const q = B(t); if(Math.abs(Math.hypot(q.x - ux, q.y - uy) - r) > Math.max(r * 4e-3, 1e-6)) return null; }
+      const a0 = Math.atan2(ay - uy, ax - ux), am = Math.atan2(by - uy, bx - ux), a1 = Math.atan2(cy - uy, cx - ux); const nrm = a => { while(a <= -Math.PI) a += TAU; while(a > Math.PI) a -= TAU; return a; };
+      const s1 = nrm(am - a0), s2 = nrm(a1 - am); if(Math.sign(s1) !== Math.sign(s2)) return null; const sw = s1 + s2; if(Math.abs(sw) < 1e-6 || Math.abs(sw) > Math.PI * 1.01) return null; return Math.tan(sw / 4); };
+    const addCurve = (p0, p1, p2, p3) => { const b = opt.arcs !== false ? arcFit(p0, p1, p2, p3) : null; if(b != null){ p0.bulge = b; curS.pts.push(p3); } else curS.pts.push(...bez(p0, p1, p2, p3, 8)); };
     let ctm = [1, 0, 0, 1, 0, 0]; const stack = []; let stroke = '#000000', fill = '#000000'; let subs = [], curS = null; const out = []; let nSkip = 0;
     const col = h => (!h || h === '#000000') ? '#ffffff' : h;
     const flush = (doStroke, doFill, evenOdd) => {
-      const closedS = subs.filter(s => s.pts.length >= 3);
-      if(doFill && opt.fill && closedS.length && out.length < opt.max){ const loops = closedS.map(s => s.pts.map(map)); const e = { type: 'HATCH', loops, solid: true, col: col(fill), layer: 'PDF_Solid Fills' }; out.push(e); }
+      const closedS = subs.filter(s => s.pts.length >= 3 || (s.pts.length >= 2 && s.pts.some(p => p.bulge)));
+      if(doFill && opt.fill && closedS.length && out.length < opt.max){ const loops = closedS.map(s => flat(s.pts.map(map))); const e = { type: 'HATCH', loops, solid: true, col: col(fill), layer: 'PDF_Solid Fills' }; out.push(e); }
       if(doStroke || (doFill && !opt.fill)) for(const s of subs){ if(s.pts.length < 2) continue; if(out.length >= opt.max){ nSkip++; continue; } const v = s.pts.map(map);
-        if(v.length === 2) out.push({ type: 'LINE', x1: v[0].x, y1: v[0].y, x2: v[1].x, y2: v[1].y, col: col(doStroke ? stroke : fill), layer: 'PDF_Geometry' });
+        if(v.length === 2 && !v[0].bulge) out.push({ type: 'LINE', x1: v[0].x, y1: v[0].y, x2: v[1].x, y2: v[1].y, col: col(doStroke ? stroke : fill), layer: 'PDF_Geometry' });
         else out.push({ type: 'POLYLINE', vertices: v, closed: !!s.closed, col: col(doStroke ? stroke : fill), layer: 'PDF_Geometry' }); }
       subs = []; curS = null;
     };
@@ -386,10 +395,10 @@
         for(const op of ops){
           if(op === OPS.moveTo){ curS = { pts: [ap(ctm, co[j], co[j + 1])] }; subs.push(curS); j += 2; }
           else if(op === OPS.lineTo){ if(!curS){ curS = { pts: [] }; subs.push(curS); } curS.pts.push(ap(ctm, co[j], co[j + 1])); j += 2; }
-          else if(op === OPS.curveTo){ const p0 = curS && curS.pts[curS.pts.length - 1]; const p1 = ap(ctm, co[j], co[j + 1]), p2 = ap(ctm, co[j + 2], co[j + 3]), p3 = ap(ctm, co[j + 4], co[j + 5]); j += 6; if(p0) curS.pts.push(...bez(p0, p1, p2, p3, 8)); }
-          else if(op === OPS.curveTo2){ const p0 = curS && curS.pts[curS.pts.length - 1]; const p2 = ap(ctm, co[j], co[j + 1]), p3 = ap(ctm, co[j + 2], co[j + 3]); j += 4; if(p0) curS.pts.push(...bez(p0, p0, p2, p3, 8)); }
-          else if(op === OPS.curveTo3){ const p0 = curS && curS.pts[curS.pts.length - 1]; const p1 = ap(ctm, co[j], co[j + 1]), p3 = ap(ctm, co[j + 2], co[j + 3]); j += 4; if(p0) curS.pts.push(...bez(p0, p1, p3, p3, 8)); }
-          else if(op === OPS.closePath){ if(curS){ curS.closed = true; const f = curS.pts[0]; curS = { pts: [f] }; subs.push(curS); } }
+          else if(op === OPS.curveTo){ const p0 = curS && curS.pts[curS.pts.length - 1]; const p1 = ap(ctm, co[j], co[j + 1]), p2 = ap(ctm, co[j + 2], co[j + 3]), p3 = ap(ctm, co[j + 4], co[j + 5]); j += 6; if(p0) addCurve(p0, p1, p2, p3); }
+          else if(op === OPS.curveTo2){ const p0 = curS && curS.pts[curS.pts.length - 1]; const p2 = ap(ctm, co[j], co[j + 1]), p3 = ap(ctm, co[j + 2], co[j + 3]); j += 4; if(p0) addCurve(p0, p0, p2, p3); }
+          else if(op === OPS.curveTo3){ const p0 = curS && curS.pts[curS.pts.length - 1]; const p1 = ap(ctm, co[j], co[j + 1]), p3 = ap(ctm, co[j + 2], co[j + 3]); j += 4; if(p0) addCurve(p0, p1, p3, p3); }
+          else if(op === OPS.closePath){ if(curS){ curS.closed = true; const f = curS.pts[0]; curS = { pts: [{ x: f.x, y: f.y }] }; subs.push(curS); } }
           else if(op === OPS.rectangle){ const x = co[j], y = co[j + 1], w = co[j + 2], h = co[j + 3]; j += 4; subs.push({ pts: [ap(ctm, x, y), ap(ctm, x + w, y), ap(ctm, x + w, y + h), ap(ctm, x, y + h)], closed: true }); curS = null; }
         }
       }
@@ -399,9 +408,26 @@
       else if(fn === OPS.endPath){ subs = []; curS = null; }
     }
     // gộp: bỏ đa tuyến chỉ còn 1 điểm, sửa đa tuyến kín trùng điểm đầu
-    for(const e of out) if(e.type === 'POLYLINE'){ const v = e.vertices; if(v.length > 2 && Math.hypot(v[0].x - v[v.length - 1].x, v[0].y - v[v.length - 1].y) < 1e-9){ v.pop(); e.closed = true; } }
+    for(const e of out) if(e.type === 'POLYLINE'){ const v = e.vertices; if(v.length > 2 && Math.hypot(v[0].x - v[v.length - 1].x, v[0].y - v[v.length - 1].y) < 1e-7 * Math.max(1, Math.abs(v[0].x) + Math.abs(v[0].y))){ v.pop(); e.closed = true; } }
+    // gộp các cung liền nhau cùng tâm; đa tuyến toàn cung cùng tâm → CIRCLE / ARC
+    let nArc = 0;
+    const segArc = (a, b) => { const th = 4 * Math.atan(a.bulge), ch = Math.hypot(b.x - a.x, b.y - a.y); if(ch < 1e-12) return null; const r = ch / (2 * Math.abs(Math.sin(th / 2))); const h = r * Math.cos(th / 2) * Math.sign(a.bulge); const nx = -(b.y - a.y) / ch, ny = (b.x - a.x) / ch; return { x: (a.x + b.x) / 2 + nx * h, y: (a.y + b.y) / 2 + ny * h, r, th }; };
+    const sameC = (p, q) => p && q && Math.sign(p.th) === Math.sign(q.th) && Math.hypot(p.x - q.x, p.y - q.y) <= Math.max(p.r, q.r) * 0.01 && Math.abs(p.r - q.r) <= Math.max(p.r, q.r) * 0.01;
+    for(let i = 0; i < out.length; i++){ const e = out[i]; if(e.type !== 'POLYLINE' || !e.vertices.some(v => v.bulge)) continue; const v = e.vertices; const n = v.length, nSeg = e.closed ? n : n - 1;
+      const S = []; for(let j = 0; j < nSeg; j++){ const a = v[j], b = v[(j + 1) % n]; S.push(a.bulge ? segArc(a, b) : null); }
+      // toàn bộ là cung cùng tâm?
+      if(S.every(x => x) && S.every(x => sameC(x, S[0]))){ let sw = 0, cx = 0, cy = 0; for(const x of S){ sw += x.th; cx += x.x * Math.abs(x.th); cy += x.y * Math.abs(x.th); } const tw = S.reduce((t, x) => t + Math.abs(x.th), 0); cx /= tw; cy /= tw; let r = 0; for(const p of v) r += Math.hypot(p.x - cx, p.y - cy); r /= n; const base = { col: e.col, layer: e.layer };
+        if(e.closed && Math.abs(Math.abs(sw) - TAU) < 0.05){ out[i] = Object.assign({ type: 'CIRCLE', cx, cy, r }, base); nArc++; continue; }
+        if(!e.closed && Math.abs(sw) < TAU - 1e-3){ let a1 = Math.atan2(v[0].y - cy, v[0].x - cx) * R2D, a2 = Math.atan2(v[n - 1].y - cy, v[n - 1].x - cx) * R2D; if(sw < 0){ const t = a1; a1 = a2; a2 = t; } out[i] = Object.assign({ type: 'ARC', cx, cy, r, a1: (a1 + 360) % 360, a2: (a2 + 360) % 360 }, base); nArc++; continue; } }
+      // gộp cung liền kề cùng tâm (bo góc, cung nhiều đoạn)
+      const nv = [Object.assign({}, v[0])]; let acc = S[0], accSw = S[0] ? S[0].th : 0;
+      for(let j = 1; j < nSeg; j++){ const sj = S[j]; if(acc && sj && sameC(acc, sj) && Math.abs(accSw + sj.th) < Math.PI * 1.5){ accSw += sj.th; continue; }
+        if(acc) nv[nv.length - 1].bulge = Math.tan(accSw / 4); else delete nv[nv.length - 1].bulge; nv.push(Object.assign({}, v[j])); acc = sj; accSw = sj ? sj.th : 0; }
+      if(acc) nv[nv.length - 1].bulge = Math.tan(accSw / 4); else delete nv[nv.length - 1].bulge;
+      if(!e.closed){ const last = Object.assign({}, v[n - 1]); delete last.bulge; nv.push(last); }
+      if(nv.length < v.length){ e.vertices = nv; nArc++; } }
     if(opt.text){ const tc = await page.getTextContent(); for(const it of tc.items){ if(!it.str || !it.str.trim()) continue; const t = it.transform; const h = Math.hypot(t[2], t[3]) * k; const p = map({ x: t[4], y: t[5] }); const rot = Math.atan2(t[1], t[0]) * R2D; out.push({ type: 'TEXT', x: p.x, y: p.y, h: Math.max(h * 0.75, 1e-6), rot: Math.abs(rot) < 1e-6 ? 0 : rot, text: it.str, layer: 'PDF_Text', col: '#ffffff' }); } }
-    return { ents: out, pages: doc.numPages, skipped: nSkip, size: [(vb[2] - vb[0]) * k, (vb[3] - vb[1]) * k] };
+    return { ents: out, pages: doc.numPages, skipped: nSkip, arcs: nArc, size: [(vb[2] - vb[0]) * k, (vb[3] - vb[1]) * k], page, vb };
   }
   A.pdfToEnts = pdfToEnts;
   async function pdfImport(file){
@@ -411,19 +437,33 @@
     let pg = 1; if(pages > 1){ const r = await A.getNum('Trang cần nhập (1–' + pages + ')', { def: 1 }); pg = Math.max(1, Math.min(pages, Math.round(r.num || 1))); }
     const s = await A.getNum('Tỉ lệ bản vẽ trong PDF 1:N, nhập N (1 = đúng kích thước giấy)', { def: annoN() }); const N = s.num > 0 ? s.num : annoN();
     const k = (25.4 / 72) * N / unitMM();
-    const o = await A.getKw('Nhập', { kw: [{ k: 'T', t: 'Nét + chữ + vùng tô' }, { k: 'N', t: 'Chỉ nét + chữ' }, { k: 'G', t: 'Chỉ nét' }], def: 'Nét + chữ + vùng tô' });
+    const o = await A.getKw('Nhập', { kw: [{ k: 'T', t: 'Nét + chữ + vùng tô' }, { k: 'N', t: 'Chỉ nét + chữ' }, { k: 'G', t: 'Chỉ nét' }, { k: 'A', t: 'Ảnh (bản quét)' }], def: 'Nét + chữ + vùng tô' });
+    if(o.kw === 'A') return pdfRaster(data, pg, k);
     log('PDFIMPORT: đang đọc trang ' + pg + '…');
     let R; try{ R = await pdfToEnts(data, pg, { k, fill: !o.kw || o.kw === 'T', text: o.kw !== 'G', max: 200000 }); }catch(err){ console.error(err); say('Lỗi đọc PDF: ' + err.message); return; }
-    if(!R.ents.length){ say('Trang PDF không có nét vector (có thể là ảnh quét).'); return; }
+    if(!R.ents.filter(e => e.type !== 'TEXT').length){ log('Trang PDF không có nét vector (bản quét) → chèn trang thành ảnh nền.'); return pdfRaster(data, pg, k); }
     let mn = { x: Infinity, y: Infinity }; for(const e of R.ents){ const b = entBBox(e); if(b){ mn.x = Math.min(mn.x, b.x0); mn.y = Math.min(mn.y, b.y0); } }
     const p = await A.getPoint('Điểm chèn (góc dưới trái) <0,0>', { rubber: false }); const ins = p.pt || { x: 0, y: 0 };
     const dx = ins.x - (isFinite(mn.x) ? mn.x : 0), dy = ins.y - (isFinite(mn.y) ? mn.y : 0);
     for(const ly of ['PDF_Geometry', 'PDF_Text', 'PDF_Solid Fills']) if(R.ents.some(e => e.layer === ly)) A.addLayer(ly);
     const add = R.ents.map(e => { A.xformEnt(e, { a: 1, b: 0, c: 0, d: 1, e: dx, f: dy }); return e; });
-    A.commit({ add }, 'PDFIMPORT: ' + add.length + ' đối tượng từ trang ' + pg + (R.skipped ? ' (bỏ ' + R.skipped + ' do quá nhiều)' : ''));
+    A.commit({ add }, 'PDFIMPORT: ' + add.length + ' đối tượng từ trang ' + pg + (R.arcs ? ', ' + R.arcs + ' cung/đường tròn' : '') + (R.skipped ? ' (bỏ ' + R.skipped + ' do quá nhiều)' : ''));
     try{ A.pushView && A.pushView(); fitView(); }catch(_){}
   }
   A.pdfImport = pdfImport;
+  // PDF quét (không có nét vector): kết xuất trang thành ảnh nền đúng tỉ lệ
+  async function pdfRaster(data, pg, k, pt){
+    const L = await loadPdfJs(); const doc = await L.getDocument({ data: data.slice ? data.slice(0) : data, isEvalSupported: false }).promise; const page = await doc.getPage(pg);
+    const vb = page.view; const wPt = vb[2] - vb[0], hPt = vb[3] - vb[1]; const dpi = Math.min(200, Math.floor(Math.sqrt(24e6 / (wPt * hPt / 5184)))); const vp = page.getViewport({ scale: dpi / 72 });
+    const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height); const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
+    log('PDFIMPORT: đang kết xuất trang ' + pg + ' (' + dpi + ' dpi)…'); await page.render({ canvasContext: cx, viewport: vp }).promise;
+    const blob = await new Promise(r => c.toBlob(r, 'image/png')); if(!blob || !A.imgAdd){ say('Không tạo được ảnh.'); return; }
+    const im = await A.imgAdd(blob, 'pdf-trang-' + pg + '.png');
+    let ins = pt; if(!ins){ const p = await A.getPoint('Điểm chèn (góc dưới trái) <0,0>', { rubber: false }); ins = p.pt || { x: 0, y: 0 }; }
+    const e = A.newProps({ type: 'IMAGE', x: ins.x, y: ins.y, w: wPt * k, h: hPt * k, rot: 0, img: im.id, name: im.name, op: 1 }); delete e.lt;
+    A.commit({ add: [e] }, 'PDFIMPORT: chèn trang ' + pg + ' thành ảnh ' + c.width + '×' + c.height + ' px'); try{ fitView(); }catch(_){} return e;
+  }
+  A.pdfRaster = pdfRaster;
   plain(['PDFIMPORT', 'PDFATTACH', 'NHAPPDF'], 'Nhập bản vẽ PDF vector thành nét, chữ, vùng tô (lớp PDF_Geometry / PDF_Text)', () => pick('.pdf').then(f => f && A.run('PDFIMPORT', () => pdfImport(f))));
 
   // phím tắt như AutoCAD
