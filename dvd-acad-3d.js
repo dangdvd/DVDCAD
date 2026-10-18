@@ -690,6 +690,7 @@
   /* ---------------- DXF: khối 3D -> mặt 3DFACE ---------------- */
   const _toDxf = window.entitiesToDXF;
   window.entitiesToDXF = function(ents){
+    if(A.dxfR2000 && A.dxfVer !== 'R12') return _toDxf.apply(this, arguments);   // R2000: khối 3D ghi trong dvd-acad-dxf.js
     const list = (ents || []).filter(e => e && !e.xr && is3D(e)); if(!list.length) return _toDxf.apply(this, arguments);
     const s = _toDxf.call(this, (ents || []).filter(e => !is3D(e)));
     const L = []; const P = (c, v) => { L.push(String(c)); L.push(typeof v === 'number' ? (Math.abs(v) < 1e-12 ? '0' : String(+v.toFixed(8))) : String(v)); };

@@ -213,6 +213,20 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v4s) — lưu DXF R2000
+Lưu DXF (Ctrl+S, SAVEAS, xuất DXF, gửi máy chủ DWG) nay ghi **DXF R2000 (AC1015)** — đầy đủ cấu trúc của AutoCAD 2000+: handle, BLOCK_RECORD, OBJECTS (dictionary, layout Model / Layout1).
+- **Bề rộng nét** từng đối tượng và từng lớp (mã 370) — in ra đúng nét đậm / mảnh.
+- **LWPOLYLINE** có cung; **MTEXT** cho chữ nhiều dòng (giữ xuống dòng, ký tự { } \\); **TEXT** tiếng Việt dạng \U+.
+- **HATCH thật**: tô đặc, mẫu ANSI31 / ANSI32 / ANSI37 / NET / LINE / BRICK kèm định nghĩa đường mẫu (AutoCAD sửa hatch được). Mẫu ngẫu nhiên (DOTS, AR-CONC, EARTH) ghi thành nét như trước.
+- **ELLIPSE**, **XLINE**, **RAY**, **3DFACE** (khối 3D, mở lại trong DVDCAD vẫn là khối).
+- **Kiểu nét phức**: chữ trong nét (GAS…) và hình (ltypeshp.shx).
+- Khối + thuộc tính (BLOCK / INSERT / ATTDEF / ATTRIB), kích thước thẳng / bán kính / đường kính / góc (DIMENSION) như bản trước.
+- Đã kiểm tra bằng 2 bộ đọc độc lập: ezdxf (0 lỗi cấu trúc) và LibreCAD.
+
+Khi mở file: hatch có mẫu cùng tên trong DVDCAD (ANSI31, NET, BRICK…) nay hiện đúng mẫu, tỉ lệ, góc; đường tròn / cung / elip trong khối giữ nguyên là đường tròn / cung / elip (trước đây thành đa tuyến).
+
+`DXFVERSION`: chọn R2000 (mặc định) hoặc R12 (phần mềm cũ). Output → Export.
+
 ## Bổ sung (v4r)
 **Cắt, nối, bo góc giữ cung:** TRIM, BREAK / BREAKATPOINT, EXTEND (đầu thẳng), JOIN (nối đoạn thẳng + cung + đa tuyến), FILLET / CHAMFER đa tuyến (một góc hoặc **P** cả đa tuyến) và REVERSE / PEDIT đảo chiều đều giữ cung thật — cung cắt ra vẫn đúng tâm, bán kính; bo góc tạo cung thật (bulge) thay vì nhiều đoạn nhỏ.
 
@@ -426,18 +440,18 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Lưu DXF ngay trong app. Lưu **DWG** cần máy chủ chuyển đổi (`SAVEDWG`, xem trên).
 - Khối lưu ra DXF thành BLOCK + INSERT (kèm thuộc tính ATTDEF/ATTRIB); kích thước thẳng, bán kính, đường kính lưu thành DIMENSION. Kích thước góc lưu thành DIMENSION 3 điểm; bản khối bị sửa riêng lưu thành khối biến thể (TÊN$1…). Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước. Kích thước không bám theo khi chỉ sửa riêng đường hình.
 - Kích thước thẳng/chéo có sẵn trong file DWG/DXF cũng kéo ô nắm và STRETCH được. Khi sửa, kích thước được vẽ lại theo kiểu của DVDCAD: giữ cao chữ, số lẻ, mũi tên/gạch chéo. Kích thước góc và bán kính của file gốc chỉ chọn theo cụm.
-- Bề rộng nét theo từng đối tượng không ghi được vào DXF R12 (AutoCAD vẫn đọc được kiểu nét).
+- DXF lưu mặc định bản **R2000** (AutoCAD 2000 trở lên): giữ bề rộng nét, HATCH, MTEXT, kiểu nét phức. Chọn `DXFVERSION` → R12 khi cần mở bằng phần mềm rất cũ (mất các phần trên).
 - Hatch dò biên trong màn hình trước, không thấy biên kín thì tự mở rộng phạm vi dò (tới 40 lần màn hình).
 - Đa tuyến có cung giữ đúng cung khi di chuyển, xoay, lật, tỉ lệ, OFFSET, sửa bằng ô nắm và lưu DXF. TRIM, BREAK, EXTEND, JOIN, FILLET / CHAMFER đa tuyến, REVERSE cũng giữ cung. Cung ở đầu đa tuyến chưa EXTEND được (kéo ô nắm hoặc LENGTHEN).
 - Vùng (REGION) lưu ra DXF dạng đa tuyến kín kèm dữ liệu DVDCAD (mở lại trong DVDCAD vẫn là vùng; AutoCAD thấy đa tuyến). Spline / elip trong phép toán vùng được chia thành đoạn thẳng nhỏ.
 - DATALINK tự đọc lại file Excel trên Chrome / Edge máy tính. Trên iPhone / iPad / Safari: dùng `DATALINKURL` (Google Sheets / link CSV) để tự cập nhật, hoặc chọn lại file khi chạy DATALINKUPDATE.
 - Trình duyệt không tự ghi được DWG: `SAVEDWG` gửi DXF tới máy chủ ODA của bạn. Không có máy chủ thì lưu DXF, AutoCAD mở bình thường.
 - Ràng buộc tham số và khối động lưu trên máy (theo bản vẽ / tên khối), không ghi vào DXF. Khối động trong file AutoCAD hiện đúng trạng thái đang lưu nhưng chưa đổi được tham số gốc của AutoCAD.
-- Vùng che, thứ tự vẽ và chú thích theo tỉ lệ ghi ra DXF dạng nét thường.
+- Vùng che, thứ tự vẽ và chú thích theo tỉ lệ ghi ra DXF dạng nét thường. Màu RGB (true color) ghi theo màu ACI gần nhất (DXF R2000 chưa có true color).
 - 3D chưa có: bo cạnh tuỳ ý trên khối sau cộng/trừ (chỉ bo được hộp, khối đùn, trụ), render dò tia chất lượng ảnh chụp.
 - Khối sau UNION/SUBTRACT là lưới tam giác: mặt cong hiện dạng nhiều mặt phẳng nhỏ.
 - Khối ACIS (3DSOLID) của AutoCAD trong DXF đọc được: mặt phẳng, mặt trụ, nón, cầu, xuyến. Mặt cong tự do (spline, bo cạnh của AutoCAD) hiện gần đúng theo đường biên. Khối đọc vào thành khối lưới, lưu lại là 3DFACE. Đọc 3DSOLID từ file **DWG** đang thử nghiệm.
 - UCS ở DVDCAD chỉ dùng cho lệnh tạo khối 3D. Nét 2D luôn vẽ trên mặt bằng XY.
 - Layout chỉ chứa khung tên và khung nhìn. Muốn ghi chú thêm thì vẽ ở Model.
 - Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
-- Kiểu nét phức: chữ và hình trong nét hiện đúng (hình của ltypeshp.shx vẽ gần đúng: tròn, vuông, gạch, zigzag, batting; hình SHX khác hiện dạng vòng tròn nhỏ). DXF R12 không có kiểu nét phức nên khi lưu, chữ / hình trong nét không được ghi (AutoCAD thấy nét đứt).
+- Kiểu nét phức: chữ và hình trong nét hiện đúng (hình của ltypeshp.shx vẽ gần đúng: tròn, vuông, gạch, zigzag, batting; hình SHX khác hiện dạng vòng tròn nhỏ).. Lưu DXF R2000 ghi đủ chữ trong nét; hình trong nét ghi theo số hình của ltypeshp.shx (AutoCAD cần có file này — có sẵn khi cài AutoCAD).

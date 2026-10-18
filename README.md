@@ -4,6 +4,10 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v4s: lưu DXF R2000
+- `dvd-acad-dxf.js`: ghi DXF AC1015 đầy đủ handle / BLOCK_RECORD / OBJECTS; bề rộng nét 370, LWPOLYLINE, MTEXT, HATCH (đặc + mẫu), ELLIPSE, XLINE/RAY, kiểu nét phức, khối + thuộc tính, DIMENSION. `DXFVERSION` để chọn lại R12.
+- Đọc DXF/DWG: hatch giữ mẫu / tỉ lệ / góc; đường tròn, cung, elip trong khối giữ nguyên loại.
+
 ## v4r: cải tiến các giới hạn còn lại
 - TRIM / BREAK / EXTEND / JOIN / FILLET / CHAMFER / REVERSE giữ cung của đa tuyến; từ khoá P không bị PAN chiếm.
 - DXF: kích thước góc thành DIMENSION, bản khối sửa riêng thành khối biến thể.

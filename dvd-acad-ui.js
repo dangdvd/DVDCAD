@@ -559,7 +559,7 @@
     ] },
     output: { en: 'Output', vi: 'Xuất', panels: [
       { id: 'plot', en: 'Plot', vi: 'In', items: [big('PLOT', 'Plot', 'In bản vẽ'), big('PUBLISH', 'Batch\nPlot', 'In\nhàng loạt'), col(sm('LAYOUTS', 'Page Setup', 'Layout & khổ giấy'), sm('STYLESMANAGER', 'Plot Style Manager', 'Kiểu in .ctb'), sm('EXPORT', 'Export Image', 'Xuất ảnh / PDF'))] },
-      { id: 'exp', en: 'Export', vi: 'Xuất file', items: [big('EXPORT', 'Export\nPDF', 'Xuất\nPDF'), big('SAVEDWG', 'Save\nDWG', 'Lưu\nDWG'), col(sm('DXFOUT', 'Export DXF', 'Xuất DXF'), sm('SAVEAS', 'Save As DXF', 'Lưu thành DXF'), sm('DWGSERVER', 'DWG Server', 'Máy chủ DWG'))] },
+      { id: 'exp', en: 'Export', vi: 'Xuất file', items: [big('EXPORT', 'Export\nPDF', 'Xuất\nPDF'), big('SAVEDWG', 'Save\nDWG', 'Lưu\nDWG'), col(sm('DXFOUT', 'Export DXF', 'Xuất DXF'), sm('SAVEAS', 'Save As DXF', 'Lưu thành DXF'), sm('DWGSERVER', 'DWG Server', 'Máy chủ DWG')), col(sm('DXFVERSION', 'DXF Version', 'Phiên bản DXF'))] },
       { id: 'exp3', en: '3D Print', vi: 'Xuất 3D', items: [col(sm('EXPORTSTL', 'Export STL', 'Xuất STL'), sm('EXPORTOBJ', 'Export OBJ', 'Xuất OBJ'))] }
     ] },
     collab: { en: 'Collaborate', vi: 'Cộng tác', panels: [
