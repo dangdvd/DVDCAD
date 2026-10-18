@@ -156,18 +156,20 @@
     const finish = () => { if(R.view){ view.scale = R.view.scale; view.offsetX = R.view.offsetX; view.offsetY = R.view.offsetY; } RE = null; OBJ_HIDE = R.hide0 || null; A.SET.pickGroup = R.pg; if(reBar){ reBar.remove(); reBar = null; } selEnts.clear(); try{ refreshPanSel(); invalidateSnap(); }catch(_){} draw(); A.paint(); if(A.onIsolate) A.onIsolate(); };
     if(!save){ let n = 0; while(editUndoStack.length > R.undo0 && n++ < 5000) undoEdit(); finish(); log('Đã huỷ thay đổi khối.'); return; }
     const Minv = inv(R.bm); const mine = modelEntities.filter(e => e.grp === R.gid);
-    const local = mine.map(m => { const w = xformEnt(deep(m), Minv); delete w.userAdded; delete w.grp; delete w.bip; delete w.bm; delete w.dimd; delete w.tbld; return w; });
+    const local = mine.filter(m => !m.att).map(m => { const w = xformEnt(deep(m), Minv); delete w.userAdded; delete w.grp; delete w.bip; delete w.bm; delete w.dimd; delete w.tbld; return w; });   // thuộc tính là riêng từng khối
     const inst = blockInstances(R.name); inst.delete(R.gid);
     let total = 0; for(const g of inst.values()) total += local.length;
     if(total > 40000 && !confirm('Cập nhật ' + inst.size + ' khối (' + total + ' nét). Bản vẽ lớn có thể lưu chậm. Tiếp tục?')){ finish(); return; }
     const del = [], add = []; const srcHex = A.layerHex(R.lay || '0');
     for(const [gid, g] of inst){
-      for(const e of g.list) del.push(e);
-      for(const l of local){ const w = xformEnt(deep(l), g.bm); w.grp = gid; w.blk = R.name; w.bm = g.bm; if(g.bip) w.bip = g.bip;
+      for(const e of g.list) if(!e.att) del.push(e);
+      const has = new Set(g.list.filter(e => e.att).map(e => e.att));
+      for(const l of local){ if(l.attdef && has.has(l.attdef.tag)) continue; const w = xformEnt(deep(l), g.bm); if(w.attdef){ w.att = w.attdef.tag; w.attp = w.attdef.prompt; w.text = w.attdef.def || ''; delete w.attdef; } w.grp = gid; w.blk = R.name; w.bm = g.bm; if(g.bip) w.bip = g.bip;
         if(l.l0 && g.bm.lay){ w.layer = g.bm.lay; if(l.bl || String(l.col || '').toLowerCase() === String(srcHex).toLowerCase()) w.col = A.layerHex(w.layer); }
         add.push(w); }
     }
-    if(add.length || del.length) A.commit({ del, add }, 'Đã cập nhật ' + inst.size + ' khối "' + R.name + '"');
+    const repA = mine.filter(m => m.attdef).map(m => { const w = deep(m); delete w.userAdded; w.att = w.attdef.tag; w.attp = w.attdef.prompt; w.text = w.attdef.def || ''; delete w.attdef; return [m, w]; });
+    if(add.length || del.length || repA.length) A.commit({ del, add, rep: repA }, 'Đã cập nhật ' + inst.size + ' khối "' + R.name + '"');
     finish(); log('Đã lưu khối "' + R.name + '" cho ' + (inst.size + 1) + ' bản.');
   }
   A.refedit = startRefedit; A.refclose = endRefedit; A.inRefedit = () => !!RE;

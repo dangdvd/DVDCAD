@@ -1318,6 +1318,7 @@
     for(const p of B.prims){ if(out.length > 50000) break; const w = deep(p); delete w.userAdded; delete w.grp; delete w.bip; delete w.dimd; delete w.bm; delete w.l0; delete w.tbld;
       translateEnt(w, -B.base.x, -B.base.y); if(sc !== 1) scaleEnt(w, sc, { x: 0, y: 0 }); if(rotDeg) rotateEnt(w, rotDeg, { x: 0, y: 0 }); translateEnt(w, ins.x, ins.y);
       if(!w.layer || w.layer === '0'){ w.layer = lay; w.l0 = 1; if(!w.col || String(w.col).toLowerCase() === String(l0).toLowerCase() || w.bl){ w.col = A.layerHex(lay); w.bl = 1; } }
+      if(w.attdef){ w.att = w.attdef.tag; w.attp = w.attdef.prompt; w.text = w.attdef.def || ''; delete w.attdef; }   // định nghĩa thuộc tính -> thuộc tính có giá trị
       w.grp = gid; w.blk = name; w.bip = { x: ins.x, y: ins.y }; w.bm = bm; out.push(w); }
     return out;
   }
@@ -1374,7 +1375,8 @@
     L[nm] = { base: b.pt, ents: sel.map(e => { const o = serializeEnt(e); delete o.grp; delete o.blk; return o; }), t: Date.now() };
     if(!saveLib(L)) return; blkCache.delete('lib|' + nm);
     const gid = A.newGroupId('B');
-    A.commit({ rep: transformAll(sel, w => { w.grp = gid; w.blk = nm; }) }, 'Đã tạo khối "' + nm + '" (' + sel.length + ' nét) — dùng INSERT để chèn ở bản vẽ khác');
+    const bm = { name: nm, src: 'lib', lay: A.LS.cur || '0', a: 1, b: 0, c: 0, d: 1, e: b.pt.x, f: b.pt.y };
+    A.commit({ rep: transformAll(sel, w => { w.grp = gid; w.blk = nm; w.bm = bm; w.bip = { x: b.pt.x, y: b.pt.y }; if(w.attdef){ w.att = w.attdef.tag; w.attp = w.attdef.prompt; w.text = w.attdef.def || ''; delete w.attdef; } }) }, 'Đã tạo khối "' + nm + '" (' + sel.length + ' nét) — dùng INSERT để chèn ở bản vẽ khác');
   });
   cmd(['GROUP', 'G'], 'Gộp nhóm (chọn 1 lần cả nhóm)', async () => {
     const s = await A.getSel('Chọn đối tượng cần gộp nhóm'); const sel = s.sel || []; if(sel.length < 2){ log('Cần ≥ 2 đối tượng.'); return; }
@@ -1458,8 +1460,9 @@
   A.aciNear = aciNear;
   function dxfStr(s){ return String(s).replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }
   window.entitiesToDXF = function(ents){
+    ents = ents.filter(e => e && !e.xr);   // tham chiếu ngoài (XREF) không ghi vào file
     const L = []; const P = (c, v) => { L.push(String(c)); let s; if(typeof v === 'number') s = (c >= 10 && c < 60) ? _fmtReal(v) : String(v | 0); else s = String(v); L.push(s); };
-    const layers = new Set(A.layerNames()); for(const e of ents) layers.add(String(e.layer || '0'));
+    const layers = new Set(A.layerNames().filter(n => !n.includes('|'))); for(const e of ents) layers.add(String(e.layer || '0'));
     let ext = bboxOf(ents) || { x0: 0, y0: 0, x1: 100, y1: 100 };
     P(0, 'SECTION'); P(2, 'HEADER'); P(9, '$ACADVER'); P(1, 'AC1009'); if(insunits){ P(9, '$INSUNITS'); P(70, insunits); }
     P(9, '$EXTMIN'); P(10, ext.x0); P(20, ext.y0); P(9, '$EXTMAX'); P(10, ext.x1); P(20, ext.y1); P(9, '$CLAYER'); P(8, A.LS.cur || '0'); P(9, '$LTSCALE'); P(40, LTSCALE || 1); P(9, '$CELTSCALE'); P(40, A.LS.celts || 1); P(0, 'ENDSEC');
@@ -1502,6 +1505,7 @@
             head('TEXT'); P(10, x); P(20, y); P(30, 0); P(40, h); P(1, dxfStr(s)); if(e.style && stUsed.has(e.style)) P(7, dxfStr(e.style)); if(rr) P(50, rr); if(e.xs && Math.abs(e.xs - 1) > 1e-3) P(41, e.xs); if(hj) P(72, hj); if(vj) P(73, vj); if(hj || vj){ P(11, x); P(21, y); P(31, 0); } }
           break; }
         case 'POLYLINE': poly(e.vertices || [], !!e.closed); break;
+        case 'IMAGE': try{ poly(imgCorners(e), true); }catch(_){} break;
         case 'SOLID': { const p = e.pts || []; if(p.length >= 3){ head('SOLID'); P(10, p[0].x); P(20, p[0].y); P(30, 0); P(11, p[1].x); P(21, p[1].y); P(31, 0); P(12, p[2].x); P(22, p[2].y); P(32, 0); const q = p[3] || p[2]; P(13, q.x); P(23, q.y); P(33, 0); } break; }
         case 'ELLIPSE': try{ poly(smpEllipse(e), Math.abs(((e.p2 == null ? TAU : e.p2) - (e.p1 || 0)) - TAU) < 1e-3); }catch(_){} break;
         case 'XLINE': { const Lx = Math.hypot(e.dx, e.dy) || 1, ux = e.dx / Lx, uy = e.dy / Lx, big = span * 3; head('LINE'); P(10, e.ray ? e.x : e.x - ux * big); P(20, e.ray ? e.y : e.y - uy * big); P(30, 0); P(11, e.x + ux * big); P(21, e.y + uy * big); P(31, 0); break; }

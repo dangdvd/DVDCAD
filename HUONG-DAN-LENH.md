@@ -1,4 +1,4 @@
-# DVDCAD v4d — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4e — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -75,6 +75,34 @@ Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thá
 - Sửa, xoá hoặc vẽ thêm bằng mọi lệnh. Nét vẽ thêm sẽ thuộc khối.
 - Bấm **Lưu cho mọi khối** thì **mọi khối cùng tên** trong bản vẽ được cập nhật, kể cả khối xoay hoặc tỉ lệ khác. Bấm **Huỷ thay đổi** để bỏ.
 
+**Thuộc tính khối:**
+- `ATTDEF` định nghĩa thuộc tính (tên, lời nhắc, giá trị mặc định) rồi gộp vào khối bằng `BLOCK`.
+- Khi `INSERT` khối có thuộc tính, app hỏi giá trị cho từng thuộc tính.
+- **Kích đúp** vào khối, hoặc dùng `EATTEDIT`, để sửa giá trị.
+- `ATTEXPORT` xuất toàn bộ thuộc tính ra CSV (mở bằng Excel).
+- Thuộc tính trong file DWG/DXF gốc (ATTRIB) cũng sửa và xuất được.
+
+**Ảnh nền:**
+- `IMAGEATTACH` chèn ảnh (ảnh chụp, bản scan): bấm điểm chèn rồi chiều rộng.
+- Di chuyển, xoay, tỉ lệ ảnh như đối tượng thường.
+- `IMAGEADJUST` chỉnh độ đậm và bật/tắt khung viền.
+- Ảnh lưu trong trình duyệt của máy này. Khi xuất DXF chỉ ghi khung ảnh.
+
+**Tham chiếu ngoài (XREF):**
+- `XATTACH` gắn một file DWG/DXF khác làm nền. Nền này hiện mờ, chỉ xem và bắt điểm, không sửa được, không ghi vào file khi lưu. Lớp của nó có dạng `TÊNFILE|LỚP`.
+- `XREF` mở bảng quản lý: nạp lại, làm mờ/rõ, gộp vào bản vẽ (Bind), mở file tham chiếu, gỡ.
+- Tham chiếu tự nạp lại khi mở bản vẽ.
+
+**Layout giấy:**
+- `LAYOUT`, hoặc bấm **＋** cạnh tab Model, để tạo layout mới:
+  - Chọn khổ A4 đến A0, ngang hoặc dọc.
+  - Có khung bản vẽ và khung tên điền sẵn: công trình, tên bản vẽ, tỉ lệ, ngày, người thiết kế và kiểm tra, số bản vẽ.
+  - Có sẵn một khung nhìn theo tỉ lệ 1:N.
+- `MVIEW` thêm khung nhìn: chỉ 2 góc trên giấy, rồi nhập tỉ lệ.
+- `VPEDIT` đổi tỉ lệ và vùng hiển thị (nút ⌖ = về Model bấm tâm).
+- Chuột phải vào tab layout để đổi khổ giấy và khung tên, chỉnh khung nhìn, in hoặc xoá layout.
+- `PLOT` khi đang ở layout in đúng khổ giấy của layout, tỉ lệ 1:1. Mép giấy và khung nhìn không in ra.
+
 **Bảng:** `TABLE`
 - Nhập số hàng, số cột, hoặc **dán vùng ô copy từ Excel**.
 - Sửa bảng bằng **kích đúp** hoặc `TABLEDIT`. Trong hộp sửa có thể thêm/bớt hàng cột, đổi độ rộng cột, dán Excel vào một ô để trải ra nhiều ô.
@@ -134,8 +162,12 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 ## Khác với AutoCAD
 - Chỉ lưu được **DXF**. File DWG mở để xem và sửa được, nhưng khi lưu sẽ thành DXF.
 - Kích thước và khối được lưu ra DXF dạng nét rời. Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước. Kích thước không bám theo khi chỉ sửa riêng đường hình.
-- Kích thước có sẵn trong file DWG/DXF gốc chọn được theo cụm, nhưng không kéo ô nắm để đổi số đo được.
+- Kích thước thẳng/chéo có sẵn trong file DWG/DXF cũng kéo ô nắm và STRETCH được. Khi sửa, kích thước được vẽ lại theo kiểu của DVDCAD: giữ cao chữ, số lẻ, mũi tên/gạch chéo. Kích thước góc và bán kính của file gốc chỉ chọn theo cụm.
 - Bề rộng nét theo từng đối tượng không ghi được vào DXF R12 (AutoCAD vẫn đọc được kiểu nét).
 - Hatch dò biên theo các nét **đang hiện trên màn hình**. Phóng tới vùng cần tô trước khi bấm.
 - Đa tuyến có đoạn cong được lưu dạng nhiều đoạn thẳng nhỏ.
-- Chưa có 3D, kiểu chữ (text style), XREF. Kiểu nét phức (chèn chữ/hình trong nét) hiện dạng nét đứt thường.
+- **Không lưu được DWG.** Chưa có bộ ghi DWG miễn phí nào chạy trong trình duyệt đủ tin cậy. AutoCAD mở file DXF bình thường và lưu lại thành DWG được (Save As).
+- **Không có 3D** (khối, mặt, render). DVDCAD là phần mềm 2D.
+- Layout chỉ chứa khung tên và khung nhìn. Muốn ghi chú thêm thì vẽ ở Model.
+- Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
+- Kiểu nét phức (chèn chữ/hình trong nét) hiện dạng nét đứt thường.

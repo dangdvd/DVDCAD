@@ -42,6 +42,7 @@
   // Đường cong của 1 đối tượng: tham số u (LINE: 0..1, ARC/CIRCLE: góc kể từ đầu, POLYLINE: chiều dài, ELLIPSE: tham số elip)
   function curveOf(e){
     if(!e) return null;
+    if(e.type === 'IMAGE'){ const c = curveOf({ type: 'POLYLINE', closed: true, vertices: imgCorners(e) }); if(c) c.e = e; return c; }
     switch(e.type){
       case 'LINE': {
         const L = Math.hypot(e.x2 - e.x1, e.y2 - e.y1);
@@ -196,7 +197,7 @@
   const LS = A.LS = { cur: '0', color: 'BYLAYER', off: new Set(), frozen: new Set(), locked: new Set(), hex: {}, orig: {}, extra: new Set(), lw: 'BYLAYER',
     lt: 'BYLAYER', celts: 1, ltscale: null, layLT: {}, layLW: {}, ltd: {}, origLT: {}, origLW: {}, origLTS: 1 };
   function lsKey(){ try{ return baseKey ? 'lay::' + baseKey : null; }catch(_){ return null; } }
-  function isLockedE(e){ return LS.locked.has((e && e.layer) || '0'); }
+  function isLockedE(e){ return !!(e && e.xr) || LS.locked.has((e && e.layer) || '0'); }   // tham chiếu ngoài (XREF) không sửa được
   A.isLocked = isLockedE;
   A.layerHex = n => LS.hex[n] || LS.orig[n] || '#ffffff';
   A.layerNames = () => { const s = new Set(['0']); try{ for(const L of layerList) s.add(L.name); }catch(_){} for(const n of LS.extra) s.add(n); for(const n of Object.keys(LS.hex)) s.add(n); return [...s].sort((a, b) => a === '0' ? -1 : b === '0' ? 1 : a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })); };
@@ -902,6 +903,7 @@
       case 'SOLID': return (e.pts || []).map((q, i) => ({ x: q.x, y: q.y, r: 'v' + i }));
       case 'TEXT': case 'POINT': case 'XLINE': return [{ x: e.x, y: e.y, r: 'mv' }];
       case 'HATCH': { const b = entBBox(e); return b ? [{ x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2, r: 'mv' }] : []; }
+      case 'IMAGE': { const c = imgCorners(e); return [{ x: c[0].x, y: c[0].y, r: 'mv' }, { x: c[2].x, y: c[2].y, r: 'isc' }]; }
     }
     return [];
   }
@@ -914,6 +916,7 @@
       case 'p1': w.x2 = to.x; w.y2 = to.y; return;
       case 'mid': case 'c': case 'mv': translateEnt(w, dx, dy); return;
       case 'q': w.r = Math.max(1e-9, Math.hypot(to.x - w.cx, to.y - w.cy)); return;
+      case 'isc': { const d0 = Math.hypot(from.x - w.x, from.y - w.y), d1 = Math.hypot(to.x - w.x, to.y - w.y); if(d0 > 1e-12 && d1 > 1e-12){ const k = d1 / d0; w.w *= k; w.h *= k; } return; }
       case 'a1': case 'a2': case 'am': {
         const c = curveOf(w); let s0 = c.at(0), m0 = c.at(c.u1 / 2), e0 = c.at(c.u1);
         if(role === 'a1') s0 = to; else if(role === 'a2') e0 = to; else m0 = to;
@@ -1246,7 +1249,7 @@
     if(e.tbld) e.tbld.o = { x: e.tbld.o.x + dx, y: e.tbld.o.y + dy };
     if(e.bm) e.bm = Object.assign({}, e.bm, { e: e.bm.e + dx, f: e.bm.f + dy });
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(const p of lp){ p.x += dx; p.y += dy; } return; }
-    if(e.type === 'XLINE'){ e.x += dx; e.y += dy; return; }
+    if(e.type === 'XLINE' || e.type === 'IMAGE'){ e.x += dx; e.y += dy; return; }
     return _tr.apply(this, arguments);
   };
   const _rot = window.rotateEnt;
@@ -1259,6 +1262,7 @@
     if(e.type === 'ELLIPSE'){ const q = _rotPt({ x: e.cx, y: e.cy }, c, a); e.cx = q.x; e.cy = q.y; const v = rotV(e.mx, e.my, a); e.mx = v.x; e.my = v.y; return; }
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(let i = 0; i < lp.length; i++) lp[i] = _rotPt(lp[i], c, a); e.pang = (e.pang || 0) + deg; return; }
     if(e.type === 'XLINE'){ const q = _rotPt({ x: e.x, y: e.y }, c, a); e.x = q.x; e.y = q.y; const v = rotV(e.dx, e.dy, a); e.dx = v.x; e.dy = v.y; return; }
+    if(e.type === 'IMAGE'){ const q = _rotPt({ x: e.x, y: e.y }, c, a); e.x = q.x; e.y = q.y; e.rot = (e.rot || 0) + deg; return; }
     return _rot.apply(this, arguments);
   };
   const _scl = window.scaleEnt;
@@ -1270,6 +1274,7 @@
     if(e.type === 'ELLIPSE'){ const q = _sclPt({ x: e.cx, y: e.cy }, c, f); e.cx = q.x; e.cy = q.y; e.mx *= f; e.my *= f; return; }
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(let i = 0; i < lp.length; i++) lp[i] = _sclPt(lp[i], c, f); if(e.psc) e.psc *= f; return; }
     if(e.type === 'XLINE'){ const q = _sclPt({ x: e.x, y: e.y }, c, f); e.x = q.x; e.y = q.y; return; }
+    if(e.type === 'IMAGE'){ const q = _sclPt({ x: e.x, y: e.y }, c, f); e.x = q.x; e.y = q.y; e.w *= f; e.h *= f; return; }
     return _scl.apply(this, arguments);
   };
   const _mir = window.mirrorAcross;
@@ -1285,6 +1290,7 @@
     if(e.type === 'ELLIPSE'){ const q = R({ x: e.cx, y: e.cy }); e.cx = q.x; e.cy = q.y; const v = RV({ x: e.mx, y: e.my }); e.mx = v.x; e.my = v.y; const p1 = e.p1 || 0, p2 = e.p2 == null ? TAU : e.p2; e.p1 = -p2; e.p2 = -p1; return true; }
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(let i = 0; i < lp.length; i++) lp[i] = R(lp[i]); e.pang = 2 * th - (e.pang || 0); return true; }
     if(e.type === 'XLINE'){ const q = R({ x: e.x, y: e.y }); e.x = q.x; e.y = q.y; const v = RV({ x: e.dx, y: e.dy }); e.dx = v.x; e.dy = v.y; return true; }
+    if(e.type === 'IMAGE'){ const c4 = imgCorners(e).map(R); e.x = c4[1].x; e.y = c4[1].y; e.rot = Math.atan2(c4[0].y - c4[1].y, c4[0].x - c4[1].x) * R2D; return true; }
     return _mir.apply(this, arguments);
   };
   const _ec = window.entCenter;

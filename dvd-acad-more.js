@@ -199,7 +199,9 @@
   PS.win = null;
   const psSave = () => { try{ const o = Object.assign({}, PS); delete o.win; localStorage.setItem('dvd:plot', JSON.stringify(o)); }catch(_){} };
   const mmPerUnit = () => { try{ return unitToMM() || 1; }catch(_){ return 1; } };   // không rõ đơn vị: coi là mm
+  const LYT = () => { try{ const U = A.curUserLayout && A.curUserLayout(); return U ? U.def : null; }catch(_){ return null; } };   // layout giấy do người dùng tạo
   function plotArea(){
+    const D = LYT(); if(D) return { x0: 0, y0: 0, x1: D.size[0], y1: D.size[1] };
     if(PS.area === 'window' && PS.win) return PS.win;
     if(PS.area === 'display'){ const b = viewWorldAABB(); return { x0: b.minX, y0: b.minY, x1: b.maxX, y1: b.maxY }; }
     let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
@@ -207,15 +209,16 @@
     if(!isFinite(a)){ const v = viewWorldAABB(); return { x0: v.minX, y0: v.minY, x1: v.maxX, y1: v.maxY }; }
     return { x0: a, y0: b, x1: c, y1: d };
   }
-  function paperMM(){ const p = PAPERS[PS.paper] || PAPERS.A3; return PS.land ? [p[1], p[0]] : [p[0], p[1]]; }
+  function paperMM(){ const D = LYT(); if(D) return [D.size[0], D.size[1]]; const p = PAPERS[PS.paper] || PAPERS.A3; return PS.land ? [p[1], p[0]] : [p[0], p[1]]; }
   // tỉ lệ thực: mm giấy trên 1 đơn vị bản vẽ
   function plotK(area, pw, ph){
+    if(LYT()) return 1;
     const aw = Math.max(1e-9, area.x1 - area.x0), ah = Math.max(1e-9, area.y1 - area.y0);
     if(PS.fit) return Math.min(pw / aw, ph / ah);
     return mmPerUnit() / (PS.scale || 1);
   }
   function plotRender(dpi, forPreview){
-    const [Wmm, Hmm] = paperMM(); const mg = Math.max(0, +PS.margin || 0); const pw = Wmm - 2 * mg, ph = Hmm - 2 * mg;
+    const [Wmm, Hmm] = paperMM(); const mg = LYT() ? 0 : Math.max(0, +PS.margin || 0); const pw = Wmm - 2 * mg, ph = Hmm - 2 * mg;
     const area = plotArea(); const k = plotK(area, pw, ph);
     const pxPerMM = dpi / 25.4; let pxW = Math.round(Wmm * pxPerMM), pxH = Math.round(Hmm * pxPerMM);
     const MAX = forPreview ? 400000 : 30000000; let sc = 1; if(pxW * pxH > MAX){ sc = Math.sqrt(MAX / (pxW * pxH)); pxW = Math.round(pxW * sc); pxH = Math.round(pxH * sc); }
@@ -228,6 +231,7 @@
     _exporting = true; ctx = octx; _RTW = Wmm * CSS_PER_MM; _RTH = Hmm * CSS_PER_MM; view.rot = 0; plotMode = true;
     _plotStyle = PS.style === 'color' ? '' : PS.style; showLW = !!PS.lw; _plotCssPerMM = PS.lw ? CSS_PER_MM : 0;
     window.drawGrid = () => {}; window.drawScaleBar = () => {};
+    const _oh = OBJ_HIDE; if(LYT()){ const h = new Set(OBJ_HIDE || []); for(const e of entities) if(e.vpf) h.add(e); OBJ_HIDE = h; }   // khung nhìn & mép giấy: không in
     try{
       Object.defineProperty(window, 'devicePixelRatio', { value: dpr, configurable: true });
       view.scale = k * CSS_PER_MM; view.offsetX = ox * CSS_PER_MM - area.x0 * view.scale; view.offsetY = (oy + ah * k) * CSS_PER_MM + area.y0 * view.scale;
@@ -237,7 +241,7 @@
       const X0 = ox * realPxPerMM - 2, Y0 = oy * realPxPerMM - 2, X1 = (ox + aw * k) * realPxPerMM + 2, Y1 = (oy + ah * k) * realPxPerMM + 2;
       octx.fillRect(0, 0, pxW, Math.max(0, Y0)); octx.fillRect(0, Y1, pxW, pxH - Y1); octx.fillRect(0, 0, Math.max(0, X0), pxH); octx.fillRect(X1, 0, pxW - X1, pxH);
     } finally {
-      ctx = sv.ctx; _RTW = sv.rtw; _RTH = sv.rth; _exporting = false; plotMode = sv.plot; showLW = sv.lw; _plotStyle = sv.style; _plotCssPerMM = sv.cpm;
+      OBJ_HIDE = _oh; ctx = sv.ctx; _RTW = sv.rtw; _RTH = sv.rth; _exporting = false; plotMode = sv.plot; showLW = sv.lw; _plotStyle = sv.style; _plotCssPerMM = sv.cpm;
       view.scale = sv.v.scale; view.offsetX = sv.v.offsetX; view.offsetY = sv.v.offsetY; view.rot = sv.v.rot; window.drawGrid = sv.grid; window.drawScaleBar = sv.sb;
       Object.defineProperty(window, 'devicePixelRatio', { value: sv.dpr, configurable: true }); bbDirty = true;
     }
@@ -290,7 +294,7 @@
       try{ const r = plotRender(Math.max(20, s * 25.4 * 1.6), true); c.width = Math.round(Wmm * s * 1.6); c.height = Math.round(Hmm * s * 1.6); c.style.width = Math.round(Wmm * s) + 'px'; c.style.height = Math.round(Hmm * s) + 'px';
         const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height); cx.drawImage(r.canvas, 0, 0, c.width, c.height);
         const mg = +PS.margin || 0; cx.strokeStyle = 'rgba(30,120,220,.55)'; cx.setLineDash([4, 3]); cx.strokeRect(mg * s * 1.6, mg * s * 1.6, (Wmm - 2 * mg) * s * 1.6, (Hmm - 2 * mg) * s * 1.6);
-        const inf = plotInfo(); g('plInfo').innerHTML = 'Khổ ' + PS.paper + ' ' + (PS.land ? 'ngang' : 'dọc') + ' · ' + Wmm + '×' + Hmm + ' mm<br>Tỉ lệ ' + (PS.fit ? 'khít giấy ≈ <b>1:' + (+inf.N.toPrecision(4)) + '</b>' : '<b>1:' + PS.scale + '</b>') + ' · hình in ' + Math.round(inf.wmm) + '×' + Math.round(inf.hmm) + ' mm' + (!inf.fits ? '<br><span style="color:#ffb347">⚠ Hình lớn hơn khổ giấy — sẽ bị cắt. Chọn tỉ lệ nhỏ hơn hoặc khổ lớn hơn.</span>' : '') + (mmPerUnit() === 1 && !unitToMM() ? '<br><span style="color:#8f99a8">Bản vẽ không ghi đơn vị — coi 1 đơn vị = 1 mm.</span>' : '');
+        const inf = plotInfo(); if(LYT()){ g('plInfo').innerHTML = 'Đang in <b>layout "' + esc(LYT().name) + '"</b>: khổ ' + LYT().paper + ' ' + Wmm + '×' + Hmm + ' mm, tỉ lệ 1:1 trên giấy (tỉ lệ khung nhìn đặt trong layout).'; return; } g('plInfo').innerHTML = 'Khổ ' + PS.paper + ' ' + (PS.land ? 'ngang' : 'dọc') + ' · ' + Wmm + '×' + Hmm + ' mm<br>Tỉ lệ ' + (PS.fit ? 'khít giấy ≈ <b>1:' + (+inf.N.toPrecision(4)) + '</b>' : '<b>1:' + PS.scale + '</b>') + ' · hình in ' + Math.round(inf.wmm) + '×' + Math.round(inf.hmm) + ' mm' + (!inf.fits ? '<br><span style="color:#ffb347">⚠ Hình lớn hơn khổ giấy — sẽ bị cắt. Chọn tỉ lệ nhỏ hơn hoặc khổ lớn hơn.</span>' : '') + (mmPerUnit() === 1 && !unitToMM() ? '<br><span style="color:#8f99a8">Bản vẽ không ghi đơn vị — coi 1 đơn vị = 1 mm.</span>' : '');
       }catch(err){ console.warn(err); }
     }, 60); };
     root.querySelectorAll('select,input').forEach(el => { el.addEventListener('change', preview); el.addEventListener('input', preview); });

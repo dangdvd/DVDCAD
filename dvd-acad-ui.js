@@ -127,6 +127,16 @@
     QDIM: '<path d="M3 6v8M9 6v8M15 6v8M21 6v8M3 11h18"/><path d="M3 19h18" stroke-dasharray="2 2"/>',
     REFEDIT: '<rect x="3" y="3" width="10" height="10"/><path d="M14 20l6-6 2 2-6 6h-2z"/>',
     BEDIT: '<rect x="3" y="3" width="10" height="10"/><path d="M14 20l6-6 2 2-6 6h-2z"/>',
+    ATTDEF: '<path d="M4 6h16M4 12h10"/><path d="M4 18h6"/><circle cx="17" cy="16" r="3"/>',
+    EATTEDIT: '<path d="M4 6h16M4 12h10"/><path d="M13 20l6-6 2 2-6 6h-2z"/>',
+    ATTEXPORT: '<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+    XATTACH: '<rect x="3" y="3" width="12" height="12" stroke-dasharray="3 2"/><path d="M14 14l7 7M21 15v6h-6"/>',
+    XREF: '<rect x="3" y="3" width="12" height="12" stroke-dasharray="3 2"/><path d="M9 21h12V9"/>',
+    IMAGEATTACH: '<rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="9" cy="10" r="2"/><path d="M3 18l6-5 4 3 3-2 5 4"/>',
+    IMAGEADJUST: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M12 4v16" /><path d="M12 4h9v16h-9z" fill="currentColor" fill-opacity=".35"/>',
+    LAYOUT: '<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4"/><rect x="8" y="10" width="8" height="7"/>',
+    MVIEW: '<rect x="3" y="4" width="18" height="16"/><rect x="6" y="7" width="8" height="6" stroke-dasharray="2 2"/>',
+    VPEDIT: '<rect x="3" y="4" width="18" height="16"/><path d="M8 14l3-3 2 2 4-4"/>',
     PICKSTYLE: '<rect x="3" y="3" width="18" height="18" stroke-dasharray="3 2"/><path d="M8 8l7 9 1-4 4-1z"/>'
   };
   const ico = (k, cls) => '<svg class="' + (cls || 'ic') + '" viewBox="0 0 24 24">' + (I[k] || I.TOOLS) + '</svg>';
@@ -323,7 +333,8 @@
     ] },
     insert: { name: 'Chèn', panels: [
       { title: 'Khối', items: [big('INSERT', 'Insert\nChèn khối'), big('BLOCK', 'Create\nTạo khối'), big('REFEDIT', 'Edit\nSửa khối'), col(sm('BLOCKLIB', 'Thư viện khối', { icon: 'LIST' }), sm('GROUP', 'Nhóm'), sm('UNGROUP', 'Bỏ nhóm'))] },
-      { title: 'Tham chiếu', items: [big('COMPARE', 'Compare\nSo sánh'), big('OPEN', 'Open\nMở')] },
+      { title: 'Thuộc tính khối', items: [big('ATTDEF', 'Define\nĐịnh nghĩa'), col(sm('EATTEDIT', 'Sửa thuộc tính'), sm('ATTEXPORT', 'Xuất CSV'))] },
+      { title: 'Tham chiếu', items: [big('XATTACH', 'Attach\nGắn XREF'), big('IMAGEATTACH', 'Image\nẢnh nền'), col(sm('XREF', 'Quản lý XREF'), sm('IMAGEADJUST', 'Chỉnh ảnh'), sm('COMPARE', 'So sánh'))] },
       { title: 'Dán', items: [big('PASTECLIP', 'Paste\nDán'), col(sm('PASTEORIG', 'Dán đúng toạ độ', { icon: 'PASTECLIP' }), sm('COPYBASE', 'Copy kèm gốc'))] }
     ] },
     annotate: { name: 'Chú thích', panels: [
@@ -339,7 +350,7 @@
       { title: 'Hiển thị', items: [col(sm('TGRID', 'Lưới', { icon: 'GRID', tog: 'grid' }), sm('TLWT', 'Bề rộng nét', { icon: 'LWT' }), sm('TBG', 'Nền trắng/tối', { icon: 'BG' })), col(sm('LINETYPE', 'Kiểu nét', { icon: 'LTYPE' }), sm('LTSCALE', 'Tỉ lệ nét', { icon: 'LTYPE' }), sm('LWEIGHT', 'Bề rộng nét…', { icon: 'LWT' })), big('DISPLAY', 'Display\nTuỳ chọn', { icon: 'SETTINGS' })] },
       { title: 'Cô lập', items: [big('ISOLATEOBJECTS', 'Isolate\nCô lập'), col(sm('HIDEOBJECTS', 'Ẩn đối tượng'), sm('UNISOLATEOBJECTS', 'Hiện lại tất cả'))] },
       { title: 'Bảng', items: [big('PROPERTIES', 'Properties\nThuộc tính', { icon: 'PROPS' }), col(sm('LAYER', 'Lớp'), sm('CMDLINE', 'Dòng lệnh'), sm('HISTORY', 'Lịch sử lệnh'))] },
-      { title: 'Layout', items: [big('LAYOUTS', 'Layouts\nKhung in', { icon: 'LAYOUT' }), big('CLEAN', 'Clean\nToàn màn hình')] }
+      { title: 'Layout', items: [big('LAYOUT', 'New Layout\nLayout mới'), col(sm('MVIEW', 'Khung nhìn (MVIEW)'), sm('VPEDIT', 'Tỉ lệ khung nhìn'), sm('LAYOUTS', 'Danh sách layout', { icon: 'LAYOUT' })), big('CLEAN', 'Clean\nToàn màn hình')] }
     ] },
     manage: { name: 'Quản lý', panels: [
       { title: 'Trợ giúp vẽ', items: [big('DSETTINGS', 'Drafting\nSettings', { icon: 'SETTINGS' }), col(sm('TOSNAP', 'OSNAP', { icon: 'ID', tog: 'osnap' }), sm('TORTHO', 'ORTHO', { icon: 'LINE', tog: 'ortho' }), sm('TPOLAR', 'POLAR', { icon: 'DIMANGULAR', tog: 'polar' }))] },
@@ -723,9 +734,12 @@
     const lt = $('acLT'); if(!lt) return; let h = '';
     if(!dwgLayouts.length) h = '<button class="on" data-l="-1">Model</button>';
     else dwgLayouts.forEach((L, i) => { if(!L.isModel && (!L.paper || (!L.paper.viewports.length && !L.paper.paperPrims.length))) return; h += '<button data-l="' + i + '" class="' + (i === currentLayout ? 'on' : '') + '">' + esc(L.isModel ? 'Model' : L.name) + '</button>'; });
+    if(A.hasDoc()) h += '<button data-l="new" title="Tạo layout mới (khổ giấy, khung tên, khung nhìn)" style="padding:0 8px">＋</button>';
     lt.innerHTML = h; $('acModel').textContent = isModelView() ? 'MODEL' : 'PAPER';
   }
-  $('acLT').addEventListener('click', e => { const b = e.target.closest('[data-l]'); if(!b) return; const i = +b.dataset.l; if(i >= 0 && i !== currentLayout) switchLayout(i); setTimeout(renderLT, 30); });
+  A.renderLT = renderLT;
+  $('acLT').addEventListener('click', e => { const b = e.target.closest('[data-l]'); if(!b) return; if(b.dataset.l === 'new'){ run('LAYOUT'); return; } const i = +b.dataset.l; if(i >= 0 && i !== currentLayout) switchLayout(i); setTimeout(renderLT, 30); });
+  $('acLT').addEventListener('contextmenu', e => { const b = e.target.closest('[data-l]'); if(!b) return; e.preventDefault(); const i = +b.dataset.l; if(A.layoutMenu) A.layoutMenu(i, e.clientX, e.clientY); });
 
   /* ---------------- menu chuột phải ---------------- */
   A.contextMenu = function(ev){
