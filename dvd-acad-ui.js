@@ -167,6 +167,14 @@
     MATERIALS: '<circle cx="12" cy="12" r="9"/><circle cx="9" cy="9" r="2" fill="currentColor"/><circle cx="15" cy="10" r="1.6"/><circle cx="10" cy="15" r="1.6"/>',
     RENDER: '<path d="M12 3l2.5 6 6.5.5-5 4 1.6 6.5L12 16.5 6.4 20l1.6-6.5-5-4 6.5-.5z"/>',
     SECTIONPLANE: '<path d="M4 8l8-4 8 4v9l-8 4-8-4z"/><path d="M2 13l10 4 10-4" stroke-width="2"/>',
+    UCS: '<path d="M5 19V5M5 19h14"/><path d="M5 19l7-7" stroke-dasharray="2 2"/><path d="M3 7l2-2 2 2M17 17l2 2-2 2"/>',
+    LOFT: '<ellipse cx="12" cy="19" rx="8" ry="2.5"/><rect x="8" y="3" width="8" height="4"/><path d="M4 19L8 5M20 19L16 5"/>',
+    FILLETEDGE: '<path d="M4 20V10a6 6 0 0 1 6-6h10"/><path d="M4 20h16" stroke-dasharray="2 2"/>',
+    CHAMFEREDGE: '<path d="M4 20V9l5-5h11"/><path d="M4 20h16" stroke-dasharray="2 2"/>',
+    LIGHT: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-1 1-1.5 2-1.5 3h-5c0-1-.5-2-1.5-3A6 6 0 0 1 12 3z"/>',
+    SUNPROPERTIES: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
+    CAMERA: '<rect x="3" y="7" width="12" height="10" rx="1"/><path d="M15 10l6-3v10l-6-3z"/>',
+    '3DWALK': '<circle cx="13" cy="4" r="2"/><path d="M9 21l2-6 3 3v3M11 15l1-6 4 3 3 1M12 9l-4 2-1 4"/>',
     FLATSHOT: '<path d="M4 8l8-4 8 4v9l-8 4-8-4z" stroke-dasharray="2 2"/><rect x="7" y="9" width="10" height="8"/>'
   };
   const ico = (k, cls) => '<svg class="' + (cls || 'ic') + '" viewBox="0 0 24 24">' + (I[k] || I.TOOLS) + '</svg>';
@@ -386,6 +394,8 @@
       { pri: 0, title: 'Khối cơ bản', items: [big('BOX', 'Box\nHộp'), big('CYLINDER', 'Cylinder\nTrụ'), col(sm('CONE', 'Nón'), sm('SPHERE', 'Cầu'), sm('PYRAMID', 'Chóp')), col(sm('WEDGE', 'Nêm'), sm('TORUS', 'Xuyến'), sm('ELEV', 'Cao độ Z'))] },
       { pri: 1, title: 'Tạo từ 2D', items: [big('EXTRUDE', 'Extrude\nĐùn'), big('PRESSPULL', 'Presspull\nKéo vùng'), col(sm('REVOLVE', 'Xoay tròn'), sm('SWEEP', 'Quét'), sm('WALL3D', 'Dựng tường'))] },
       { pri: 2, title: 'Sửa khối', items: [big('UNION', 'Union\nCộng'), big('SUBTRACT', 'Subtract\nTrừ'), col(sm('INTERSECT', 'Giao'), sm('SLICE', 'Cắt khối'), sm('3DMOVE', 'Dời 3D')), col(sm('3DROTATE', 'Xoay 3D'), sm('MIRROR3D', 'Đối xứng 3D'))] },
+      { pri: 4, title: 'Nâng cao', items: [big('UCS', 'UCS\nMặt phẳng'), col(sm('LOFT', 'Loft'), sm('FILLETEDGE', 'Bo cạnh'), sm('CHAMFEREDGE', 'Vát cạnh'))] },
+      { pri: 5, title: 'Ánh sáng & camera', items: [col(sm('SUNPROPERTIES', 'Mặt trời'), sm('LIGHT', 'Đèn'), sm('CAMERA', 'Camera')), col(sm('3DWALK', 'Đi bộ'))] },
       { pri: 3, title: 'Xem', items: [big('3DORBIT', 'Orbit\nXem 3D'), big('RENDER', 'Render\nThực tế'), col(sm('MATERIALS', 'Vật liệu'), sm('SECTIONPLANE', 'Mặt cắt'), sm('FLATSHOT', 'Chiếu 2D')), col(sm('VIEWTOP', 'Trên'), sm('VIEWFRONT', 'Trước'), sm('VIEWSWISO', 'ISO Tây Nam'))] },
       { pri: 8, title: 'Xuất 3D', items: [col(sm('EXPORTSTL', 'Xuất STL'), sm('EXPORTOBJ', 'Xuất OBJ'), sm('DXFOUT', 'DXF (3DFACE)', { icon: 'EXPORT' }))] }
     ] },

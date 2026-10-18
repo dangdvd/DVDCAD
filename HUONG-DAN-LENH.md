@@ -1,4 +1,4 @@
-# DVDCAD v4g — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4h — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -158,6 +158,25 @@ Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thá
 - `SECTIONPLANE` — mặt cắt ngang, kéo thanh trượt để đổi cao độ cắt (xem bên trong nhà).
 - `FLATSHOT` hoặc nút **Chiếu 2D** trong khung 3D — chiếu mô hình thành nét 2D theo góc nhìn hiện tại (mặt đứng, mặt bên, ISO), **đã bỏ nét khuất**, đúng tỉ lệ 1:1. Bấm điểm đặt là xong.
 
+**Mặt phẳng làm việc (UCS):**
+- `UCS` → **Mặt đứng qua 2 điểm**, **Trước**, **Bên**, **Mặt khối** (bấm vào mặt trong khung 3D), **Xoay quanh X/Y**, **Cao độ gốc**, **Điểm neo**, **Thế giới**.
+- Khi UCS bật, các lệnh BOX, CYLINDER, EXTRUDE, REVOLVE, SWEEP, LOFT, PYRAMID… đặt khối lên mặt phẳng UCS. Biên dạng vẫn vẽ trên mặt bằng, quanh điểm neo, như đang nhìn thẳng vào mặt phẳng đó (X sang phải, Y lên trên). Ví dụ: vẽ ô cửa trên mặt bằng rồi EXTRUDE, ô cửa sẽ dựng đứng trên tường.
+- Góc trên trái bản vẽ hiện `[UCS: …]` hoặc `[WCS]`. Khung 3D vẽ mũi tên trục UCS.
+
+**Khối nâng cao:**
+- `LOFT` — chọn các mặt cắt kín từ dưới lên (tròn, vuông, elip…), nhập khoảng cách đều hoặc danh sách cao độ (`0,800,2500`).
+- `FILLETEDGE` / `CHAMFEREDGE` — bo/vát cạnh trên, dưới, cạnh đứng hoặc tất cả, cho khối hộp, khối đùn, tường và khối trụ.
+
+**Ánh sáng, camera:**
+- `SUNPROPERTIES` (`SUN`) — mặt trời theo **ngày, giờ, vĩ độ, kinh độ, múi giờ, hướng Bắc**. Mặc định là TP.HCM. Nút **▶ Bóng đổ trong ngày** chạy bóng từ 6h đến 18h.
+- `LIGHT` — đặt đèn điểm: vị trí, cao độ, cường độ, màu. Đèn sáng trong kiểu xem **Thực tế**.
+- `CAMERA` — bấm điểm đứng, điểm nhìn, nhập cao mắt và tên. Khung 3D mở phối cảnh từ đúng vị trí đó. Camera được lưu trong danh sách **Đã lưu…** cùng các góc nhìn bạn lưu.
+- `3DWALK` hoặc nút **Đi bộ**: dùng W A S D để đi, Q/E để xuống/lên, Shift để đi nhanh, kéo chuột để nhìn quanh. Trên điện thoại có bàn phím mũi tên trên màn hình.
+
+**Mặt cắt:**
+- `SECTIONPLANE` → **Ngang** (kéo thanh để đổi cao độ) hoặc **Đứng qua 2 điểm**. Chỗ cắt được tô kín bằng gạch chéo.
+- Nút **Mặt cắt → 2D** (`SECTION2D`) chèn mặt cắt thành đa tuyến + hatch ANSI31. Mặt cắt ngang có thể đặt đúng vị trí trên mặt bằng.
+
 Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCALE, MIRROR, ARRAY, ERASE dùng được như hình 2D. Bảng thuộc tính sửa được cao độ đáy, chiều cao, bán kính và xem thể tích.
 
 **Xem 3D:** `3DORBIT` (`3DO`, `VIEW3D`) hoặc nút **3D**.
@@ -205,9 +224,10 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Hatch dò biên theo các nét **đang hiện trên màn hình**. Phóng tới vùng cần tô trước khi bấm.
 - Đa tuyến có đoạn cong được lưu dạng nhiều đoạn thẳng nhỏ.
 - **Không lưu được DWG.** Chưa có bộ ghi DWG miễn phí nào chạy trong trình duyệt đủ tin cậy. AutoCAD mở file DXF bình thường và lưu lại thành DWG được (Save As).
-- 3D chưa có: UCS 3D (vẽ trên mặt nghiêng), LOFT, bo/vát cạnh khối (FILLETEDGE), đèn và camera tuỳ chỉnh, render ra ảnh chất lượng cao. Mặt cắt chưa tô kín mặt cắt.
+- 3D chưa có: bo cạnh tuỳ ý trên khối sau cộng/trừ (chỉ bo được hộp, khối đùn, trụ), render dò tia chất lượng ảnh chụp.
 - Khối sau UNION/SUBTRACT là lưới tam giác: mặt cong hiện dạng nhiều mặt phẳng nhỏ.
-- Khối ACIS (3DSOLID) do AutoCAD tạo chưa đọc được (định dạng đóng). Đọc được 3DFACE, lưới POLYFACE và lưới MESH. Trong AutoCAD, đổi khối sang lưới bằng `CONVTOMESH` rồi lưu DXF là DVDCAD xem được. File DWG chỉ đọc 3DFACE.
+- Khối ACIS (3DSOLID) của AutoCAD trong DXF đọc được: mặt phẳng, mặt trụ, nón, cầu, xuyến. Mặt cong tự do (spline, bo cạnh của AutoCAD) hiện gần đúng theo đường biên. Khối đọc vào thành khối lưới, lưu lại là 3DFACE. Đọc 3DSOLID từ file **DWG** đang thử nghiệm.
+- UCS ở DVDCAD chỉ dùng cho lệnh tạo khối 3D. Nét 2D luôn vẽ trên mặt bằng XY.
 - Layout chỉ chứa khung tên và khung nhìn. Muốn ghi chú thêm thì vẽ ở Model.
 - Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
 - Kiểu nét phức (chèn chữ/hình trong nét) hiện dạng nét đứt thường.

@@ -140,7 +140,7 @@
     if(e.type === 'POLYLINE'){ const v = e.vertices || []; const cl = e.closed || (v.length > 3 && Math.hypot(v[0].x - v[v.length - 1].x, v[0].y - v[v.length - 1].y) < 1e-9); if(!cl) return null; const o = v.map(p => ({ x: p.x, y: p.y })); if(!e.closed) o.pop(); return o; }
     return null;
   }
-  function addMesh(e, base, msg){ if(!e){ log('Không tạo được khối.'); return; } if(base){ e.layer = base.layer; e.col = base.col; if(base.bl) e.bl = 1; } else A.newProps(e); delete e.lt; A.commit({ add: [e] }, msg); log(msg + ' — xem: 3DORBIT.'); }
+  function addMesh(e, base, msg){ if(!e){ log('Không tạo được khối.'); return; } if(base){ e.layer = base.layer; e.col = base.col; if(base.bl) e.bl = 1; } else A.newProps(e); delete e.lt; if(A.ucsApply) e = A.ucsApply(e); A.commit({ add: [e] }, msg); log(msg + ' — xem: 3DORBIT.'); }
   cmd(['REVOLVE', 'REV'], 'Xoay biên dạng kín quanh trục thành khối 3D (cột, chậu, lan can…)', async () => {
     const s = await A.getSel('Chọn biên dạng kín (đa tuyến kín / tròn)', { filter: e => !!profileOf(e) }); const prof = (s.sel || []).find(e => profileOf(e)); if(!prof){ log('Cần một đa tuyến kín hoặc đường tròn.'); return; }
     const a = await A.getPoint('Điểm đầu trục xoay (chân)'); if(!a.pt) return;
@@ -229,7 +229,7 @@
     w.v = v; const pp = []; for(let i = 0; i < v.length; i += 3) pp.push({ x: v[i], y: v[i + 1] }); w.pts = hull2d(pp); }
   cmd(['3DROTATE', 'ROTATE3D', '3R'], 'Xoay khối 3D quanh trục X, Y, Z hoặc trục nằm qua 2 điểm', async () => {
     const sel = await pick3D('Chọn khối 3D'); if(!sel.length) return;
-    const k = await A.getKw('Trục xoay', { kw: [{ k: 'X', t: 'Trục X' }, { k: 'Y', t: 'Trục Y' }, { k: 'Z', t: 'Trục Z' }, { k: '2', t: '2 điểm' }], def: '2 điểm' }); const ax = k.kw || '2';
+    const k = await A.getKw('Trục xoay', { kw: [{ k: 'X', t: 'Trục X' }, { k: 'Y', t: 'Trục Y' }, { k: 'K', t: 'Trục Z (đứng)' }, { k: '2', t: '2 điểm' }], def: '2 điểm' }); let ax = k.kw || '2'; if(ax === 'K') ax = 'Z';
     let o, dir;
     if(ax === '2'){ const a = await A.getPoint('Điểm thứ nhất của trục (nằm ngang)'); if(!a.pt) return; const b = await A.getPoint('Điểm thứ hai của trục', { base: a.pt }); if(!b.pt) return; const L = Math.hypot(b.pt.x - a.pt.x, b.pt.y - a.pt.y); if(L < 1e-9) return; o = [a.pt.x, a.pt.y, 0]; dir = [(b.pt.x - a.pt.x) / L, (b.pt.y - a.pt.y) / L, 0]; }
     else { const a = await A.getPoint('Điểm trục đi qua'); if(!a.pt) return; o = [a.pt.x, a.pt.y, 0]; dir = ax === 'X' ? [1, 0, 0] : ax === 'Y' ? [0, 1, 0] : [0, 0, 1]; }

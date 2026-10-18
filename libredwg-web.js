@@ -5305,6 +5305,13 @@ class LibreEntityConverter {
       const fixedtype = libredwg.dwg_object_get_fixedtype(object_ptr);
       if (fixedtype == Dwg_Object_Type.DWG_TYPE_3DFACE) {
         return this.convert3dFace(entity_tio, commonAttrs);
+      } else if (fixedtype == Dwg_Object_Type.DWG_TYPE_3DSOLID || fixedtype == Dwg_Object_Type.DWG_TYPE_BODY) {
+        // DVDCAD: lấy dữ liệu ACIS (SAT đã giải mã hoặc SAB nhị phân) — thử nghiệm
+        try {
+          const v = this.libredwg.dwg_dynapi_entity_value(entity_tio, "acis_data");
+          let ver = 0; try { ver = this.libredwg.dwg_dynapi_entity_value(entity_tio, "version").data; } catch (_) {}
+          return { type: "3DSOLID", ...commonAttrs, acisVersion: ver, acis: v ? (v.bin || v.data) : null };
+        } catch (_) { return void 0; }
       } else if (fixedtype == Dwg_Object_Type.DWG_TYPE_ARC) {
         return this.convertArc(entity_tio, commonAttrs);
       } else if (fixedtype == Dwg_Object_Type.DWG_TYPE_ATTDEF) {

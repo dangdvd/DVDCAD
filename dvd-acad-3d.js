@@ -143,7 +143,8 @@
   const H0 = () => MEM.h3 || (() => { try{ const b = viewWorldAABB(); return +((b.maxX - b.minX) * 0.15).toPrecision(2); }catch(_){ return 1000; } })();
   async function askH(prompt, base){ const r = await A.getDist(prompt || 'Chiều cao (âm = đùn xuống)', { def: H0(), base }); let h = r.num != null ? r.num : H0(); if(!h) return null; MEM.h3 = Math.abs(h); return h; }
   async function askZ0(){ return MEM.z03 || 0; }
-  function addSolids(list, msg){ const add = list.filter(Boolean).map(e => { A.newProps(e); delete e.lt; return e; }); if(!add.length){ log('Không tạo được khối.'); return []; } A.commit({ add }, msg || ('Đã tạo ' + add.length + ' khối 3D')); log((msg || 'Đã tạo khối 3D') + ' — gõ 3DORBIT (hoặc nút 3D) để xem.'); return add; }
+  const ucsMap = e => (A.ucsApply ? A.ucsApply(e) : e);
+  function addSolids(list, msg){ const add = list.filter(Boolean).map(e => { A.newProps(e); delete e.lt; return ucsMap(e); }); if(!add.length){ log('Không tạo được khối.'); return []; } A.commit({ add }, msg || ('Đã tạo ' + add.length + ' khối 3D')); log((msg || 'Đã tạo khối 3D') + ' — gõ 3DORBIT (hoặc nút 3D) để xem.'); return add; }
   cmd(['BOX'], 'Khối hộp 3D (2 góc đáy + chiều cao)', async () => {
     const a = await A.getPoint('Chỉ định góc thứ nhất của đáy'); if(!a.pt) return;
     const b = await A.getPoint('Chỉ định góc đối diện (hoặc @dài,rộng)', { base: a.pt, rubber: false, preview: (g, p) => g.poly([a.pt, { x: p.x, y: a.pt.y }, p, { x: a.pt.x, y: p.y }], true) }); if(!b.pt) return;
@@ -187,7 +188,7 @@
     const s = await A.getSel('Chọn hình kín cần đùn'); const sel = (s.sel || []).filter(e => !A.isLocked(e)); if(!sel.length) return;
     const ok = sel.filter(e => e.type === 'CIRCLE' || e.type === 'HATCH' || sampleClosed(e)); if(!ok.length){ log('Không có hình kín nào (cần đa tuyến kín, đường tròn, elip, hatch).'); return; }
     const h = await askH('Chiều cao đùn'); if(h == null) return;
-    const list = await extrudeEnts(ok, h); const add = list.map(e => { if(e.layer == null) A.newProps(e); delete e.lt; return e; });
+    const list = await extrudeEnts(ok, h); const add = list.map(e => { if(e.layer == null) A.newProps(e); delete e.lt; return ucsMap(e); });
     if(!add.length){ log('Không tạo được khối.'); return; }
     A.commit({ add }, 'Đã đùn ' + add.length + ' khối 3D'); log('Đã đùn ' + add.length + ' hình (cao ' + Math.abs(h) + '). Hình 2D gốc vẫn giữ — xem 3D: 3DORBIT.');
   });
@@ -291,7 +292,14 @@
   #dvd3d .hint{position:absolute;left:10px;bottom:10px;color:#aab3c0;font:12px system-ui,sans-serif;background:rgba(20,24,32,.6);padding:4px 8px;border-radius:5px;pointer-events:none}
   #dvd3d .home{position:absolute;right:30px;top:124px;z-index:2;height:26px;border-radius:5px;border:1px solid #556071;background:rgba(32,38,48,.88);color:#e6eaf0;font:12px system-ui;cursor:pointer;padding:0 8px}
   #dvd3d .t3 .vsel{display:none}
-  @media (max-width:760px){ #dvd3d .t3 button[data-v]{display:none} #dvd3d .t3 .vsel{display:inline-block} #dvd3d .hint{font-size:11px;right:10px} }
+  #dvd3d .pnl{position:absolute;left:8px;top:76px;z-index:3;background:rgba(24,28,36,.94);border:1px solid #556071;border-radius:8px;padding:10px 12px;color:#e6eaf0;font:12px system-ui,sans-serif;display:none;min-width:250px}
+  #dvd3d .wpad{position:absolute;right:14px;bottom:44px;z-index:3;display:none;grid-template-columns:repeat(3,46px);gap:6px} #dvd3d .wpad.on{display:grid}
+  #dvd3d .wpad button{height:46px;border-radius:10px;border:1px solid #556071;background:rgba(32,38,48,.85);color:#e6eaf0;font:18px system-ui;touch-action:none}
+  #dvd3d .wpad [data-w=w]{grid-column:2} #dvd3d .wpad [data-w=a]{grid-column:1;grid-row:2} #dvd3d .wpad [data-w=s]{grid-column:2;grid-row:2} #dvd3d .wpad [data-w=d]{grid-column:3;grid-row:2} #dvd3d .wpad [data-w=e]{grid-column:1;grid-row:1} #dvd3d .wpad [data-w=q]{grid-column:3;grid-row:1}
+  #dvd3d .pnl.on{display:block} #dvd3d .pnl label{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0}
+  #dvd3d .pnl input{background:#1b2028;border:1px solid #454e5c;border-radius:4px;color:#e6eaf0;padding:2px 6px;width:110px} #dvd3d .pnl input[type=range]{width:150px;padding:0}
+  #dvd3d .pnl .info{opacity:.8;margin-top:6px} #dvd3d .walkhint{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px solid rgba(255,255,255,.6);border-radius:50%;pointer-events:none;display:none}
+  @media (max-width:760px){ #dvd3d .t3 button[data-v],#dvd3d .t3 [data-a=ucsf],#dvd3d .t3 [data-a=stl],#dvd3d .t3 [data-a=obj],#dvd3d .t3 [data-a=named]{display:none} #dvd3d .pnl{top:120px;left:4px;right:4px;min-width:0} #dvd3d .t3 .vsel{display:inline-block} #dvd3d .hint{font-size:11px;right:10px} }
   html:not(.acad) #dvd3d .t3{max-width:calc(100% - 130px)} html:not(.acad) #dvd3d .vc{right:8px;top:8px;transform:scale(.85)}`;
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
   const VIEWS = { top: [0, 89.9], bottom: [0, -89.9], front: [-90, 0], back: [90, 0], left: [180, 0], right: [0, 0], sw: [-135, 30], se: [-45, 30], ne: [45, 30], nw: [135, 30] };
@@ -321,9 +329,12 @@
     const ov = document.createElement('div'); ov.id = 'dvd3d';
     ov.innerHTML = '<div class="t3"><button class="x" data-a="close" title="Về bản vẽ 2D (Esc)">✕ 2D</button>' + ['top', 'front', 'right', 'left', 'back', 'sw', 'se', 'ne', 'nw'].map(k => '<button data-v="' + k + '">' + VN[k] + '</button>').join('') +
       '<select data-a="views" class="vsel" title="Góc nhìn"><option value="">Góc nhìn…</option>' + Object.keys(VN).map(k => '<option value="' + k + '">' + VN[k] + '</option>').join('') + '</select>' +
+      '<select data-a="named" title="Góc nhìn đã lưu / camera"><option value="">Đã lưu…</option></select>' +
       '<select data-a="style" title="Kiểu hiển thị (Visual style)"><option value="wire">Khung dây</option><option value="shade">Tô bóng</option><option value="shedge">Tô bóng + cạnh</option><option value="xray">X-quang</option><option value="real">Thực tế (vật liệu, bóng đổ)</option></select>' +
-      '<button data-a="persp" title="Phối cảnh / song song">' + (V.persp ? 'Phối cảnh' : 'Song song') + '</button><button data-a="2d" class="' + (V.show2d ? 'on' : '') + '" title="Hiện nét 2D ở cao độ 0">Nét 2D</button><button data-a="cut" title="Mặt cắt ngang (section plane)">Cắt</button><input type="range" data-a="cutz" min="0" max="1000" value="500" title="Cao độ mặt cắt" style="display:none;width:120px"><button data-a="flat" title="Chiếu thành hình 2D theo góc nhìn này (FLATSHOT)">Chiếu 2D</button><button data-a="png" title="Lưu ảnh PNG">Ảnh</button><button data-a="stl">STL</button><button data-a="obj">OBJ</button></div>' +
+      '<button data-a="persp" title="Phối cảnh / song song">' + (V.persp ? 'Phối cảnh' : 'Song song') + '</button><button data-a="2d" class="' + (V.show2d ? 'on' : '') + '" title="Hiện nét 2D ở cao độ 0">Nét 2D</button><button data-a="cut" title="Mặt cắt ngang (section plane)">Cắt</button><input type="range" data-a="cutz" min="0" max="1000" value="500" title="Cao độ mặt cắt" style="display:none;width:120px"><button data-a="sec2d" title="Xuất mặt cắt thành nét + hatch 2D" style="display:none">Mặt cắt → 2D</button><button data-a="flat" title="Chiếu thành hình 2D theo góc nhìn này (FLATSHOT)">Chiếu 2D</button><button data-a="sun" title="Mặt trời theo ngày giờ, vị trí địa lý (nghiên cứu bóng đổ)">Mặt trời</button><button data-a="walk" title="Đi bộ trong mô hình (W A S D, Q/E lên xuống, kéo chuột để nhìn)">Đi bộ</button><button data-a="ucsf" title="Đặt UCS theo mặt khối: bấm vào một mặt">UCS mặt</button><button data-a="png" title="Lưu ảnh PNG">Ảnh</button><button data-a="stl">STL</button><button data-a="obj">OBJ</button></div>' +
       '<div class="vc"><div class="cube">' + [['top', 'TRÊN'], ['bottom', 'DƯỚI'], ['front', 'TRƯỚC'], ['back', 'SAU'], ['left', 'TRÁI'], ['right', 'PHẢI']].map(([k, t]) => '<div class="f" data-v="' + k + '">' + t + '</div>').join('') + '</div></div><button class="home" data-v="se" title="Về góc nhìn ISO">⌂</button>' +
+      '<div class="pnl" data-p="sun"><b>Mặt trời (SUNPROPERTIES)</b><label>Bật theo ngày giờ <input type="checkbox" data-s="on" style="width:auto"></label><label>Ngày <input type="date" data-s="date"></label><label>Giờ <input type="range" data-s="hour" min="5" max="19" step="0.25"><span data-s="hl"></span></label><label>Vĩ độ <input type="number" data-s="lat" step="0.01"></label><label>Kinh độ <input type="number" data-s="lon" step="0.01"></label><label>Múi giờ <input type="number" data-s="tz" step="0.5"></label><label>Hướng Bắc (° từ trục Y) <input type="number" data-s="north" step="1"></label><button data-a="sunanim" style="margin-top:6px">▶ Bóng đổ trong ngày</button><div class="info" data-s="info"></div></div>' +
+      '<div class="walkhint"></div><div class="wpad"><button data-w="w">▲</button><button data-w="a">◀</button><button data-w="s">▼</button><button data-w="d">▶</button><button data-w="e">⤒</button><button data-w="q">⤓</button></div>' +
       '<div class="hint">' + (matchMedia('(pointer:coarse)').matches ? '1 ngón: xoay · 2 ngón: dời + phóng · Chạm đúp: vừa màn hình' : 'Kéo trái: xoay · Kéo phải / giữa / Shift: dời · Lăn: phóng · Kích đúp: vừa màn hình · Esc: về 2D') + '</div>';
     stage.appendChild(ov); ov.querySelector('select[data-a="style"]').value = V.style;
     const cv3 = document.createElement('canvas'); cv3.className = 'c3'; ov.insertBefore(cv3, ov.firstChild);
@@ -376,7 +387,109 @@
     // mặt cắt ngang (section plane): giữ phần có z ≤ cao độ cắt
     const zr = [bb.a[2], bb.b[2] > bb.a[2] ? bb.b[2] : bb.a[2] + size]; const cutPlane = new T.Plane(new T.Vector3(0, 0, -1), 0);
     const cutZ = () => zr[0] + (zr[1] - zr[0]) * (V.cutF == null ? 0.5 : V.cutF);
-    const applyCut = () => { cutPlane.constant = cutZ(); renderer.clippingPlanes = V.cut ? [cutPlane] : []; const inp = ov.querySelector('[data-a="cutz"]'); if(inp){ inp.style.display = V.cut ? '' : 'none'; inp.value = Math.round((V.cutF == null ? .5 : V.cutF) * 1000); } const b = ov.querySelector('[data-a="cut"]'); if(b) b.classList.toggle('on', !!V.cut); need = true; };
+    const applyCut = () => { setPlane(); renderer.clippingPlanes = V.cut ? [cutPlane] : []; capsSoon(); const sb = ov.querySelector('[data-a="sec2d"]'); if(sb) sb.style.display = V.cut ? '' : 'none'; const inp = ov.querySelector('[data-a="cutz"]'); if(inp){ inp.style.display = V.cut ? '' : 'none'; inp.value = Math.round((V.cutF == null ? .5 : V.cutF) * 1000); } const b = ov.querySelector('[data-a="cut"]'); if(b) b.classList.toggle('on', !!V.cut); need = true; };
+    // mặt cắt đứng (qua 2 điểm trên mặt bằng) — giữ phía bên trái hướng A→B
+    const cutBasis = () => { if(V.cutMode === 'v' && V.cutLine){ const a = V.cutLine.a, b = V.cutLine.b, L = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / L, uy = (b.y - a.y) / L; return { n: [-uy, ux, 0], u: [ux, uy, 0], v: [0, 0, 1], o: [a.x, a.y, 0] }; } return { n: [0, 0, -1], u: [1, 0, 0], v: [0, 1, 0], o: [0, 0, 0] }; };
+    const setPlane = () => { const B = cutBasis(); cutPlane.normal.set(B.n[0], B.n[1], B.n[2]); if(V.cutMode === 'v' && V.cutLine){ const s2 = ((V.cutF == null ? .5 : V.cutF) - .5) * size * 1.2; cutPlane.constant = -(B.n[0] * B.o[0] + B.n[1] * B.o[1] + s2); } else cutPlane.constant = cutZ(); };
+    // tô kín mặt cắt (capping) bằng mẫu gạch chéo
+    const capGroup = new T.Group(); scene.add(capGroup); let secRegions = [];
+    const hatchTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64); g.strokeStyle = '#333'; g.lineWidth = 3; for(let k = -64; k < 128; k += 16){ g.beginPath(); g.moveTo(k, 64); g.lineTo(k + 64, 0); g.stroke(); } const t = new T.CanvasTexture(cv); t.wrapS = t.wrapT = T.RepeatWrapping; return t; })();
+    function buildCaps(){
+      for(const o of capGroup.children.slice()){ capGroup.remove(o); o.geometry.dispose(); o.material.dispose(); } secRegions = [];
+      if(!V.cut) return; const B = cutBasis(), n = [cutPlane.normal.x, cutPlane.normal.y, cutPlane.normal.z], c = cutPlane.constant, q = size * 1e-7, eps = size * 2e-5;
+      for(const it of meshes0){ const p = it.m.p, I = it.m.i, segs = [];
+        const D = k => p[k * 3] * n[0] + p[k * 3 + 1] * n[1] + p[k * 3 + 2] * n[2] + c;
+        for(let t = 0; t + 2 < I.length; t += 3){ const ix = [I[t], I[t + 1], I[t + 2]], d = ix.map(D); const P = [];
+          for(let k = 0; k < 3; k++){ const a = ix[k], b = ix[(k + 1) % 3], da = d[k], db = d[(k + 1) % 3]; if((da >= 0) !== (db >= 0)){ const s2 = da / (da - db); P.push([p[a * 3] + (p[b * 3] - p[a * 3]) * s2, p[a * 3 + 1] + (p[b * 3 + 1] - p[a * 3 + 1]) * s2, p[a * 3 + 2] + (p[b * 3 + 2] - p[a * 3 + 2]) * s2]); } }
+          if(P.length === 2) segs.push(P); }
+        if(!segs.length) continue;
+        const key = v => Math.round(v[0] / q) + ',' + Math.round(v[1] / q) + ',' + Math.round(v[2] / q); const adj = new Map();
+        segs.forEach((sg, i) => { for(const e2 of [0, 1]){ const k = key(sg[e2]); let l = adj.get(k); if(!l) adj.set(k, l = []); l.push([i, e2]); } });
+        const used = new Uint8Array(segs.length), loops = [];
+        for(let i = 0; i < segs.length; i++){ if(used[i]) continue; used[i] = 1; const L = [segs[i][0], segs[i][1]]; let endK = key(segs[i][1]), g2 = 0;
+          while(g2++ < 1e6){ const l = adj.get(endK) || []; const nx = l.find(([j]) => !used[j]); if(!nx) break; used[nx[0]] = 1; const other = segs[nx[0]][1 - nx[1]]; endK = key(other); if(endK === key(L[0])) break; L.push(other); }
+          if(L.length >= 3) loops.push(L); }
+        const to2 = v => [(v[0] - B.o[0]) * B.u[0] + (v[1] - B.o[1]) * B.u[1] + (v[2] - B.o[2]) * B.u[2], (v[0] - B.o[0]) * B.v[0] + (v[1] - B.o[1]) * B.v[1] + (v[2] - B.o[2]) * B.v[2]];
+        const L2 = loops.map(l => l.map(to2)); const ar = l => { let s3 = 0; for(let k = 0; k < l.length; k++){ const a = l[k], b = l[(k + 1) % l.length]; s3 += a[0] * b[1] - b[0] * a[1]; } return s3 / 2; };
+        const inside = (pt, l) => { let r = false; for(let k = 0, j = l.length - 1; k < l.length; j = k++){ const a = l[k], b = l[j]; if((a[1] > pt[1]) !== (b[1] > pt[1]) && pt[0] < (b[0] - a[0]) * (pt[1] - a[1]) / (b[1] - a[1]) + a[0]) r = !r; } return r; };
+        const order = L2.map((l, i) => i).sort((x, y) => Math.abs(ar(L2[y])) - Math.abs(ar(L2[x]))); const depth = new Array(L2.length).fill(0), parent = new Array(L2.length).fill(-1);
+        for(const i of order){ for(const j of order){ if(j === i || Math.abs(ar(L2[j])) <= Math.abs(ar(L2[i]))) continue; if(inside(L2[i][0], L2[j])){ if(parent[i] < 0 || Math.abs(ar(L2[j])) < Math.abs(ar(L2[parent[i]]))) parent[i] = j; } } }
+        for(let i = 0; i < L2.length; i++){ let d2 = 0, k = parent[i]; while(k >= 0 && d2 < 50){ d2++; k = parent[k]; } depth[i] = d2; }
+        const pos = [], uv = [], ids = [];
+        for(let i = 0; i < L2.length; i++){ if(depth[i] % 2) continue; const holes = []; for(let j = 0; j < L2.length; j++) if(parent[j] === i && depth[j] % 2) holes.push(j);
+          const outer = L2[i].map(v => new T.Vector2(v[0], v[1])), hs = holes.map(j => L2[j].map(v => new T.Vector2(v[0], v[1])));
+          let tri; try{ tri = T.ShapeUtils.triangulateShape(outer, hs); }catch(_){ continue; }
+          const all = [loops[i]].concat(holes.map(j => loops[j])).flat(), all2 = [L2[i]].concat(holes.map(j => L2[j])).flat(); const b0 = pos.length / 3;
+          for(let k = 0; k < all.length; k++){ pos.push(all[k][0] + n[0] * eps, all[k][1] + n[1] * eps, all[k][2] + n[2] * eps); uv.push(all2[k][0] / (size / 30), all2[k][1] / (size / 30)); }
+          for(const t3 of tri) ids.push(b0 + t3[0], b0 + t3[1], b0 + t3[2]);
+          secRegions.push({ col: it.e.col, layer: it.e.layer, outer: L2[i], holes: holes.map(j => L2[j]) }); }
+        if(!ids.length) continue;
+        const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setIndex(ids);
+        const col = new T.Color(it.e.mat && MATS[it.e.mat] ? MATS[it.e.mat].c : (it.e.col || '#cccccc'));
+        capGroup.add(new T.Mesh(g, new T.MeshBasicMaterial({ color: col, map: hatchTex, side: T.DoubleSide })));
+      }
+    }
+    let capT = 0; const capsSoon = () => { clearTimeout(capT); capT = setTimeout(() => { buildCaps(); need = true; }, 60); };
+    // đèn điểm (LIGHT) và gizmo UCS
+    const lightGroup = new T.Group(); scene.add(lightGroup); const U2 = Math.pow(1000 / U, 2);
+    for(const e of modelEntities){ if(e.type !== 'POINT' || !e.light) continue; try{ if(A.isHiddenE(e)) continue; }catch(_){}
+      const L = new T.PointLight(new T.Color(e.light.col || '#ffd9a0'), (e.light.int || 5) * U2, 0, 2); L.position.set(e.x, e.y, e.light.z || 0); lightGroup.add(L);
+      const bulb = new T.Mesh(new T.SphereGeometry(size * 0.006, 12, 8), new T.MeshBasicMaterial({ color: new T.Color(e.light.col || '#ffd9a0') })); bulb.position.copy(L.position); lightGroup.add(bulb); }
+    lightGroup.visible = false;
+    const ucsGroup = new T.Group(); scene.add(ucsGroup);
+    function buildUCS(){ for(const o of ucsGroup.children.slice()){ ucsGroup.remove(o); if(o.geometry) o.geometry.dispose(); }
+      const Uc = A.UCS; if(!Uc || !Uc.on) return; const o = new T.Vector3(...Uc.O), L = size * 0.18;
+      [[Uc.U, 0xff4444], [Uc.V, 0x44dd44], [Uc.N, 0x4488ff]].forEach(([d, c]) => ucsGroup.add(new T.ArrowHelper(new T.Vector3(...d), o, L, c, L * 0.18, L * 0.08)));
+      const sq = new T.BufferGeometry(); const Q = [[0, 0], [1, 0], [1, 1], [0, 1]].map(([a, b]) => o.clone().addScaledVector(new T.Vector3(...Uc.U), a * L * 2).addScaledVector(new T.Vector3(...Uc.V), b * L * 2));
+      sq.setFromPoints([Q[0], Q[1], Q[2], Q[0], Q[2], Q[3]]); ucsGroup.add(new T.Mesh(sq, new T.MeshBasicMaterial({ color: 0x4488ff, transparent: true, opacity: .18, side: T.DoubleSide, depthWrite: false }))); }
+    buildUCS();
+    // vị trí mặt trời (thuật toán NOAA rút gọn)
+    const SUN = Object.assign({ on: false, date: new Date().toISOString().slice(0, 10), hour: 15, lat: 10.78, lon: 106.70, tz: 7, north: 0 }, (() => { try{ return JSON.parse(localStorage.getItem('dvd:sun') || '{}'); }catch(_){ return {}; } })());
+    function sunVec(){
+      const dt = new Date(SUN.date + 'T00:00:00Z'); const doy = Math.floor((dt - Date.UTC(dt.getUTCFullYear(), 0, 0)) / 864e5); const h = +SUN.hour;
+      const g = TAU / 365 * (doy - 1 + (h - 12) / 24);
+      const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+      const dec = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+      const tst = h * 60 + eqt + 4 * SUN.lon - 60 * SUN.tz, ha = (tst / 4 - 180) * D2R, lat = SUN.lat * D2R;
+      const cz = Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(ha), zen = Math.acos(Math.max(-1, Math.min(1, cz))), elv = Math.PI / 2 - zen;
+      let az = Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(lat) - Math.tan(dec) * Math.cos(lat)) + Math.PI;   // từ hướng Bắc, theo chiều kim đồng hồ
+      const na = (SUN.north || 0) * D2R, nN = [-Math.sin(na), Math.cos(na)], nE = [Math.cos(na), Math.sin(na)];
+      const e1 = Math.sin(az) * Math.cos(elv), n1 = Math.cos(az) * Math.cos(elv);
+      return { v: [e1 * nE[0] + n1 * nN[0], e1 * nE[1] + n1 * nN[1], Math.sin(elv)], elv: elv / D2R, az: ((az / D2R) % 360 + 360) % 360 };
+    }
+    function applySun(){
+      const real = V.style === 'real'; const info = ov.querySelector('[data-s="info"]');
+      if(SUN.on){ const sv = sunVec(); if(info) info.textContent = 'Độ cao ' + sv.elv.toFixed(1) + '° · phương vị ' + sv.az.toFixed(1) + '°' + (sv.elv <= 0 ? ' (mặt trời đã lặn)' : '');
+        const up2 = Math.max(0.02, sv.v[2]); sun.position.set(ctr.x + sv.v[0] * size * 2, ctr.y + sv.v[1] * size * 2, ctr.z + up2 * size * 2); sun.intensity = sv.elv > 0 ? (real ? 1.8 : 1.0) : 0.05; }
+      else { if(info) info.textContent = ''; sun.position.set(ctr.x + size * 0.7, ctr.y - size * 1.1, ctr.z + size * 1.8); sun.intensity = real ? 1.6 : 0.9; }
+      need = true; }
+    const sunP = ov.querySelector('[data-p="sun"]');
+    const syncSunUI = () => { sunP.querySelector('[data-s="on"]').checked = !!SUN.on; for(const k of ['date', 'hour', 'lat', 'lon', 'tz', 'north']) sunP.querySelector('[data-s="' + k + '"]').value = SUN[k]; const hh = +SUN.hour; sunP.querySelector('[data-s="hl"]').textContent = Math.floor(hh) + ':' + String(Math.round((hh % 1) * 60)).padStart(2, '0'); };
+    syncSunUI();
+    sunP.addEventListener('input', e => { const k = e.target.dataset.s; if(!k) return; if(k === 'on') SUN.on = e.target.checked; else if(k === 'date') SUN.date = e.target.value; else SUN[k] = +e.target.value; try{ localStorage.setItem('dvd:sun', JSON.stringify(SUN)); }catch(_){} syncSunUI(); applySun(); });
+    sunP.addEventListener('keydown', e => e.stopPropagation());
+    let sunAnim = 0;
+    // góc nhìn đã lưu (VIEW / CAMERA)
+    const vKey = () => 'dvd:v3d::' + (currentName || '');
+    const savedViews = () => { let L = []; try{ L = JSON.parse(localStorage.getItem(vKey()) || '[]'); }catch(_){} for(const e of modelEntities) if(e.type === 'POINT' && e.cam3) L.push({ name: '📷 ' + (e.cam3.name || 'Camera'), cam: e }); return L; };
+    function fillNamed(){ const sel = ov.querySelector('select[data-a="named"]'); const L = savedViews(); sel.innerHTML = '<option value="">Đã lưu…</option>' + L.map((v, i) => '<option value="' + i + '">' + esc(v.name) + '</option>').join('') + '<option value="save">＋ Lưu góc nhìn này…</option>'; }
+    function camTo(pos, tgt){ const dx = pos[0] - tgt[0], dy = pos[1] - tgt[1], dz = pos[2] - tgt[2], d = Math.hypot(dx, dy, dz) || 1; S.target.set(tgt[0], tgt[1], tgt[2]); S.dist = d; S.az = Math.atan2(dy, dx); S.el = Math.asin(dz / d); need = true; }
+    function applyNamed(v){ if(v.cam){ const e = v.cam, c = e.cam3; V.persp = true; pc.fov = 60; const pb = ov.querySelector('[data-a="persp"]'); if(pb) pb.textContent = 'Phối cảnh'; camTo([e.x, e.y, c.z], [e.x + c.dx, e.y + c.dy, c.tz]); } else { S.target.set(v.t[0], v.t[1], v.t[2]); S.az = v.az; S.el = v.el; S.dist = v.dist; if(v.persp != null){ V.persp = v.persp; const pb = ov.querySelector('[data-a="persp"]'); if(pb) pb.textContent = V.persp ? 'Phối cảnh' : 'Song song'; } } need = true; }
+    // đi bộ (3DWALK)
+    const keys = new Set(); let lastT = 0;
+    function walkStep(t){ if(!V.walk || !keys.size){ lastT = t; return; } const dt = Math.min(0.1, (t - (lastT || t)) / 1000); lastT = t; const sp = size * 0.25 * (keys.has('shift') ? 3 : 1) * dt;
+      const fx = -Math.cos(S.az), fy = -Math.sin(S.az), rx = -Math.sin(S.az), ry = Math.cos(S.az); let mx = 0, my = 0, mz = 0;
+      if(keys.has('w') || keys.has('arrowup')){ mx += fx; my += fy; } if(keys.has('s') || keys.has('arrowdown')){ mx -= fx; my -= fy; } if(keys.has('d') || keys.has('arrowright')){ mx += rx; my += ry; } if(keys.has('a') || keys.has('arrowleft')){ mx -= rx; my -= ry; } if(keys.has('e')) mz += 1; if(keys.has('q')) mz -= 1;
+      S.target.x += mx * sp; S.target.y += my * sp; S.target.z += mz * sp; need = true; }
+    function setWalk(on){ V.walk = !!on; const b = ov.querySelector('[data-a="walk"]'); if(b) b.classList.toggle('on', V.walk); ov.querySelector('.walkhint').style.display = V.walk ? 'block' : 'none'; ov.querySelector('.wpad').classList.toggle('on', V.walk && matchMedia('(pointer:coarse)').matches); keys.clear();
+      if(V.walk){ const el2 = S.el, pos = [S.target.x + Math.cos(el2) * Math.cos(S.az) * S.dist, S.target.y + Math.cos(el2) * Math.sin(S.az) * S.dist, S.target.z + Math.sin(el2) * S.dist]; const d = size * 0.02;
+        if(!V.persp){ V.persp = true; const pb = ov.querySelector('[data-a="persp"]'); if(pb) pb.textContent = 'Phối cảnh'; } pc.fov = 60;
+        camTo(pos, [pos[0] - Math.cos(el2) * Math.cos(S.az) * d, pos[1] - Math.cos(el2) * Math.sin(S.az) * d, pos[2] - Math.sin(el2) * d]); log('Đi bộ: W/S tiến lùi · A/D sang ngang · Q/E xuống/lên · Shift chạy nhanh · kéo chuột để nhìn quanh. Bấm "Đi bộ" lần nữa để thôi.'); }
+      need = true; }
+    ov.querySelector('.wpad').addEventListener('pointerdown', e => { const b2 = e.target.closest('[data-w]'); if(!b2) return; e.preventDefault(); keys.add(b2.dataset.w); try{ b2.setPointerCapture(e.pointerId); }catch(_){} });
+    for(const ev of ['pointerup', 'pointercancel', 'pointerleave']) ov.querySelector('.wpad').addEventListener(ev, e => { const b2 = e.target.closest('[data-w]'); if(b2) keys.delete(b2.dataset.w); });
+    let pickFace = false;
+    const ray = new T.Raycaster();
     // camera (Z hướng lên như AutoCAD)
     const pc = new T.PerspectiveCamera(40, 1, size / 1000, size * 200); pc.up.set(0, 0, 1);
     const oc = new T.OrthographicCamera(-1, 1, 1, -1, -size * 100, size * 200); oc.up.set(0, 0, 1);
@@ -400,7 +513,7 @@
     function applyStyle(){
       const s = V.style, real = s === 'real';
       for(const o of solids){ o.mesh.visible = s !== 'wire'; o.mesh.material = real ? o.std : o.lam; o.ed.visible = s !== 'shade' && !real; o.ed.material = s === 'wire' ? wireMat : edgeMat; if(o.iso) o.iso.visible = s === 'wire' || s === 'xray'; }
-      ground.visible = real; sun.castShadow = real; sun.intensity = real ? 1.6 : 0.9; scene.environment = real ? envMap() : null; renderer.toneMapping = real ? T.ACESFilmicToneMapping : T.NoToneMapping;
+      ground.visible = real; sun.castShadow = real; lightGroup.visible = real; applySun(); scene.environment = real ? envMap() : null; renderer.toneMapping = real ? T.ACESFilmicToneMapping : T.NoToneMapping;
       for(const m of mats.values()){ m.transparent = s === 'xray'; m.opacity = s === 'xray' ? 0.4 : 1; m.depthWrite = s !== 'xray'; m.needsUpdate = true; }
       need = true;
     }
@@ -433,8 +546,8 @@
           for(let s2 = 0; s2 <= n; s2++){ const t = s2 / n, q = P(t), ok = vis(q[0], q[1], q[2]); if(ok && run < 0) run = t; if((!ok || s2 === n) && run >= 0){ const t1 = ok ? t : (s2 - 1) / n; if(t1 > run && ((t1 - run) * pl >= 4 || (run === 0 && t1 === 1))) emit(P(run), P(t1)); run = -1; } } } }
       return out;
     }
-    function frame(){ if(!R3) return; if(need){ need = false; place(); renderer.render(scene, cam()); } R3.raf = requestAnimationFrame(frame); }
-    function setView(k){ const v = VIEWS[k]; if(!v) return; S.az = v[0] * D2R; S.el = v[1] * D2R; S.target.copy(ctr); S.dist = size * 1.8; need = true; }
+    function frame(t){ if(!R3) return; walkStep(t || 0); if(need){ need = false; place(); renderer.render(scene, cam()); } R3.raf = requestAnimationFrame(frame); }
+    function setView(k){ const v = VIEWS[k]; if(!v) return; pc.fov = 40; S.az = v[0] * D2R; S.el = v[1] * D2R; S.target.copy(ctr); S.dist = size * 1.8; need = true; }
     function zoomExt(){ S.target.copy(ctr); S.dist = size * 1.8; need = true; }
     // chuột / chạm
     let drag = null; const pts = new Map();
@@ -445,10 +558,13 @@
       if(!pts.has(e.pointerId)) return; const prev = pts.get(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if(pts.size >= 2){ const [p1, p2] = [...pts.values()]; const other = [...pts.entries()].find(([id]) => id !== e.pointerId)[1]; const d0 = Math.hypot(prev.x - other.x, prev.y - other.y), d1 = Math.hypot(p1.x - p2.x, p1.y - p2.y); if(d0 > 0 && d1 > 0) S.dist *= d0 / d1; panBy((e.clientX - prev.x) / 2, (e.clientY - prev.y) / 2); need = true; return; }
       const dx = e.clientX - prev.x, dy = e.clientY - prev.y; if(!drag) return;
-      if(drag.b === 0 && !drag.sh && !e.shiftKey){ S.az -= dx * 0.008; S.el += dy * 0.008; S.el = Math.max(-89.9 * D2R, Math.min(89.9 * D2R, S.el)); need = true; }
+      if(drag.b === 0 && !drag.sh && !e.shiftKey && V.walk){ const el0 = S.el, pos = [S.target.x + Math.cos(el0) * Math.cos(S.az) * S.dist, S.target.y + Math.cos(el0) * Math.sin(S.az) * S.dist, S.target.z + Math.sin(el0) * S.dist]; S.az += dx * 0.004; S.el = Math.max(-85 * D2R, Math.min(85 * D2R, S.el - dy * 0.004)); const el1 = S.el; S.target.set(pos[0] - Math.cos(el1) * Math.cos(S.az) * S.dist, pos[1] - Math.cos(el1) * Math.sin(S.az) * S.dist, pos[2] - Math.sin(el1) * S.dist); need = true; }
+      else if(drag.b === 0 && !drag.sh && !e.shiftKey){ S.az -= dx * 0.008; S.el += dy * 0.008; S.el = Math.max(-89.9 * D2R, Math.min(89.9 * D2R, S.el)); need = true; }
       else panBy(dx, dy);
     });
-    const up = e => { pts.delete(e.pointerId); if(!pts.size) drag = null; };
+    const up = e => { if(pickFace && drag && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5){ const r = cv3.getBoundingClientRect(); ray.setFromCamera(new T.Vector2((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cam()); const hit = ray.intersectObjects(solids.map(o => o.mesh), false)[0];
+        if(hit && hit.face){ const nv = hit.face.normal.clone().transformDirection(hit.object.matrixWorld); if(nv.dot(ray.ray.direction) > 0) nv.negate(); if(A.setUCSFace) A.setUCSFace([hit.point.x, hit.point.y, hit.point.z], [nv.x, nv.y, nv.z]); buildUCS(); pickFace = false; ov.querySelector('[data-a="ucsf"]').classList.remove('on'); need = true; } }
+      pts.delete(e.pointerId); if(!pts.size) drag = null; };
     cv3.addEventListener('pointerup', up); cv3.addEventListener('pointercancel', up);
     cv3.addEventListener('wheel', e => { e.preventDefault(); S.dist *= Math.pow(1.0015, e.deltaY); S.dist = Math.max(size / 1e4, Math.min(size * 100, S.dist)); need = true; }, { passive: false });
     cv3.addEventListener('dblclick', zoomExt);
@@ -462,16 +578,28 @@
       if(a === 'stl') exportSTL(); if(a === 'obj') exportOBJ();
       if(a === 'cut'){ V.cut = !V.cut; applyCut(); }
       if(a === 'flat'){ const segs = flatshot(); close3D(); A._fs = segs; setTimeout(() => DVDCmd.run('FLATSHOT'), 30); }
+      if(a === 'sec2d'){ buildCaps(); if(!secRegions.length){ log('Mặt cắt không cắt qua khối nào.'); return; } A._sec = { regions: secRegions, kind: V.cutMode === 'v' && V.cutLine ? 'v' : 'h', z: cutZ() }; close3D(); setTimeout(() => DVDCmd.run('SECTION2D'), 30); }
+      if(a === 'sun'){ sunP.classList.toggle('on'); b.classList.toggle('on', sunP.classList.contains('on')); }
+      if(a === 'sunanim'){ if(sunAnim){ clearInterval(sunAnim); sunAnim = 0; b.textContent = '▶ Bóng đổ trong ngày'; return; } SUN.on = true; if(V.style !== 'real'){ V.style = 'real'; ov.querySelector('select[data-a="style"]').value = 'real'; applyStyle(); } SUN.hour = 6; b.textContent = '■ Dừng'; sunAnim = setInterval(() => { SUN.hour = +SUN.hour + 0.25; if(SUN.hour > 18){ SUN.hour = 6; } syncSunUI(); applySun(); }, 250); }
+      if(a === 'walk') setWalk(!V.walk);
+      if(a === 'ucsf'){ pickFace = !pickFace; b.classList.toggle('on', pickFace); if(pickFace) log('Bấm vào một mặt của khối để đặt UCS (gốc tại điểm bấm, trục Z vuông góc mặt).'); }
     });
     ov.querySelector('[data-a="cutz"]').addEventListener('input', e => { V.cutF = (+e.target.value) / 1000; applyCut(); });
+    ov.querySelector('select[data-a="named"]').addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if(v === 'save'){ const nm = prompt('Tên góc nhìn:', 'Góc ' + (savedViews().length + 1)); if(!nm) return; let L = []; try{ L = JSON.parse(localStorage.getItem(vKey()) || '[]'); }catch(_){} L = L.filter(x => x.name !== nm); L.push({ name: nm, t: [S.target.x, S.target.y, S.target.z], az: S.az, el: S.el, dist: S.dist, persp: V.persp }); try{ localStorage.setItem(vKey(), JSON.stringify(L)); }catch(_){} fillNamed(); log('Đã lưu góc nhìn "' + nm + '".'); return; } const L = savedViews(); if(L[+v]) applyNamed(L[+v]); });
+    fillNamed();
     ov.querySelector('select[data-a="views"]').addEventListener('change', e => { if(e.target.value) setView(e.target.value); e.target.value = ''; });
     ov.querySelector('select[data-a="style"]').addEventListener('change', e => { V.style = e.target.value; localStorage.setItem('dvd:3dstyle', V.style); applyStyle(); });
-    const onKey = e => { if(e.key === 'Escape'){ e.stopPropagation(); e.preventDefault(); close3D(); } };
-    window.addEventListener('keydown', onKey, true);
+    const onKey = e => { if(e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName) && e.key !== 'Escape') return;
+      if(e.key === 'Escape'){ e.stopPropagation(); e.preventDefault(); if(V.walk){ setWalk(false); return; } close3D(); return; }
+      if(V.walk){ const k = e.key.toLowerCase(); if(/^(w|a|s|d|q|e|arrowup|arrowdown|arrowleft|arrowright|shift)$/.test(k)){ e.preventDefault(); e.stopPropagation(); keys.add(k); } } };
+    const onKeyUp = e => { keys.delete(e.key.toLowerCase()); if(e.key === 'Shift') keys.delete('shift'); };
+    window.addEventListener('keydown', onKey, true); window.addEventListener('keyup', onKeyUp, true);
     const ro = new ResizeObserver(() => { need = true; }); ro.observe(ov);
-    R3 = { ov, renderer, scene, ro, onKey, raf: 0, setView, flatshot, get state(){ return S; }, solids: solids.length, render(){ need = true; place(); renderer.render(scene, cam()); }, canvas: cv3, setCut(on, f){ V.cut = !!on; if(f != null) V.cutF = f; applyCut(); }, setStyle(st){ V.style = st; ov.querySelector('select[data-a="style"]').value = st; applyStyle(); } };
+    R3 = { ov, renderer, scene, ro, onKey, onKeyUp, raf: 0, stop(){ if(sunAnim) clearInterval(sunAnim); sunAnim = 0; clearTimeout(capT); }, setView, flatshot, camTo, setWalk, walkKey(k, on){ if(on) keys.add(k); else keys.delete(k); }, buildCaps(){ buildCaps(); return secRegions; }, setSun(o){ Object.assign(SUN, o); syncSunUI(); applySun(); }, sunVec, buildUCS(){ buildUCS(); need = true; }, get cutPlane(){ return cutPlane; }, get state(){ return S; }, solids: solids.length, render(){ need = true; place(); renderer.render(scene, cam()); }, canvas: cv3, setCut(on, f, mode, line){ V.cut = !!on; if(f != null) V.cutF = f; if(mode) V.cutMode = mode; if(line) V.cutLine = line; applyCut(); }, setStyle(st){ V.style = st; ov.querySelector('select[data-a="style"]').value = st; applyStyle(); } };
     applyCut();
-    if(MEM.cam3 && !opt.view){ S.az = MEM.cam3.az; S.el = MEM.cam3.el; } else setView(opt.view || MEM.v3 || 'se'); frame();
+    if(opt.cam){ V.persp = true; pc.fov = 60; const pb = ov.querySelector('[data-a="persp"]'); if(pb) pb.textContent = 'Phối cảnh'; camTo(opt.cam.pos, opt.cam.target); }
+    else if(MEM.cam3 && !opt.view){ S.az = MEM.cam3.az; S.el = MEM.cam3.el; } else setView(opt.view || MEM.v3 || 'se');
+    applySun(); frame();
     if(!meshes.length) log('Bản vẽ chưa có khối 3D — dùng BOX, CYLINDER, EXTRUDE, PRESSPULL hoặc WALL3D để tạo. Đang hiện nét 2D ở cao độ 0.');
     else log('Xem 3D: ' + meshes.length + ' khối. Esc hoặc "✕ 2D" để về bản vẽ.');
     A.view3D = R3;
@@ -479,7 +607,7 @@
   function close3D(){
     if(!R3) { V.open = false; return; }
     try{ MEM.cam3 = { az: R3.state.az, el: R3.state.el }; }catch(_){}
-    cancelAnimationFrame(R3.raf); window.removeEventListener('keydown', R3.onKey, true); try{ R3.ro.disconnect(); }catch(_){}
+    cancelAnimationFrame(R3.raf); window.removeEventListener('keydown', R3.onKey, true); window.removeEventListener('keyup', R3.onKeyUp, true); V.walk = false; try{ R3.stop(); }catch(_){} try{ R3.ro.disconnect(); }catch(_){}
     R3.scene.traverse(o => { if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); } });
     try{ R3.renderer.dispose(); R3.renderer.forceContextLoss(); }catch(_){}
     R3.ov.remove(); R3 = null; A.view3D = null; V.open = false; try{ draw(); A.paint(); }catch(_){}

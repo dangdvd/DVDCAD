@@ -428,7 +428,10 @@
         else h += F('Kiểu', '', e.solid ? 'Tô đặc (file gốc)' : 'Mẫu của file gốc', true);
         h += F('Số vòng biên', '', String((e.loops || []).length), true) + F('Diện tích ≈', '', Math.abs(ar), true);
         break; }
-      case 'POINT': h += F('X', 'x', e.x) + F('Y', 'y', e.y); break;
+      case 'POINT': h += F('X', 'x', e.x) + F('Y', 'y', e.y);
+        if(e.light) h += F('Đèn — cao độ Z', 'lz', e.light.z || 0) + F('Đèn — cường độ', 'li', e.light.int || 5);
+        if(e.cam3) h += F('Camera — tên', '', e.cam3.name || '', true) + F('Camera — cao mắt', 'cz', e.cam3.z || 0) + '<div class="act"><button data-a="view3d">Xem từ camera</button></div>';
+        break;
       case 'SOLID3D': {
         const KN = { mesh: 'Khối lưới (sau cộng/trừ, xoay, quét…)', ext: 'Khối đùn / hộp', cone: (e.r2 != null && Math.abs(e.r2 - e.r) < 1e-12) ? 'Khối trụ' : 'Khối nón', sph: 'Khối cầu' };
         h += F('Loại', '', KN[e.k] || e.k, true);
@@ -444,7 +447,7 @@
     }
     if(!editable) h += '<div class="pe">Đang xem layout — chuyển về Model để sửa.</div>';
     palBody.innerHTML = h; bindSingle(e);
-    const b3 = palBody.querySelector('[data-a="view3d"]'); if(b3) b3.addEventListener('click', () => { const A2 = ACAD(); if(A2 && A2.open3D) A2.open3D(); });
+    const b3 = palBody.querySelector('[data-a="view3d"]'); if(b3) b3.addEventListener('click', () => { const A2 = ACAD(); if(!A2 || !A2.open3D) return; if(e.cam3) A2.open3D({ cam: { pos: [e.x, e.y, e.cam3.z], target: [e.x + e.cam3.dx, e.y + e.cam3.dy, e.cam3.tz] } }); else A2.open3D(); });
   }
   function pickColor(cb, cur){ const i = document.createElement('input'); i.type = 'color'; i.value = /^#[0-9a-f]{6}$/i.test(cur || '') ? cur : '#ffffff'; i.style.cssText = 'position:fixed;left:-100px;top:0;opacity:0'; document.body.appendChild(i); i.addEventListener('change', () => { cb(i.value); i.remove(); }); i.addEventListener('blur', () => setTimeout(() => i.remove(), 400)); i.click(); }
   function commitSingle(e, fn){
@@ -497,6 +500,7 @@
           else if(f === 'ea'){ const a = Math.hypot(w.mx, w.my) || 1; if(v > 0){ const b = a * (w.ratio || 1); w.mx *= v / a; w.my *= v / a; w.ratio = Math.min(1, b / v); } }
           else if(f === 'eb'){ const a = Math.hypot(w.mx, w.my) || 1; if(v > 0 && v <= a) w.ratio = v / a; }
           else if(f === 'r2'){ if(v >= 0) w.r2 = v; }
+          else if(f === 'lz' && w.light){ w.light.z = v; } else if(f === 'li' && w.light){ if(v > 0) w.light.int = v; } else if(f === 'cz' && w.cam3){ w.cam3.z = v; w.cam3.tz = v; }
           else if(f === 'v0x' || f === 'v0y'){ if(w.vertices && w.vertices[0]) w.vertices[0][f === 'v0x' ? 'x' : 'y'] = v; }
           else w[f] = v;
         });
