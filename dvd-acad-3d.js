@@ -291,7 +291,9 @@
   #dvd3d .vc .ring{position:absolute;left:4px;top:58px;width:88px;height:22px;border-radius:50%;border:2px solid rgba(200,210,225,.35)}
   #dvd3d .hint{position:absolute;left:10px;bottom:10px;color:#aab3c0;font:12px system-ui,sans-serif;background:rgba(20,24,32,.6);padding:4px 8px;border-radius:5px;pointer-events:none}
   #dvd3d .home{position:absolute;right:30px;top:124px;z-index:2;height:26px;border-radius:5px;border:1px solid #556071;background:rgba(32,38,48,.88);color:#e6eaf0;font:12px system-ui;cursor:pointer;padding:0 8px}
+  #dvd3d .t3{pointer-events:none} #dvd3d .t3 > *{pointer-events:auto} #dvd3d .vc{pointer-events:none} #dvd3d .vc .f{pointer-events:auto}
   #dvd3d .t3 .vsel{display:none}
+  html.v3d #dvdCmd{z-index:46}
   #dvd3d .pnl{position:absolute;left:8px;top:76px;z-index:3;background:rgba(24,28,36,.94);border:1px solid #556071;border-radius:8px;padding:10px 12px;color:#e6eaf0;font:12px system-ui,sans-serif;display:none;min-width:250px}
   #dvd3d .wpad{position:absolute;right:14px;bottom:44px;z-index:3;display:none;grid-template-columns:repeat(3,46px);gap:6px} #dvd3d .wpad.on{display:grid}
   #dvd3d .wpad button{height:46px;border-radius:10px;border:1px solid #556071;background:rgba(32,38,48,.85);color:#e6eaf0;font:18px system-ui;touch-action:none}
@@ -305,10 +307,10 @@
   const VIEWS = { top: [0, 89.9], bottom: [0, -89.9], front: [-90, 0], back: [90, 0], left: [180, 0], right: [0, 0], sw: [-135, 30], se: [-45, 30], ne: [45, 30], nw: [135, 30] };
   const VN = { top: 'Trên', bottom: 'Dưới', front: 'Trước', back: 'Sau', left: 'Trái', right: 'Phải', sw: 'ISO TN', se: 'ISO ĐN', ne: 'ISO ĐB', nw: 'ISO TB' };
   function sceneBounds(meshes){ let a = [Infinity, Infinity, Infinity], b = [-Infinity, -Infinity, -Infinity]; for(const { m } of meshes) for(let i = 0; i < m.p.length; i += 3) for(let k = 0; k < 3; k++){ const v = m.p[i + k]; if(v < a[k]) a[k] = v; if(v > b[k]) b[k] = v; } return a[0] <= b[0] ? { a, b } : null; }
-  function lines2D(maxSeg){
+  function lines2D(maxSeg, only){
     const P = [], C = []; let n = 0; const vb = (() => { try{ return null; }catch(_){ return null; } })(); void vb;
     const push = (x1, y1, x2, y2, col) => { if(n >= maxSeg) return; P.push(x1, y1, 0, x2, y2, 0); const c = parseInt(String(col || '#c8ccd2').replace('#', ''), 16) || 0xc8ccd2; const r = ((c >> 16) & 255) / 255, g = ((c >> 8) & 255) / 255, b = (c & 255) / 255; C.push(r, g, b, r, g, b); n++; };
-    for(const e of modelEntities){
+    for(const e of (only || modelEntities)){
       if(n >= maxSeg) break; if(is3D(e) || e.type === 'TEXT' || e.type === 'HATCH' || e.type === 'IMAGE' || e.type === 'XLINE'){ continue; } try{ if(A.isHiddenE(e)) continue; }catch(_){}
       const col = e.col;
       if(e.type === 'LINE') push(e.x1, e.y1, e.x2, e.y2, col);
@@ -336,7 +338,7 @@
       '<div class="pnl" data-p="sun"><b>Mặt trời (SUNPROPERTIES)</b><label>Bật theo ngày giờ <input type="checkbox" data-s="on" style="width:auto"></label><label>Ngày <input type="date" data-s="date"></label><label>Giờ <input type="range" data-s="hour" min="5" max="19" step="0.25"><span data-s="hl"></span></label><label>Vĩ độ <input type="number" data-s="lat" step="0.01"></label><label>Kinh độ <input type="number" data-s="lon" step="0.01"></label><label>Múi giờ <input type="number" data-s="tz" step="0.5"></label><label>Hướng Bắc (° từ trục Y) <input type="number" data-s="north" step="1"></label><button data-a="sunanim" style="margin-top:6px">▶ Bóng đổ trong ngày</button><div class="info" data-s="info"></div></div>' +
       '<div class="walkhint"></div><div class="wpad"><button data-w="w">▲</button><button data-w="a">◀</button><button data-w="s">▼</button><button data-w="d">▶</button><button data-w="e">⤒</button><button data-w="q">⤓</button></div>' +
       '<div class="hint">' + (matchMedia('(pointer:coarse)').matches ? '1 ngón: xoay · 2 ngón: dời + phóng · Chạm đúp: vừa màn hình' : 'Kéo trái: xoay · Kéo phải / giữa / Shift: dời · Lăn: phóng · Kích đúp: vừa màn hình · Esc: về 2D') + '</div>';
-    stage.appendChild(ov); ov.querySelector('select[data-a="style"]').value = V.style;
+    stage.appendChild(ov); ov.querySelector('select[data-a="style"]').value = V.style; document.documentElement.classList.add('v3d'); setTimeout(() => { const h = ov.querySelector('.hint'); if(h) h.style.display = 'none'; }, 7000);
     const cv3 = document.createElement('canvas'); cv3.className = 'c3'; ov.insertBefore(cv3, ov.firstChild);
     const renderer = new T.WebGLRenderer({ canvas: cv3, antialias: true, preserveDrawingBuffer: true, alpha: true });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
@@ -345,12 +347,8 @@
     const sun = new T.DirectionalLight(0xffffff, 0.9); sun.position.set(0.6, -1.0, 1.6); scene.add(sun); scene.add(sun.target);
     const sun2 = new T.DirectionalLight(0xffffff, 0.25); sun2.position.set(-1, 0.8, 0.4); scene.add(sun2);
     const root = new T.Group(); scene.add(root);
-    // khối 3D
-    const meshes0 = allMeshes(); const solids = []; const mats = new Map();
-    // gộp các mặt 3DFACE cùng màu thành 1 lưới (để cạnh chung giữa các tam giác không bị vẽ)
-    const meshes = [], fg = new Map();
-    const many = meshes0.length > 200;   // nhiều khối: gộp theo màu để vẽ nhanh (ít lệnh vẽ)
-    for(const it of meshes0){ if(it.e.type !== 'SOLID' && !many){ meshes.push(it); continue; } const sm = !!it.m.smooth, k = String(it.e.col || '#cccccc') + (sm ? '|s' : '|f') + '|' + (it.e.mat || ''); let g = fg.get(k); if(!g){ g = { e: { col: String(it.e.col || '#cccccc'), mat: it.e.mat }, m: { p: [], i: [], flat: !sm, smooth: sm }, iso: [] }; fg.set(k, g); meshes.push(g); } const b = g.m.p.length / 3; for(const v of it.m.p) g.m.p.push(v); for(const i of it.m.i) g.m.i.push(i + b); const ip = isoLines(it.e); for(const v of ip) g.iso.push(v); }
+    // khối 3D (dựng lại được khi bản vẽ thay đổi trong lúc đang xem 3D)
+    let meshes0 = [], meshes = [], solids = []; const mats = new Map();
     const matOf = col => { col = String(col || '#cccccc'); if(!mats.has(col)) mats.set(col, new T.MeshLambertMaterial({ color: new T.Color(col), side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })); return mats.get(col); };
     const edgeMat = new T.LineBasicMaterial({ color: 0x0d1015 }), wireMat = new T.LineBasicMaterial({ color: 0xd8dee8 });
     const U = (typeof unitToMM === 'function' && unitToMM()) || 1, stds = new Map();
@@ -359,15 +357,26 @@
       if(M){ o.color = new T.Color(M.tex ? '#ffffff' : M.c); o.roughness = M.r; o.metalness = M.m || 0; if(M.tex) o.map = texOf(T, mk); if(M.op){ o.transparent = true; o.opacity = M.op; o.depthWrite = false; } }
       else { o.color = new T.Color(col || '#cccccc'); o.roughness = .75; o.metalness = 0; }
       const m = new T.MeshStandardMaterial(o); stds.set(key, m); return m; };
-    for(const { e, m, iso: isoP } of meshes){
-      let g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(m.p, 3)); g.setIndex(m.i);
-      if(m.flat){ g = g.toNonIndexed(); } g.computeVertexNormals();
-      if(e.mat && MATS[e.mat] && MATS[e.mat].tex) boxUV(T, g, MATS[e.mat].ts / U);
-      const mesh = new T.Mesh(g, matOf(e.mat && MATS[e.mat] ? MATS[e.mat].c : e.col)); mesh.castShadow = true; mesh.receiveShadow = true; root.add(mesh);
-      const eg = new T.EdgesGeometry(g, 25); const ed = new T.LineSegments(eg, edgeMat); root.add(ed);
-      let iso = null; const IP = isoP || isoLines(e); if(IP.length){ const ig = new T.BufferGeometry(); ig.setAttribute('position', new T.Float32BufferAttribute(IP, 3)); iso = new T.LineSegments(ig, wireMat); iso.visible = false; root.add(iso); }
-      solids.push({ mesh, ed, iso, col: e.col, lam: mesh.material, std: stdOf(e.col, e.mat) });
+    function buildSolids(){
+      for(const o of solids){ for(const x of [o.mesh, o.ed, o.iso]){ if(!x) continue; root.remove(x); x.geometry.dispose(); } }
+      meshes0 = allMeshes(); meshes = []; solids = []; const fg = new Map();
+      // gộp các mặt 3DFACE cùng màu thành 1 lưới; nhiều khối: gộp theo màu để vẽ nhanh — vẫn nhớ khối nào ứng với tam giác nào (để chọn trong 3D)
+      const many = meshes0.length > 200;
+      for(const it of meshes0){ if(it.e.type !== 'SOLID' && !many){ meshes.push({ e: it.e, m: it.m, parts: [{ e: it.e, t0: 0, t1: it.m.i.length / 3 }] }); continue; }
+        const sm = !!it.m.smooth, k = String(it.e.col || '#cccccc') + (sm ? '|s' : '|f') + '|' + (it.e.mat || ''); let g = fg.get(k);
+        if(!g){ g = { e: { col: String(it.e.col || '#cccccc'), mat: it.e.mat }, m: { p: [], i: [], flat: !sm, smooth: sm }, iso: [], parts: [] }; fg.set(k, g); meshes.push(g); }
+        const b = g.m.p.length / 3, t0 = g.m.i.length / 3; for(const v of it.m.p) g.m.p.push(v); for(const i of it.m.i) g.m.i.push(i + b); g.parts.push({ e: it.e, t0, t1: g.m.i.length / 3 }); const ip = isoLines(it.e); for(const v of ip) g.iso.push(v); }
+      for(const { e, m, iso: isoP, parts } of meshes){
+        let g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(m.p, 3)); g.setIndex(m.i);
+        if(m.flat){ g = g.toNonIndexed(); } g.computeVertexNormals();
+        if(e.mat && MATS[e.mat] && MATS[e.mat].tex) boxUV(T, g, MATS[e.mat].ts / U);
+        const mesh = new T.Mesh(g, matOf(e.mat && MATS[e.mat] ? MATS[e.mat].c : e.col)); mesh.castShadow = true; mesh.receiveShadow = true; root.add(mesh);
+        const eg = new T.EdgesGeometry(g, 25); const ed = new T.LineSegments(eg, edgeMat); root.add(ed);
+        let iso = null; const IP = isoP || isoLines(e); if(IP.length){ const ig = new T.BufferGeometry(); ig.setAttribute('position', new T.Float32BufferAttribute(IP, 3)); iso = new T.LineSegments(ig, wireMat); iso.visible = false; root.add(iso); }
+        solids.push({ mesh, ed, iso, col: e.col, lam: mesh.material, std: stdOf(e.col, e.mat), parts });
+      }
     }
+    buildSolids();
     // nét 2D ở z = 0
     let l2 = null;
     const build2D = () => { if(l2){ root.remove(l2); l2.geometry.dispose(); l2 = null; } if(!V.show2d) return; const L = lines2D(400000); if(!L.n) return; const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(L.P, 3)); g.setAttribute('color', new T.Float32BufferAttribute(L.C, 3)); l2 = new T.LineSegments(g, new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.75 })); root.add(l2); };
@@ -376,7 +385,7 @@
     let bb = sceneBounds(meshes);
     if(!bb){ let a = [Infinity, Infinity, 0], b = [-Infinity, -Infinity, 0]; for(const e of modelEntities){ const x = entBBox(e); if(!x) continue; a[0] = Math.min(a[0], x.x0); a[1] = Math.min(a[1], x.y0); b[0] = Math.max(b[0], x.x1); b[1] = Math.max(b[1], x.y1); } bb = isFinite(a[0]) ? { a, b } : { a: [0, 0, 0], b: [1000, 1000, 1000] }; }
     const ctr = new T.Vector3((bb.a[0] + bb.b[0]) / 2, (bb.a[1] + bb.b[1]) / 2, (bb.a[2] + bb.b[2]) / 2);
-    const size = Math.max(bb.b[0] - bb.a[0], bb.b[1] - bb.a[1], bb.b[2] - bb.a[2], 1e-6);
+    let size = Math.max(bb.b[0] - bb.a[0], bb.b[1] - bb.a[1], bb.b[2] - bb.a[2], 1e-6);
     // lưới mặt đất
     const gsz = Math.pow(10, Math.ceil(Math.log10(size * 1.5))); const grid = new T.GridHelper(gsz, 20, 0x6b7586, 0x4a5262); grid.rotation.x = Math.PI / 2; grid.position.set(ctr.x, ctr.y, Math.min(0, bb.a[2]) - size * 1e-4); grid.material.transparent = true; grid.material.opacity = 0.35; scene.add(grid);
     const axes = new T.AxesHelper(size * 0.15); axes.position.set(bb.a[0], bb.a[1], 0); scene.add(axes);
@@ -432,10 +441,64 @@
     let capT = 0; const capsSoon = () => { clearTimeout(capT); capT = setTimeout(() => { buildCaps(); need = true; }, 60); };
     // đèn điểm (LIGHT) và gizmo UCS
     const lightGroup = new T.Group(); scene.add(lightGroup); const U2 = Math.pow(1000 / U, 2);
-    for(const e of modelEntities){ if(e.type !== 'POINT' || !e.light) continue; try{ if(A.isHiddenE(e)) continue; }catch(_){}
-      const L = new T.PointLight(new T.Color(e.light.col || '#ffd9a0'), (e.light.int || 5) * U2, 0, 2); L.position.set(e.x, e.y, e.light.z || 0); lightGroup.add(L);
-      const bulb = new T.Mesh(new T.SphereGeometry(size * 0.006, 12, 8), new T.MeshBasicMaterial({ color: new T.Color(e.light.col || '#ffd9a0') })); bulb.position.copy(L.position); lightGroup.add(bulb); }
-    lightGroup.visible = false;
+    function buildLights(){ for(const o of lightGroup.children.slice()){ lightGroup.remove(o); if(o.geometry) o.geometry.dispose(); if(o.dispose) o.dispose(); }
+      for(const e of modelEntities){ if(e.type !== 'POINT' || !e.light) continue; try{ if(A.isHiddenE(e)) continue; }catch(_){}
+        const L = new T.PointLight(new T.Color(e.light.col || '#ffd9a0'), (e.light.int || 5) * U2, 0, 2); L.position.set(e.x, e.y, e.light.z || 0); lightGroup.add(L);
+        const bulb = new T.Mesh(new T.SphereGeometry(size * 0.006, 12, 8), new T.MeshBasicMaterial({ color: new T.Color(e.light.col || '#ffd9a0') })); bulb.position.copy(L.position); lightGroup.add(bulb); } }
+    buildLights(); lightGroup.visible = false;
+    // ---- nhập liệu cho lệnh ngay trong khung 3D: bấm điểm (bắt đỉnh khối / nét 2D), chọn khối hoặc nét 2D ----
+    const hiGroup = new T.Group(); scene.add(hiGroup); const hiMat = new T.LineBasicMaterial({ color: 0x3d9bff, depthTest: false, transparent: true });
+    const mk = new T.Group(); mk.visible = false; scene.add(mk);
+    const mkRing = new T.Mesh(new T.RingGeometry(0.6, 1, 24), new T.MeshBasicMaterial({ color: 0x66ff99, side: T.DoubleSide, depthTest: false, transparent: true })); mk.add(mkRing);
+    let mkLine = null; const snapBox = new T.Mesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ color: 0xffd43b, wireframe: true, depthTest: false })); snapBox.visible = false; scene.add(snapBox);
+    function clearMk(){ if(mk.visible || snapBox.visible || mkLine){ mk.visible = false; snapBox.visible = false; if(mkLine){ scene.remove(mkLine); mkLine.geometry.dispose(); mkLine = null; } need = true; } }
+    function refreshHi(){ if(!(A.busy && A.busy())) clearMk(); for(const o of hiGroup.children.slice()){ hiGroup.remove(o); o.geometry.dispose(); }
+      const sel = A.curSel ? A.curSel() : []; if(!sel.length) { need = true; return; } const P = [];
+      for(const e of sel.slice(0, 400)){ if(is3D(e)){ const m = meshOf(e); if(!m) continue; const L = viewEdges(edgeData(m), null, Math.cos(25 * D2R)); for(const v of L) P.push(v); }
+        else { const L = lines2D(1e5, [e]); for(const v of L.P) P.push(v); } }
+      if(P.length){ const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(P, 3)); const ls = new T.LineSegments(g, hiMat); ls.renderOrder = 10; hiGroup.add(ls); }
+      need = true; }
+    const ndcOf = ev => { const r = cv3.getBoundingClientRect(); return new T.Vector2((ev.clientX - r.left) / r.width * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1); };
+    const wpp = (pt) => { const c = cam(), H = ov.clientHeight || 1; if(V.persp){ const d = c.position.distanceTo(pt); return 2 * d * Math.tan(pc.fov * D2R / 2) / H; } return (oc.top - oc.bottom) / H; };
+    function hitSolid(ev){ ray.setFromCamera(ndcOf(ev), cam()); const vis = solids.filter(o => o.mesh.visible || V.style === 'wire'); const h = ray.intersectObjects(vis.map(o => o.mesh), false)[0]; if(!h) return null;
+      const o = solids.find(x => x.mesh === h.object); let ent = null; if(o) for(const pr of o.parts){ if(h.faceIndex >= pr.t0 && h.faceIndex < pr.t1){ ent = pr.e; break; } } return { h, ent }; }
+    function groundPt(ev, z){ ray.setFromCamera(ndcOf(ev), cam()); const pl = new T.Plane(new T.Vector3(0, 0, 1), -z); const q = new T.Vector3(); return ray.ray.intersectPlane(pl, q) ? q : null; }
+    // điểm 3D tại con trỏ: ưu tiên đỉnh khối gần nhất, rồi điểm trên mặt khối, rồi điểm đặc biệt của nét 2D, cuối cùng điểm trên mặt phẳng Z = cao độ
+    // bắt đỉnh khối gần con trỏ nhất (tính trên màn hình), kể cả khi tia chuột trượt mép khối
+    function vertexNear(ev, tolPx, maxV){ const c = cam(), r = cv3.getBoundingClientRect(), n = ndcOf(ev), v = new T.Vector3(); let best = null, bd = tolPx, cnt = 0;
+      for(const o of solids){ const pa = o.mesh.geometry.attributes.position; cnt += pa.count; if(cnt > maxV) return best; for(let i = 0; i < pa.count; i++){ v.set(pa.getX(i), pa.getY(i), pa.getZ(i)).project(c); if(v.z > 1) continue; const d = Math.hypot((v.x - n.x) * r.width / 2, (v.y - n.y) * r.height / 2); if(d < bd){ bd = d; best = new T.Vector3(pa.getX(i), pa.getY(i), pa.getZ(i)); } } }
+      return best; }
+    function pointAt(ev, full){
+      const tolPx = 12; const vn = vertexNear(ev, tolPx, full ? 600000 : 60000); if(vn) return { p: vn, snap: true };
+      const hs = hitSolid(ev);
+      if(hs){ const g = hs.h.object.geometry, pa = g.attributes.position, f = hs.h.face; let best = null, bd = Infinity; const c = cam(), r = cv3.getBoundingClientRect();
+        for(const ix of [f.a, f.b, f.c]){ const v = new T.Vector3(pa.getX(ix), pa.getY(ix), pa.getZ(ix)); const sp = v.clone().project(c); const dx = (sp.x - ndcOf(ev).x) * r.width / 2, dy = (sp.y - ndcOf(ev).y) * r.height / 2, d = Math.hypot(dx, dy); if(d < bd){ bd = d; best = v; } }
+        if(best && bd < tolPx) return { p: best, snap: true }; return { p: hs.h.point.clone(), snap: false }; }
+      const z = MEM.z03 || 0, q = groundPt(ev, z); if(!q) return null; const tol = tolPx * wpp(q); let best = null, bd = tol;
+      for(const e of (A.selectable ? A.selectable() : modelEntities)){ if(is3D(e)) continue; let gp; try{ gp = A.gripsOf ? A.gripsOf(e) : []; }catch(_){ gp = []; } for(const g2 of gp){ const d = Math.hypot(g2.x - q.x, g2.y - q.y); if(d < bd){ bd = d; best = g2; } } }
+      if(best) return { p: new T.Vector3(best.x, best.y, z), snap: true }; return { p: q, snap: false };
+    }
+    function entAtGround(ev){ const q = groundPt(ev, 0); if(!q) return null; const tol = 10 * wpp(q); let best = null, bd = tol;
+      for(const e of (A.selectable ? A.selectable() : [])){ if(is3D(e)) continue; const b = entBBox(e); if(!b || q.x < b.x0 - tol || q.x > b.x1 + tol || q.y < b.y0 - tol || q.y > b.y1 + tol) continue; const d = A.entDist ? A.entDist(e, { x: q.x, y: q.y }) : Infinity; if(d < bd){ bd = d; best = e; } }
+      return best; }
+    const fmt = v => String(+v.toFixed(6));
+    const roundPt = (q) => { if(q.snap) return q.p; const w = wpp(q.p), st = Math.pow(10, Math.floor(Math.log10(Math.max(w, 1e-9)))); return new T.Vector3(Math.round(q.p.x / st) * st, Math.round(q.p.y / st) * st, q.p.z); };
+    function cmdClick(ev){
+      const r = A.reqInfo && A.reqInfo(); if(!r) return false;
+      if(r.type === 'sel'){ const hs = hitSolid(ev); let e = hs && hs.ent; if(!e) e = entAtGround(ev); if(!e){ log('Không trúng đối tượng nào (bấm vào khối hoặc nét 2D) — Enter / chuột phải để xong.'); return true; } A.pickEnt3D(e, hs ? { x: hs.h.point.x, y: hs.h.point.y } : null); setTimeout(refreshHi, 0); return true; }
+      if(r.type === 'pt' || r.type === 'dist' || r.type === 'ang'){ const q = pointAt(ev, true); if(!q) return true; const pp = roundPt(q); A.input(fmt(pp.x) + ',' + fmt(pp.y)); setTimeout(refreshHi, 0); return true; }
+      return false;
+    }
+    function cmdHover(ev){
+      const r = A.reqInfo && A.reqInfo(); if(!r || !(r.type === 'pt' || r.type === 'dist' || r.type === 'ang')){ clearMk(); return; }
+      const q = pointAt(ev); if(!q){ mk.visible = false; need = true; return; } const s2 = 8 * wpp(q.p);
+      mk.visible = true; mk.position.copy(q.p); mk.scale.setScalar(s2); mk.quaternion.copy(cam().quaternion);
+      snapBox.visible = q.snap; if(q.snap){ snapBox.position.copy(q.p); snapBox.scale.setScalar(s2 * 1.6); }
+      if(mkLine){ scene.remove(mkLine); mkLine.geometry.dispose(); mkLine = null; }
+      if(r.base){ const z = MEM.z03 || 0; const g = new T.BufferGeometry().setFromPoints([new T.Vector3(r.base.x, r.base.y, q.p.z != null ? q.p.z : z), q.p]); mkLine = new T.Line(g, new T.LineDashedMaterial({ color: 0xe8eef7, dashSize: s2, gapSize: s2 * .6, depthTest: false })); mkLine.computeLineDistances(); scene.add(mkLine); }
+      need = true; }
+    // bản vẽ thay đổi (lệnh vừa xong, undo…) → dựng lại cảnh, giữ nguyên góc nhìn
+    function rebuild(){ buildSolids(); { const nb = sceneBounds(meshes); if(nb){ const a = [Math.min(nb.a[0], bb.a[0]), Math.min(nb.a[1], bb.a[1]), Math.min(nb.a[2], bb.a[2])], b = [Math.max(nb.b[0], bb.b[0]), Math.max(nb.b[1], bb.b[1]), Math.max(nb.b[2], bb.b[2])]; bb = { a, b }; ctr.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2); size = Math.max(b[0] - a[0], b[1] - a[1], b[2] - a[2], 1e-6); } } build2D(); buildLights(); applyStyle(); if(V.cut) capsSoon(); refreshHi(); need = true; }
     const ucsGroup = new T.Group(); scene.add(ucsGroup);
     function buildUCS(){ for(const o of ucsGroup.children.slice()){ ucsGroup.remove(o); if(o.geometry) o.geometry.dispose(); }
       const Uc = A.UCS; if(!Uc || !Uc.on) return; const o = new T.Vector3(...Uc.O), L = size * 0.18;
@@ -562,12 +625,16 @@
       else if(drag.b === 0 && !drag.sh && !e.shiftKey){ S.az -= dx * 0.008; S.el += dy * 0.008; S.el = Math.max(-89.9 * D2R, Math.min(89.9 * D2R, S.el)); need = true; }
       else panBy(dx, dy);
     });
-    const up = e => { if(pickFace && drag && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5){ const r = cv3.getBoundingClientRect(); ray.setFromCamera(new T.Vector2((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cam()); const hit = ray.intersectObjects(solids.map(o => o.mesh), false)[0];
+    cv3.addEventListener('pointermove', e => { if(!pts.size) cmdHover(e); });
+    const up = e => { if(!pickFace && !V.walk && drag && pts.size <= 1 && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5){
+        if(A.busy && A.busy()){ if(drag.b === 2) A.input(''); else if(drag.b === 0) cmdClick(e); setTimeout(refreshHi, 0); }
+        else if(drag.b === 0){ const hs = hitSolid(e); const ent = (hs && hs.ent) || entAtGround(e); try{ if(!e.shiftKey && !drag.sh) selEnts.clear(); if(ent){ if(selEnts.has(ent)) selEnts.delete(ent); else selEnts.add(ent); } if(window.DVDCmd && DVDCmd.refreshPalette) DVDCmd.refreshPalette(true); }catch(_){} refreshHi(); } }
+      if(pickFace && drag && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5){ const r = cv3.getBoundingClientRect(); ray.setFromCamera(new T.Vector2((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), cam()); const hit = ray.intersectObjects(solids.map(o => o.mesh), false)[0];
         if(hit && hit.face){ const nv = hit.face.normal.clone().transformDirection(hit.object.matrixWorld); if(nv.dot(ray.ray.direction) > 0) nv.negate(); if(A.setUCSFace) A.setUCSFace([hit.point.x, hit.point.y, hit.point.z], [nv.x, nv.y, nv.z]); buildUCS(); pickFace = false; ov.querySelector('[data-a="ucsf"]').classList.remove('on'); need = true; } }
       pts.delete(e.pointerId); if(!pts.size) drag = null; };
     cv3.addEventListener('pointerup', up); cv3.addEventListener('pointercancel', up);
     cv3.addEventListener('wheel', e => { e.preventDefault(); S.dist *= Math.pow(1.0015, e.deltaY); S.dist = Math.max(size / 1e4, Math.min(size * 100, S.dist)); need = true; }, { passive: false });
-    cv3.addEventListener('dblclick', zoomExt);
+    cv3.addEventListener('dblclick', () => { if(!(A.busy && A.busy())) zoomExt(); });
     ov.addEventListener('click', async e => {
       const v = e.target.closest('[data-v]'); if(v){ setView(v.dataset.v); return; }
       const b = e.target.closest('[data-a]'); if(!b) return; const a = b.dataset.a;
@@ -590,12 +657,12 @@
     ov.querySelector('select[data-a="views"]').addEventListener('change', e => { if(e.target.value) setView(e.target.value); e.target.value = ''; });
     ov.querySelector('select[data-a="style"]').addEventListener('change', e => { V.style = e.target.value; localStorage.setItem('dvd:3dstyle', V.style); applyStyle(); });
     const onKey = e => { if(e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName) && e.key !== 'Escape') return;
-      if(e.key === 'Escape'){ e.stopPropagation(); e.preventDefault(); if(V.walk){ setWalk(false); return; } close3D(); return; }
+      if(e.key === 'Escape'){ e.stopPropagation(); e.preventDefault(); if(V.walk){ setWalk(false); return; } if(A.busy && A.busy()){ A.cancel(); setTimeout(refreshHi, 0); mk.visible = false; need = true; return; } close3D(); return; }
       if(V.walk){ const k = e.key.toLowerCase(); if(/^(w|a|s|d|q|e|arrowup|arrowdown|arrowleft|arrowright|shift)$/.test(k)){ e.preventDefault(); e.stopPropagation(); keys.add(k); } } };
     const onKeyUp = e => { keys.delete(e.key.toLowerCase()); if(e.key === 'Shift') keys.delete('shift'); };
     window.addEventListener('keydown', onKey, true); window.addEventListener('keyup', onKeyUp, true);
     const ro = new ResizeObserver(() => { need = true; }); ro.observe(ov);
-    R3 = { ov, renderer, scene, ro, onKey, onKeyUp, raf: 0, stop(){ if(sunAnim) clearInterval(sunAnim); sunAnim = 0; clearTimeout(capT); }, setView, flatshot, camTo, setWalk, walkKey(k, on){ if(on) keys.add(k); else keys.delete(k); }, buildCaps(){ buildCaps(); return secRegions; }, setSun(o){ Object.assign(SUN, o); syncSunUI(); applySun(); }, sunVec, buildUCS(){ buildUCS(); need = true; }, get cutPlane(){ return cutPlane; }, get state(){ return S; }, solids: solids.length, render(){ need = true; place(); renderer.render(scene, cam()); }, canvas: cv3, setCut(on, f, mode, line){ V.cut = !!on; if(f != null) V.cutF = f; if(mode) V.cutMode = mode; if(line) V.cutLine = line; applyCut(); }, setStyle(st){ V.style = st; ov.querySelector('select[data-a="style"]').value = st; applyStyle(); } };
+    R3 = { ov, renderer, scene, ro, onKey, onKeyUp, raf: 0, rebuild, refreshHi, cmdClickAt(x, y, btn){ const ev = { clientX: x, clientY: y }; if(btn === 2){ A.input(''); return; } cmdClick(ev); }, toClient(x, y, z){ place(); const v = new T.Vector3(x, y, z || 0).project(cam()); const r = cv3.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, pointAtXY(x, y){ const q = pointAt({ clientX: x, clientY: y }); return q ? [q.p.x, q.p.y, q.p.z, q.snap] : null; }, stop(){ if(sunAnim) clearInterval(sunAnim); sunAnim = 0; clearTimeout(capT); }, setView, flatshot, camTo, setWalk, walkKey(k, on){ if(on) keys.add(k); else keys.delete(k); }, buildCaps(){ buildCaps(); return secRegions; }, setSun(o){ Object.assign(SUN, o); syncSunUI(); applySun(); }, sunVec, buildUCS(){ buildUCS(); need = true; }, get cutPlane(){ return cutPlane; }, get state(){ return S; }, get solids(){ return solids.length; }, render(){ need = true; place(); renderer.render(scene, cam()); }, canvas: cv3, setCut(on, f, mode, line){ V.cut = !!on; if(f != null) V.cutF = f; if(mode) V.cutMode = mode; if(line) V.cutLine = line; applyCut(); }, setStyle(st){ V.style = st; ov.querySelector('select[data-a="style"]').value = st; applyStyle(); } };
     applyCut();
     if(opt.cam){ V.persp = true; pc.fov = 60; const pb = ov.querySelector('[data-a="persp"]'); if(pb) pb.textContent = 'Phối cảnh'; camTo(opt.cam.pos, opt.cam.target); }
     else if(MEM.cam3 && !opt.view){ S.az = MEM.cam3.az; S.el = MEM.cam3.el; } else setView(opt.view || MEM.v3 || 'se');
@@ -610,9 +677,11 @@
     cancelAnimationFrame(R3.raf); window.removeEventListener('keydown', R3.onKey, true); window.removeEventListener('keyup', R3.onKeyUp, true); V.walk = false; try{ R3.stop(); }catch(_){} try{ R3.ro.disconnect(); }catch(_){}
     R3.scene.traverse(o => { if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); } });
     try{ R3.renderer.dispose(); R3.renderer.forceContextLoss(); }catch(_){}
-    R3.ov.remove(); R3 = null; A.view3D = null; V.open = false; try{ draw(); A.paint(); }catch(_){}
+    R3.ov.remove(); document.documentElement.classList.remove('v3d'); R3 = null; A.view3D = null; V.open = false; try{ draw(); A.paint(); }catch(_){}
   }
   A.open3D = open3D; A.close3D = close3D;
+  // mọi thay đổi bản vẽ (lệnh, hoàn tác, bảng thuộc tính) đều đi qua saveGeomEdits → cập nhật cảnh 3D đang mở
+  try{ const _sge = window.saveGeomEdits; if(typeof _sge === 'function'){ let t = 0; window.saveGeomEdits = function(){ const r = _sge.apply(this, arguments); if(R3 && R3.rebuild){ clearTimeout(t); t = setTimeout(() => { try{ if(R3) R3.rebuild(); }catch(err){ console.warn(err); } }, 30); } return r; }; } }catch(_){}
   plain(['3DORBIT', '3DO', 'ORBIT', 'VIEW3D', '3D', 'NAVVCUBE'], 'Xem mô hình 3D (quay, thu phóng, ViewCube, kiểu hiển thị)', () => open3D());
   for(const [k, n] of [['top', 'TOP'], ['front', 'FRONT'], ['right', 'RIGHT'], ['sw', 'SWISO'], ['se', 'SEISO'], ['ne', 'NEISO'], ['nw', 'NWISO']]){
     plain(['-VIEW' + n, 'VIEW' + n], 'Xem 3D hướng ' + VN[k], async () => { MEM.v3 = k; MEM.cam3 = null; if(!V.open) await open3D({ view: k }); else if(R3) R3.setView(k); });

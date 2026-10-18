@@ -871,6 +871,17 @@
     return hb;
   }
   A.pickAt = pickAt;
+  // cầu nối cho khung nhìn 3D: biết lệnh đang hỏi gì, chọn đối tượng bấm trong 3D
+  A.reqInfo = () => { const r = cur && cur.req; return r ? { type: r.type, single: !!r.single, filter: r.filter, base: r.base, kw: r.kw } : null; };
+  A.curSel = () => (cur && cur.sel) ? [...cur.sel] : [...selEnts];
+  A.pickEnt3D = function(e, pt){
+    const r = cur && cur.req; if(!r || r.type !== 'sel' || !e) return false;
+    if(r.filter && !r.filter(e)){ log('Đối tượng này không dùng được cho lệnh.'); return false; }
+    if(!r.allowLocked && isLockedE(e)){ log('Đối tượng nằm trên lớp bị khoá.'); return false; }
+    if(r.single){ r.res({ sel: [e], ent: e, pt: pt || null }); return true; }
+    const set = A.expandGroups(new Set([e])); let k = 0; for(const x of set){ if(cur.remove){ if(cur.sel.delete(x)) k++; } else if(!cur.sel.has(x)){ cur.sel.add(x); k++; } }
+    log((cur.remove ? 'Bỏ ' : 'Thêm ') + k + ', tổng ' + cur.sel.size + ' — Enter / chuột phải để xong'); refresh(); paintSelSoon(); return true;
+  };
   function winSelect(x0, y0, x1, y1, filter){
     const a = toWorld(x0, y0), b = toWorld(x1, y1);
     const box = { minx: Math.min(a.x, b.x), maxx: Math.max(a.x, b.x), miny: Math.min(a.y, b.y), maxy: Math.max(a.y, b.y) };

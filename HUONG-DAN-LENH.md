@@ -1,4 +1,4 @@
-# DVDCAD v4h — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v4i — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -187,6 +187,13 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 - Kiểu hiển thị: Khung dây, Tô bóng, Tô bóng + cạnh, X-quang.
 - Phối cảnh hoặc song song. Bật/tắt nét 2D ở cao độ 0.
 - Esc hoặc "✕ 2D" để về bản vẽ.
+
+**Dùng lệnh ngay trong khung 3D:** bấm nút trên ribbon hoặc gõ lệnh khi đang xem 3D, không cần về 2D.
+- Khi lệnh hỏi **điểm**: bấm vào khung 3D. Điểm tự bắt vào **đỉnh khối** gần con trỏ (ô vàng), hoặc điểm đặc biệt của nét 2D, hoặc điểm trên mặt phẳng cao độ hiện hành (`ELEV`). Vòng xanh và nét đứt cho thấy điểm sẽ chọn.
+- Khi lệnh hỏi **chọn đối tượng**: bấm vào khối hoặc nét 2D trên mặt đất. Đối tượng được chọn viền xanh. **Enter** hoặc **chuột phải** để xong.
+- Số (chiều cao, bán kính…) gõ thẳng, hiện ở dòng lệnh phía dưới.
+- Không có lệnh: bấm khối để chọn (Shift để chọn thêm), rồi gọi lệnh (MOVE, ERASE, SUBTRACT…).
+- **Esc** huỷ lệnh đang chạy. Bấm Esc lần nữa để về 2D. Cảnh 3D tự cập nhật sau mỗi lệnh và sau Undo/Redo.
 
 **Xuất:** ảnh PNG, `EXPORTSTL` (in 3D, đơn vị mm), `EXPORTOBJ` (+ file MTL màu, mở bằng SketchUp, Blender, 3ds Max). Lưu DXF thì khối 3D thành mặt **3DFACE**, AutoCAD mở được. File DXF lưu từ DVDCAD mở lại vẫn là khối (sửa tiếp chiều cao, bán kính, vật liệu). File DXF/DWG có 3DFACE, file DXF có lưới POLYFACE / POLYGON MESH / MESH (SketchUp, Revit, AutoCAD xuất ra) cũng xem 3D được.
 
