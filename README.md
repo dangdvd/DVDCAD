@@ -4,6 +4,17 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5h: XCLIP giống AutoCAD
+- `index.html`:
+  - Bản ghi đường cắt `XCLIPS` (mã → `{bp: đa giác toạ độ khối, on, inv, cache}`); `xclipNew`, `xclipFor(R, bm)` (đường cắt WCS theo ma trận chèn, dùng chung 1 đối tượng), `xclipApply(list, R)`.
+  - Thành viên khối: `xcl` (mã bản ghi), `xo` + `xh` (nằm ngoài, ẩn nhưng giữ trong bản vẽ), `xp` + `clip` (cắt ngang). Vẽ, bắt điểm (`isHiddenE`), phạm vi, chọn, khung nhìn layout bỏ qua `xh`.
+  - Đường cắt đảo ngược: cắt canvas theo chẵn-lẻ (`clip('evenodd')`), đa giác có lỗ kiểu AutoCAD.
+  - `drawXclipFrames` + `XCLIPFRAME` (đọc `$XCLIPFRAME` của DXF / DWG). Hoàn tác thao tác tự định nghĩa: `{op: 'fn', undo, redo}`.
+- `dvd-acad-x17.js`: lệnh XCLIP (Bật / Tắt / Xoá / Tạo đa tuyến / Khung cắt mới: đa tuyến, đa giác, chữ nhật, đảo ngược), XCLIPFRAME; bọc `A.commit` để đường cắt đi theo khối khi dời / xoay / chép, bỏ khi phá khối.
+- `dvd-acad-core.js`: `isHiddenB` (ẩn không tính XCLIP) cho chọn theo nhóm, `gripSel` bỏ phần ẩn.
+- `dvd-acad-dxf.js`: khối ghi đủ thành viên + xdict → ACAD_FILTER → SPATIAL_FILTER (đỉnh WCS, ma trận nghịch đảo của INSERT). `dvd-acad-cmds.js` (R12): bỏ phần ẩn.
+- Kiểm thử: `v5h_test.py` (25 bước, đọc lại DXF bằng ezdxf).
+
 ## v5g: XCLIP của file DWG / DXF
 - `index.html`:
   - DWG: `dwgXclipMap(db)` đọc `db.objects.SPATIAL_FILTER` qua từ điển mở rộng của INSERT (`ownerDictionaryHardId` → ACAD_FILTER → SPATIAL); INSERT có `xc` (đa giác trong toạ độ khối).

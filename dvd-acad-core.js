@@ -221,7 +221,8 @@
      3) TRUY VẤN NHANH THEO HỘP BAO (dùng mảng số của app)
      ===================================================================== */
   function ensureBB(){ try{ if(bbDirty || bbN !== entities.length || !bbX0) buildBBoxCache(); }catch(_){} }
-  const isHiddenE = e => !!e.vh || hiddenUserLayers.has(e.layer || '0') || !!(OBJ_HIDE && OBJ_HIDE.has(e));
+  const isHiddenB = e => !!e.vh || hiddenUserLayers.has(e.layer || '0') || !!(OBJ_HIDE && OBJ_HIDE.has(e));
+  const isHiddenE = e => !!e.xh || isHiddenB(e);   // xh: phần khối nằm ngoài đường XCLIP
   A.isHiddenE = isHiddenE;
   function queryBox(x0, y0, x1, y1, max, opt){
     ensureBB(); const out = []; max = max || 1e9; opt = opt || {};
@@ -359,10 +360,10 @@
   A.expandGroups = function(set){
     if(SET.pickGroup === false) return set;
     let has = false; for(const e of set) if(e && e.grp){ has = true; break; } if(!has) return set;
-    const m = groupMap(); for(const e of [...set]){ if(e && e.grp){ const a = m.get(e.grp); if(a) for(const x of a) if(!isHiddenE(x)) set.add(x); } }
+    const m = groupMap(); for(const e of [...set]){ if(e && e.grp){ const a = m.get(e.grp); if(a) for(const x of a) if(!isHiddenB(x)) set.add(x); } }   // phần khối bị XCLIP ẩn vẫn đi theo khối (dời, xoá, phá khối)
     return set;
   };
-  A.filterSel = function(arr){ return arr.filter(e => e && !isLockedE(e) && !isHiddenE(e)); };
+  A.filterSel = function(arr){ return arr.filter(e => e && !isLockedE(e) && !isHiddenB(e)); };
 
   /* =====================================================================
      6) GHI THAY ĐỔI (1 bước hoàn tác) — add / del / rep
@@ -1039,7 +1040,7 @@
     if(role[0] === 'v'){ const i = +role.slice(1); const vs = w.type === 'POLYLINE' ? w.vertices : w.pts; if(vs && vs[i]){ vs[i] = { x: to.x, y: to.y }; if(w.type === 'POLYLINE' && w.closed && i === 0 && vs.length > 1){ const l = vs[vs.length - 1]; if(Math.hypot(l.x - from.x, l.y - from.y) < 1e-9) vs[vs.length - 1] = { x: to.x, y: to.y }; } } delete w.wq; }
   }
   const GRIP_MAX = 400;
-  function gripSel(){ if(!idleDesk() || !selEnts.size || selEnts.size > GRIP_MAX) return null; return [...selEnts]; }
+  function gripSel(){ if(!idleDesk() || !selEnts.size || selEnts.size > GRIP_MAX) return null; return [...selEnts].filter(e => !e.xh); }
   function gripHit(p){
     const sel = gripSel(); if(!sel) return null; const tol = 7;
     for(const e of sel){ if(isHiddenE(e)) continue; for(const g of gripsOf(e)){ const P = toScreen(g.x, g.y); if(Math.abs(P.x - p.x) <= tol && Math.abs(P.y - p.y) <= tol) return { x: g.x, y: g.y }; } }

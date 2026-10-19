@@ -195,6 +195,9 @@
 "(giữ nguyên)": [
 "dvd-acad-x11.js:attr"
 ],
+"(giữ phần bên ngoài)": [
+"dvd-acad-x17.js"
+],
 "(gốc 0,0 = điểm gốc đã chọn). Dùng XATTACH hoặc mở file để dùng lại.": [
 "dvd-acad-x6.js"
 ],
@@ -314,6 +317,9 @@
 ],
 "). Vẽ biên dạng trên mặt bằng quanh điểm neo (": [
 "dvd-acad-3dy.js"
+],
+"): góc thứ nhất hoặc [Chọn đa tuyến / Đa giác / Chữ nhật / Đảo ngược]": [
+"dvd-acad-x17.js"
 ],
 "** THÊM ĐỈNH ** Chỉ định vị trí đỉnh mới": [
 "dvd-acad-core.js"
@@ -1082,6 +1088,7 @@
 "dvd-acad-x12.js",
 "dvd-acad-x15.js",
 "dvd-acad-x16.js",
+"dvd-acad-x17.js",
 "dvd-acad-x3.js",
 "dvd-acad-x7.js",
 "dvd-acad-x9.js",
@@ -2517,6 +2524,7 @@
 "dvd-acad-x12.js"
 ],
 "Chọn khối / tham chiếu ngoài": [
+"dvd-acad-x17.js",
 "dvd-acad-x7.js"
 ],
 "Chọn khối 3D": [
@@ -2705,10 +2713,14 @@
 "index.html:html"
 ],
 "Chọn đa tuyến": [
-"dvd-acad-cmds.js"
+"dvd-acad-cmds.js",
+"dvd-acad-x17.js"
 ],
 "Chọn đa tuyến kín": [
 "dvd-acad-x3.js"
+],
+"Chọn đa tuyến kín / đường tròn làm đường cắt": [
+"dvd-acad-x17.js"
 ],
 "Chọn điểm bên trong vùng kín (Enter để xong)": [
 "dvd-acad-more.js"
@@ -3068,6 +3080,7 @@
 "dvd-acad-ui.js",
 "dvd-acad-x11.js",
 "dvd-acad-x13.js",
+"dvd-acad-x17.js",
 "index.html:html"
 ],
 "Chữ nhật theo kích thước": [
@@ -3235,6 +3248,7 @@
 "dvd-acad-x11.js",
 "dvd-acad-x15.js",
 "dvd-acad-x16.js",
+"dvd-acad-x17.js",
 "dvd-acad-x2.js",
 "dvd-acad-x3.js",
 "dvd-acad-x6.js",
@@ -3467,6 +3481,9 @@
 "Cắt hiển thị khối / tham chiếu ngoài theo khung chữ nhật": [
 "dvd-acad-x7.js"
 ],
+"Cắt hiển thị khối / tham chiếu ngoài: chữ nhật, đa giác, đa tuyến, đảo ngược; bật / tắt / xoá": [
+"dvd-acad-x17.js"
+],
 "Cắt hiển thị ảnh nền theo khung chữ nhật": [
 "dvd-acad-x7.js"
 ],
@@ -3633,7 +3650,7 @@
 "DWG đọc được nhưng chưa có đối tượng 2D nào được hỗ trợ.": [
 "index.html"
 ],
-"DWG/DXF · bản màu · v5f": [
+"DWG/DXF · bản màu · v5h": [
 "index.html:html"
 ],
 "DYN (nhập động)": [
@@ -4201,6 +4218,7 @@
 "dvd-acad-x14.js"
 ],
 "Góc thứ nhất của khung cắt": [
+"dvd-acad-x17.js",
 "dvd-acad-x7.js"
 ],
 "Góc thứ nhất của đáy (phía cao)": [
@@ -4260,6 +4278,7 @@
 ],
 "Góc đối diện": [
 "dvd-acad-x14.js",
+"dvd-acad-x17.js",
 "dvd-acad-x7.js"
 ],
 "Góc đối diện (phía thấp)": [
@@ -4928,7 +4947,11 @@
 "dvd-cmd.js"
 ],
 "Khung cắt mới": [
+"dvd-acad-x17.js",
 "dvd-acad-x7.js"
+],
+"Khung cắt mới (": [
+"dvd-acad-x17.js"
 ],
 "Khung cắt thứ nhất (kéo phải → trái)": [
 "dvd-acad-x13.js"
@@ -5001,6 +5024,12 @@
 "Khung vùng che:": [
 "dvd-acad-x3.js"
 ],
+"Khung đường cắt": [
+"dvd-acad-ui.js"
+],
+"Khung đường cắt XCLIP: 0 ẩn, 1 hiện và in, 2 hiện nhưng không in": [
+"dvd-acad-x17.js"
+],
 "Khung ảnh": [
 "dvd-acad-ui.js"
 ],
@@ -5045,6 +5074,7 @@
 "dvd-acad-x11.js",
 "dvd-acad-x15.js",
 "dvd-acad-x16.js",
+"dvd-acad-x17.js",
 "dvd-acad-x2.js",
 "dvd-acad-x3.js",
 "dvd-acad-x6.js",
@@ -5628,6 +5658,9 @@
 ],
 "Khối lượng riêng theo vật liệu (bê tông 2500, gạch 1800, thép 7850, gỗ 600 kg/m³…). Chưa gán vật liệu: coi là bê tông.": [
 "dvd-acad-x2.js"
+],
+"Khối này chưa có đường cắt.": [
+"dvd-acad-x17.js"
 ],
 "Khối này không có thuộc tính.": [
 "dvd-acad-pro.js"
@@ -7247,7 +7280,8 @@
 "dvd-acad-x9.js"
 ],
 "Nhập 0, 1 hoặc 2.": [
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x17.js"
 ],
 "Nhập 3 số x,y,z.": [
 "dvd-acad-x14.js"
@@ -8917,6 +8951,9 @@
 "Tuỳ chọn (hiển thị, nền, bề rộng nét, đơn vị…)": [
 "dvd-acad-x7.js"
 ],
+"Tuỳ chọn XCLIP [Bật / Tắt / Xoá / Tạo đa tuyến / Khung cắt mới]": [
+"dvd-acad-x17.js"
+],
 "Tuỳ chọn [Đóng / Mở / Nối / Độ rộng / Đảo chiều / Thoát]": [
 "dvd-acad-x15.js"
 ],
@@ -9270,6 +9307,9 @@
 "Tạo vùng 2D (region) từ đường kín hoặc các nét nối kín (đa tuyến, tròn, elip, đoạn + cung)": [
 "dvd-acad-x9.js"
 ],
+"Tạo đa tuyến": [
+"dvd-acad-x17.js"
+],
 "Tạo đa tuyến kín theo biên của hatch": [
 "dvd-acad-x11.js"
 ],
@@ -9340,6 +9380,7 @@
 "dvd-acad-x12.js",
 "dvd-acad-x15.js",
 "dvd-acad-x16.js",
+"dvd-acad-x17.js",
 "dvd-acad-x3.js",
 "dvd-acad-x7.js",
 "dvd-acad-x9.js",
@@ -9887,6 +9928,24 @@
 "X và Y": [
 "dvd-acad-x5.js"
 ],
+"XCLIP: đã bật đường cắt.": [
+"dvd-acad-x17.js"
+],
+"XCLIP: đã cắt": [
+"dvd-acad-x17.js"
+],
+"XCLIP: đã tạo đa tuyến theo đường cắt": [
+"dvd-acad-x17.js"
+],
+"XCLIP: đã tắt đường cắt, hiện đủ khối.": [
+"dvd-acad-x17.js"
+],
+"XCLIP: đã xoá đường cắt.": [
+"dvd-acad-x17.js"
+],
+"XCLIPFRAME (0 = ẩn, 1 = hiện & in, 2 = hiện, không in)": [
+"dvd-acad-x17.js"
+],
 "XOPEN: mở": [
 "dvd-acad-x16.js"
 ],
@@ -10006,6 +10065,7 @@
 "dvd-acad-x10.js",
 "dvd-acad-x10.js:attr",
 "dvd-acad-x16.js",
+"dvd-acad-x17.js",
 "dvd-acad-x9.js",
 "index.html:html"
 ],
@@ -10086,6 +10146,9 @@
 ],
 "Xoá đèn": [
 "dvd-acad-x16.js:attr"
+],
+"Xoá đường cắt cũ? [Có / Không]": [
+"dvd-acad-x17.js"
 ],
 "Xoá đỉnh": [
 "dvd-acad-core.js",
@@ -10427,6 +10490,9 @@
 "của đa tuyến": [
 "dvd-acad-x9.js"
 ],
+"của đường cắt": [
+"dvd-acad-x17.js"
+],
 "do quá nhiều)": [
 "dvd-acad-x8.js"
 ],
@@ -10483,6 +10549,12 @@
 ],
 "giờ trước": [
 "index.html"
+],
+"giữ phần bên ngoài": [
+"dvd-acad-x17.js"
+],
+"giữ phần bên trong": [
+"dvd-acad-x17.js"
 ],
 "góc": [
 "dvd-acad-cmds.js",
@@ -11387,7 +11459,8 @@
 "Đa giác": [
 "dvd-acad-ui.js",
 "dvd-acad-x11.js",
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x17.js"
 ],
 "Đa giác cắt": [
 "dvd-acad-core.js"
@@ -11734,7 +11807,8 @@
 ],
 "Điểm thứ": [
 "dvd-acad-x15.js",
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x17.js"
 ],
 "Điểm thứ hai": [
 "dvd-acad-3dx.js",
@@ -11775,7 +11849,8 @@
 "dvd-acad-x2.js"
 ],
 "Điểm tiếp theo (Enter = đóng)": [
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x17.js"
 ],
 "Điểm tiếp theo (Enter để đóng)": [
 "dvd-acad-x3.js"
@@ -12935,12 +13010,21 @@
 "Đường cắt [Đa giác / Đối tượng / Xoá]": [
 "dvd-acad-x16.js"
 ],
+"Đường cắt cần ít nhất 3 điểm.": [
+"dvd-acad-x17.js"
+],
 "Đường cắt ngắn": [
 "dvd-acad-ui.js",
 "dvd-acad-x6.js"
 ],
 "Đường cắt ngắn có ký hiệu gãy (Express Tools)": [
 "dvd-acad-x6.js"
+],
+"Đường cắt đang bật.": [
+"dvd-acad-x17.js"
+],
+"Đường cắt đang tắt.": [
+"dvd-acad-x17.js"
 ],
 "Đường dẫn quá ngắn.": [
 "dvd-acad-3dx.js"
@@ -13071,6 +13155,9 @@
 ],
 "Đảo hướng kính": [
 "dvd-acad-x6.js"
+],
+"Đảo ngược": [
+"dvd-acad-x17.js"
 ],
 "Đảo ngược (chọn những đối tượng KHÔNG khớp)": [
 "dvd-acad-x10.js"
@@ -13698,6 +13785,7 @@
 ],
 "đỉnh.": [
 "dvd-acad-x16.js",
+"dvd-acad-x17.js",
 "dvd-acad-x9.js"
 ],
 "định nghĩa khối": [

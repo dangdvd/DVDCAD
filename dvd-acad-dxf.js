@@ -77,13 +77,14 @@
     const blockDefs = new Map(), blockFam = new Map(), inserts = new Map(), dims = new Map(); const done = new Set();
     if(ents.length < 200000) for(const [gid] of byGrp){
       const mem = grpAll(gid); if(!mem || !mem.length) continue; const f = mem[0];
-      if(f.bm && f.bm.name && !String(f.blk || '').startsWith('*') && !mem.some(x => x.vh || x.type === 'SOLID3D' || x.type === 'IMAGE')){
+      const xR = (() => { const q = mem.find(x => x.xcl); return q && typeof XCLIPS !== 'undefined' ? XCLIPS.get(q.xcl) : null; })();   // XCLIP: ghi đủ khối + SPATIAL_FILTER
+      if(f.bm && f.bm.name && !String(f.blk || '').startsWith('*') && !(xR && xR.inv) && !mem.some(x => x.vh || x.type === 'SOLID3D' || x.type === 'IMAGE')){
         const Mi = inv(f.bm); if(!Mi || mem.some(x => !x.bm || x.bm.name !== f.bm.name)) continue; const nm = String(f.bm.name).replace(/[<>\\/":;?*|=`]/g, '_').slice(0, 250); if(!nm) continue;
         const loc = mem.map(x => A.xformEnt(clone(x), Mi)); const bb = bbox(loc.filter(x => !x.att)) || { x0: 0, y0: 0, x1: 0, y1: 0 };
         const tol = Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0, 1) * 1e-6; const same = D0 => D0.n === mem.length && Math.abs(D0.bb.x0 - bb.x0) <= tol && Math.abs(D0.bb.y0 - bb.y0) <= tol && Math.abs(D0.bb.x1 - bb.x1) <= tol && Math.abs(D0.bb.y1 - bb.y1) <= tol;
         const fam = blockFam.get(nm) || []; let D = fam.find(same);
         if(!D){ const vn = fam.length ? nm + '$' + fam.length : nm; D = { name: vn, ents: loc, n: mem.length, bb, atts: loc.filter(x => x.att), hBR: H(), hB: H(), hE: H() }; fam.push(D); blockFam.set(nm, fam); blockDefs.set(vn, D); }
-        inserts.set(gid, { D, m: f.bm, mem }); for(const x of mem) done.add(x); continue; }
+        inserts.set(gid, { D, m: f.bm, mem, xR }); for(const x of mem) done.add(x); continue; }
       if(String(f.blk || '').startsWith('*DIM')){ const t = mem.find(x => x.dimd && x.type === 'TEXT'); if(t && /^(lin|rad|dia|ang)$/.test(t.dimd.k)){ dims.set(gid, { t, mem, hBR: H(), hB: H(), hE: H() }); for(const x of mem) done.add(x); } }
     }
     let dn = 0; for(const d of dims.values()) d.bn = '*D' + (++dn);
@@ -242,10 +243,11 @@
     P(0, 'ENDSEC');
     // ---------- ENTITIES ----------
     P(0, 'SECTION'); P(2, 'ENTITIES');
-    for(const e of ents){ if(done.has(e)) continue; emit(e, hBRmodel); }
+    for(const e of ents){ if(done.has(e) || e.xh) continue; emit(e, hBRmodel); }
+    const xcl = [];
     for(const ins of inserts.values()){ const m = ins.m; const sx = Math.hypot(m.a, m.b), det = m.a * m.d - m.b * m.c, sy = det / (sx || 1), rot = Math.atan2(m.b, m.a) * R2D; const f = ins.mem[0];
       const lyn = dxfStr(String(m.lay || f.layer || '0')); const atts = ins.mem.filter(x => x.att && x.type === 'TEXT'); const hI = H();
-      P(0, 'INSERT'); P(5, hI); P(330, hBRmodel); P(100, 'AcDbEntity'); P(8, lyn); P(100, 'AcDbBlockReference'); if(atts.length) P(66, 1); P(2, dxfStr(ins.D.name)); P(10, m.e); P(20, m.f); P(30, 0); if(Math.abs(sx - 1) > 1e-12) P(41, sx); if(Math.abs(sy - 1) > 1e-12) P(42, sy); if(Math.abs(sx - 1) > 1e-12 || Math.abs(sy - 1) > 1e-12) P(43, 1); if(Math.abs(rot) > 1e-12) P(50, rot);
+      P(0, 'INSERT'); P(5, hI); if(ins.xR && window.xclipFor){ const X = { hI, hXD: H(), hFD: H(), hSF: H(), R: ins.xR, m }; xcl.push(X); P(102, '{ACAD_XDICTIONARY'); P(360, X.hXD); P(102, '}'); } P(330, hBRmodel); P(100, 'AcDbEntity'); P(8, lyn); P(100, 'AcDbBlockReference'); if(atts.length) P(66, 1); P(2, dxfStr(ins.D.name)); P(10, m.e); P(20, m.f); P(30, 0); if(Math.abs(sx - 1) > 1e-12) P(41, sx); if(Math.abs(sy - 1) > 1e-12) P(42, sy); if(Math.abs(sx - 1) > 1e-12 || Math.abs(sy - 1) > 1e-12) P(43, 1); if(Math.abs(rot) > 1e-12) P(50, rot);
       if(atts.length){ for(const a of atts){ const al = a.layer || '0'; const byL2 = a.bl || String(a.col || '').toLowerCase() === String(A.layerHex(al)).toLowerCase(); const { hj, vj } = { hj: a.ha === 'center' ? 1 : (a.ha === 'right' || a.ha === 'end') ? 2 : 0, vj: a.va === 'bottom' ? 1 : a.va === 'middle' ? 2 : a.va === 'top' ? 3 : 0 };
           P(0, 'ATTRIB'); P(5, H()); P(330, hI); P(100, 'AcDbEntity'); P(8, dxfStr(al)); if(!byL2) P(62, A.aciNear(a.col || '#ffffff')); P(100, 'AcDbText'); P(10, a.x); P(20, a.y); P(30, 0); P(40, a.h || 2.5); P(1, dxfStr(a.text || '')); if(a.rot) P(50, a.rot); if(hj) P(72, hj); if(hj || vj){ P(11, a.x); P(21, a.y); P(31, 0); }
           P(100, 'AcDbAttribute'); P(2, dxfStr(a.att)); P(70, 0); if(vj) P(74, vj); }
@@ -283,6 +285,14 @@
       P(100, 'AcDbPlotSettings'); P(1, ''); P(2, 'none_device'); P(4, ''); P(6, ''); P(40, 0); P(41, 0); P(42, 0); P(43, 0); P(44, 0); P(45, 0); P(46, 0); P(47, 0); P(48, 0); P(49, 0); P(140, 0); P(141, 0); P(142, 1); P(143, 1); P(70, name === 'Model' ? 1712 : 688); P(72, 1); P(73, 0); P(74, 5); P(7, ''); P(75, 16); P(147, 1); P(148, 0); P(149, 0);
       P(100, 'AcDbLayout'); P(1, name); P(70, flags); P(71, tab); P(10, 0); P(20, 0); P(11, 420); P(21, 297); P(12, 0); P(22, 0); P(32, 0); P(14, ext.x0); P(24, ext.y0); P(34, 0); P(15, ext.x1); P(25, ext.y1); P(35, 0); P(146, 0); P(13, 0); P(23, 0); P(33, 0); P(16, 1); P(26, 0); P(36, 0); P(17, 0); P(27, 1); P(37, 0); P(76, 0); P(330, br); };
     layout(hLayModel, 'Model', 1, 0, hBRmodel); layout(hLayPaper, 'Layout1', 1, 1, hBRpaper);
+    // XCLIP: xdict của INSERT → ACAD_FILTER → SPATIAL (đỉnh WCS + ma trận nghịch đảo của INSERT, như AutoCAD)
+    for(const X of xcl){ const c = xclipFor(X.R, X.m); const Mi = inv(X.m); if(!Mi) continue;
+      let V = c.poly || [{ x: c.x, y: c.y }, { x: c.x + c.w, y: c.y + c.h }];
+      dict(X.hXD, X.hI, [['ACAD_FILTER', X.hFD]], true); dict(X.hFD, X.hXD, [['SPATIAL', X.hSF]], true);
+      P(0, 'SPATIAL_FILTER'); P(5, X.hSF); P(102, '{ACAD_REACTORS'); P(330, X.hFD); P(102, '}'); P(330, X.hFD); P(100, 'AcDbFilter'); P(100, 'AcDbSpatialFilter');
+      P(70, V.length); for(const v of V){ P(10, v.x); P(20, v.y); } P(210, 0); P(220, 0); P(230, 1); P(11, 0); P(21, 0); P(31, 0); P(71, X.R.on ? 1 : 0); P(72, 0); P(73, 0);
+      for(const v of [Mi.a, Mi.c, 0, Mi.e, Mi.b, Mi.d, 0, Mi.f, 0, 0, 1, 0]) P(40, v);
+      for(const v of [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]) P(40, v); }
     if(N7){ dict(N7.color, hRoot, []); dict(N7.tbs, hRoot, []); dict(N7.vis, hRoot, []);
       dict(N7.mat, hRoot, [['ByBlock', N7.mByBlock], ['ByLayer', N7.mByLayer], ['Global', N7.mGlobal]]);
       const material = (h, name) => { P(0, 'MATERIAL'); P(5, h); P(102, '{ACAD_REACTORS'); P(330, N7.mat); P(102, '}'); P(330, N7.mat); P(100, 'AcDbMaterial'); P(1, name); P(2, '');
