@@ -231,7 +231,7 @@
   function tryParseCoordOnly(v){ return /^\s*[@#]?-?[\d.]+\s*([,;<]\s*-?[\d.]+)?\s*$/.test(v); }
   function renderSug(){
     const q = input.value.trim().toUpperCase();
-    if(!q || tryParseCoordOnly(q) || busy()){ hideSug(); return; }
+    if(!q || tryParseCoordOnly(q) || busy() || q[0] === '(' || window.DVD_AUTOCOMPLETE === false){ hideSug(); return; }
     const dq = deaccent(q);
     const exact = [], pre = [], desc = [];
     for(const c of CMDS){

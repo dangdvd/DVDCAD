@@ -4,6 +4,17 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5f: lệnh AutoCAD còn thiếu
+- `dvd-acad-x16.js`:
+  - Khung nhìn layout: VPLAYER, LAYVPI, VPCLIP, VPSYNC, SPACETRANS. Dữ liệu riêng từng khung nhìn (`frz`, `cp`) lưu ở `localStorage` `dvd:vpx` theo bản vẽ + layout + số thứ tự khung nhìn, đọc qua `window.vpExtra(L, i)`.
+  - Nhập / xuất: IMPORT, ATTACH, ACISIN, ETRANSMIT / ARCHIVE (`A.zipStore`: zip không nén, CRC32), TIFOUT, BMPOUT, XOPEN, REINIT, 3DPRINT, EXPORTTOAUTOCAD, RECOVERALL, XBIND.
+  - MKLTYPE (`A.mkltPattern`), IMAGEFRAME, IMAGEQUALITY, SPOTLIGHT, DISTANTLIGHT, LIGHTLIST, SEPARATE (`A.meshParts`), AUTOCOMPLETE, DRAGMODE và các tên gọi khác.
+- `index.html`: `buildPaperEntities` bỏ lớp đóng băng theo khung nhìn, thay khung bằng đường cắt; `applyClip` / `drawViewportFrames` cắt theo đa giác; `drawImageEnt` theo IMAGEFRAME / IMAGEQUALITY.
+- `dvd-acad-pro.js`: xuất `A.saveLayoutDef`, `A.proIdbGet`, `A.xrefList`, `A.refreshLayout`; khung khung nhìn có `vpi`.
+- `dvd-acad-3d.js`: đèn rọi (`SpotLight`), đèn song song (`DirectionalLight`), đèn tắt (`light.off`); dựng lại đèn khi bản vẽ đổi (`view3D.rebuildLights`).
+- `dvd-cmd.js`: gợi ý lệnh theo `window.DVD_AUTOCOMPLETE`.
+- Kiểm thử: `v5f_test.py` (45 bước kiểm tra).
+
 ## v5e: lệnh AutoCAD còn thiếu
 - `dvd-acad-x15.js`:
   - Độ trong suốt: `e.tp` (CETRANSPARENCY, TRANSPARENCY, nút TP).

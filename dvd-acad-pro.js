@@ -206,7 +206,7 @@
       T(x0 + 112, (r[3] + y1) / 2, 2.5, tb.dv || 'ĐƠN VỊ THIẾT KẾ', 'left');
       void c2;
     }
-    for(const v of D.vps || []){ out.push({ type: 'POLYLINE', layer: 'VPORTS', vertices: [{ x: v.x, y: v.y }, { x: v.x + v.w, y: v.y }, { x: v.x + v.w, y: v.y + v.h }, { x: v.x, y: v.y + v.h }], closed: true, col: '#5fa8ff', vpf: 1 }); }
+    (D.vps || []).forEach((v, vi) => { out.push({ type: 'POLYLINE', layer: 'VPORTS', vertices: [{ x: v.x, y: v.y }, { x: v.x + v.w, y: v.y }, { x: v.x + v.w, y: v.y + v.h }, { x: v.x, y: v.y + v.h }], closed: true, col: '#5fa8ff', vpf: 1, vpi: vi }); });
     return out;
   }
   function vpScaleText(D){ const v = (D.vps || [])[0]; return v ? '1:' + (+v.n.toPrecision(4)) : ''; }
@@ -296,7 +296,7 @@
       { sep: 1 }, { t: 'Xoá layout', ic: 'ERASE', fn: () => { if(!confirm('Xoá layout "' + L.name + '"?')) return; const mi = dwgLayouts.findIndex(z => z.isModel); if(mi >= 0) switchLayout(mi); usave(ulays().filter(z => z.name !== L.name)); installLayouts(); } });
     A.menu(x, y - items.length * 30 - 10, items);
   }
-  A.layoutMenu = layoutMenu;
+  A.layoutMenu = layoutMenu; A.saveLayoutDef = saveDef; A.proIdbGet = idbGet; A.xrefList = xrefs; A.refreshLayout = refreshLayout;
   const _ofl = A.onLoad; void _ofl;
   try{ DVDCmd.refresh && DVDCmd.refresh(); }catch(_){}
 })();

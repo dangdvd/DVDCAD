@@ -213,6 +213,54 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v5f) — lệnh AutoCAD còn thiếu
+**Khung nhìn trên layout** (bấm vào trong khung nhìn để chọn; khung chồng nhau thì lấy khung nhỏ hơn)
+- `VPLAYER`: đóng băng / làm tan lớp riêng trong từng khung nhìn. Nhập tên lớp (`*`, `?`, dấu phẩy) hoặc Enter rồi chọn đối tượng. Tuỳ chọn Đặt lại (làm tan hết), Liệt kê.
+- `LAYVPI`: lớp của đối tượng chọn chỉ còn hiện ở một khung nhìn, các khung nhìn khác đóng băng.
+- `VPCLIP`: cắt khung nhìn theo đa giác hoặc đối tượng kín (đa tuyến, đường tròn). Khung nhìn đổi theo đường cắt. Xoá = bỏ cắt.
+- `VPSYNC`: các khung nhìn theo tỉ lệ của khung nhìn chính và căn thẳng hàng với nó (Enter = tất cả khung còn lại).
+- `SPACETRANS`: đổi chiều dài giấy ↔ mô hình theo tỉ lệ khung nhìn (vd chữ cao 2,5 mm trên giấy ở 1:50 = 125). Kết quả được chép vào bộ nhớ tạm.
+
+**Nhập / xuất file**
+- `IMPORT`: chọn loại file cần nhập (PDF, ACIS, ảnh, bảng CSV / Excel, DWG / DXF tham chiếu, add-in).
+- `ATTACH`: gắn tham chiếu (DWG / DXF, ảnh, PDF, liên kết dữ liệu bảng).
+- `ACISIN`: nhập khối 3D từ file ACIS `.sat` / `.sab`.
+- `ETRANSMIT`: đóng gói bản vẽ (DXF) kèm ảnh nền, file tham chiếu và báo cáo thành một file `.zip` để gửi. `ARCHIVE`: như ETRANSMIT, dùng để lưu trữ.
+- `TIFOUT`: xuất khung nhìn thành ảnh TIFF. `BMPOUT` nay xuất ảnh BMP thật (trước đây là JPG).
+- `XOPEN`: chọn một đối tượng của tham chiếu ngoài để mở file đó ra sửa.
+- `3DPRINT` (= EXPORTSTL), `EXPORTTOAUTOCAD` (= SAVEAS), `RECOVERALL` (= RECOVER), `XBIND` (= XREF, nút Gộp).
+- `REINIT`: nạp lại DVDCAD.
+
+**Kiểu nét**
+- `MKLTYPE`: tạo kiểu nét từ các đoạn thẳng và điểm đã vẽ. Nhập tên, mô tả, bấm điểm đầu và điểm cuối của một chu kỳ mẫu, rồi chọn các đoạn thẳng / điểm nằm trên đường đó. Kiểu nét mới dùng ngay, lưu cùng thiết lập, và tải được file `.lin` cho AutoCAD.
+
+**Ảnh nền**
+- `IMAGEFRAME`: 0 = ẩn khung ảnh, 1 = hiện và in, 2 = hiện nhưng không in.
+- `IMAGEQUALITY`: Cao (mịn) / Nháp (nhanh).
+
+**Đèn**
+- `SPOTLIGHT`: đèn rọi (vị trí, điểm rọi, cao độ, góc chiếu, cường độ, màu).
+- `DISTANTLIGHT`: đèn song song như mặt trời, theo hướng và góc chiếu xuống.
+- `LIGHTLIST`: danh sách đèn: bật / tắt, sửa cao độ, cường độ, màu, xoá, phóng tới đèn.
+- Đèn hiện trong khung xem 3D ở kiểu Thực tế (RENDER) và cập nhật ngay khi sửa.
+
+**3D**
+- `SEPARATE`: tách một khối gồm nhiều phần rời nhau (vd sau UNION hai khối không chạm) thành các khối riêng.
+
+**Thiết lập**
+- `AUTOCOMPLETE`: bật / tắt gợi ý lệnh khi gõ ở dòng lệnh.
+- `DRAGMODE`: Tắt = không hiện hình xem trước khi kéo / di chuyển đối tượng.
+
+**Tên gọi khác**
+- `DVIEW` (= 3DORBIT), `SOLPROF` (= FLATSHOT), `SOLVIEW` / `SOLDRAW` (= VIEWBASE), `PASTESPEC` (= PASTECLIP), `COPYLINK` (= COPYCLIP), `TPNAVIGATE` (= TOOLPALETTES), `MATBROWSEROPEN` (= MATERIALS), `SHEETSET` / `SSM` (= PUBLISH), `3DALIGN` (= ALIGN).
+
+**Ribbon**
+- Hiển thị › Layout: VPCLIP, VPLAYER, VPSYNC, LAYVPI, SPACETRANS.
+- Chèn › Nhập: IMPORT, ACISIN. Chèn › Tham chiếu: ATTACH, XOPEN, IMAGEFRAME.
+- Xuất › Xuất file: ETRANSMIT, ARCHIVE, TIFOUT, BMPOUT. Xuất 3D: 3DPRINT.
+- Trình diễn › Ánh sáng: SPOTLIGHT, DISTANTLIGHT, LIGHTLIST. Trang chủ (Mô hình 3D) › Sửa khối: SEPARATE.
+- Thuộc tính (menu thêm): MKLTYPE. Quản lý › Bản vẽ: AUTOCOMPLETE, DRAGMODE, REINIT.
+
 ## Bổ sung (v5e) — lệnh AutoCAD còn thiếu
 **Độ trong suốt** (như AutoCAD)
 - Bảng **Thuộc tính** có dòng **Độ trong suốt**: ByLayer hoặc 0–90 %. Áp dụng được cho đối tượng đang chọn và cho đối tượng mới.
@@ -743,3 +791,4 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Giao diện English dịch từ chuỗi tiếng Việt gốc khi hiển thị. Một vài câu ghép có thể đọc chưa trơn như AutoCAD bản tiếng Anh. Chữ do lệnh ghi vào bản vẽ (trường ngày tháng, nhãn ký hiệu, khung tên mẫu) vẫn là tiếng Việt.
 - AutoLISP của DVDCAD chạy mã nguồn `.lsp`. Chưa có: hàm `vla-` / `vlax-` (ActiveX), hộp thoại DCL, `grread`, `entmake` cho khối / hatch, reactor. Add-in lưu trên từng máy (trong trình duyệt), không đi kèm bản vẽ hay Google Drive.
 - Độ trong suốt đặt cho từng đối tượng. Độ trong suốt theo lớp (trong bảng Lớp của AutoCAD) chưa đọc / ghi. THICKEN chỉ làm dày được mặt phẳng; mặt cong (REVSURF…) chưa làm dày được. 3DFACE nằm ở cao độ ELEV (chưa nhập Z riêng từng đỉnh).
+- Lớp đóng băng riêng khung nhìn (VPLAYER, LAYVPI) và đường cắt khung nhìn (VPCLIP) lưu trên máy theo bản vẽ, chưa ghi vào file DXF / DWG. VPSYNC trên layout đọc từ file DWG chỉ giữ đến khi mở lại file. ETRANSMIT đóng gói bản vẽ dạng DXF (không phải DWG), không nén. MKLTYPE chỉ tạo kiểu nét đơn giản (nét, khoảng hở, chấm), chưa có chữ / hình trong nét.
