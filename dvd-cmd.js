@@ -83,6 +83,7 @@
   let lastCmd = null;
   function runCommand(text){
     const raw = String(text || '').trim();
+    if(window.DVDLisp && /^[(!]/.test(raw) && DVDLisp.commandLine(raw)) return;   // AutoLISP gõ thẳng ở dòng lệnh: (+ 1 2), !bien
     if(busy()){ ACAD().input(raw); updateBar(); return; }
     if(!raw){ return repeatOrFinish(); }
     const parts = raw.split(/\s+/); const name = parts[0].toUpperCase().replace(/^[_.']+/, ''); const arg = parts.slice(1).join(' ');
@@ -199,6 +200,9 @@
     prEl.addEventListener('mousedown', e => { const k = e.target.closest('.kw'); if(!k) return; e.preventDefault(); if(busy()) ACAD().input(k.dataset.k); updateBar(); });
     input.addEventListener('input', () => { renderSug(); onTyped(); });
     input.addEventListener('keydown', e => {
+      const lispOpen = () => { const v = input.value.trimStart(); if(v[0] !== '(') return false; let d = 0, q = false; for(const ch of v){ if(ch === '"') q = !q; else if(!q){ if(ch === '(') d++; else if(ch === ')') d--; } } return d > 0 || q; };
+      if(e.key === ' ' && input.value.trimStart()[0] === '(') return;   // biểu thức LISP: phím cách là dấu cách
+      if(e.key === 'Enter' && lispOpen()){ e.preventDefault(); input.value += ' '; return; }   // ngoặc chưa đóng: chờ gõ tiếp
       if(e.key === 'Enter' || (e.key === ' ' && !(busy() && ACAD().cur().req && ACAD().cur().req.type === 'str'))){
         e.preventDefault();
         let v = input.value;

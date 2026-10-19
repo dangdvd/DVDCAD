@@ -213,6 +213,41 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v5d) — add-in: AutoLISP và JavaScript
+**`APPLOAD` (`AP`)** (ribbon › thẻ **Add-ins** › Nạp ứng dụng): nạp add-in giống AutoCAD.
+- **Nạp file…**: chọn `.lsp` (AutoLISP) hoặc `.js` (JavaScript); nạp được nhiều file một lần. Có thể nạp từ đường link.
+- Cột **Khởi động** (Startup Suite): add-in tự nạp mỗi khi mở DVDCAD. **Nạp lại** / **Gỡ** từng add-in.
+- **Add-in mẫu**, bấm **Cài**:
+  - *QS — khối lượng*: `TONGDAI` (tổng chiều dài theo lớp), `TONGDT` (tổng diện tích vùng kín). Kết quả chèn bảng vào bản vẽ hoặc tải file CSV mở bằng Excel.
+  - *Tiện ích AutoLISP*: `STT` (đánh số thứ tự), `TL` (tổng chiều dài), `DTL` (đổi lớp theo đối tượng mẫu), `KHUNGTEN` (vẽ khung bản vẽ).
+- Lệnh của add-in hiện ở thẻ **Add-ins** trên ribbon.
+
+**AutoLISP**
+- `(defun c:TEN () …)` thành lệnh `TEN`.
+- Gõ thẳng biểu thức ở dòng lệnh: `(+ 1 2)`, `(setq r 5)`. Khi lệnh đang hỏi, gõ `!r` để dùng giá trị biến.
+- `VLISP` (`VLIDE`): bảng gõ thử mã LISP (Ctrl+Enter = chạy), có nút lưu thành add-in.
+- Có các hàm thông dụng:
+  - nhập liệu: `getpoint`, `getdist`, `getstring`, `initget`, `entsel`, `ssget` (kèm bộ lọc);
+  - đối tượng: `entget`, `entmod`, `entmake`;
+  - chạy lệnh: `(command "LINE" p1 p2 "")`, `pause`;
+  - hệ thống, danh sách, chuỗi: `getvar`, `setvar`, `vl-sort`, `vl-string-…`.
+- Danh sách đầy đủ trong `ADDIN-API.md` (lệnh `ADDINAPI`).
+
+**JavaScript**: file `.js` dùng API `DVDCAD` để:
+- đăng ký lệnh: `DVDCAD.addCommand`;
+- hỏi điểm / chọn đối tượng: `getPoint`, `getSelection`;
+- thêm / sửa / xoá đối tượng (UNDO được): `addLine`, `addText`, `modify`, `erase`;
+- chạy lệnh, xuất file: `command`, `download`.
+
+Xem `ADDIN-API.md`.
+
+**Không chạy được:**
+- `.fas` / `.vlx` (LISP đã biên dịch);
+- `.dll` / `.arx` (.NET, ObjectARX);
+- `.dvb` (VBA).
+
+Đây là add-in Windows chỉ chạy trong AutoCAD. Với add-in .NET, cần viết lại phần xử lý bằng JavaScript.
+
 ## Bổ sung (v5c) — ngôn ngữ giao diện đồng bộ
 - Bấm nút **Không gian làm việc** (cạnh nút Lưu) › **Ngôn ngữ giao diện** để chọn **English** hoặc **Tiếng Việt**. Lựa chọn áp dụng cho toàn bộ giao diện:
   - ribbon, thẻ, thanh trạng thái, bảng Thuộc tính, bảng Lớp;
@@ -666,3 +701,4 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Mặt lưới RULESURF / TABSURF / REVSURF / EDGESURF / PLANESURF là khối lưới tam giác: lưu DXF thành 3DFACE và UNION / SUBTRACT không dùng cho mặt hở. Đường 2D của DVDCAD luôn nằm trên mặt bằng XY (cao độ theo ELEV), nên RULESURF / EDGESURF giữa các đường 2D ra mặt phẳng.
 - POLYSOLID chưa có tuỳ chọn Cung khi vẽ theo điểm. Muốn có đoạn cong, vẽ đa tuyến có cung rồi dùng POLYSOLID › Đối tượng.
 - Giao diện English dịch từ chuỗi tiếng Việt gốc khi hiển thị. Một vài câu ghép có thể đọc chưa trơn như AutoCAD bản tiếng Anh. Chữ do lệnh ghi vào bản vẽ (trường ngày tháng, nhãn ký hiệu, khung tên mẫu) vẫn là tiếng Việt.
+- AutoLISP của DVDCAD chạy mã nguồn `.lsp`. Chưa có: hàm `vla-` / `vlax-` (ActiveX), hộp thoại DCL, `grread`, `entmake` cho khối / hatch, reactor. Add-in lưu trên từng máy (trong trình duyệt), không đi kèm bản vẽ hay Google Drive.

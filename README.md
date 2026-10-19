@@ -4,6 +4,21 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5d: add-in AutoLISP / JavaScript (APPLOAD)
+- `dvd-lisp.js`: bộ thông dịch AutoLISP chạy bất đồng bộ.
+  - Kiểu dữ liệu: số nguyên / số thực tách riêng, cặp chấm, tên đối tượng, tập chọn.
+  - Phạm vi biến động (dynamic scope); `defun c:` thành lệnh DVDCAD.
+  - Hỏi người dùng (`getpoint`…) chạy trong ngữ cảnh lệnh tạm, Esc thì huỷ hàm.
+  - `(command …)` chờ từng lời nhắc qua `A.reqSeq`.
+  - `entget` / `entmod` / `entmake` dùng mã DXF; tên đối tượng bền qua `_lid`, khối / kích thước theo nhóm.
+  - Gõ được `(…)` và `!bien` ở dòng lệnh.
+- `dvd-addins.js`:
+  - APPLOAD: kho add-in lưu trong `localStorage` `dvd:addins`, Startup Suite.
+  - VLISP (bảng gõ thử), API `window.DVDCAD` cho add-in `.js`, thẻ ribbon Add-ins.
+- `addins/`: `qs-khoi-luong.js`, `lisp-tien-ich.lsp`. `ADDIN-API.md`: hướng dẫn viết add-in.
+- `dvd-acad-core.js`: `A.run(…, { quiet })`, `A.reqSeq`. `dvd-cmd.js`: phím cách trong biểu thức LISP.
+- Kiểm thử: `v5d_test.py` (36 bước kiểm tra).
+
 ## v5c: ngôn ngữ giao diện đồng bộ English / Tiếng Việt
 - `dvd-i18n.js`: một công tắc ngôn ngữ chung (`DVDI18N`, khoá `dvd:riblang`, mặc định theo trình duyệt).
   - Khi chọn English, `MutationObserver` thay chữ hiển thị: nút chữ, `title`, `placeholder`, `aria-label`, `data-tl`, nút `<input>`, `alert` / `confirm` / `prompt`.

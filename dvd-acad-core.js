@@ -793,7 +793,7 @@
     const id = ++runId;
     cur = { id, name, pre, sel: new Set(), req: null, hl: [] };
     if(opt.keepMode !== true) setModeInt('acad');
-    log('Lệnh: ' + name);
+    if(!opt.quiet) log('Lệnh: ' + name);
     hoverEnt = null; osOverride = null; acq.length = 0;
     refresh();
     try{ await fn(A, cur); }
@@ -821,7 +821,7 @@
     const c = cur;
     return new Promise((res, rej) => {
       req.res = v => { if(c.req === req) c.req = null; res(v); };
-      req.rej = rej; c.req = req;
+      req.rej = rej; c.req = req; A.reqSeq = (A.reqSeq || 0) + 1;   // số thứ tự lời nhắc (LISP (command …) chờ lời nhắc kế tiếp)
       if(req.type === 'sel'){ c.sel = new Set(); c.poly = null; }
       lastPt = mouse ? computePoint(mouse, req, lastTouch) : null;
       refresh(); paintSelSoon();

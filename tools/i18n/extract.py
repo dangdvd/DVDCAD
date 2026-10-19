@@ -14,9 +14,14 @@ def add(t,src):
         p=re.sub(r'\s+',' ',p)
         if p and VI.search(p):
             segs.setdefault(p,set()).add(src)
-files=sorted(f for f in glob.glob(ROOT+'/dvd-*.js') if 'i18n' not in f)+[ROOT+'/index.html']
+files=sorted(f for f in glob.glob(ROOT+'/dvd-*.js') if 'i18n' not in f)+[ROOT+'/index.html']+sorted(glob.glob(ROOT+'/addins/*.js'))+sorted(glob.glob(ROOT+'/addins/*.lsp'))
 for f in files:
     s=open(f,encoding='utf-8').read(); name=os.path.basename(f)
+    if f.endswith('.lsp'):
+        for m in re.finditer(r'"((?:[^"\\]|\\.)*)"', '\n'.join(l.split(';')[0] if '"' not in l.split(';')[0] and ';' in l else l for l in s.split('\n'))):
+            t=m.group(1).replace('\\n','\n')
+            if VI.search(t): add(t,name)
+        continue
     if f.endswith('.html'):
         scripts=re.findall(r'<script[^>]*>(.*?)</script>',s,re.S)
         markup=re.sub(r'<script[^>]*>.*?</script>','',s,flags=re.S)
