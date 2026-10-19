@@ -155,7 +155,7 @@
       const lw = e.lw > 0 ? lwStd(e.lw) : (e.lwb ? -2 : null);
       const tc = V2004 && aci !== 256 && !isAciColor(e.col) ? hexRGB(e.col) : null;
       let wrote = false;
-      const head = (t, sub, hh) => { wrote = true; const h = hh || H(); P(0, t); P(5, h); P(330, owner); P(100, 'AcDbEntity'); P(8, ly); if(elt && t !== 'HATCH' && t !== 'TEXT' && t !== 'MTEXT') P(6, elt); if(aci !== 256) P(62, aci); if(tc != null) P(420, tc); if(lw != null) P(370, lw); if(e.lts && Math.abs(e.lts - 1) > 1e-9 && t !== 'TEXT' && t !== 'MTEXT') P(48, e.lts); if(sub) P(100, sub); return h; };
+      const head = (t, sub, hh) => { wrote = true; const h = hh || H(); P(0, t); P(5, h); P(330, owner); P(100, 'AcDbEntity'); P(8, ly); if(elt && t !== 'HATCH' && t !== 'TEXT' && t !== 'MTEXT') P(6, elt); if(aci !== 256) P(62, aci); if(tc != null) P(420, tc); if(lw != null) P(370, lw); if(e.tp > 0 && V2004) P(440, (0x02000000 | Math.round(255 * (1 - Math.min(90, e.tp) / 100))) >>> 0); if(e.lts && Math.abs(e.lts - 1) > 1e-9 && t !== 'TEXT' && t !== 'MTEXT') P(48, e.lts); if(sub) P(100, sub); return h; };
       const xd = () => { if(o.inBlock || o.dimBlock) return; const pr = {}; for(const k of XKEYS) if(e[k] != null && e[k] !== '' && !(k === 'mt' && e.type !== 'TEXT')) pr[k] = e[k]; const js = Object.keys(pr).length ? JSON.stringify(pr) : null;
         if(!e.rgn && !js) return; P(1001, 'DVDCAD'); if(e.rgn) P(1000, 'RGN' + (e.grp && e.blk === '*REGION' ? ':' + e.grp : '')); if(js){ for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); } };
       // đa tuyến có độ rộng: độ rộng đầu / cuối từng đỉnh (40 / 41) lấy lại từ các tứ giác tô

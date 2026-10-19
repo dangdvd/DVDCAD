@@ -4,6 +4,19 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5e: lệnh AutoCAD còn thiếu
+- `dvd-acad-x15.js`:
+  - Độ trong suốt: `e.tp` (CETRANSPARENCY, TRANSPARENCY, nút TP).
+  - Giao diện: RIBBON / RIBBONCLOSE, COMMANDLINE(HIDE), PROPERTIESCLOSE, LAYERCLOSE, HIDE / SHOWPALETTES, GRAPHSCR, NAVBAR, WORKSPACE, QCCLOSE.
+  - File: QUIT / EXIT / QQUIT, SAVEALL, REVERT, PREVIEW, LOGFILEON / OFF.
+  - Lệnh: UNDEFINE / REDEFINE, MPEDIT, DIMLAYER, XDLIST, DCLINEAR, VIEWRES, LAYERPMODE, ARRAYCLOSE và các tên gọi khác.
+  - 3D: MESH, CONVTOMESH / SOLID / SURFACE, 3DFACE, THICKEN.
+- `index.html`: vẽ trong suốt (globalAlpha, không gộp nét), đọc DXF 440. `dvd-acad-dxf.js`: ghi 440.
+- `dvd-cmd.js`:
+  - Dòng "Độ trong suốt" trong bảng Thuộc tính (đối tượng mới / một / nhiều đối tượng).
+  - UNDEFINE: danh sách lưu ở `dvd:undef`, tiền tố `.`.
+- Kiểm thử: `v5e_test.py` (29 bước kiểm tra).
+
 ## v5d: add-in AutoLISP / JavaScript (APPLOAD)
 - `dvd-lisp.js`: bộ thông dịch AutoLISP chạy bất đồng bộ.
   - Kiểu dữ liệu: số nguyên / số thực tách riêng, cặp chấm, tên đối tượng, tập chọn.

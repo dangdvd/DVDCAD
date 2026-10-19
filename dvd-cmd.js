@@ -80,6 +80,8 @@
     rebuild(); return c;
   }
 
+  const UNDEF = new Set((() => { try{ return JSON.parse(localStorage.getItem('dvd:undef') || '[]'); }catch(_){ return []; } })());   // UNDEFINE / REDEFINE như AutoCAD
+  const saveUndef = () => { try{ localStorage.setItem('dvd:undef', JSON.stringify([...UNDEF])); }catch(_){} };
   let lastCmd = null;
   function runCommand(text){
     const raw = String(text || '').trim();
@@ -88,6 +90,7 @@
     if(!raw){ return repeatOrFinish(); }
     const parts = raw.split(/\s+/); const name = parts[0].toUpperCase().replace(/^[_.']+/, ''); const arg = parts.slice(1).join(' ');
     if(name === 'Z' || name === 'ZOOM'){ if(arg){ zoomCmd(arg); log('Lệnh: ZOOM ' + arg.toUpperCase()); return; } }
+    if(UNDEF.has(name) && !/^[_]?\./.test(parts[0])){ log('Lệnh ' + name + ' đã bị tắt bằng UNDEFINE. Gõ .' + name + ' để dùng lệnh gốc, REDEFINE ' + name + ' để bật lại.'); return; }
     const c = ALIAS.get(name);
     if(!c){ log('Không có lệnh "' + raw + '". Gõ ? để xem danh sách.'); return; }
     execute(c, arg);
@@ -366,6 +369,7 @@
               h += '<div class="r"><label>Kiểu nét</label><select data-g="lt">' + ltOpts(ln.lt) + '</select></div>';
               h += '<div class="r"><label>Tỉ lệ kiểu nét</label><input data-g="celts" value="' + esc(fmt(ln.celts || 1)) + '"></div>';
               h += '<div class="r"><label>Bề rộng nét</label><select data-g="lw">' + lwOpts(ln.lw) + '</select></div>';
+              { const A0 = ACAD(); const cv = A0 && A0.SET ? A0.SET.cetp : null; h += '<div class="r"><label>Độ trong suốt</label><select data-g="tp">' + tpOpts(cv == null ? 'BYLAYER' : cv) + '</select></div>'; }
               h += '<div class="r"><label>LTSCALE (toàn cục)</label><input data-g="ltscale" value="' + esc(fmt(typeof LTSCALE !== 'undefined' ? LTSCALE : 1)) + '"></div>'; }
       h += '<div class="grp">Bản vẽ</div>' + F('Tên', '', currentName || '', true) + F('Số đối tượng', '', String(entities.length), true) + F('Đơn vị', '', (typeof UNIT !== 'undefined' && UNIT[insunits]) || '(không rõ)', true);
       palBody.innerHTML = h + '<div class="pe">Bấm vào một nét (hoặc kéo khung) để xem và sửa thuộc tính.</div>'; bindGlobal(); return;
@@ -384,7 +388,8 @@
       { const lts = new Set(s.map(e => e.lt || 'BYLAYER')), lws = new Set(s.map(e => e.lw > 0 ? e.lw : 'BYLAYER')), sc = new Set(s.map(e => e.lts || 1));
         h += '<div class="r"><label>Kiểu nét</label><select data-m="lt"' + (editable ? '' : ' disabled') + '>' + ltOpts([...lts][0], lts.size > 1) + '</select></div>';
         h += '<div class="r"><label>Tỉ lệ kiểu nét</label><input data-m="lts"' + ro + ' value="' + (sc.size > 1 ? '*nhiều*' : esc(fmt([...sc][0]))) + '"></div>';
-        h += '<div class="r"><label>Bề rộng nét</label><select data-m="lw"' + (editable ? '' : ' disabled') + '>' + lwOpts([...lws][0], lws.size > 1) + '</select></div>'; }
+        h += '<div class="r"><label>Bề rộng nét</label><select data-m="lw"' + (editable ? '' : ' disabled') + '>' + lwOpts([...lws][0], lws.size > 1) + '</select></div>';
+        const tps = new Set(s.map(e => e.tp != null ? e.tp : 'BYLAYER')); h += '<div class="r"><label>Độ trong suốt</label><select data-m="tp"' + (editable ? '' : ' disabled') + '>' + tpOpts([...tps][0], tps.size > 1) + '</select></div>'; }
       if(grpIds.size) h += '<div class="act"><button data-a="explode">Phá nhóm/khối</button></div>';
       const ex = window.DVDPalExtra ? window.DVDPalExtra(s, editable) : null; if(ex && ex.html) h += ex.html;
       palBody.innerHTML = h; bindMulti(s); if(ex && ex.bind) ex.bind(palBody); return;
@@ -398,6 +403,7 @@
       h += F('Tỉ lệ kiểu nét', 'lts', e.lts || 1);
     }
     h += '<div class="r"><label>Bề rộng nét</label><select data-f="lw"' + (editable ? '' : ' disabled') + '>' + lwOpts(e.lw) + '</select></div>';
+    h += '<div class="r"><label>Độ trong suốt</label><select data-f="tp"' + (editable ? '' : ' disabled') + '>' + tpOpts(e.tp != null ? e.tp : 'BYLAYER') + '</select></div>';
     h += '<div class="grp">Hình học</div>';
     switch(e.type){
       case 'LINE':
@@ -465,6 +471,8 @@
     const wasSel = selEnts.has(e);
     if(replaceEntity(e, work)){ if(wasSel) afterEditKeepSel(e, work); palSig = ''; refreshPalette(true); }
   }
+  const tpOpts = (v, multi) => (multi ? '<option selected value="*">*nhiều*</option>' : '') + '<option value="BYLAYER"' + (!multi && (v == null || v === 'BYLAYER') ? ' selected' : '') + '>ByLayer</option>' + [0, 10, 20, 30, 40, 50, 60, 70, 80, 90].map(n => '<option value="' + n + '"' + (!multi && v != null && v !== 'BYLAYER' && +v === n ? ' selected' : '') + '>' + n + '</option>').join('');
+  const setTP = (w, v) => { if(v === 'BYLAYER' || v === '' || v == null) delete w.tp; else w.tp = Math.max(0, Math.min(90, +v || 0)); };
   const setColor = (w, v) => { const A = ACAD(); if(v === 'BYLAYER'){ w.bl = 1; w.col = A ? A.layerHex(w.layer || '0') : w.col; } else { delete w.bl; w.col = v; } };
   function bindGlobal(){
     const A = ACAD(); if(!A) return;
@@ -475,6 +483,7 @@
       else if(g === 'lt'){ if(el.value === 'OTHER'){ if(A.openLinetypes) A.openLinetypes(); } else A.setCurLT(el.value); }
       else if(g === 'lw') A.setCurLW(el.value);
       else if(g === 'celts' || g === 'ltscale'){ const v = num(el.value); if(!(v > 0)) say('Tỉ lệ phải > 0.'); else if(g === 'celts') A.setCELTS(v); else A.setLTScale(v); }
+      else if(g === 'tp'){ A.SET.cetp = el.value === 'BYLAYER' ? null : +el.value; A.saveSet(); }
       else if(el.value === 'PICK') pickColor(c => { A.setCurColor(c); palSig = ''; refreshPalette(true); }, A.LS.color);
       else A.setCurColor(el.value);
       palSig = ''; refreshPalette(true);
@@ -489,6 +498,7 @@
         if(f === 'closed'){ commitSingle(e, w => { w.closed = el.checked; }); return; }
         if(f === 'lt'){ if(el.value === 'OTHER'){ palSig = ''; refreshPalette(true); const A = ACAD(); if(A && A.openLinetypes) A.openLinetypes(); return; } const A = ACAD(); if(A && el.value !== 'BYLAYER' && el.value !== 'BYBLOCK' && el.value !== 'CONTINUOUS' && !LTYPES[el.value]) A.loadLT(el.value); commitSingle(e, w => setLT(w, el.value)); return; }
         if(f === 'lw'){ commitSingle(e, w => setLW(w, el.value)); return; }
+        if(f === 'tp'){ commitSingle(e, w => setTP(w, el.value)); return; }
         if(f === 'lts'){ const v = num(el.value); if(!(v > 0)){ say('Tỉ lệ phải > 0.'); palSig = ''; refreshPalette(true); return; } commitSingle(e, w => { if(Math.abs(v - 1) < 1e-12) delete w.lts; else w.lts = v; }); return; }
         if(f === 'text'){ commitSingle(e, w => { w.text = el.value; }); return; }
         if(f === 'ha'){ commitSingle(e, w => { w.ha = el.value; }); return; }
@@ -524,6 +534,7 @@
       if(el.dataset.m === 'layer'){ if(el.value === '*') return; run(w => { const wasBL = w.bl; w.layer = el.value; if(wasBL && A) w.col = A.layerHex(w.layer); }); }
       else if(el.dataset.m === 'lt'){ if(el.value === '*') return; if(el.value === 'OTHER'){ palSig = ''; refreshPalette(true); if(A && A.openLinetypes) A.openLinetypes(); return; } run(w => { if(!NOLT[w.type]) setLT(w, el.value); }); }
       else if(el.dataset.m === 'lw'){ if(el.value === '*') return; run(w => setLW(w, el.value)); }
+      else if(el.dataset.m === 'tp'){ if(el.value === '*') return; run(w => setTP(w, el.value)); }
       else if(el.dataset.m === 'lts'){ const v = num(el.value); if(!(v > 0)) return; run(w => { if(NOLT[w.type]) return; if(Math.abs(v - 1) < 1e-12) delete w.lts; else w.lts = v; }); }
       else { if(el.value === '*') return; if(el.value === 'PICK'){ pickColor(c => run(w => setColor(w, c))); return; } run(w => setColor(w, el.value)); }
     }));
@@ -584,6 +595,6 @@
   buildBar(); buildPalette(); addMobileButton();
   try{ const v = localStorage.getItem('dvd:props'); if(v === '1' || (v == null && fine() && window.innerWidth >= 900)) palWanted = true; }catch(_){}
   updateBar();
-  window.DVDCmd = { run: runCommand, commands: CMDS, register, log, refresh: () => { _lastPr = ''; updateBar(); }, toggleHistory, runTransparent, togglePalette, toggleBar, showHelp, refreshPalette: () => { palSig = ''; refreshPalette(true); }, isPaletteOn: () => palWanted, focus: () => { if(input) input.focus(); } };
+  window.DVDCmd = { undefine: n => { n = String(n).toUpperCase().replace(/^[_.]+/, ''); if(!ALIAS.has(n)) return false; UNDEF.add(n); saveUndef(); return true; }, redefine: n => { n = String(n).toUpperCase().replace(/^[_.]+/, ''); const had = UNDEF.delete(n); saveUndef(); return had; }, get undefined(){ return [...UNDEF]; }, run: runCommand, commands: CMDS, register, log, refresh: () => { _lastPr = ''; updateBar(); }, toggleHistory, runTransparent, togglePalette, toggleBar, showHelp, refreshPalette: () => { palSig = ''; refreshPalette(true); }, isPaletteOn: () => palWanted, focus: () => { if(input) input.focus(); } };
   window.DVDCmd.history = () => lines.map(l => l.m);
 })();

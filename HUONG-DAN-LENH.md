@@ -213,6 +213,46 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 **3D:** `SHELL` (làm rỗng khối: bể nước, hộp — hở mặt trên/dưới hoặc kín), `INTERFERE` (kiểm tra va chạm giữa các khối, tạo khối đỏ ở lớp VA_CHAM), `MASSPROP` (thể tích, diện tích mặt, trọng tâm, khối lượng theo vật liệu), `3DARRAY` (hàng × cột × tầng, hoặc tròn).
 
+## Bổ sung (v5e) — lệnh AutoCAD còn thiếu
+**Độ trong suốt** (như AutoCAD)
+- Bảng **Thuộc tính** có dòng **Độ trong suốt**: ByLayer hoặc 0–90 %. Áp dụng được cho đối tượng đang chọn và cho đối tượng mới.
+- `CETRANSPARENCY`: độ trong suốt cho đối tượng mới.
+- `TRANSPARENCY` (hoặc nút **TP** trên thanh trạng thái): hiện / ẩn độ trong suốt.
+- Lưu và mở DXF dùng mã 440 (DXF 2004 trở lên). AutoCAD đọc đúng.
+
+**Sửa, vẽ**
+- `MPEDIT`: sửa nhiều đa tuyến một lúc. Lệnh tự đổi đường, cung thành đa tuyến, rồi cho các tuỳ chọn: Đóng / Mở, **Nối** (có khoảng hở fuzz, giữ cung), Độ rộng, Đảo chiều.
+- `DIMLAYER`: lớp cho kích thước mới (`.` = lớp hiện hành).
+- `DCLINEAR`: ràng buộc kích thước ngang / dọc.
+- `XDLIST`: xem toàn bộ dữ liệu của một đối tượng.
+- `UNDEFINE` / `REDEFINE`: tắt / bật lại một lệnh có sẵn. Gõ `.TÊN` (vd `.LINE`) để vẫn dùng lệnh gốc. Hay dùng cùng AutoLISP.
+
+**3D**
+- `MESH`: khối lưới cơ bản (hộp, trụ, nón, cầu, nêm, xuyến, chóp).
+- `CONVTOMESH`: đổi khối thành lưới. `CONVTOSOLID`: đổi lưới kín thành khối đặc. `CONVTOSURFACE`: đổi khối thành mặt.
+- `3DFACE`: mặt 3D qua 3–4 điểm.
+- `THICKEN`: làm dày mặt phẳng (PLANESURF, 3DFACE…) thành khối.
+- Tên gọi khác của xem 3D: `3DFORBIT`, `3DCORBIT`, `3DPAN`, `3DZOOM`, `3DSWIVEL`, `3DDISTANCE` (= 3DORBIT), `3DFLY` (= 3DWALK), `3DCLIP` (= SECTIONPLANE).
+
+**File**
+- `REVERT`: bỏ mọi thay đổi, mở lại bản vẽ như lúc mở file. Dùng được với file đã mở trên máy này.
+- `QUIT` / `EXIT` / `QQUIT`: đóng bản vẽ. `SAVEALL`: lưu. `PREVIEW`: xem trước bản in.
+- `LOGFILEON` / `LOGFILEOFF`: ghi nhật ký dòng lệnh rồi tải file `.log`.
+
+**Giao diện**
+- `RIBBON` / `RIBBONCLOSE`, `COMMANDLINE` / `COMMANDLINEHIDE`, `PROPERTIESCLOSE`, `LAYERCLOSE`, `QCCLOSE`, `GRAPHSCR`.
+- `HIDEPALETTES` / `SHOWPALETTES`: ẩn / hiện các bảng.
+- `NAVBAR`: hiện / ẩn thanh điều hướng.
+- `WORKSPACE`: đổi Vẽ 2D / Mô hình 3D.
+
+**Tên gọi khác**
+- `CLASSICLAYER` (= LAYER), `EATTEXT` (= trích thuộc tính), `GOTOURL` (= mở liên kết), `NEWVIEW` (= VIEW), `LAYOUTWIZARD` (= LAYOUT).
+- `VIEWRES`, `LAYERPMODE`, `ARRAYCLOSE` có cho đủ lệnh như AutoCAD.
+
+**Ribbon**
+- Khối đặc › Mặt lưới thêm: MESH, CONVTOMESH, CONVTOSOLID, THICKEN, 3DFACE, CONVTOSURFACE.
+- MPEDIT nằm trong menu thêm của bảng Sửa.
+
 ## Bổ sung (v5d) — add-in: AutoLISP và JavaScript
 **`APPLOAD` (`AP`)** (ribbon › thẻ **Add-ins** › Nạp ứng dụng): nạp add-in giống AutoCAD.
 - **Nạp file…**: chọn `.lsp` (AutoLISP) hoặc `.js` (JavaScript); nạp được nhiều file một lần. Có thể nạp từ đường link.
@@ -702,3 +742,4 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - POLYSOLID chưa có tuỳ chọn Cung khi vẽ theo điểm. Muốn có đoạn cong, vẽ đa tuyến có cung rồi dùng POLYSOLID › Đối tượng.
 - Giao diện English dịch từ chuỗi tiếng Việt gốc khi hiển thị. Một vài câu ghép có thể đọc chưa trơn như AutoCAD bản tiếng Anh. Chữ do lệnh ghi vào bản vẽ (trường ngày tháng, nhãn ký hiệu, khung tên mẫu) vẫn là tiếng Việt.
 - AutoLISP của DVDCAD chạy mã nguồn `.lsp`. Chưa có: hàm `vla-` / `vlax-` (ActiveX), hộp thoại DCL, `grread`, `entmake` cho khối / hatch, reactor. Add-in lưu trên từng máy (trong trình duyệt), không đi kèm bản vẽ hay Google Drive.
+- Độ trong suốt đặt cho từng đối tượng. Độ trong suốt theo lớp (trong bảng Lớp của AutoCAD) chưa đọc / ghi. THICKEN chỉ làm dày được mặt phẳng; mặt cong (REVSURF…) chưa làm dày được. 3DFACE nằm ở cao độ ELEV (chưa nhập Z riêng từng đỉnh).
