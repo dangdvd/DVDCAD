@@ -952,7 +952,7 @@
     const w = toWorld(sp.x, sp.y), tol = ((opt.touch ? 16 : SET.pickbox + 3)) / view.scale;
     const cands = queryBox(w.x - tol, w.y - tol, w.x + tol, w.y + tol, 8000);
     let best = null, bd = tol;
-    for(const e of cands){ if(!opt.allowLocked && isLockedE(e)) continue; if(opt.filter && !opt.filter(e)) continue; const d = entDist(e, w); if(d < bd || (d === bd && best && e.userAdded)){ bd = d; best = e; } }
+    for(const e of cands){ if(!opt.allowLocked && isLockedE(e)) continue; if(opt.filter && !opt.filter(e)) continue; if(e.clip && window.ptInClip && !ptInClip(w, e.clip)) continue; const d = entDist(e, w); if(d < bd || (d === bd && best && e.userAdded)){ bd = d; best = e; } }
     if(best) return best;
     // trong vùng hatch (ưu tiên hatch nhỏ nhất)
     let hb = null, ha = Infinity;

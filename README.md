@@ -4,6 +4,15 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5g: XCLIP của file DWG / DXF
+- `index.html`:
+  - DWG: `dwgXclipMap(db)` đọc `db.objects.SPATIAL_FILTER` qua từ điển mở rộng của INSERT (`ownerDictionaryHardId` → ACAD_FILTER → SPATIAL); INSERT có `xc` (đa giác trong toạ độ khối).
+  - DXF: đọc DICTIONARY / SPATIAL_FILTER trong OBJECTS; giữ mã 360 (`_DXF_SKIP`) để lấy xdict của INSERT.
+  - `xclipBlockPoly`: đỉnh × ma trận nghịch đảo INSERT lúc cắt (12 số 40 đầu), 2 đỉnh = chữ nhật, mã 71 = 0 → bỏ.
+  - `explodeInto` → `xclipRange`: bỏ đối tượng nằm hẳn ngoài, gắn `e.clip` `{x,y,w,h,poly,xc:1}` cho đối tượng cắt ngang.
+  - `applyClip` cắt thêm `c.sub` (XCLIP trong khung nhìn layout); `ptInClip` dùng khi bấm chọn (`A.pickAt`).
+- Kiểm thử: `v5g_test.py` (14 bước), file mẫu `test/xclip_test.dxf` (ezdxf: chữ nhật, tam giác, khối xoay kiểu AutoCAD, đường cắt tắt).
+
 ## v5f: lệnh AutoCAD còn thiếu
 - `dvd-acad-x16.js`:
   - Khung nhìn layout: VPLAYER, LAYVPI, VPCLIP, VPSYNC, SPACETRANS. Dữ liệu riêng từng khung nhìn (`frz`, `cp`) lưu ở `localStorage` `dvd:vpx` theo bản vẽ + layout + số thứ tự khung nhìn, đọc qua `window.vpExtra(L, i)`.
