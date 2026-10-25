@@ -50,7 +50,10 @@ async function until(fn, ms){ const t = Date.now(); while(Date.now() - t < ms){ 
   check(!!unExe, 'có trình gỡ cài');
   if(unExe){ spawnSync(path.join(DIR, unExe), ['/S', '_?=' + DIR], { stdio: 'inherit', timeout: 300000 }); }
   check(await until(() => !fs.existsSync(EXE), 60000), 'đã xoá DVDCAD.exe');
-  check(!/DVDCAD/i.test(reg('HKCU\\Software\\Classes\\.dwg')), 'đã bỏ gắn .dwg');
+  for(const ext of ['dwg', 'dxf']){
+    check(!reg('HKCU\\Software\\Classes\\DVDCAD.' + ext + '\\shell\\open\\command'), 'đã xoá lớp DVDCAD.' + ext);
+    check(!/DVDCAD/i.test(reg('HKCU\\Software\\Classes\\.' + ext)), '.' + ext + ' không còn trỏ về DVDCAD');
+  }
   console.log(failed ? '\nTHẤT BẠI: ' + failed + ' mục' : '\nĐẠT tất cả');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
