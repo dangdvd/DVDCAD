@@ -752,7 +752,9 @@ Bố cục tab, bảng và biểu tượng theo AutoCAD để người dùng Aut
 - Định nghĩa khối động lưu trên máy theo tên khối nên dùng được cho mọi bản vẽ chèn khối đó.
 
 **Lưu DWG:**
-- `SAVEDWG` (`DWGOUT`) — lưu ra file **DWG** qua máy chủ chuyển đổi của bạn. `DWGSERVER` để đặt địa chỉ máy chủ.
+- `SAVEDWG` (`DWGOUT`) — lưu ra file **DWG**. `DWGSERVER` để chọn phiên bản DWG, đường dẫn ODA File Converter, địa chỉ máy chủ.
+  - Bản Windows: cài **ODA File Converter** (miễn phí) là lưu được ngay trên máy, không cần mạng hay máy chủ.
+  - Bản web: lưu qua máy chủ chuyển đổi của bạn (hướng dẫn bên dưới).
 - Chuẩn bị một lần trên máy tính: cài **ODA File Converter** (miễn phí) và **Node.js**, chạy `node server-dwg.js` (file có trong repo; đặt biến `ODA` trỏ tới ODAFileConverter). Điện thoại dùng được nếu cùng mạng với máy tính đó (nhập `http://<IP máy tính>:8787/convert`).
 
 ## In bản vẽ (PLOT, Ctrl+P)

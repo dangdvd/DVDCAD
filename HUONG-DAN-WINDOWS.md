@@ -1,7 +1,7 @@
 # DVDCAD cho Windows — cài đặt và dùng offline
 
 DVDCAD bản Windows là một phần mềm cài trên máy, chạy **hoàn toàn offline**: không cần mạng, không cần trình duyệt, không cần máy chủ.
-Giao diện và cách dùng như bản web kiểu AutoCAD: ribbon, dòng lệnh, Quick Access Toolbar, tab bản vẽ, thanh trạng thái, bảng Properties / Layer, và gần 500 lệnh (hơn 850 tên lệnh kể cả lệnh tắt) như `L`, `PL`, `C`, `TR`, `O`, `H`, `DLI`.
+Giao diện và cách dùng như bản web kiểu AutoCAD: ribbon, dòng lệnh, Quick Access Toolbar, tab bản vẽ, thanh trạng thái, bảng Properties / Layer, và hơn 500 lệnh (hơn 900 tên lệnh kể cả lệnh tắt) như `L`, `PL`, `C`, `TR`, `O`, `H`, `DLI`.
 
 ## Tải và cài đặt
 
@@ -43,8 +43,9 @@ Danh sách lệnh đầy đủ: [HUONG-DAN-LENH.md](HUONG-DAN-LENH.md), hoặc b
 
 ## Giới hạn
 
-- **Lưu DWG**: bản vẽ được lưu ra **DXF 2018**; AutoCAD và các phần mềm CAD khác mở được file này.
-  Muốn có file .dwg, dùng ODA File Converter (miễn phí) như hướng dẫn trong `server-dwg.js`.
+- **Lưu DWG**: `Ctrl+S` lưu ra **DXF 2018**; AutoCAD và các phần mềm CAD khác mở được file này.
+  Muốn có file .dwg: cài **ODA File Converter** (miễn phí, opendesign.com) rồi dùng lệnh `SAVEDWG`. DVDCAD tự tìm ODA trong `C:\Program Files\ODA`, chuyển ngay trên máy, không cần mạng.
+  Nếu cài ODA chỗ khác, chọn đường dẫn trong lệnh `DWGSERVER`; ở đó cũng chọn được phiên bản DWG (2000 → 2018).
 - Đây là phần mềm mã nguồn mở có **tên lệnh và cách dùng giống AutoCAD**, **không phải** sản phẩm của Autodesk.
   Biểu tượng là hình DVDCAD tự vẽ theo quy ước quen thuộc của phần mềm CAD; DVDCAD không dùng logo, biểu tượng hay mã nguồn của Autodesk.
 

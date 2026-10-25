@@ -7,6 +7,7 @@
 const { app, BrowserWindow, protocol, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { execFile } = require('child_process');
 
 const SCHEME = 'dvdcad';
 const ORIGIN = SCHEME + '://app';
@@ -183,6 +184,44 @@ ipcMain.handle('recent:list', () => Promise.all(recent.map(async r => {
   return { ...r, size: s ? s.size : r.size, mtime: s ? s.mtimeMs : 0, exists: s === undefined ? true : !!(s && s.isFile()) };
 })));
 ipcMain.handle('recent:remove', (_e, p) => { recent = recent.filter(r => key(r.path) !== key(p)); writeJSON('recent.json', recent); return true; });
+
+/* ---------------- lưu DWG: DXF → DWG bằng ODA File Converter (miễn phí, cài riêng) ---------------- */
+function findODA(){
+  const cands = [];
+  if(process.env.ODA) cands.push(process.env.ODA);
+  const pr = readJSON('prefs.json', {}); if(pr.odaPath) cands.push(pr.odaPath);
+  if(process.platform === 'win32'){
+    for(const base of [process.env.ProgramFiles, process.env['ProgramFiles(x86)'], 'C:\\Program Files', 'C:\\Program Files (x86)']){
+      if(!base) continue; let subs = [];
+      try{ subs = fs.readdirSync(path.join(base, 'ODA')).filter(n => /^ODAFileConverter/i.test(n)).sort().reverse(); }catch(_){}
+      for(const d of subs) cands.push(path.join(base, 'ODA', d, 'ODAFileConverter.exe'));
+    }
+  }else cands.push('/usr/bin/ODAFileConverter', '/opt/ODAFileConverter/ODAFileConverter');
+  return cands.find(p => { try{ return fs.statSync(p).isFile(); }catch(_){ return false; } }) || null;
+}
+ipcMain.handle('dwg:oda', () => ({ path: findODA() }));
+ipcMain.handle('dwg:odaPick', async () => {
+  const r = await dialog.showOpenDialog(win, { title: 'ODAFileConverter', properties: ['openFile'], filters: process.platform === 'win32' ? [{ name: 'ODAFileConverter.exe', extensions: ['exe'] }] : [] });
+  if(r.canceled || !r.filePaths[0]) return null;
+  const pr = readJSON('prefs.json', {}); pr.odaPath = r.filePaths[0]; writeJSON('prefs.json', pr); return { path: r.filePaths[0] };
+});
+ipcMain.handle('dwg:convert', async (_e, dxf, ver) => {
+  const oda = findODA(); if(!oda) return { error: 'Chưa có ODA File Converter trên máy — cài bản miễn phí (opendesign.com) hoặc chọn trong DWGSERVER.' };
+  const V = /^ACAD(2000|2004|2007|2010|2013|2018)$/.test(String(ver)) ? String(ver) : 'ACAD2018';
+  const work = await fs.promises.mkdtemp(path.join(app.getPath('temp'), 'dvdcad-dwg-'));
+  try{
+    const inDir = path.join(work, 'in'), outDir = path.join(work, 'out');
+    await fs.promises.mkdir(inDir); await fs.promises.mkdir(outDir);
+    await fs.promises.writeFile(path.join(inDir, 'drawing.dxf'), String(dxf));
+    // ODAFileConverter <thư mục vào> <thư mục ra> <phiên bản> <DWG|DXF> <đệ quy> <audit> <lọc>
+    await new Promise((res, rej) => execFile(oda, [inDir, outDir, V, 'DWG', '0', '1', '*.dxf'], { timeout: 180000, windowsHide: true }, err => err ? rej(err) : res()));
+    const f = (await fs.promises.readdir(outDir)).find(n => /\.dwg$/i.test(n));
+    if(!f) return { error: 'ODA File Converter không tạo được file DWG.' };
+    const buf = await fs.promises.readFile(path.join(outDir, f));
+    return { data: new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength) };
+  }catch(e){ return { error: 'ODA File Converter lỗi: ' + (e && e.message || e) }; }
+  finally{ fs.promises.rm(work, { recursive: true, force: true }).catch(() => {}); }
+});
 
 ipcMain.handle('shell:external', (_e, url) => { if(/^(https?:|mailto:)/i.test(String(url))) shell.openExternal(String(url)); return true; });
 ipcMain.handle('shell:reveal', (_e, p) => { if(canRead.has(key(p))) shell.showItemInFolder(norm(p)); return true; });

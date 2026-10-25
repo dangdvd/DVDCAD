@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld('dvdDesktop', {
   droppedPaths: files => call('fs:dropped', Array.from(files || []).map(f => { try{ return webUtils.getPathForFile(f); }catch(_){ return ''; } })),
   recentList: () => call('recent:list'),
   recentRemove: p => call('recent:remove', p),
+  dwgConvert: (dxf, ver) => call('dwg:convert', dxf, ver),
+  odaInfo: () => call('dwg:oda'),
+  odaPick: () => call('dwg:odaPick'),
   openExternal: url => call('shell:external', url),
   reveal: p => call('shell:reveal', p)
 });
