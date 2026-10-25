@@ -103,14 +103,46 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
 
   console.log('7. Lệnh phục hồi (x3 / x4 / x5) + lưu DWG');
   check(await win.evaluate(() => ['DRAWORDER', 'WIPEOUT', 'CANNOSCALE', 'GCHORIZONTAL', 'DCALIGNED', 'PARAMETERS', 'BPARAMETER', 'BDYN', 'SAVEDWG'].every(n => DVDCmd.commands.some(c => c.k.includes(n)))), 'có DRAWORDER, WIPEOUT, CANNOSCALE, GC*/DC*, PARAMETERS, BPARAMETER, BDYN, SAVEDWG');
-  if(process.platform !== 'win32'){
-    const dwgOut = path.join(tmp, 'luu-ra.dwg');
-    await app.evaluate(({ dialog }, p) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: p }); }, dwgOut);
-    await win.evaluate(() => DVDCmd.run('SAVEDWG'));
-    check(await until(() => fs.existsSync(dwgOut) && fs.readFileSync(dwgOut, 'latin1').startsWith('AC1032')), 'SAVEDWG chuyển qua ODA File Converter trên máy và lưu .dwg');
-  }else{
-    await win.evaluate(() => DVDCmd.run('SAVEDWG'));
-    check(await until(() => win.evaluate(() => /ODA/.test(document.getElementById('toast').textContent))), 'SAVEDWG khi chưa cài ODA → hướng dẫn cài ODA File Converter');
+  {
+    const stubSave = p => app.evaluate(({ dialog }, p) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: p }); }, p);
+    const head = p => { try{ return fs.readFileSync(p, 'latin1').slice(0, 6); }catch(_){ return ''; } };
+    const reopen = p => win.evaluate(async p => { const r = await window.dvdDesktop.readFile(p); const u = new Uint8Array(r.data); await loadDWG(u.slice().buffer, 'kiem-tra.dwg'); await new Promise(q => setTimeout(q, 300)); return modelEntities.length; }, p);
+    const outDir = process.env.DVD_DWG_OUT || '';   // CI: thư mục chép file DWG để ODA File Converter kiểm tra lại
+    const keep = (p, name) => { if(outDir){ fs.mkdirSync(outDir, { recursive: true }); fs.copyFileSync(p, path.join(outDir, name)); } };
+    const n0 = await win.evaluate(() => modelEntities.length);
+    // mặc định: DWG 2000 gốc (dvd-dwg.js), không cần ODA
+    const dwgNat = path.join(tmp, 'luu-goc.dwg'); await stubSave(dwgNat);
+    await win.evaluate(() => { localStorage.removeItem('dvd:dwgsrv'); DVDCmd.run('SAVEDWG'); });
+    check(await until(() => head(dwgNat) === 'AC1015', 60000), 'SAVEDWG mặc định ghi DWG 2000 gốc (AC1015), không cần ODA File Converter');
+    keep(dwgNat, 'mat-bang-tang-1.dwg');
+    check(await reopen(dwgNat) === n0, 'mở lại DWG vừa ghi: đủ ' + n0 + ' đối tượng');
+    // Lưu thành (SAVEAS) chọn đuôi .dwg → DWG
+    const dwgAs = path.join(tmp, 'luu-thanh.dwg'); await stubSave(dwgAs);
+    await win.evaluate(() => DVDCmd.run('SAVEAS'));
+    check(await until(() => head(dwgAs) === 'AC1015', 60000), 'SAVEAS chọn *.dwg → ghi DWG');
+    // bản vẽ tổng hợp: kích thước, hatch, chữ tiếng Việt, khối 3D, vùng che… → DWG → mở lại
+    const syn = await win.evaluate(async () => { const A = DVDAcad, w = ms => new Promise(r => setTimeout(r, ms));
+      A.newDrawing(); await w(600); try{ A.hideStart && A.hideStart(); }catch(_){}
+      for(const n of ['GAS_LINE', 'FENCELINE1']) try{ A.loadLT(n); }catch(_){}
+      const add = es => A.commit({ add: [].concat(es).filter(Boolean).map(e => A.newProps ? A.newProps(e) : e) });
+      add([{ type: 'LINE', x1: 0, y1: 0, x2: 120, y2: 0, lt: 'GAS_LINE' }, { type: 'LINE', x1: 0, y1: 10, x2: 120, y2: 10, lt: 'FENCELINE1' }, { type: 'CIRCLE', cx: 200, cy: 200, r: 20 }]);
+      const c = modelEntities.find(e => e.type === 'CIRCLE'); add(A.makeDimRad(c, { x: 230, y: 230 }, false)); add(A.makeDimRad(c, { x: 170, y: 235 }, true));
+      add(A.makeDimAng({ x: 300, y: 0 }, 0, Math.PI / 3, { x: 340, y: 15 })); add(A.makeDimLinear({ x: 0, y: 50 }, { x: 80, y: 90 }, { x: 40, y: 110 }, 0));
+      add([{ type: 'HATCH', loops: [[{ x: 0, y: 200 }, { x: 50, y: 200 }, { x: 50, y: 250 }, { x: 0, y: 250 }]], pat: 'ANSI31', psc: 1, pang: 0 }, { type: 'HATCH', loops: [[{ x: 60, y: 200 }, { x: 110, y: 200 }, { x: 85, y: 250 }]], pat: 'SOLID', solid: true },
+        { type: 'TEXT', x: 0, y: -30, h: 5, text: 'Chữ tiếng Việt: ĐƯỜNG ỐNG Ø100', rot: 15 }, { type: 'TEXT', x: 0, y: -60, h: 3.5, text: 'Dòng một\nDòng hai', mt: 1 }, { type: 'ELLIPSE', cx: 400, cy: 0, mx: 30, my: 0, ratio: 0.5, p1: 0, p2: Math.PI }]);
+      for(const s of ['BOX\n700,0\n740,40\n25\n', 'WIPEOUT\n100,500\n140,500\n140,540\n100,540\n\n']){ await A.runScript(s); await w(300); for(let i = 0; i < 5 && A.busy(); i++){ A.cancel(); await w(60); } }
+      const sig = () => modelEntities.map(e => e.type + (e.blk ? '*' : '') + (e.wipe ? 'W' : '') + '|' + (e.layer || '0') + '|' + (e.lt || '') + '|' + (e.text || '')).sort().join('\n');
+      const s0 = sig(), dwg = A.dwgNative(); await loadDWG(dwg.slice().buffer, 'tong-hop.dwg'); await w(300);
+      let bin = ''; for(let i = 0; i < dwg.length; i += 0x8000) bin += String.fromCharCode.apply(null, dwg.subarray(i, i + 0x8000));
+      return { same: sig() === s0, n: modelEntities.length, s3d: modelEntities.some(e => e.type === 'SOLID3D'), wipe: modelEntities.some(e => e.wipe), b64: btoa(bin) }; });
+    check(syn.same && syn.s3d && syn.wipe, 'bản vẽ tổng hợp (kích thước, hatch, chữ Việt, kiểu nét chữ/hình, khối 3D, vùng che) → DWG → mở lại giống hệt (' + syn.n + ' đối tượng)');
+    if(outDir){ fs.mkdirSync(outDir, { recursive: true }); fs.writeFileSync(path.join(outDir, 'tong-hop.dwg'), Buffer.from(syn.b64, 'base64')); }
+    // phiên bản mới hơn qua ODA File Converter (Linux/macOS: ODA giả ghi AC1032; Windows chưa cài ODA → tự ghi DWG 2000)
+    const dwgOda = path.join(tmp, 'luu-oda.dwg'); await stubSave(dwgOda);
+    await win.evaluate(() => { localStorage.setItem('dvd:dwgsrv', JSON.stringify({ url: '', ver: 'ACAD2018' })); DVDCmd.run('SAVEDWG'); });
+    if(process.platform !== 'win32') check(await until(() => head(dwgOda) === 'AC1032'), 'DWG 2018 qua ODA File Converter trên máy');
+    else check(await until(() => /^AC10(15|32)$/.test(head(dwgOda)), 60000), 'DWG 2018: qua ODA nếu máy đã cài, chưa cài → tự ghi DWG 2000 gốc (' + head(dwgOda) + ')');
+    await win.evaluate(() => localStorage.removeItem('dvd:dwgsrv'));
   }
 
   console.log('8. Lệnh tắt giống AutoCAD (acad.pgp)');
@@ -123,6 +155,37 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
   });
   check(!al.bad.length && al.ok >= 200, al.ok + ' lệnh tắt trỏ đúng lệnh' + (al.bad.length ? '; sai: ' + al.bad.join(', ') : ''));
   check(al.spot, 'DO = DONUT, T = MTEXT, DT = TEXT, QM = đo nhanh, PA = PASTESPEC, REA = REGENALL');
+
+  console.log('9. Dòng lệnh kiểu AutoCAD 2027');
+  const cl = await win.evaluate(async () => {
+    const w = (ms = 40) => new Promise(r => setTimeout(r, ms));
+    const run = async (...xs) => { DVDCmd.run(xs[0]); await w(); for(const x of xs.slice(1)){ if(!DVDAcad.busy()) break; DVDAcad.input(x.t != null ? x.t : x, x.t != null ? { dyn: true } : undefined); await w(); } for(let i = 0; i < 5 && DVDAcad.busy(); i++){ DVDAcad.cancel(); await w(); } };
+    const lines = () => modelEntities.filter(e => e.type === 'LINE').map(e => [e.x1, e.y1, e.x2, e.y2].map(v => Math.round(v * 1000) / 1000).join(','));
+    DVDAcad.newDrawing(); await w(600); try{ if(DVDAcad.hideStart) DVDAcad.hideStart(); }catch(_){}
+    DVDAcad.commit({ del: modelEntities.slice() });
+    const o = {};
+    // nhập động: điểm thứ hai x,y tương đối, # tuyệt đối; khoá góc; bộ lọc .X; 'CAL đưa kết quả vào lời nhắc
+    await run('LINE', '0,0', { t: '100,0' }, { t: '#0,50' }); o.dyn = lines().join(' ');
+    DVDAcad.commit({ del: modelEntities.slice() });
+    await run('LINE', '0,0', '<90', "'CAL", '20*2'); o.cal = lines().join(' ');
+    DVDAcad.commit({ del: modelEntities.slice() });
+    await run('LINE', '0,0', '.X', '30,5', '7,40'); o.filt = lines().join(' ');
+    // script -LAYER + UNDO nhóm
+    o.before = lines().length;
+    await DVDAcad.runScript('-LAYER M TUONG C 1 TUONG \nUNDO BE\nLINE 0,10 10,10 \nLINE 0,20 10,20 \nUNDO E\nU\n'); await w(200);
+    o.layer = DVDAcad.LS.cur + ' ' + DVDAcad.layerHex('TUONG'); o.undo = lines().length;
+    // gợi ý: đồng nghĩa, sửa lỗi gõ, biến hệ thống
+    const sug = async t => { const i = document.querySelector('#dvdCmd input'); i.focus(); i.value = t; i.dispatchEvent(new Event('input')); await w(60); const s = document.querySelector('#dvdCmd .sug').innerText; i.value = ''; i.dispatchEvent(new Event('input')); return s; };
+    o.syn = /FILLET/.test(await sug('ROUND')); o.typo = /LINE/.test(await sug('LNIE')); o.sv = /OSMODE/.test(await sug('OSM'));
+    o.help = !!(window.DVD_HELP && DVD_HELP.TRIM && window.DVD_HELP_PROMPTS && DVD_HELP_PROMPTS.LINE);
+    return o;
+  });
+  check(cl.dyn === '0,0,100,0 100,0,0,50', 'nhập động: x,y tương đối cho điểm thứ hai, #x,y tuyệt đối: ' + cl.dyn);
+  check(cl.cal === '0,0,0,40', "khoá góc <90 + 'CAL 20*2 đưa 40 vào lời nhắc: " + cl.cal);
+  check(cl.filt === '0,0,30,40', 'bộ lọc điểm .X: ' + cl.filt);
+  check(cl.layer === 'TUONG #ff0000' && cl.undo === cl.before, 'script -LAYER M/C, UNDO BE/E + U hoàn tác cả nhóm: ' + cl.layer + ', còn ' + cl.undo + '/' + cl.before + ' đường');
+  check(cl.syn && cl.typo && cl.sv, 'gợi ý khi gõ: đồng nghĩa (ROUND → FILLET), sửa lỗi gõ (LNIE → LINE), biến hệ thống (OSM → OSMODE)');
+  check(cl.help, 'trợ giúp F1 có trang cách dùng + lời nhắc đầu của lệnh');
 
   check(!errors.length, 'không có lỗi JavaScript' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await app.close();

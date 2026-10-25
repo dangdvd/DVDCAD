@@ -60,8 +60,8 @@
     C(['UNDO', 'U'], 'Hoàn tác (Ctrl+Z)', () => { if(hasDrawing()) undoEdit(); }),
     C(['REDO', 'MREDO'], 'Làm lại (Ctrl+Y)', () => { if(hasDrawing()) redoEdit(); }),
     C(['OPEN'], 'Mở bản vẽ (Ctrl+O)', () => { const b = $('openBtn'); if(b) b.click(); }),
-    C(['QSAVE', 'SAVE'], 'Lưu (Ctrl+S): Drive hoặc DXF trên máy', () => cloud('save')()),
-    C(['SAVEAS'], 'Lưu thành DXF mới (Ctrl+Shift+S)', () => cloud('saveDxfLocal')(true)),
+    C(['QSAVE', 'SAVE'], 'Lưu (Ctrl+S): Drive hoặc file DWG / DXF trên máy', () => cloud('save')()),
+    C(['SAVEAS'], 'Lưu thành file DWG / DXF mới (Ctrl+Shift+S)', () => cloud('saveDxfLocal')(true)),
     C(['DXFOUT'], 'Xuất DXF', () => { try{ exportDXF(false); }catch(_){} }),
     C(['DRIVE', 'CLOUD'], 'Google Drive · chia sẻ · cộng tác', () => cloud('openSheet')()),
     C(['SHARE'], 'Chia sẻ link bản vẽ', () => cloud('share')()),
@@ -82,28 +82,53 @@
 
   const UNDEF = new Set((() => { try{ return JSON.parse(localStorage.getItem('dvd:undef') || '[]'); }catch(_){ return []; } })());   // UNDEFINE / REDEFINE như AutoCAD
   const saveUndef = () => { try{ localStorage.setItem('dvd:undef', JSON.stringify([...UNDEF])); }catch(_){} };
-  let lastCmd = null;
-  function runCommand(text){
+  let lastCmd = null, lastUnknown = null;
+  // tên lệnh: _LINE (tên quốc tế) · .LINE (lệnh gốc, bỏ qua UNDEFINE) · 'ZOOM (trong suốt) · -LAYER (bản dòng lệnh: chưa có thì dùng lệnh thường)
+  const lookup = name => ALIAS.get(name) || (name[0] === '-' ? ALIAS.get(name.slice(1)) : null);
+  function runCommand(text, opt){
     const raw = String(text || '').trim();
     if(window.DVDLisp && /^[(!]/.test(raw) && DVDLisp.commandLine(raw)) return;   // AutoLISP gõ thẳng ở dòng lệnh: (+ 1 2), !bien
-    if(busy()){ ACAD().input(raw); updateBar(); return; }
+    if(busy()){ ACAD().input(raw, opt); updateBar(); return; }
     if(!raw){ return repeatOrFinish(); }
     const parts = raw.split(/\s+/); const name = parts[0].toUpperCase().replace(/^[_.']+/, ''); const arg = parts.slice(1).join(' ');
     if(name === 'Z' || name === 'ZOOM'){ if(arg){ zoomCmd(arg); log('Lệnh: ZOOM ' + arg.toUpperCase()); return; } }
     if(UNDEF.has(name) && !/^[_]?\./.test(parts[0])){ log('Lệnh ' + name + ' đã bị tắt bằng UNDEFINE. Gõ .' + name + ' để dùng lệnh gốc, REDEFINE ' + name + ' để bật lại.'); return; }
-    const c = ALIAS.get(name);
-    if(!c){ log('Không có lệnh "' + raw + '". Gõ ? để xem danh sách.'); return; }
+    let c = lookup(name);
+    if(!c){
+      const ac = AC[name]; if(ac && ac.n >= 3 && ALIAS.get(ac.to)){ log('Tự sửa: ' + name + ' → ' + ac.to); execute(ALIAS.get(ac.to), arg); return; }
+      const sug = IS.correct ? corrections(name) : []; lastUnknown = sug.length ? { name, t: Date.now(), to: sug.map(x => x.k[0]) } : null;
+      log('Không có lệnh "' + raw + '". Bấm F1 để xem trợ giúp.' + (sug.length ? ' Có phải: ' + sug.map(x => x.k[0]).join(', ') + '?' : ''));
+      return;
+    }
+    if(name[0] === '-' && !ALIAS.get(name)) log('(' + name + ' dùng bản thường ' + c.k[0] + ')');
     execute(c, arg);
   }
-  function runTransparent(t){
-    const p = String(t || '').trim().toUpperCase().replace(/^'/, '').split(/\s+/); const n = p[0], a = p.slice(1).join(' ');
-    if(n === 'Z' || n === 'ZOOM') zoomCmd(a || 'E'); else if(n === 'ZE') zoomCmd('E'); else if(n === 'ZW') zoomCmd('W');
-    else if(n === 'RE' || n === 'REGEN' || n === 'REDRAW'){ try{ forceRedraw(); }catch(_){ draw(); } }
-    log('>> ' + n + (a ? ' ' + a : ''));
+  // lệnh trong suốt khi đang chạy lệnh khác — trả true nếu đã xử lý
+  function runTransparent(t, apos){
+    const p = String(t || '').trim().toUpperCase().replace(/^'/, '').split(/\s+/); const n = p[0].replace(/^[_.]+/, ''), a = p.slice(1).join(' ');
+    if(!n) return false;
+    const zc = ALIAS.get('ZOOM');
+    if((n === 'Z' || n === 'ZOOM') && (a || !zc || !zc.engine)){ zoomCmd(a || 'E'); log('>>ZOOM' + (a ? ' ' + a : '')); return true; }
+    if(n === 'ZE' || n === 'ZA'){ zoomCmd('E'); log('>>ZOOM E'); return true; }
+    if(n === 'ZW'){ zoomCmd('W'); log('>>ZOOM W'); return true; }
+    if(n === 'RE' || n === 'REGEN' || n === 'REDRAW' || n === 'REGENALL'){ try{ forceRedraw(); }catch(_){ draw(); } log('>>' + n); return true; }
+    if(n === 'P' || n === 'PAN'){ if(!apos && n === 'P') return false; log('>>PAN — giữ chuột giữa (hoặc Space + kéo) để kéo màn hình, rồi tiếp tục lệnh.'); return true; }
+    const c = lookup(n);
+    if(!c){ if(apos){ log('Không có lệnh "' + n + '".'); return true; } return false; }
+    const A = ACAD();
+    if(c.engine && !(A && A.isTransparent && (A.isTransparent(c.k[0]) || A.isTransparent(n)))){ if(apos){ log('** Lệnh ' + c.k[0] + ' không chạy trong suốt được **'); return true; } return false; }
+    if(!c.engine) log('>>' + c.k[0]);
+    if(A) A._nest = true;
+    try{ c.run(a); }catch(err){ console.error(err); log('Lỗi: ' + err.message); }
+    finally{ if(A) A._nest = false; }
+    updateBar(); return true;
   }
   function execute(c, arg){
     lastCmd = c;
     if(!c.engine) log('Lệnh: ' + c.k[0]);
+    if(lastUnknown && Date.now() - lastUnknown.t < 30000 && lastUnknown.to.includes(c.k[0])){ const a = AC[lastUnknown.name] || (AC[lastUnknown.name] = { to: c.k[0], n: 0 }); if(a.to !== c.k[0]){ a.to = c.k[0]; a.n = 0; } a.n++; saveAC(); }
+    lastUnknown = null;
+    if(!/^(UNDO|U|REDO|MREDO|HELP|\?)$/.test(c.k[0])){ bumpFreq(c.k[0]); noteCmd(c.k[0]); }
     try{ c.run(arg); }catch(err){ console.error(err); log('Lỗi: ' + err.message); }
     updateBar();
   }
@@ -132,26 +157,45 @@
   #dvdCmd{pointer-events:none}
   #dvdCmd .box,#dvdCmd .sug{pointer-events:auto}
   @media (max-width:700px){ #dvdCmd{width:calc(100% - 24px)} }
-  #dvdCmd .hist{display:flex;flex-direction:column;gap:1px;max-height:66px;overflow:hidden;font:12px ui-monospace,Menlo,Consolas,monospace;color:#c9d2de;pointer-events:none}
-  #dvdCmd .hist div{background:rgba(20,26,34,.72);padding:1px 8px;border-radius:4px;align-self:flex-start;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .6s}
+  #dvdCmd{--cl-op:.94}
+  #dvdCmd .hist{display:flex;flex-direction:column;gap:1px;max-height:none;overflow:hidden;font:12px "Cascadia Mono",Consolas,ui-monospace,Menlo,"DejaVu Sans Mono",monospace;color:#c9d2de;pointer-events:none}
+  #dvdCmd .hist div{background:rgba(20,26,34,calc(var(--cl-op) * .78));padding:1px 8px;border-radius:4px;align-self:flex-start;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .6s}
   #dvdCmd .hist div.old{opacity:0}
   #dvdCmd.big .hist{max-height:42vh;overflow-y:auto;pointer-events:auto;background:rgba(20,26,34,.92);border:1px solid var(--line);border-radius:8px;padding:6px}
   #dvdCmd.big .hist div{background:none;opacity:1 !important;white-space:normal}
-  #dvdCmd .box{display:flex;align-items:center;gap:6px;background:rgba(10,12,17,.94);border:1px solid var(--line);border-radius:9px;padding:0 5px 0 8px;box-shadow:var(--shadow);backdrop-filter:blur(8px)}
+  #dvdCmd .mid{display:flex;flex-wrap:wrap;align-items:center;gap:0 6px;flex:1;min-width:0}
+  #dvdCmd .box{display:flex;align-items:center;gap:6px;background:rgba(10,12,17,var(--cl-op));border:1px solid var(--line);border-radius:9px;padding:0 5px 0 8px;box-shadow:var(--shadow);backdrop-filter:blur(8px)}
   #dvdCmd .box:focus-within{border-color:var(--accent)}
   #dvdCmd .ic{color:var(--ink-faint);font:700 13px ui-monospace,Menlo,monospace;flex:0 0 auto}
-  #dvdCmd .pr{font:600 12.5px ui-monospace,Menlo,Consolas,monospace;color:#9fd0ff;white-space:nowrap;max-width:62%;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+  #dvdCmd .pr{line-height:1.45;padding:4px 0;font:600 12.5px "Cascadia Mono",Consolas,ui-monospace,Menlo,"DejaVu Sans Mono",monospace;color:#9fd0ff;white-space:normal;max-width:100%;flex:0 1 auto;word-break:break-word}
   #dvdCmd .pr .kw{color:#ffd24a;cursor:pointer;text-decoration:underline dotted;padding:0 1px}
   #dvdCmd .pr .kw:hover{color:#fff;background:rgba(255,210,74,.2)}
   #dvdCmd .pr .cnt{color:#7ee787}
-  #dvdCmd input{flex:1;min-width:60px;background:transparent;border:none;outline:none;color:var(--ink);font:600 13.5px ui-monospace,Menlo,Consolas,monospace;padding:9px 2px;text-transform:uppercase}
+  #dvdCmd .pr .kw .kk{font-style:normal;font-size:9.5px;color:#9aa6b6;margin-left:2px;vertical-align:1px;text-decoration:none}
+  #dvdCmd .iw{position:relative;flex:1 1 90px;min-width:90px;display:flex}
+  #dvdCmd input{flex:1;min-width:60px;background:transparent;border:none;outline:none;color:var(--ink);font:600 13.5px "Cascadia Mono",Consolas,ui-monospace,Menlo,"DejaVu Sans Mono",monospace;padding:9px 2px;text-transform:uppercase;position:relative;z-index:1}
+  #dvdCmd .gh{position:absolute;left:0;top:0;bottom:0;display:flex;align-items:center;padding:0 2px;font:600 13.5px "Cascadia Mono",Consolas,ui-monospace,Menlo,"DejaVu Sans Mono",monospace;color:#6d7a8c;white-space:pre;pointer-events:none;text-transform:uppercase;overflow:hidden}
+  #dvdCmd .gh i{font-style:normal;color:transparent}
+  #dvdCmd .tl{display:flex;flex-direction:column;gap:1px;margin-left:-4px;flex:0 0 auto}
+  #dvdCmd .tl .tb{width:18px;height:14px;padding:0;border:none;background:none;color:var(--ink-faint);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:3px}
+  #dvdCmd .tl .tb:hover{background:rgba(255,255,255,.1);color:var(--ink)}
+  #dvdCmd .tl svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  #dvdCmd .tl .tb[data-tb="cust"] svg{fill:currentColor;stroke:none}
+  #dvdCmd .sug p.hd{margin:0;padding:4px 11px 2px;font:700 10px system-ui,sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-faint);border-top:1px solid var(--line)}
+  #dvdCmd .sug div em{font-style:normal;font-size:11px;color:#ffd24a;margin-right:4px}
+  #dvdCmd .sug div .ic.sv{font:700 10px "Cascadia Mono",Consolas,ui-monospace,Menlo,"DejaVu Sans Mono",monospace;color:#7ee787;display:flex;align-items:center;justify-content:center}
+  #dvdCmd.dock{left:0;right:0;bottom:0;transform:none;width:auto;gap:0}
+  #dvdCmd.dock .box{border-radius:0;border-left:none;border-right:none;border-bottom:none;box-shadow:none}
+  #dvdCmd.dock .hist{background:rgba(20,26,34,var(--cl-op));border-top:1px solid var(--line);padding:2px 0;overflow-y:auto;pointer-events:auto}
+  #dvdCmd.dock .hist div{background:none;opacity:1 !important}
+  #dvdCmd.dock .sug{margin:0 8px 4px;align-self:flex-start;min-width:min(620px,96%)}
   #dvdCmd input::placeholder{text-transform:none;color:var(--ink-faint);font-weight:500}
   #dvdCmd .bt{font-family:inherit;font-size:12px;font-weight:700;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);padding:6px 10px;cursor:pointer;display:none;flex:0 0 auto}
   #dvdCmd .bt.show{display:block}
   #dvdCmd .sug{display:none;flex-direction:column;background:rgba(17,21,29,.98);border:1px solid var(--line);border-radius:9px;overflow:hidden;box-shadow:var(--shadow)}
   #dvdCmd .sug.show{display:flex}
   #dvdCmd .sug div{display:flex;gap:10px;padding:7px 11px;font-size:12.5px;cursor:pointer;color:var(--ink-dim)}
-  #dvdCmd .sug div b{min-width:96px;color:var(--ink);font:700 12px ui-monospace,Menlo,Consolas,monospace}
+  #dvdCmd .sug div b{min-width:96px;color:var(--ink);font:700 12px "Cascadia Mono",Consolas,ui-monospace,Menlo,"DejaVu Sans Mono",monospace}
   #dvdCmd .sug div.on,#dvdCmd .sug div:hover{background:rgba(56,189,248,.14);color:var(--ink)}
   #dvdCmd .sug div .ic{width:16px;height:16px;flex:0 0 16px;--ic-bg:#11151d}
   #dvdProps{position:absolute;right:66px;top:62px;z-index:8;width:280px;max-height:calc(100% - 140px);overflow-y:auto;display:none;
@@ -177,79 +221,242 @@
   #dvdHelpList div{display:flex;gap:10px;padding:6px 2px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-dim)}
   #dvdHelpList b{min-width:150px;color:var(--ink);font:700 12px ui-monospace,Menlo,Consolas,monospace}
   `;
-  let bar, input, histEl, prEl, sugEl, okBtn, entBtn, escBtn, sugIdx = -1, sugList = [], hist = [], histIdx = -1, barWanted = null, histBig = false;
+  let bar, input, histEl, prEl, sugEl, ghEl, okBtn, entBtn, escBtn, sugIdx = -1, sugList = [], hist = [], histIdx = -1, riIdx = -1, barWanted = null, histBig = false;
   const lines = [];
+  /* ---- tuỳ chọn dòng lệnh (INPUTSEARCHOPTIONS / CLIPROMPTLINES / độ trong suốt / neo) ---- */
+  const IS_DEF = { auto: 1, append: 1, correct: 1, syn: 1, mid: 1, sysvar: 1, content: 1, freq: 1, delay: 0, lines: 3, opacity: 94, dock: 0 };
+  const IS = Object.assign({}, IS_DEF, (() => { try{ return JSON.parse(localStorage.getItem('dvd:inputsearch') || '{}') || {}; }catch(_){ return {}; } })());
+  const saveIS = () => { try{ localStorage.setItem('dvd:inputsearch', JSON.stringify(IS)); }catch(_){} applyLook(); };
+  function applyLook(){
+    if(!bar) return; bar.classList.toggle('dock', !!IS.dock);
+    bar.style.setProperty('--cl-op', String(Math.max(20, Math.min(100, +IS.opacity || 94)) / 100));
+    renderHist(); try{ resize(); }catch(_){}
+  }
+  // số lần dùng từng lệnh: gợi ý xếp lệnh hay dùng lên trước (như AutoCAD)
+  const FREQ = (() => { try{ return JSON.parse(localStorage.getItem('dvd:cmdfreq') || '{}') || {}; }catch(_){ return {}; } })();
+  let freqT = 0; const bumpFreq = n => { FREQ[n] = (FREQ[n] || 0) + 1; clearTimeout(freqT); freqT = setTimeout(() => { try{ localStorage.setItem('dvd:cmdfreq', JSON.stringify(FREQ)); }catch(_){} }, 800); };
+  // lệnh dùng gần đây (nút ▾ cạnh dòng lệnh)
+  const RECENT = (() => { try{ return JSON.parse(localStorage.getItem('dvd:cmdrecent') || '[]') || []; }catch(_){ return []; } })();
+  const noteCmd = n => { const i = RECENT.indexOf(n); if(i >= 0) RECENT.splice(i, 1); RECENT.unshift(n); if(RECENT.length > 20) RECENT.length = 20; try{ localStorage.setItem('dvd:cmdrecent', JSON.stringify(RECENT)); }catch(_){} };
+  // từ đồng nghĩa (như acadSynonyms.pgp): gõ từ quen thuộc → gợi ý đúng lệnh
+  const SYN = { ROUND: 'FILLET', CORNER: 'FILLET', BEVEL: 'CHAMFER', SYMBOL: 'INSERT', PART: 'INSERT', COMPONENT: 'INSERT', DELETE: 'ERASE', DEL: 'ERASE', REMOVE: 'ERASE', DUPLICATE: 'COPY', CLONE: 'COPY',
+    TURN: 'ROTATE', SPIN: 'ROTATE', RESIZE: 'SCALE', SIZE: 'SCALE', ENLARGE: 'SCALE', FLIP: 'MIRROR', REFLECT: 'MIRROR', PARALLEL: 'OFFSET', CUT: 'TRIM', CLIPLINE: 'TRIM', LENGTHEN: 'EXTEND', PROLONG: 'EXTEND',
+    STRAIGHT: 'LINE', SEGMENT: 'LINE', POLY: 'PLINE', SQUARE: 'RECTANG', RECTANGLE: 'RECTANG', BOX: 'RECTANG', HEXAGON: 'POLYGON', OVAL: 'ELLIPSE', CURVE: 'SPLINE', BEZIER: 'SPLINE', CLOUD: 'REVCLOUD',
+    WRITE: 'MTEXT', WORDS: 'MTEXT', LABEL: 'MTEXT', NOTE: 'MLEADER', CALLOUT: 'MLEADER', ARROW: 'MLEADER', LEADER: 'MLEADER', DIMENSION: 'DIM', MEASURE: 'MEASUREGEOM', DISTANCE: 'DIST', AREA: 'AREA',
+    PATTERN: 'HATCH', FILLAREA: 'HATCH', SHADE: 'GRADIENT', PRINT: 'PLOT', PDF: 'EXPORTPDF', CLEAN: 'PURGE', CLEANUP: 'PURGE', ATTACH: 'XATTACH', REFERENCE: 'XREF', SHEET: 'LAYOUT', PAPER: 'LAYOUT',
+    GROUPS: 'GROUP', LAYERS: 'LAYER', LEVEL: 'LAYER', SETTINGS: 'OPTIONS', PREFERENCES: 'OPTIONS', CALCULATOR: 'QUICKCALC', SNAPS: 'OSNAP', OBJECTSNAP: 'OSNAP', NUMBER: 'TCOUNT', COUNTER: 'COUNT', QUANTITY: 'COUNT',
+    XOA: 'ERASE', CHEP: 'COPY', SAOCHEP: 'COPY', DICHUYEN: 'MOVE', XOAY: 'ROTATE', CAT: 'TRIM', KEODAI: 'EXTEND', BOGOC: 'FILLET', VATGOC: 'CHAMFER', DOIXUNG: 'MIRROR', TILE: 'SCALE', SONGSONG: 'OFFSET',
+    DUONG: 'LINE', DUONGTHANG: 'LINE', DATUYEN: 'PLINE', TRON: 'CIRCLE', DUONGTRON: 'CIRCLE', CUNG: 'ARC', CHUNHAT: 'RECTANG', DAGIAC: 'POLYGON', ELIP: 'ELLIPSE', CHU: 'MTEXT', VIETCHU: 'MTEXT',
+    KICHTHUOC: 'DIM', DIMKT: 'DIM', LOP: 'LAYER', KHOI: 'BLOCK', CHENKHOI: 'INSERT', MANG: 'ARRAY', NHOM: 'GROUP', PHAKHOI: 'EXPLODE', NOI: 'JOIN', TACH: 'BREAK', KEOGIAN: 'STRETCH', TODAC: 'HATCH', MATCAT: 'HATCH', IN: 'PLOT', LUU: 'QSAVE', MO: 'OPEN' };
+  // tự sửa lỗi gõ (AutoCorrect): sửa cùng một lỗi 3 lần thì lần sau tự chạy đúng lệnh
+  const AC = (() => { try{ return JSON.parse(localStorage.getItem('dvd:autocorrect') || '{}') || {}; }catch(_){ return {}; } })();
+  const saveAC = () => { try{ localStorage.setItem('dvd:autocorrect', JSON.stringify(AC)); }catch(_){} };
+  // khoảng cách sửa chữ (có tính đổi chỗ 2 chữ liền nhau: LNIE → LINE = 1)
+  function lev(a, b, max){
+    if(Math.abs(a.length - b.length) > max) return max + 1;
+    let pp = null, prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for(let i = 1; i <= a.length; i++){
+      const cur = [i]; let best = i;
+      for(let j = 1; j <= b.length; j++){
+        const c = a[i - 1] === b[j - 1] ? 0 : 1;
+        let v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + c);
+        if(pp && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, pp[j - 2] + 1);
+        cur.push(v); if(v < best) best = v;
+      }
+      if(best > max) return max + 1; pp = prev; prev = cur;
+    }
+    return prev[b.length];
+  }
+  function corrections(q){
+    if(q.length < 3) return [];
+    const max = q.length <= 4 ? 1 : 2, out = [];
+    for(const c of CMDS){ let d = Infinity; for(const k of c.k){ if(k.length < 3) continue; const v = lev(q, k, max); if(v < d) d = v; } if(d <= max) out.push({ c, d }); }
+    return out.sort((a, b) => a.d - b.d || (FREQ[b.c.k[0]] || 0) - (FREQ[a.c.k[0]] || 0)).slice(0, 4).map(o => o.c);
+  }
+  // m: chuỗi, hoặc mảng mảnh [chuỗi dịch được | { nt: chuỗi giữ nguyên }] — giao diện English dịch từng mảnh
   function log(m){
-    if(!m) return; lines.push({ t: Date.now(), m: String(m) }); if(lines.length > 300) lines.shift();
+    if(!m) return; const parts = Array.isArray(m) ? m : null;
+    lines.push({ t: Date.now(), m: parts ? parts.map(x => typeof x === 'string' ? x : x.nt).join('') : String(m), parts }); if(lines.length > 500) lines.shift();
     renderHist();
+  }
+  const partsHTML = P => P.map(x => typeof x === 'string' ? (x ? '<span>' + esc(x) + '</span>' : '') : '<span translate="no">' + esc(x.nt) + '</span>').join('');
+  // tách lời nhắc dạng chữ "… [A/B] <mặc định>:" thành mảnh
+  function promptStrParts(s){
+    const m = /^([\s\S]*?)(?: \[([^\]]*)\])?(?: <([^>]*)>)?(:?)$/.exec(String(s || '')); if(!m) return [String(s || '')];
+    const out = [m[1]]; if(m[2] != null){ out.push(' ['); m[2].split('/').forEach((k, i) => { if(i) out.push('/'); out.push(k); }); out.push(']'); }
+    if(m[3] != null){ out.push(' <'); out.push(/^[\d.,\-]+$/.test(m[3]) ? { nt: m[3] } : m[3]); out.push('>'); } if(m[4]) out.push(':'); return out;
   }
   function renderHist(){
     if(!histEl) return;
-    const now = Date.now(); const show = histBig ? lines.slice(-200) : lines.slice(-3);
-    histEl.innerHTML = show.map(l => '<div class="' + (!histBig && now - l.t > 12000 ? 'old' : '') + '">' + esc(l.m) + '</div>').join('');
-    if(histBig) histEl.scrollTop = histEl.scrollHeight;
+    const n = Math.max(0, Math.min(50, IS.lines | 0));
+    const now = Date.now(); const show = histBig ? lines.slice(-300) : lines.slice(-n);
+    histEl.innerHTML = show.map(l => '<div class="' + (!histBig && !IS.dock && now - l.t > 12000 ? 'old' : '') + '">' + (l.parts ? partsHTML(l.parts) : esc(l.m)) + '</div>').join('');
+    histEl.style.display = !histBig && !n ? 'none' : '';
+    if(IS.dock && !histBig) histEl.style.height = (n * 17 + 4) + 'px'; else histEl.style.height = '';
+    histEl.scrollTop = histEl.scrollHeight;
   }
-  setInterval(() => { if(!histBig && lines.length) renderHist(); }, 3000);
+  setInterval(() => { if(!histBig && !IS.dock && lines.length) renderHist(); }, 3000);
   function toggleHistory(on){ histBig = on === undefined ? !histBig : !!on; if(bar) bar.classList.toggle('big', histBig); renderHist(); }
+  const TOOL_SVG = { cust: '<svg viewBox="0 0 16 16"><path d="M10.6 2.2a3.3 3.3 0 0 0-3.9 4.3L2.4 10.8a1.2 1.2 0 0 0 1.7 1.7l4.3-4.3a3.3 3.3 0 0 0 4.3-3.9l-1.9 1.9-1.7-.4-.4-1.7z"/></svg>',
+    rec: '<svg viewBox="0 0 16 16"><path d="M3 4h7M3 8h10M3 12h6"/><path d="M12 2.5l2 2-2 2"/></svg>', close: '<svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg>' };
   function buildBar(){
     const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
     bar = document.createElement('div'); bar.id = 'dvdCmd';
-    bar.innerHTML = '<div class="sug"></div><div class="hist"></div><div class="box"><span class="ic" title="Dòng lệnh">&gt;_</span><span class="pr">Lệnh:</span><input autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="gõ lệnh: L, PL, C, M, CO, TR, H, DLI… (F1 = trợ giúp)"><button class="bt ok" type="button">✓ Xong chọn</button><button class="bt ent" type="button" title="Enter">↵</button><button class="bt esc" type="button" title="Huỷ (Esc)">✕</button></div>';
+    bar.innerHTML = '<div class="sug"></div><div class="hist"></div><div class="box"><span class="tl"><button type="button" class="tb" data-tb="close" title="Ẩn dòng lệnh (Ctrl+9)">' + TOOL_SVG.close + '</button><button type="button" class="tb" data-tb="cust" title="Tuỳ chỉnh dòng lệnh">' + TOOL_SVG.cust + '</button><button type="button" class="tb" data-tb="rec" title="Lệnh gần đây">' + TOOL_SVG.rec + '</button></span><span class="mid"><span class="ic" title="Dòng lệnh">&gt;_</span><span class="pr">Lệnh:</span><span class="iw"><span class="gh" aria-hidden="true"></span><input autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" placeholder="gõ lệnh: L, PL, C, M, CO, TR, H, DLI… (F1 = trợ giúp)"></span></span><button class="bt ok" type="button">✓ Xong chọn</button><button class="bt ent" type="button" title="Enter">↵</button><button class="bt esc" type="button" title="Huỷ (Esc)">✕</button></div>';
     const stage = document.querySelector('.stage'); stage.appendChild(bar);
-    input = bar.querySelector('input'); histEl = bar.querySelector('.hist'); prEl = bar.querySelector('.pr'); sugEl = bar.querySelector('.sug');
-    okBtn = bar.querySelector('.ok'); entBtn = bar.querySelector('.ent'); escBtn = bar.querySelector('.esc');
+    input = bar.querySelector('input'); histEl = bar.querySelector('.hist'); prEl = bar.querySelector('.pr'); sugEl = bar.querySelector('.sug'); ghEl = bar.querySelector('.gh');
+    okBtn = bar.querySelector('.ok'); entBtn = bar.querySelector('.ent'); escBtn = bar.querySelector('.esc'); input.dataset.ph = input.getAttribute('placeholder');
     okBtn.addEventListener('click', () => { runCommand(''); });
     entBtn.addEventListener('click', () => { const v = input.value; input.value = ''; onTyped(); runCommand(v); });
     escBtn.addEventListener('click', () => { input.value = ''; onTyped(); cancelAll(); updateBar(); });
+    bar.querySelector('.tl').addEventListener('mousedown', e => { const b = e.target.closest('[data-tb]'); if(!b) return; e.preventDefault(); const r = b.getBoundingClientRect();
+      if(b.dataset.tb === 'close') toggleBar(); else if(b.dataset.tb === 'rec') recentMenu(r.left, r.top - 4); else custMenu(r.left, r.top - 4); });
     prEl.addEventListener('mousedown', e => { const k = e.target.closest('.kw'); if(!k) return; e.preventDefault(); if(busy()) ACAD().input(k.dataset.k); updateBar(); });
-    input.addEventListener('input', () => { renderSug(); onTyped(); });
+    histEl.addEventListener('dblclick', () => toggleHistory());
+    input.addEventListener('input', () => { riIdx = -1; schedSug(); onTyped(); });
     input.addEventListener('keydown', e => {
       const lispOpen = () => { const v = input.value.trimStart(); if(v[0] !== '(') return false; let d = 0, q = false; for(const ch of v){ if(ch === '"') q = !q; else if(!q){ if(ch === '(') d++; else if(ch === ')') d--; } } return d > 0 || q; };
       if(e.key === ' ' && input.value.trimStart()[0] === '(') return;   // biểu thức LISP: phím cách là dấu cách
       if(e.key === 'Enter' && lispOpen()){ e.preventDefault(); input.value += ' '; return; }   // ngoặc chưa đóng: chờ gõ tiếp
       if(e.key === 'Enter' || (e.key === ' ' && !(busy() && ACAD().cur().req && ACAD().cur().req.type === 'str'))){
         e.preventDefault();
-        let v = input.value;
-        if(sugIdx >= 0 && sugList[sugIdx] && !busy() && !tryParseCoordOnly(v)) v = sugList[sugIdx].k[0];
-        input.value = ''; hideSug(); onTyped();
+        let v = input.value; let picked = null;
+        if(sugIdx >= 0 && sugList[sugIdx] && !busy() && !tryParseCoordOnly(v)) picked = sugList[sugIdx];
+        const dyn = busy() && !!(ACAD().dynShown && ACAD().dynShown());
+        input.value = ''; hideSug(); onTyped(); riIdx = -1;
         if(v.trim()){ hist.push(v.trim()); if(hist.length > 50) hist.shift(); }
         histIdx = -1;
-        runCommand(v);
+        if(picked) runSug(picked, v.trim()); else runCommand(v, { dyn });
         if(!fine()) input.blur();
         return;
       }
-      if(e.key === 'Escape'){ e.preventDefault(); if(input.value){ input.value = ''; hideSug(); onTyped(); } else { cancelAll(); input.blur(); } updateBar(); return; }
-      if(e.key === 'ArrowUp'){ e.preventDefault(); if(sugEl.classList.contains('show')){ moveSug(-1); } else if(hist.length){ histIdx = histIdx < 0 ? hist.length - 1 : Math.max(0, histIdx - 1); input.value = hist[histIdx]; onTyped(); } return; }
-      if(e.key === 'ArrowDown'){ e.preventDefault(); if(sugEl.classList.contains('show')){ moveSug(1); } else if(histIdx >= 0){ histIdx = Math.min(hist.length, histIdx + 1); input.value = hist[histIdx] || ''; if(histIdx >= hist.length) histIdx = -1; onTyped(); } return; }
-      if(e.key === 'Tab'){ e.preventDefault(); if(sugList[sugIdx >= 0 ? sugIdx : 0]){ input.value = sugList[sugIdx >= 0 ? sugIdx : 0].k[0]; hideSug(); onTyped(); } return; }
+      if(e.key === 'Escape'){ e.preventDefault(); if(input.value){ input.value = ''; hideSug(); onTyped(); } else { cancelAll(); input.blur(); } riIdx = -1; updateBar(); return; }
+      if(e.key === 'ArrowUp'){ e.preventDefault(); if(sugEl.classList.contains('show')){ moveSug(-1); return; }
+        if(busy()){ const L = recentFor(); if(L.length){ riIdx = Math.min(L.length - 1, riIdx + 1); input.value = L[riIdx]; onTyped(); } return; }
+        if(hist.length){ histIdx = histIdx < 0 ? hist.length - 1 : Math.max(0, histIdx - 1); input.value = hist[histIdx]; onTyped(); } return; }
+      if(e.key === 'ArrowDown'){ e.preventDefault(); if(sugEl.classList.contains('show')){ moveSug(1); return; }
+        if(busy()){ if(riIdx >= 0){ const L = recentFor(); riIdx--; input.value = riIdx >= 0 ? L[riIdx] : ''; onTyped(); return; } if(!input.value) kwMenu(); return; }
+        if(histIdx >= 0){ histIdx = Math.min(hist.length, histIdx + 1); input.value = hist[histIdx] || ''; if(histIdx >= hist.length) histIdx = -1; onTyped(); } return; }
+      if(e.key === 'Tab'){ e.preventDefault();
+        if(busy() && ACAD().dynTab && ACAD().dynTab(input.value)){ input.value = ''; onTyped(); return; }
+        const c = sugList[sugIdx >= 0 ? sugIdx : 0]; if(c){ input.value = c.name || c.k[0]; hideSug(); onTyped(); } return; }
+      if(e.key === 'ArrowRight' && ghEl.textContent && input.selectionStart === input.value.length){ const c = sugList[sugIdx >= 0 ? sugIdx : 0]; if(c && c.k){ e.preventDefault(); input.value = c.k.find(k => k.startsWith(input.value.trim().toUpperCase())) || c.k[0]; renderSug(); onTyped(); } return; }
       if((e.ctrlKey || e.metaKey) && !input.value && handleCtrl(e)){ e.preventDefault(); }
       if(/^F\d+$/.test(e.key)) return;
     });
-    input.addEventListener('blur', () => setTimeout(hideSug, 150));
-    sugEl.addEventListener('mousedown', e => { const d = e.target.closest('[data-i]'); if(!d) return; e.preventDefault(); const c = sugList[+d.dataset.i]; input.value = ''; hideSug(); onTyped(); if(c){ hist.push(c.k[0]); execute(c); } });
+    input.addEventListener('blur', () => setTimeout(() => { if(document.activeElement !== input) hideSug(); }, 150));
+    sugEl.addEventListener('mousedown', e => { const d = e.target.closest('[data-i]'); if(!d) return; e.preventDefault(); const c = sugList[+d.dataset.i]; const typed = input.value.trim(); input.value = ''; hideSug(); onTyped(); if(c){ hist.push(c.name || c.k[0]); runSug(c, typed); } });
+    applyLook();
   }
-  function onTyped(){ try{ if(ACAD() && ACAD().onTyped) ACAD().onTyped(input.value); }catch(_){} }
-  function tryParseCoordOnly(v){ return /^\s*[@#]?-?[\d.]+\s*([,;<]\s*-?[\d.]+)?\s*$/.test(v); }
+  function onTyped(){ try{ if(ACAD() && ACAD().onTyped) ACAD().onTyped(input.value); }catch(_){} updGhost(); }
+  function tryParseCoordOnly(v){ return /\d/.test(v) && /^\s*[@#*]?[-+\d.,;<'"\/\s]*$/.test(v); }
+  function recentFor(){ const A = ACAD(); const c = A && A.cur && A.cur(); const r = c && c.req; if(!r || !A.recentInput) return []; return A.recentInput(r.type === 'ang' ? 'ang' : r.type); }
+  /* ---- gợi ý khi gõ (AutoComplete): lệnh · đồng nghĩa · sửa lỗi gõ · biến hệ thống · nội dung bản vẽ ---- */
+  let sugT = 0;
+  function schedSug(){ clearTimeout(sugT); const d = Math.max(0, +IS.delay || 0); if(d) sugT = setTimeout(renderSug, d); else renderSug(); }
+  function contentItems(q){
+    const A = ACAD(); if(!A || !IS.content || q.length < 2) return [];
+    const out = [], Q = deaccent(q), hit = n => { const d = deaccent(n); return IS.mid ? d.includes(Q) : d.startsWith(Q); };
+    const add = (cat, name, run, ic) => { if(out.length < 12) out.push({ cat, name, d: cat + ': ' + name, run, ic }); };
+    try{ for(const n of (A.layerNames ? A.layerNames() : [])) if(hit(n)) add('Lớp', n, () => { A.setCurLayer(n); log('Lớp hiện hành: ' + n); }, 'LAYER'); }catch(_){}
+    try{ const B = A.blockList ? A.blockList() : { file: [], lib: [] }; for(const n of B.file) if(hit(n)) add('Khối', n, () => A.insertBlock(n, 'file'), 'INSERT'); for(const n of B.lib) if(hit(n) && !B.file.includes(n)) add('Khối (thư viện)', n, () => A.insertBlock(n, 'lib'), 'INSERT'); }catch(_){}
+    try{ const P = A.PATS || {}; for(const k of Object.keys(P)) if(hit(k) || hit(P[k].name || '')) add('Mẫu hatch', k, () => { A.setHatchPattern(k); runCommand('HATCH'); }, 'HATCH'); }catch(_){}
+    try{ const L = A.TS && A.TS.list ? Object.keys(A.TS.list) : []; for(const n of L) if(hit(n)) add('Kiểu chữ', n, () => { A.tsSetCur(n); log('Kiểu chữ hiện hành: ' + n); }, 'STYLE'); }catch(_){}
+    return out;
+  }
+  function sysvarItems(q){
+    const A = ACAD(); if(!A || !A.sysvar || !IS.sysvar || q.length < 2) return [];
+    const out = []; for(const n of A.sysvar.list()){ if(!(n.startsWith(q) || (IS.mid && q.length >= 3 && n.includes(q)))) continue; const c = ALIAS.get(n); let v = ''; try{ v = A.sysvar.get(n); }catch(_){}
+      out.push({ sys: n, name: n, d: (c ? c.d.replace(/^Biến hệ thống:\s*/, '') : '') , val: v, run: () => { if(c) execute(c); } }); }
+    return out.sort((a, b) => a.name.length - b.name.length).slice(0, 6);
+  }
   function renderSug(){
     const q = input.value.trim().toUpperCase();
-    if(!q || tryParseCoordOnly(q) || busy() || q[0] === '(' || window.DVD_AUTOCOMPLETE === false){ hideSug(); return; }
-    const dq = deaccent(q);
-    const exact = [], pre = [], desc = [];
+    if(!q || tryParseCoordOnly(q) || busy() || q[0] === '(' || q[0] === '!' || window.DVD_AUTOCOMPLETE === false || !IS.auto){ hideSug(); return; }
+    const qq = q.replace(/^[_.'\-]+/, ''); if(!qq){ hideSug(); return; }
+    const dq = deaccent(qq), f = c => IS.freq ? (FREQ[c.k[0]] || 0) : 0;
+    const exact = [], pre = [], mid = [], desc = [], seen = new Set();
+    const svC = c => IS.sysvar && /^Biến hệ thống:/.test(c.d) && !c.k.includes(qq);
     for(const c of CMDS){
-      if(c.k.includes(q)) exact.push(c);
-      else if(c.k.some(k => k.startsWith(q))) pre.push(c);
+      if(svC(c)) continue;
+      if(c.k.includes(qq)) exact.push(c);
+      else if(c.k.some(k => k.startsWith(qq))) pre.push(c);
+      else if(IS.mid && qq.length >= 2 && c.k.some(k => k.includes(qq))) mid.push(c);
       else if(dq.length >= 3 && deaccent(c.d).includes(dq)) desc.push(c);
     }
-    pre.sort((a, b) => Math.min(...a.k.filter(k => k.startsWith(q)).map(k => k.length)) - Math.min(...b.k.filter(k => k.startsWith(q)).map(k => k.length)));
-    sugList = [...exact, ...pre, ...desc].slice(0, 8); sugIdx = sugList.length ? 0 : -1;
+    const minLen = c => Math.min(...c.k.filter(k => k.startsWith(qq)).map(k => k.length));
+    pre.sort((a, b) => (f(b) - f(a)) || (minLen(a) - minLen(b))); mid.sort((a, b) => f(b) - f(a)); desc.sort((a, b) => f(b) - f(a));
+    let list = [];
+    const push = (c, tag) => { if(!c || seen.has(c)) return; seen.add(c); list.push(tag ? Object.assign(Object.create(c), { tag }) : c); };
+    for(const c of exact) push(c);
+    if(IS.syn){ const s = SYN[deaccent(qq).toUpperCase()]; if(s) push(ALIAS.get(s), 'đồng nghĩa'); for(const k in SYN) if(qq.length >= 3 && k !== qq && k.startsWith(deaccent(qq).toUpperCase())) push(ALIAS.get(SYN[k]), 'đồng nghĩa: ' + k); }
+    for(const c of pre) push(c);
+    for(const c of mid) push(c);
+    if(IS.correct && !exact.length && !pre.length){ const ac = AC[qq]; if(ac && ALIAS.get(ac.to)) push(ALIAS.get(ac.to), 'tự sửa'); for(const c of corrections(qq)) push(c, 'sửa lỗi gõ'); }
+    list = list.slice(0, 8);
+    // biến hệ thống + nội dung bản vẽ, rồi mới tới lệnh khớp theo mô tả (gõ chữ Việt: XOAY, CHUNHAT…)
+    const extra = sysvarItems(qq).concat(contentItems(qq)).slice(0, 6);
+    const more = []; for(const c of desc){ if(seen.has(c)) continue; seen.add(c); more.push(c); }
+    sugList = list.concat(extra, more.slice(0, Math.max(0, 12 - list.length - extra.length))); sugIdx = sugList.length ? 0 : -1;
     if(!sugList.length){ hideSug(); return; }
-    // biểu tượng cạnh từng gợi ý như AutoComplete của AutoCAD (chế độ máy tính có bộ biểu tượng)
-    const A = ACAD(), icoOf = c => { if(!A || !A.ico || !A.ICONS) return ''; const k = c.k.find(x => A.ICONS[x] || (window.DVDIcons && DVDIcons[x])); return k ? A.ico(k) : '<span class="ic"></span>'; };
-    sugEl.innerHTML = sugList.map((c, i) => '<div data-i="' + i + '" class="' + (i === sugIdx ? 'on' : '') + '">' + icoOf(c) + '<b>' + esc(c.k.slice(0, 3).join(' · ')) + '</b><span>' + esc(c.d) + '</span></div>').join('');
-    sugEl.classList.add('show');
+    // biểu tượng cạnh từng gợi ý như AutoComplete của AutoCAD
+    const A = ACAD(), icoK = k => (A && A.ico && A.ICONS && k && (A.ICONS[k] || (window.DVDIcons && DVDIcons[k]))) ? A.ico(k) : '<span class="ic"></span>';
+    const icoOf = c => { if(c.sys) return '<span class="ic sv">x=</span>'; if(c.cat) return icoK(c.ic); if(!A || !A.ico || !A.ICONS) return ''; const k = c.k.find(x => A.ICONS[x] || (window.DVDIcons && DVDIcons[x])); return k ? A.ico(k) : '<span class="ic"></span>'; };
+    let lastCat = null;
+    sugEl.innerHTML = sugList.map((c, i) => {
+      let hd = ''; const cat = c.sys ? 'Biến hệ thống' : c.cat ? c.cat : null; if(cat && cat !== lastCat){ hd = '<p class="hd">' + esc(cat) + '</p>'; } lastCat = cat;
+      const label = c.sys ? c.name : c.cat ? c.name : c.k.slice(0, 3).join(' · ');
+      const d = c.sys ? (String(c.val) + (c.d ? ' — ' + c.d : '')) : c.cat ? '' : c.d;
+      return hd + '<div data-i="' + i + '" class="' + (i === sugIdx ? 'on' : '') + '">' + icoOf(c) + '<b' + (c.cat ? ' translate="no"' : '') + '>' + esc(label) + '</b><span>' + (c.tag ? '<em>' + esc(c.tag) + '</em> ' : '') + esc(d) + '</span></div>';
+    }).join('');
+    sugEl.classList.add('show'); updGhost();
   }
-  function moveSug(d){ if(!sugList.length) return; sugIdx = (sugIdx + d + sugList.length) % sugList.length; sugEl.querySelectorAll('[data-i]').forEach((x, i) => x.classList.toggle('on', i === sugIdx)); }
-  function hideSug(){ sugEl.classList.remove('show'); sugList = []; sugIdx = -1; }
+  function updGhost(){
+    if(!ghEl) return; const v = input.value; const c = sugList[sugIdx >= 0 ? sugIdx : 0];
+    let g = '';
+    if(IS.append && v && c && c.k && sugEl.classList.contains('show')){ const Q = v.toUpperCase(); const k = c.k.find(x => x.startsWith(Q) && x.length > Q.length); if(k && Q === v.toUpperCase()) g = k.slice(Q.length); }
+    ghEl.innerHTML = g ? '<i>' + esc(v) + '</i>' + esc(g) : '';
+  }
+  // chạy mục gợi ý: lệnh / biến hệ thống / nội dung (lớp, khối, mẫu hatch, kiểu chữ)
+  function runSug(c, typed){
+    if(c.run && (c.sys || c.cat)){ c.run(); updateBar(); return; }
+    const base = Object.getPrototypeOf(c) && Object.getPrototypeOf(c).k ? (c.tag ? Object.getPrototypeOf(c) : c) : c;
+    const T = String(typed || '').toUpperCase();
+    if(c.tag && /sửa/.test(c.tag) && T && !base.k.includes(T)){ const a = AC[T] || (AC[T] = { to: base.k[0], n: 0 }); if(a.to !== base.k[0]){ a.to = base.k[0]; a.n = 0; } a.n++; saveAC(); }
+    execute(base, '');
+  }
+  function moveSug(d){ if(!sugList.length) return; sugIdx = (sugIdx + d + sugList.length) % sugList.length; sugEl.querySelectorAll('[data-i]').forEach((x, i) => x.classList.toggle('on', i === sugIdx)); updGhost(); }
+  function hideSug(){ sugEl.classList.remove('show'); sugList = []; sugIdx = -1; clearTimeout(sugT); if(ghEl) ghEl.innerHTML = ''; }
+  /* ---- menu: lệnh gần đây · tuỳ chỉnh dòng lệnh · tuỳ chọn của lời nhắc (↓) ---- */
+  const amenu = (x, y, items) => { const A = ACAD(); if(A && A.menu) A.menu(x, y, items); };
+  function recentMenu(x, y){
+    const L = RECENT.filter(n => ALIAS.get(n)).slice(0, 20);
+    if(!L.length){ say('Chưa có lệnh nào.'); return; }
+    amenu(x, y, [{ hd: 'Lệnh gần đây' }].concat(L.map(n => ({ t: n + ' — ' + ALIAS.get(n).d.slice(0, 60), ic: n, fn: () => runCommand(n) }))));
+  }
+  function custMenu(x, y){
+    const ck = (on, t) => (on ? '✓ ' : ' ') + t, tg = k => () => { IS[k] = IS[k] ? 0 : 1; saveIS(); };
+    amenu(x, y, [{ hd: 'Gợi ý khi gõ' },
+      { t: ck(IS.auto, 'Tự hoàn thành (AutoComplete)'), fn: tg('auto') }, { t: ck(IS.append, 'Tự nối chữ (AutoAppend)'), fn: tg('append') }, { t: ck(IS.correct, 'Tự sửa lỗi gõ (AutoCorrect)'), fn: tg('correct') },
+      { t: ck(IS.syn, 'Từ đồng nghĩa'), fn: tg('syn') }, { t: ck(IS.mid, 'Tìm giữa chuỗi'), fn: tg('mid') }, { t: ck(IS.sysvar, 'Tìm biến hệ thống'), fn: tg('sysvar') }, { t: ck(IS.content, 'Tìm nội dung (lớp, khối, mẫu hatch, kiểu chữ)'), fn: tg('content') },
+      { t: ck(IS.freq, 'Xếp theo lệnh hay dùng'), fn: tg('freq') }, { t: ' Cài đặt tìm kiếm…', fn: () => runCommand('INPUTSEARCHOPTIONS') },
+      { sep: 1 }, { t: ' Số dòng lời nhắc (CLIPROMPTLINES = ' + IS.lines + ')…', fn: () => runCommand('CLIPROMPTLINES') }, { t: ' Độ trong suốt…', fn: () => opacityDlg() },
+      { t: ck(IS.dock, 'Neo ở đáy cửa sổ'), fn: tg('dock') }, { sep: 1 }, { t: ' Lịch sử dòng lệnh', k: 'F2', fn: () => toggleHistory() }, { t: ' Cửa sổ chữ', k: 'Ctrl+F2', fn: () => runCommand('TEXTSCR') }, { t: ' Sao chép lịch sử', fn: () => runCommand('COPYHIST') }]);
+  }
+  function opacityDlg(){
+    const A = ACAD(); if(!A || !A.dialog) return; const v0 = IS.opacity;
+    A.dialog({ title: 'Độ trong suốt dòng lệnh', okText: 'Xong', html: '<label class="dvd-frow"><span>Độ đục</span><span class="v"><input id="clOp" type="range" min="20" max="100" value="' + IS.opacity + '" style="width:220px"> <b id="clOpV">' + IS.opacity + '%</b></span></label>',
+      onOpen: root => { const r = root.querySelector('#clOp'); r.addEventListener('input', () => { IS.opacity = +r.value; root.querySelector('#clOpV').textContent = r.value + '%'; applyLook(); }); },
+      ok: () => saveIS(), cancel: () => { IS.opacity = v0; applyLook(); } });
+  }
+  // DYNPROMPT: ↓ ở lời nhắc có tuỳ chọn → danh sách tuỳ chọn cạnh con trỏ
+  function kwMenu(){
+    const A = ACAD(); const c = A && A.cur && A.cur(); const r = c && c.req; if(!r || !r.kw || !r.kw.length) return false;
+    const dy = document.getElementById('dvdDyn'); let x = 0, y = 0;
+    if(dy && dy.style.display === 'block'){ const b = dy.getBoundingClientRect(); x = b.left; y = b.bottom + 2; } else { const b = input.getBoundingClientRect(); x = b.left; y = b.top - 6; }
+    amenu(x, y, r.kw.map(k => ({ t: k.t + '  (' + k.k + ')', fn: () => { A.input(k.k); updateBar(); } })));
+    return true;
+  }
   function promptHTML(){
     if(busy()) return ACAD().promptHTML();
     try{
@@ -276,6 +483,7 @@
     document.body.classList.toggle('dvd-cmd-on', bar.classList.contains('show'));
     const h = promptHTML(); if(h !== _lastPr){ prEl.innerHTML = h; _lastPr = h; }
     const b = busy(); const touch = !fine();
+    const ph = b ? '' : (input.dataset.ph || ''); if(input.getAttribute('placeholder') !== ph && (b || input.dataset.ph)) input.setAttribute('placeholder', ph);
     okBtn.classList.toggle('show', false);
     entBtn.classList.toggle('show', b || touch);
     escBtn.classList.toggle('show', b);
@@ -295,26 +503,62 @@
     ct.appendChild(b); ct.appendChild(p);
   }
 
-  /* ---------------- trợ giúp ---------------- */
+  /* ---------------- trợ giúp (F1) — danh sách lệnh + trang cách dùng của từng lệnh ----------------
+     F1 khi đang chạy lệnh mở thẳng trang của lệnh đó, như trợ giúp theo ngữ cảnh của AutoCAD.
+     Nội dung cách dùng: window.DVD_HELP (dvd-help.js); lời nhắc đầu: window.DVD_HELP_PROMPTS (tự sinh). */
   let helpOv = null;
-  function showHelp(){
+  const HELP_INTRO = '<p>Gõ lệnh rồi Enter (hoặc Space). Enter trống = lặp lệnh trước. Esc = huỷ. Chuột phải = Enter khi đang chạy lệnh (giữ chuột phải = menu, Shift + chuột phải = bắt điểm). Bấm chữ vàng trong lời nhắc để chọn tuỳ chọn, hoặc gõ chữ tắt.</p>' +
+    '<p>Khi chọn điểm có thể nhập: <b>x,y</b> · <b>@dx,dy</b> · <b>@dài&lt;góc</b> · <b>#x,y</b> (tuyệt đối khi nhập động) · chỉ <b>dài</b> (theo hướng con trỏ / ORTHO / POLAR / đường truy bắt) · <b>&lt;góc</b> (khoá góc) · <b>.X .Y .XY</b> (bộ lọc điểm) · <b>FROM</b> · <b>M2P</b> · <b>TT</b>. Gõ END, MID, CEN, INT, PER, TAN, NEA, QUA, NOD, INS, EXT, PAR, GCE để bắt điểm 1 lần. Lệnh trong suốt: <b>\'Z</b>, <b>\'CAL</b>, <b>\'DIST</b>, <b>\'LA</b>, <b>\'OSMODE</b>…</p>';
+  function showHelp(name){
     if(!helpOv){
       helpOv = document.createElement('div'); helpOv.className = 'overlay'; helpOv.id = 'dvdHelpOverlay';
-      helpOv.innerHTML = '<div class="modal wide"><h3>Lệnh &amp; phím tắt</h3><p>Gõ lệnh rồi Enter (hoặc Space). Enter trống = lặp lệnh trước. Esc = huỷ. Chuột phải = Enter khi đang chạy lệnh. Bấm chữ vàng trong lời nhắc để chọn tuỳ chọn. Khi chọn điểm có thể nhập: <b>x,y</b> · <b>@dx,dy</b> · <b>@dài&lt;góc</b> · hoặc chỉ <b>dài</b> (theo hướng con trỏ / ORTHO / POLAR). Gõ END, MID, CEN, INT, PER, TAN, NEA, QUA để bắt điểm 1 lần.</p><input id="dvdHelpFind" placeholder="Tìm lệnh…" style="width:100%;margin-bottom:6px"><div id="dvdHelpList"></div><div class="modal-actions"><button class="btn-ghost" id="dvdHelpClose">Đóng</button></div></div>';
+      helpOv.innerHTML = '<div class="modal wide"><h3>Trợ giúp DVDCAD — lệnh &amp; phím tắt</h3><div id="dvdHelpBody"></div><div class="modal-actions"><button class="btn-ghost" id="dvdHelpBack" style="display:none">← Danh sách lệnh</button><button class="btn-ghost" id="dvdHelpClose">Đóng</button></div></div>';
       document.body.appendChild(helpOv);
-      helpOv.addEventListener('click', e => { if(e.target === helpOv) closeModal(helpOv); });
+      helpOv.addEventListener('click', e => { if(e.target === helpOv) closeModal(helpOv); const r = e.target.closest('[data-hc]'); if(r){ const c = lookup(r.dataset.hc); if(c) cmdHelp(c); } });
       helpOv.querySelector('#dvdHelpClose').onclick = () => closeModal(helpOv);
-      helpOv.querySelector('#dvdHelpFind').addEventListener('input', fillHelp);
+      helpOv.querySelector('#dvdHelpBack').onclick = () => listHelp();
+      helpOv.addEventListener('keydown', e => { if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); closeModal(helpOv); } });
     }
-    fillHelp(); openModal(helpOv);
+    const c = name ? lookup(String(name).toUpperCase().replace(/^[_.']+/, '')) : null;
+    if(c) cmdHelp(c); else listHelp();
+    openModal(helpOv);
+  }
+  function listHelp(){
+    const body = helpOv.querySelector('#dvdHelpBody'); helpOv.querySelector('#dvdHelpBack').style.display = 'none';
+    body.innerHTML = HELP_INTRO + '<input id="dvdHelpFind" placeholder="Tìm lệnh (tên, chữ tắt hoặc nội dung)…" style="width:100%;margin-bottom:6px"><div id="dvdHelpList"></div>';
+    const f = body.querySelector('#dvdHelpFind'); f.addEventListener('input', fillHelp); f.addEventListener('keydown', e => e.stopPropagation()); fillHelp(); setTimeout(() => f.focus(), 30);
   }
   function fillHelp(){
     const q = deaccent((helpOv.querySelector('#dvdHelpFind').value || '').trim());
-    const keys = [['F1', 'Bảng này'], ['F2', 'Lịch sử dòng lệnh'], ['F3', 'Bật/tắt bắt điểm OSNAP'], ['F7', 'Lưới GRID'], ['F8', 'ORTHO (giữ Shift = tạm thời)'], ['F9', 'SNAP bước lưới'], ['F10', 'POLAR góc cực'], ['F11', 'Truy bắt OTRACK'], ['F12', 'Nhập động DYN'],
-      ['Ctrl+Z / Ctrl+Y', 'Hoàn tác / làm lại'], ['Ctrl+C / X / V', 'Sao chép / cắt / dán (giữa các bản vẽ)'], ['Ctrl+Shift+C / V', 'Sao chép kèm điểm gốc / dán đúng toạ độ'], ['Ctrl+N', 'Bản vẽ mới'], ['Ctrl+O', 'Mở'], ['Ctrl+S / Ctrl+Shift+S', 'Lưu / lưu thành'], ['Ctrl+A', 'Chọn tất cả'], ['Ctrl+Shift+A', 'Bật/tắt chọn cả nhóm/khối'], ['Ctrl+P', 'In / xuất'], ['Ctrl+1', 'Thuộc tính'], ['Ctrl+0', 'Toàn màn hình (ẩn ribbon)'], ['Delete', 'Xoá đối tượng đã chọn'], ['Esc', 'Huỷ lệnh / bỏ chọn'],
+    const keys = [['F1', 'Trợ giúp (khi đang chạy lệnh: trang của lệnh đó)'], ['F2', 'Lịch sử dòng lệnh'], ['Ctrl+F2', 'Cửa sổ chữ (lịch sử, sao chép được)'], ['F3', 'Bật/tắt bắt điểm OSNAP'], ['F7', 'Lưới GRID'], ['F8', 'ORTHO (giữ Shift = tạm thời)'], ['F9', 'SNAP bước lưới'], ['F10', 'POLAR góc cực'], ['F11', 'Truy bắt OTRACK'], ['F12', 'Nhập động DYN'],
+      ['Tab', 'Nhập động: khoá ô đang gõ (độ dài / góc, X / Y) rồi sang ô kia'], ['↑ / ↓', 'Lệnh đã gõ trước (khi không chạy lệnh) · giá trị đã nhập gần đây (khi đang ở lời nhắc) · ↓ = danh sách tuỳ chọn'],
+      ['Ctrl+Z / Ctrl+Y', 'Hoàn tác / làm lại'], ['Ctrl+C / X / V', 'Sao chép / cắt / dán (giữa các bản vẽ)'], ['Ctrl+Shift+C / V', 'Sao chép kèm điểm gốc / dán đúng toạ độ'], ['Ctrl+N', 'Bản vẽ mới'], ['Ctrl+O', 'Mở'], ['Ctrl+S / Ctrl+Shift+S', 'Lưu / lưu thành'], ['Ctrl+A', 'Chọn tất cả'], ['Ctrl+Shift+A', 'Bật/tắt chọn cả nhóm/khối'], ['Ctrl+P', 'In / xuất'], ['Ctrl+1', 'Thuộc tính'], ['Ctrl+9', 'Ẩn / hiện dòng lệnh'], ['Ctrl+0', 'Toàn màn hình (ẩn ribbon)'], ['Delete', 'Xoá đối tượng đã chọn'], ['Esc', 'Huỷ lệnh / bỏ chọn'],
       ['Chuột giữa', 'Kéo màn hình · kích đúp = vừa bản vẽ'], ['Lăn chuột', 'Phóng to/nhỏ tại con trỏ'], ['Kéo trái→phải', 'Khung trùm (chọn đối tượng nằm trọn)'], ['Kéo phải→trái', 'Khung cắt (chọn đối tượng chạm khung)'], ['Shift+bấm', 'Bỏ chọn']];
-    const rows = CMDS.map(c => [c.k.join(' · '), c.d]).concat(keys).filter(r => !q || deaccent(r[0] + ' ' + r[1]).includes(q));
-    helpOv.querySelector('#dvdHelpList').innerHTML = rows.map(k => '<div><b>' + esc(k[0]) + '</b><span>' + esc(k[1]) + '</span></div>').join('');
+    const H = window.DVD_HELP || {};
+    const rows = CMDS.filter(c => !q || deaccent(c.k.join(' ') + ' ' + c.d).includes(q)).slice(0, 700);
+    const kr = keys.filter(r => !q || deaccent(r[0] + ' ' + r[1]).includes(q));
+    helpOv.querySelector('#dvdHelpList').innerHTML = rows.map(c => '<div data-hc="' + esc(c.k[0]) + '" style="cursor:pointer"><b>' + esc(c.k.join(' · ')) + '</b><span>' + esc(c.d) + (H[c.k[0]] ? ' <i style="color:var(--accent);font-style:normal">· cách dùng ›</i>' : '') + '</span></div>').join('') +
+      (kr.length ? '<div style="border:none;padding-top:10px"><b style="color:var(--ink-faint)">PHÍM TẮT</b></div>' + kr.map(k => '<div><b>' + esc(k[0]) + '</b><span>' + esc(k[1]) + '</span></div>').join('') : '');
+  }
+  function cmdHelp(c){
+    const body = helpOv.querySelector('#dvdHelpBody'); helpOv.querySelector('#dvdHelpBack').style.display = '';
+    const n = c.k[0], H = (window.DVD_HELP || {})[n], P = (window.DVD_HELP_PROMPTS || {})[n];
+    const A = ACAD(); const ico = A && A.ico && A.ICONS && (A.ICONS[n] || (window.DVDIcons && DVDIcons[n])) ? A.ico(n) : '';
+    let h = '<div style="display:flex;gap:10px;align-items:center;margin-bottom:6px"><span style="width:28px;height:28px;display:inline-flex">' + ico + '</span><div><div style="font:700 16px ui-monospace,Consolas,monospace">' + esc(n) + '</div>' +
+      (c.k.length > 1 ? '<div style="font-size:12px;color:var(--ink-dim)">Lệnh tắt: <b translate="no">' + esc(c.k.slice(1).join(', ')) + '</b></div>' : '') + '</div></div>';
+    h += '<p>' + esc(c.d) + '</p>';
+    if(H){
+      if(H.u && H.u.length) h += '<div class="grp" style="font-weight:700;margin-top:8px">Cách dùng</div><ol style="margin:4px 0 6px 18px;padding:0">' + H.u.map(x => '<li style="margin:2px 0">' + esc(x) + '</li>').join('') + '</ol>';
+      if(H.o && H.o.length) h += '<div class="grp" style="font-weight:700;margin-top:8px">Tuỳ chọn</div><div id="dvdHelpList" style="max-height:none">' + H.o.map(o => '<div><b translate="no">' + esc(o[0]) + '</b><span><b style="min-width:0;font-family:inherit">' + esc(o[1]) + '</b>' + (o[2] ? ' — ' + esc(o[2]) : '') + '</span></div>').join('') + '</div>';
+      if(H.n) h += '<p style="margin-top:8px;color:var(--ink-dim)">' + esc(H.n) + '</p>';
+    }
+    if(P && (!H || !H.u)){ h += '<div class="grp" style="font-weight:700;margin-top:8px">Lời nhắc đầu tiên</div><p style="font-family:ui-monospace,Consolas,monospace;font-size:12.5px">' + partsHTML(promptStrParts(P)) + '</p>'; }
+    if(!H && !P) h += '<p style="color:var(--ink-dim)">Chạy lệnh và làm theo lời nhắc ở dòng lệnh; bấm chữ vàng (hoặc gõ chữ tắt) để chọn tuỳ chọn.</p>';
+    const onRib = A && A.ribbonFind && A.ribbonFind(n, true);
+    h += '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button type="button" class="btn-ghost" id="dvdHelpRun">▶ Chạy ' + esc(n) + '</button>' + (onRib ? '<button type="button" class="btn-ghost" id="dvdHelpFindR">⌕ Tìm trên ribbon</button>' : '') + '</div>';
+    body.innerHTML = h;
+    body.querySelector('#dvdHelpRun').onclick = () => { closeModal(helpOv); if(busy() && ACAD().cmdName() === n) return; setTimeout(() => runCommand(n), 30); };
+    const fr = body.querySelector('#dvdHelpFindR'); if(fr) fr.onclick = () => { closeModal(helpOv); setTimeout(() => A.ribbonFind(n), 60); };
   }
 
   /* ---------------- bảng Thuộc tính ---------------- */
@@ -570,7 +814,8 @@
   window.addEventListener('keydown', e => {
     if(e.defaultPrevented) return;
     const t = e.target;
-    if(e.key === 'F1'){ e.preventDefault(); showHelp(); return; }
+    if(e.key === 'F1'){ e.preventDefault(); showHelp(busy() ? ACAD().cmdName() : (t === input && input.value.trim() ? input.value.trim().toUpperCase().replace(/^[_.'\-]+/, '').split(/\s+/)[0] : '')); return; }
+    if(e.key === 'F2' && e.ctrlKey){ e.preventDefault(); runCommand('TEXTSCR'); return; }
     if(typing(t) && t !== input) return;
     if(document.querySelector('.overlay.show')) return;
     if(t === input) return;   // ô lệnh tự xử lý
@@ -587,7 +832,7 @@
       if(searchNavOpen()) return;
       e.preventDefault(); repeatOrFinish(); updateBar(); return;
     }
-    if(e.key.length === 1 && /[A-Za-z0-9@#.,<\-?']/.test(e.key)){
+    if(e.key.length === 1 && /[A-Za-z0-9@#*.,<\-?'(!_]/.test(e.key)){
       if(!bar.classList.contains('show')){ barWanted = true; updateBar(); }
       input.focus(); input.value += e.key.toUpperCase(); renderSug(); onTyped(); e.preventDefault();
     }
@@ -598,6 +843,7 @@
   buildBar(); buildPalette(); addMobileButton();
   try{ const v = localStorage.getItem('dvd:props'); if(v === '1' || (v == null && fine() && window.innerWidth >= 900)) palWanted = true; }catch(_){}
   updateBar();
-  window.DVDCmd = { undefine: n => { n = String(n).toUpperCase().replace(/^[_.]+/, ''); if(!ALIAS.has(n)) return false; UNDEF.add(n); saveUndef(); return true; }, redefine: n => { n = String(n).toUpperCase().replace(/^[_.]+/, ''); const had = UNDEF.delete(n); saveUndef(); return had; }, get undefined(){ return [...UNDEF]; }, run: runCommand, commands: CMDS, register, log, refresh: () => { _lastPr = ''; updateBar(); }, toggleHistory, runTransparent, togglePalette, toggleBar, showHelp, refreshPalette: () => { palSig = ''; refreshPalette(true); }, isPaletteOn: () => palWanted, focus: () => { if(input) input.focus(); } };
+  window.DVDCmd = { undefine: n => { n = String(n).toUpperCase().replace(/^[_.]+/, ''); if(!ALIAS.has(n)) return false; UNDEF.add(n); saveUndef(); return true; }, redefine: n => { n = String(n).toUpperCase().replace(/^[_.]+/, ''); const had = UNDEF.delete(n); saveUndef(); return had; }, get undefined(){ return [...UNDEF]; }, run: runCommand, commands: CMDS, register, log, refresh: () => { _lastPr = ''; updateBar(); }, toggleHistory, runTransparent, togglePalette, toggleBar, showHelp, refreshPalette: () => { palSig = ''; refreshPalette(true); }, isPaletteOn: () => palWanted, focus: () => { if(input) input.focus(); },
+    opts: IS, saveOpts: saveIS, recent: () => RECENT.slice(), lookup, kwMenu, synonyms: SYN, autocorrect: AC };
   window.DVDCmd.history = () => lines.map(l => l.m);
 })();

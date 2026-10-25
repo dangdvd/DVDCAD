@@ -224,9 +224,10 @@
     const v = Function('"use strict";return (' + s + ')')(); if(typeof v !== 'number' || !isFinite(v)) throw new Error('Kết quả không hợp lệ'); return v;
   }
   A.calc = calc;
-  cmd(['CAL', 'QUICKCALC', 'QC', 'TINH'], 'Máy tính: + − × ÷ ^ ( ) sqrt sin cos tan (độ) pi…', async () => {
-    for(;;){ const r = await A.getStr('Biểu thức (Enter để xong)', {}); const t = (r.str || '').trim(); if(!t) return;
-      try{ const v = calc(t); MEM.calLast = v; log(t + ' = ' + (+v.toPrecision(12))); try{ if(navigator.clipboard) navigator.clipboard.writeText(String(+v.toPrecision(12))).catch(() => {}); }catch(_){} }catch(err){ log('CAL: ' + err.message); } }
+  // gõ 'CAL khi đang ở lời nhắc của lệnh khác: tính một biểu thức rồi đưa kết quả vào lời nhắc đó (như AutoCAD)
+  cmd(['CAL', 'QUICKCALC', 'QC', 'TINH'], 'Máy tính: + − × ÷ ^ ( ) sqrt sin cos tan (độ) pi…', async (A2, c) => {
+    for(;;){ const r = await A.getStr(c && c.nest ? 'Biểu thức (kết quả đưa vào lời nhắc)' : 'Biểu thức (Enter để xong)', {}); const t = (r.str || '').trim(); if(!t) return;
+      try{ const v = calc(t); MEM.calLast = v; log(t + ' = ' + (+v.toPrecision(12))); if(c && c.nest){ A._nestResult = String(+v.toPrecision(12)); return; } try{ if(navigator.clipboard) navigator.clipboard.writeText(String(+v.toPrecision(12))).catch(() => {}); }catch(_){} }catch(err){ log('CAL: ' + err.message); } }
   });
 
   /* ====================== PUBLISH (in nhiều layout ra 1 PDF) ====================== */

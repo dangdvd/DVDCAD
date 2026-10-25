@@ -538,7 +538,8 @@
     const mk = (e, side) => { const o = G.offsetEntity(e, through ? null : d, side); if(!o) return null; delete o.userAdded; if(layerCur){ const p = A.newProps({ type: o.type }); o.layer = p.layer; o.col = p.col; if(p.bl) o.bl = 1; else delete o.bl; } return o; };
     const hist = [];
     for(;;){
-      const rs = await A.getEnt('Chọn đối tượng cần offset (Enter để thôi)', { filter: canOff, kw: [{ k: 'U', t: 'Hoàn tác' }] });
+      const rs = await A.getEnt('Chọn đối tượng cần offset', { filter: canOff, kw: [{ k: 'E', t: 'Thoát' }, { k: 'U', t: 'Hoàn tác' }], def: 'Thoát' });
+      if(rs.kw === 'E') break;
       if(rs.kw === 'U'){ if(hist.length){ hist.pop(); try{ undoEdit(); }catch(_){ DVDCmd.run('U'); } } else log('Không còn gì để hoàn tác.'); continue; }
       if(!rs.ent) break; let e = rs.ent; hl([e]);
       const rp = await A.getPoint(through ? 'Chỉ định điểm đi qua' : 'Chỉ định điểm ở phía cần offset', { kw: [{ k: 'M', t: 'Nhiều lần' }, { k: 'E', t: 'Thoát' }], preview: (g, p) => { const o = mk(e, p); if(o) g.ent(o); } });

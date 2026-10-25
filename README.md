@@ -3,8 +3,40 @@
 > **Bản Windows** (cài như phần mềm, chạy offline, giao diện kiểu AutoCAD): xem **[HUONG-DAN-WINDOWS.md](HUONG-DAN-WINDOWS.md)**.
 
 Ứng dụng web một trang: **xem** bản vẽ, **đo khoảng cách** (có bắt điểm), **thêm ghi chú**.
-Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
+Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
+
+## v5k: tự ghi DWG (AutoCAD 2000), không cần ODA File Converter
+- `dvd-dwg.js`: bộ ghi **DWG R2000 (AC1015)** bằng JavaScript, chạy trong trình duyệt, điện thoại và bản Windows.
+  - Đầu vào là DXF 2000 của `dvd-acad-dxf.js` (`A.dxfR2000`), nên DWG giữ đúng những gì DXF giữ: bảng lớp / kiểu nét (cả kiểu nét có chữ, hình) / kiểu chữ / dimstyle / VPORT / APPID, khối + thuộc tính, DIMENSION (thẳng, chéo, góc 3 điểm, bán kính, đường kính), HATCH đặc và mẫu, LWPOLYLINE (cung, độ rộng), TEXT / MTEXT, SOLID / 3DFACE, ELLIPSE, XLINE / RAY, WIPEOUT, từ điển, LAYOUT, MLINESTYLE, XRECORD.
+  - Viết theo tài liệu mở của Open Design Alliance và mã nguồn LibreDWG (cùng GPL-3.0): mã hoá bit, CRC-16, thứ tự trường, bố cục section giống AutoCAD 2000 (header → AuxHeader → ảnh xem trước BMP → biến hệ thống → lớp → đối tượng → bản đồ handle → ObjFreeSpace → header phụ → Template).
+  - Dữ liệu riêng DVDCAD (XDATA "DVDCAD": khối 3D tham số, vùng, thứ tự vẽ, chú thích theo tỉ lệ; DVDCAD_DATA: ràng buộc, khối động) ghi thành EED chuẩn và một khối `DVDCADX1` giữa các section, vì bộ đọc WASM chưa đọc được EED của DWG 2000.
+  - API: `A.dwgNative(ents)` → `Uint8Array`; `DVDDwg.dwgFromDxf(text, { bmp })` (chạy được trong Node để kiểm thử).
+- `SAVEDWG` mặc định dùng bộ ghi gốc; DWG 2004 → 2018 vẫn qua ODA File Converter / máy chủ (`DWGSERVER`), không có thì tự ghi DWG 2000. `SAVEAS` / Ctrl+S chọn được `*.dwg`.
+- Mở DWG: bỏ ATTRIB trùng (libredwg trả ATTRIB cả trong danh sách chung lẫn trong `INSERT.attribs`); đọc khối `DVDCADX1` của file do DVDCAD ghi.
+- Kiểm tra:
+  - 36 file DWG mẫu của LibreDWG (2000 → 2018) + `sample.dwg` (10 nghìn đối tượng): mở → ghi DWG gốc → mở lại, **giống hệt từng đối tượng** so với mở lại bản DXF 2000; LibreDWG đọc mọi file không cảnh báo.
+  - `desktop/test/smoke.js` mục 7: SAVEDWG / SAVEAS *.dwg / bản vẽ tổng hợp (kích thước, hatch, chữ Việt, kiểu nét chữ/hình, khối 3D, vùng che) → DWG → mở lại.
+  - GitHub Actions: ODA File Converter đọc + audit các file DWG do DVDCAD ghi (artifact `DVDCAD-DWG-kiem-tra`).
+- Ký số bản Windows (không bắt buộc): secret `WIN_CSC_LINK` / `WIN_CSC_KEY_PASSWORD` (.pfx) hoặc Azure Trusted Signing; kiểm tra chữ ký sau khi dựng. Xem `HUONG-DAN-WINDOWS.md`.
+
+## v5j: dòng lệnh và cách dùng lệnh như AutoCAD 2027
+- `dvd-cmd.js` (thanh dòng lệnh):
+  - Gợi ý khi gõ theo `INPUTSEARCHOPTIONS`: khớp đầu tên, giữa chuỗi, từ đồng nghĩa (`ROUND` → FILLET, `XOAY` → ROTATE), tự sửa lỗi gõ (sửa 3 lần thì tự chạy), biến hệ thống kèm giá trị, nội dung bản vẽ (lớp, khối, mẫu hatch, kiểu chữ). Xếp lệnh hay dùng lên đầu; phần còn lại của tên hiện mờ (→ / Tab để nhận).
+  - Nút ✕ / Tuỳ chỉnh / Lệnh gần đây; `CLIPROMPTLINES`, độ trong suốt, neo ở đáy cửa sổ. Lời nhắc dài xuống dòng thay vì bị cắt.
+  - ↑ / ↓ ở lời nhắc gọi lại nhập gần đây; ↓ mở danh sách tuỳ chọn cạnh con trỏ (DYNPROMPT); Tab khoá ô nhập động.
+  - F1 theo ngữ cảnh: trang cách dùng của lệnh đang chạy (`dvd-help.js`) + **Tìm trên ribbon** (`A.ribbonFind`). Ctrl+F2 = cửa sổ chữ.
+  - Lịch sử ghi "lời nhắc: câu trả lời" như AutoCAD, dạng mảnh để giao diện English dịch được (`log([...])`, `{ nt }` = giữ nguyên).
+- `dvd-acad-core.js` (bộ nhập):
+  - Nhập động: `x,y` của điểm thứ hai trở đi là tương đối (`DYNPICOORDS`), `#x,y` / `*x,y` tuyệt đối, `x,y,z`, `@` = LASTPOINT; số `1/2`, `3-1/2`, feet-inch `5'6"` (bản vẽ inch / feet).
+  - Khoá góc `<45`, bộ lọc điểm `.X .Y .Z .XY .XZ .YZ`, `TT`, `FROM`, `M2P`; gõ số theo đường truy bắt (OTRACK / TT); Tab khoá độ dài / góc / X / Y.
+  - Chọn đối tượng: `W`, `C`, `BOX`, `G`, `U`, `SI`, `M`, `AU`, `?` (thêm vào ALL / P / L / R / A / F / WP / CP có sẵn).
+  - Lệnh trong suốt chạy lồng (`'CAL`, `'DIST`, `'ID`, `'ZOOM`, `'LAYER`, biến hệ thống…) rồi trở lại lệnh đang dở; `'CAL` trả kết quả cho lời nhắc.
+  - Chuột phải: bấm nhanh = Enter, giữ = menu lệnh (`A.cmdMenu`); Shift + chuột phải = menu bắt điểm (`A.osnapMenu`).
+- `dvd-acad-cmdline.js` (mới): menu chuột phải, `INPUTSEARCHOPTIONS`, `-LAYER`, `-INSERT`, `-OSNAP`, `UNDO` (số bước, BE/E, M/B), `MULTIPLE` hỏi trên dòng lệnh, 17 biến hệ thống mới (`A.sysvar.def`).
+- `dvd-help.js` (mới): cách dùng của ~60 lệnh thông dụng + lời nhắc đầu của mọi lệnh (`tools/help/prompts.js` sinh tự động).
+- Tuỳ chọn lệnh theo AutoCAD 2027: PLINE (Length, cung Angle / CEnter / CLose / Direction / Radius / Second pt), CIRCLE (Ttr), RECTANG (Chamfer / Fillet / Width / Area / Rotation), ELLIPSE (Arc), XLINE (Ang / Bisect / Offset), TEXT (Style, 15 kiểu canh lề), MTEXT (Height / Justify / Rotation / Style / Width), MOVE / COPY (Enter = độ dời, mOde, Exit), TRIM / EXTEND (Crossing / Fence / mOde / eRase, Boundary edges = B), FILLET (Trim, Shift = góc nhọn), CHAMFER (2 khoảng, Angle, Trim, mEthod), ZOOM (Center / Scale / 2X), AREA (Add / Subtract), DIST (Multiple), MEASUREGEOM (Distance / Radius / Angle / ARea), DIVIDE / MEASURE (Block), PEDIT (Fit / Spline / Decurve / Undo), OFFSET (Exit), DIMLINEAR (Mtext / Text), WIPEOUT (Polyline = P), `-BLOCK`.
+- Kiểm thử: thêm mục 9 vào `desktop/test/smoke.js` (nhập động, khoá góc + `'CAL`, bộ lọc `.X`, script `-LAYER` + `UNDO BE/E`, gợi ý đồng nghĩa / sửa lỗi gõ / biến hệ thống, trợ giúp).
 
 ## v5i: bản Windows chạy offline + trang Start kiểu AutoCAD
 - **DVDCAD cho Windows** (`desktop/`, Electron): bộ cài `DVDCAD-Setup-*.exe` và bản portable, chạy hoàn toàn offline. Hướng dẫn: **[HUONG-DAN-WINDOWS.md](HUONG-DAN-WINDOWS.md)**.
@@ -32,7 +64,7 @@ Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn 
     - Thứ tự vẽ: `DRAWORDER` / `DR` (F B A U), `TEXTTOFRONT`, `HATCHTOBACK`.
     - Vùng che: `WIPEOUT` / `WO` (điểm, D đa tuyến, F khung).
     - Chú thích theo tỉ lệ: `CANNOSCALE` (ô ▲ 1:N ở thanh trạng thái), `ANNOTATIVE`.
-    - Lưu DWG: `SAVEDWG` / `DWGOUT`, `DWGSERVER`. Bản Windows chuyển bằng ODA File Converter trên máy.
+    - Lưu DWG: `SAVEDWG` / `DWGOUT`, `DWGSERVER`. Bản Windows chuyển bằng ODA File Converter trên máy (từ v5k: mặc định tự ghi DWG 2000).
   - `dvd-acad-x4.js`: ràng buộc tham số.
     - Lệnh: GC* (10 lệnh), DC* (6 lệnh), `GEOMCONSTRAINT`, `DIMCONSTRAINT`, `AUTOCONSTRAIN`, `PARAMETERS`, `DELCONSTRAINT`, `CONSTRAINTBAR`.
     - Bộ giải lan từ đối tượng vừa sửa ra ngoài và móc vào `A.commit`, nên mọi cách sửa đều giữ ràng buộc, U hoàn tác cả nhóm.

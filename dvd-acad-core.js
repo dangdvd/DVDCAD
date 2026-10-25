@@ -506,6 +506,7 @@
      8) TÍNH ĐIỂM: OSNAP → OTRACK → ORTHO/POLAR → SNAP
      ===================================================================== */
   const acq = [];   // điểm đã "dừng" để truy bắt (OTRACK)
+  const ttPts = [];   // điểm truy bắt tạm (TT) của lời nhắc đang chạy
   let acqCand = null;
   function gridSpacing(){
     if(SET.snapSp > 0) return SET.snapSp;
@@ -513,7 +514,21 @@
     return [1, 2, 5, 10].map(m => m * pow).find(c => c >= raw) || 10 * pow;
   }
   A.gridSpacing = gridSpacing;
+  // khoá của nhập động (Tab) / khoá góc (<45) áp lên điểm tính được
   function computePoint(sp, r, touch){
+    const base = r && r.base;
+    if(r && base && r.angLock != null){
+      const w = toWorld(sp.x, sp.y), ux = Math.cos(r.angLock), uy = Math.sin(r.angLock);
+      let t = r.lenLock != null ? r.lenLock : (w.x - base.x) * ux + (w.y - base.y) * uy;
+      return { x: base.x + ux * t, y: base.y + uy * t, raw: w, snap: null, track: { base, ang: t >= 0 ? r.angLock : r.angLock + Math.PI, d: Math.abs(t), kind: 'lock' } };
+    }
+    const q = computePointRaw(sp, r, touch);
+    if(r && base && r.lenLock != null){ const dx = q.x - base.x, dy = q.y - base.y, L = Math.hypot(dx, dy); const a = L > 1e-12 ? Math.atan2(dy, dx) : (q.track ? q.track.ang : 0);
+      q.x = base.x + r.lenLock * Math.cos(a); q.y = base.y + r.lenLock * Math.sin(a); q.snap = null; q.track = { base, ang: a, d: r.lenLock, kind: 'lock' }; }
+    else if(r && !base && (r.xLock != null || r.yLock != null)){ if(r.xLock != null) q.x = r.xLock; if(r.yLock != null) q.y = r.yLock; q.snap = null; }
+    return q;
+  }
+  function computePointRaw(sp, r, touch){
     const w = toWorld(sp.x, sp.y);
     const res = { x: w.x, y: w.y, raw: w, snap: null, track: null };
     const base = r && r.base;
@@ -546,6 +561,7 @@
       if(SET.polar) lines.push({ p: base, incs: SET.polarAng, kind: 'polar' });
     }
     if(SET.otrack && SET.osnap) for(const a of acq) lines.push({ p: a, incs: SET.polar ? SET.polarAng : 90, kind: 'track' });
+    for(const a of ttPts) lines.push({ p: a, incs: SET.polar ? SET.polarAng : 90, kind: 'track' });
     const hits = [];
     for(const L of lines){
       const ang = Math.atan2(w.y - L.p.y, w.x - L.p.x), inc = L.incs * D2R, sOff = (SET.snapAng || 0) * D2R;
@@ -711,7 +727,7 @@
       }
     }
     // điểm đã "dừng" (OTRACK)
-    if(acq.length && r && r.type !== 'sel'){ cC.save(); cC.strokeStyle = 'rgba(80,255,130,.95)'; cC.lineWidth = 1.4; for(const a of acq){ const P = toScreen(a.x, a.y); cC.beginPath(); cC.moveTo(P.x - 4, P.y); cC.lineTo(P.x + 4, P.y); cC.moveTo(P.x, P.y - 4); cC.lineTo(P.x, P.y + 4); cC.stroke(); } cC.restore(); }
+    if((acq.length || ttPts.length) && r && r.type !== 'sel'){ cC.save(); cC.strokeStyle = 'rgba(80,255,130,.95)'; cC.lineWidth = 1.4; for(const a of acq.concat(ttPts)){ const P = toScreen(a.x, a.y); cC.beginPath(); cC.moveTo(P.x - 4, P.y); cC.lineTo(P.x + 4, P.y); cC.moveTo(P.x, P.y - 4); cC.lineTo(P.x, P.y + 4); cC.stroke(); } cC.restore(); }
     // dấu bắt điểm
     if(lastPt && lastPt.snap && (mouseIn || lastTouch) && r && r.type !== 'sel'){
       const P = toScreen(lastPt.snap.x, lastPt.snap.y);
@@ -723,7 +739,7 @@
       if(deskUI()) tipBox(cC, P.x + 12, P.y + 12, OS_NAME[lastPt.snap.type] || lastPt.snap.type);
     }
     // khung chọn
-    if(win){ const x = Math.min(win.x0, win.x1), y = Math.min(win.y0, win.y1), w = Math.abs(win.x1 - win.x0), h = Math.abs(win.y1 - win.y0); const cross = win.x1 < win.x0;
+    if(win){ const x = Math.min(win.x0, win.x1), y = Math.min(win.y0, win.y1), w = Math.abs(win.x1 - win.x0), h = Math.abs(win.y1 - win.y0); const cross = win.force === 'C' || (win.force !== 'W' && win.x1 < win.x0);
       cC.save(); cC.lineWidth = 1; if(cross){ cC.strokeStyle = '#4ce07a'; cC.fillStyle = 'rgba(60,200,100,.16)'; cC.setLineDash([6, 4]); } else { cC.strokeStyle = '#5aa9ff'; cC.fillStyle = 'rgba(60,140,255,.16)'; cC.setLineDash([]); }
       cC.fillRect(x, y, w, h); cC.strokeRect(x + .5, y + .5, w, h); cC.restore(); }
     // biểu tượng UCS
@@ -752,18 +768,28 @@
   const dyn = document.createElement('div'); dyn.id = 'dvdDyn'; stage.appendChild(dyn);
   let typed = '';
   A.onTyped = v => { typed = v || ''; updateDyn(); };
+  A.dynShown = () => dyn.style.display === 'block';
   A.fmt = v => { if(!isFinite(v)) return ''; const a = Math.abs(v); return a >= 1000 ? v.toFixed(1) : a >= 10 ? v.toFixed(2) : v.toFixed(3); };
   function updateDyn(){
     const show = SET.dyn && deskUI() && mouseIn && mouse && hasDoc() && !lastTouch && (cur && cur.req || typed);
     if(!show){ dyn.style.display = 'none'; return; }
     const r = cur && cur.req; let h = '';
-    if(r) h += '<div class="pr">' + escapeHtml(shortPrompt(r)) + '</div>';
+    if(r && SET.dynPrompt !== false){ const P = promptParts(r).filter((x, i, a) => !(r.def !== undefined && i >= a.length - 3)); h += '<div class="pr">' + P.map(x => typeof x === 'string' ? '<span>' + escapeHtml(x) + '</span>' : '<span translate="no">' + escapeHtml(x.nt) + '</span>').join('') + (r.kw && r.kw.length ? ' <span class="dd" title="↓ = danh sách tuỳ chọn">▾</span>' : '') + '</div>'; }
+    // ô nhập động như AutoCAD: độ dài / góc (có điểm trước) hoặc X / Y; Tab khoá ô đang gõ và chuyển ô
     let v = '';
-    if(typed) v = '<span class="in">' + escapeHtml(typed) + '</span>';
-    else if(r && lastPt && (r.type === 'pt' || r.type === 'dist' || r.type === 'ang')){
-      if(r.base){ const d = Math.hypot(lastPt.x - r.base.x, lastPt.y - r.base.y), a = ((Math.atan2(lastPt.y - r.base.y, lastPt.x - r.base.x) * R2D) % 360 + 360) % 360; v = '<span class="in">' + A.fmt(d) + '</span><span class="in">' + a.toFixed(0) + '°</span>'; }
-      else v = '<span class="in">' + A.fmt(lastPt.x) + '</span><span class="in">' + A.fmt(lastPt.y) + '</span>';
+    const numTyped = !!typed && isFinite(parseLen(typed));
+    const LOCK = '<svg class="lock" viewBox="0 0 10 12"><rect x="1" y="5" width="8" height="6.5" rx="1"/><path d="M3 5V3.6a2 2 0 0 1 4 0V5" fill="none"/></svg>';
+    const fld = (txt, on, lk) => '<span class="in' + (on ? ' on' : '') + (lk ? ' lk' : '') + '">' + escapeHtml(txt) + (lk ? LOCK : '') + '</span>';
+    if(r && lastPt && (r.type === 'pt' || r.type === 'dist') && !r.num && (!typed || numTyped)){
+      const f = r.dynF || 0; let a0, a1, k0, k1;
+      if(r.base){ const d = Math.hypot(lastPt.x - r.base.x, lastPt.y - r.base.y), a = ((Math.atan2(lastPt.y - r.base.y, lastPt.x - r.base.x) * R2D) % 360 + 360) % 360;
+        a0 = A.fmt(d); a1 = (+a.toFixed(Math.abs(a - Math.round(a)) > 1e-6 ? 1 : 0)) + '°'; k0 = r.lenLock != null; k1 = r.angLock != null; }
+      else { a0 = A.fmt(lastPt.x); a1 = A.fmt(lastPt.y); k0 = r.xLock != null; k1 = r.yLock != null; }
+      if(typed){ if(f === 0) a0 = typed; else a1 = typed; }
+      v = fld(a0, f === 0, k0 && !(typed && f === 0)) + fld(a1, f === 1, k1 && !(typed && f === 1));
     }
+    else if(typed) v = fld(typed, true, false);
+    else if(r && lastPt && r.type === 'ang' && r.base){ const a = ((Math.atan2(lastPt.y - r.base.y, lastPt.x - r.base.x) * R2D) % 360 + 360) % 360; v = fld((+a.toFixed(1)) + '°', true, false); }
     if(v) h += '<div class="vals">' + v + '</div>';
     if(!h){ dyn.style.display = 'none'; return; }
     dyn.innerHTML = h; dyn.style.display = 'block';
@@ -778,19 +804,41 @@
      ===================================================================== */
   class Cancel extends Error{ constructor(){ super('cancel'); this.cancel = true; } }
   A.Cancel = Cancel;
-  let runId = 0, internalMode = false;
+  let runId = 0, internalMode = false, typedNow = null;
   A.busy = () => !!cur;
   A.cur = () => cur;
   function log(m){ try{ if(window.DVDCmd && DVDCmd.log) DVDCmd.log(m); }catch(_){} }
   A.log = log;
   function refresh(){ try{ if(window.DVDCmd && DVDCmd.refresh) DVDCmd.refresh(); }catch(_){} paintSoon(); }
   function setModeInt(m){ internalMode = true; try{ setMode(m); } finally { internalMode = false; } }
+  // lệnh trong suốt (gõ 'TÊN hoặc bấm nút khi đang chạy lệnh khác): chạy lồng rồi trở lại lệnh đang dở, như AutoCAD
+  const TRANS_CMDS = new Set(['ZOOM', 'PAN', 'REDRAW', 'REGEN', 'CAL', 'QUICKCALC', 'DIST', 'ID', 'LAYER', 'OSNAP', 'DSETTINGS', 'ORTHO', 'SNAP', 'GRID', 'SETVAR', 'HELP', 'TEXTSCR', 'HISTORY', 'GRAPHSCR', 'LTSCALE',
+    'COLOR', 'LINETYPE', 'LWEIGHT', 'UNITS', 'PTYPE', 'DDPTYPE', 'TIME', 'STATUS', 'LIMITS', 'STYLE', 'DIMSTYLE', 'APERTURE', 'DRAGMODE', 'FILL', 'QTEXT', 'BLIPMODE', 'ABOUT', 'DELAY', 'RESUME', 'CLEANSCREENON', 'CLEANSCREENOFF', 'PROPERTIES', 'COPYHIST', 'COMMANDLINE', 'INPUTSEARCHOPTIONS', 'DDOSNAP', 'POLAR']);
+  A.isTransparent = n => { n = String(n || '').toUpperCase(); return TRANS_CMDS.has(n) || !!(A.sysvar && A.sysvar.get && A.sysvar.get(n) !== undefined); };
+  A.addTransparent = (...names) => { for(const n of names) TRANS_CMDS.add(String(n).toUpperCase()); };
+  async function runNested(name, fn){
+    const c = cur; const sv = { req: c.req, sel: c.sel, poly: c.poly, remove: c.remove, pre: c.pre, name: c.name, forceWin: c.forceWin, selHist: c.selHist, selSingle: c.selSingle };
+    c.req = null; c.pre = []; c.name = name; c.nest = (c.nest || 0) + 1; c.poly = null; c.remove = false; c.forceWin = null; c.selHist = null; c.selSingle = false; win = null;
+    const lp0 = A.lastPoint; A._nestResult = null;
+    log('>>' + name); refresh();
+    try{ await fn(A, c); }
+    catch(err){ if(!(err && err.cancel)){ console.error(err); log('Lỗi: ' + (err && err.message || err)); } }
+    finally{
+      if(cur === c){ c.nest--; Object.assign(c, sv); log('Tiếp tục lệnh ' + c.name + '.');
+        if(c.req && A.lastPoint !== lp0 && A.lastPoint) c.req._atBase = A.lastPoint;   // 'ID đổi LASTPOINT → "@" của lời nhắc tính từ điểm đó
+        if(c.req && mouse) lastPt = computePoint(mouse, c.req, lastTouch); refresh(); paintSelSoon(); paintSoon();
+        const nr = A._nestResult; A._nestResult = null; if(nr != null && c.req) setTimeout(() => { if(cur === c && c.req) A.input(String(nr)); }, 0); }   // 'CAL trả kết quả cho lời nhắc đang dở
+      else if(sv.req && sv.req.rej) sv.req.rej(new Cancel());   // Esc trong lệnh trong suốt: huỷ luôn lệnh ngoài
+    }
+  }
   A.run = async function(name, fn, opt){
     opt = opt || {};
     if(!hasDoc()){ say('Mở hoặc tạo bản vẽ trước.'); return; }
+    const nest = A._nest; A._nest = false;
+    if(cur && (nest || TRANS_CMDS.has(String(name).toUpperCase()) || (A.sysvar && A.sysvar.get && A.sysvar.get(name) !== undefined))) return runNested(name, fn);
     if(cur) A.cancel(true);
     let pre = [];
-    try{ pre = A.filterSel([...selEnts]); if(!pre.length && infoIdx >= 0 && entities[infoIdx]) pre = A.filterSel([entities[infoIdx]]); }catch(_){}
+    if(SET.pickfirst !== false) try{ pre = A.filterSel([...selEnts]); if(!pre.length && infoIdx >= 0 && entities[infoIdx]) pre = A.filterSel([entities[infoIdx]]); }catch(_){}
     const id = ++runId;
     cur = { id, name, pre, sel: new Set(), req: null, hl: [] };
     if(opt.keepMode !== true) setModeInt('acad');
@@ -817,11 +865,29 @@
     if(!silent) {}
     return true;
   };
+  // lời nhắc dạng chữ như dòng lệnh AutoCAD: "Chỉ định điểm tiếp theo [Đóng/Hoàn tác] <…>"
+  // dạng mảnh (để giao diện English dịch từng mảnh): chuỗi = dịch được, { nt } = giữ nguyên (số, chữ người dùng gõ)
+  function promptParts(r){
+    const out = [r.prompt || ''];
+    if(r.kw && r.kw.length){ out.push(' ['); r.kw.forEach((k, i) => { if(i) out.push('/'); out.push(k.t); }); out.push(']'); }
+    if(r.def !== undefined && r.def !== null && r.def !== ''){ out.push(' <'); out.push(typeof r.def === 'number' ? { nt: A.fmt(r.def).replace(/\.?0+$/, '') } : String(r.def)); out.push('>'); }
+    return out;
+  }
+  const partsText = P => P.map(x => typeof x === 'string' ? x : x.nt).join('');
+  function plainPrompt(r){ return partsText(promptParts(r)); }
+  A.plainPrompt = plainPrompt; A.promptParts = promptParts; A.partsText = partsText;
+  // ghi lời nhắc + câu trả lời vào lịch sử dòng lệnh (bấm chuột: chỉ ghi lời nhắc, như AutoCAD)
+  function echoReq(req){
+    if(req.type === 'sel' || req.noEcho) return;
+    const ans = req._echo != null ? req._echo : (typedNow != null ? typedNow : ''); req._echo = null;
+    log(promptParts(req).concat([':'], ans ? [' ', { nt: ans }] : []));
+  }
   function ask(req){
     if(!cur) return Promise.reject(new Cancel());
     const c = cur;
+    ttPts.length = 0;
     return new Promise((res, rej) => {
-      req.res = v => { if(c.req === req) c.req = null; res(v); };
+      req.res = v => { if(c.req === req) c.req = null; try{ echoReq(req); }catch(_){} if(v && v.pt && (req.type === 'pt' || req.type === 'dist' || req.type === 'ang')) A.lastPoint = { x: v.pt.x, y: v.pt.y }; res(v); };
       req.rej = rej; c.req = req; A.reqSeq = (A.reqSeq || 0) + 1;   // số thứ tự lời nhắc (LISP (command …) chờ lời nhắc kế tiếp)
       if(req.type === 'sel'){ c.sel = new Set(); c.poly = null; }
       lastPt = mouse ? computePoint(mouse, req, lastTouch) : null;
@@ -850,7 +916,10 @@
     const r = cur && cur.req; if(!r) return cur ? escapeHtml(cur.name) + ':' : '';
     let h = escapeHtml(r.prompt || '');
     if(r.type === 'sel' && cur.sel.size) h += ' <b class="cnt">(' + cur.sel.size + ')</b>';
-    if(r.kw && r.kw.length) h += ' [' + r.kw.map(k => '<span class="kw" data-k="' + escapeHtml(k.k) + '">' + escapeHtml(k.t) + '</span>').join('/') + ']';
+    // tuỳ chọn bấm được; chữ tắt để gõ (như chữ hoa trong tuỳ chọn của AutoCAD) hiện nhỏ phía sau nếu nhãn không bắt đầu bằng nó
+    if(r.kw && r.kw.length){ const en = window.DVDI18N && DVDI18N.lang === 'en';
+      h += ' [' + r.kw.map(k => { const lab = en ? DVDI18N.t(k.t) : k.t; const show = !deacc(lab).startsWith(deacc(k.k));
+        return '<span class="kw" data-k="' + escapeHtml(k.k) + '">' + escapeHtml(k.t) + (show ? '<i class="kk" translate="no">(' + escapeHtml(k.k) + ')</i>' : '') + '</span>'; }).join('/') + ']'; }
     if(r.def !== undefined && r.def !== null && r.def !== '') h += ' &lt;' + escapeHtml(typeof r.def === 'number' ? A.fmt(r.def).replace(/\.?0+$/, '') : r.def) + '&gt;';
     return h + ':';
   };
@@ -860,13 +929,42 @@
     for(const k of r.kw){ const w = deacc(k.t); if(T.length >= 2 && w.startsWith(T)) return k.k; }
     return null;
   }
-  const TRANSPARENT = new Set(['Z', 'ZOOM', 'P', 'PAN', 'RE', 'REGEN', 'REDRAW', 'ZE', 'ZW']);
-  // nhập toạ độ: x,y | @dx,dy | @d<a | d<a | số (khoảng cách theo hướng con trỏ)
-  function parseCoord(t, base){
-    t = t.replace(/\s+/g, ''); let m;
-    if((m = /^(#)?(-?[\d.]+)[,;](-?[\d.]+)$/.exec(t))){ const x = num(m[2]), y = num(m[3]); if(isFinite(x) && isFinite(y)) return { x, y }; }
-    if((m = /^@(-?[\d.]+)[,;](-?[\d.]+)$/.exec(t))){ const dx = num(m[1]), dy = num(m[2]); const b = base || { x: 0, y: 0 }; if(isFinite(dx) && isFinite(dy)) return { x: b.x + dx, y: b.y + dy }; }
-    if((m = /^(@)?(-?[\d.]+)<(-?[\d.]+)$/.exec(t))){ const d = num(m[2]), a = num(m[3]) * D2R; const b = (m[1] || base) ? (base || { x: 0, y: 0 }) : { x: 0, y: 0 }; if(isFinite(d) && isFinite(a)) return { x: b.x + d * Math.cos(a), y: b.y + d * Math.sin(a) }; }
+  const TRANSPARENT = new Set(['Z', 'ZOOM', 'PAN', 'RE', 'REGEN', 'REDRAW', 'ZE', 'ZW']);
+  // số kiểu AutoCAD: 12.5 · 2,5 · 1/2 · 3-1/2 · 3 1/2 · (bản vẽ inch / feet) 5' · 5'6" · 5'-6 1/2" · 6"
+  function fracNum(s){
+    s = String(s).trim(); let m;
+    if(/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(s)) return parseFloat(s);
+    if((m = /^([-+]?)(\d+)\/(\d+)$/.exec(s))) return +m[3] ? (m[1] === '-' ? -1 : 1) * (+m[2] / +m[3]) : NaN;
+    if((m = /^([-+]?)(\d+)[-\s]+(\d+)\/(\d+)$/.exec(s))) return +m[4] ? (m[1] === '-' ? -1 : 1) * (+m[2] + +m[3] / +m[4]) : NaN;
+    return NaN;
+  }
+  function parseLen(t){
+    t = String(t == null ? '' : t).trim(); if(!t) return NaN;
+    const v = fracNum(/^[-+]?\d*,\d+$/.test(t) ? t.replace(',', '.') : t); if(isFinite(v)) return v;
+    if(!/['"]/.test(t)) return NaN;
+    const m = /^([-+])?\s*(?:(\d+(?:\.\d+)?)\s*')?\s*-?\s*(\d+(?:\.\d+)?(?:[-\s]+\d+\/\d+)?|\d+\/\d+)?\s*"?$/.exec(t);
+    if(!m || (m[2] == null && m[3] == null)) return NaN;
+    let u = 4; try{ u = insunits; }catch(_){}
+    if(u !== 1 && u !== 2) return NaN;   // như AutoCAD: feet-inch chỉ dùng cho bản vẽ đơn vị inch / feet
+    const ft = m[2] != null ? +m[2] : 0, inch = m[3] != null ? fracNum(m[3]) : 0; if(!isFinite(inch)) return NaN;
+    const val = u === 2 ? ft + inch / 12 : ft * 12 + inch; return m[1] === '-' ? -val : val;
+  }
+  A.parseLen = parseLen;
+  // nhập toạ độ: x,y[,z] · @dx,dy · d<a · @d<a · #x,y / *x,y (tuyệt đối)
+  // rel = gõ ở ô nhập động cạnh con trỏ (DYNPICOORDS = 0): điểm thứ hai trở đi mặc định là tương đối, như AutoCAD
+  function parseCoord(t, base, rel){
+    t = String(t).replace(/\s+/g, ''); let m;
+    if((m = /^([#*@])?([^,;<@#*]+)[,;]([^,;<@#*]+)(?:[,;]([^,;<@#*]+))?$/.exec(t))){
+      const x = parseLen(m[2]), y = parseLen(m[3]), z = m[4] != null ? parseLen(m[4]) : undefined;
+      if(!isFinite(x) || !isFinite(y) || (m[4] != null && !isFinite(z))) return null;
+      const isRel = m[1] === '@' || (!m[1] && !!rel && !!base); const b = isRel ? (base || A.lastPoint || { x: 0, y: 0 }) : { x: 0, y: 0 };
+      const p = { x: b.x + x, y: b.y + y }; if(z !== undefined) p.z = (isRel && base && base.z ? base.z : 0) + z; return p;
+    }
+    if((m = /^([#*@])?([^<@#*]+)<(-?[\d.]+)$/.exec(t))){
+      const d = parseLen(m[2]), a = num(m[3]) * D2R; if(!isFinite(d) || !isFinite(a)) return null;
+      const isRel = m[1] === '@' || (!m[1] && !!rel && !!base); const b = isRel ? (base || A.lastPoint || { x: 0, y: 0 }) : { x: 0, y: 0 };
+      return { x: b.x + d * Math.cos(a), y: b.y + d * Math.sin(a) };
+    }
     return null;
   }
   A.parseCoord = parseCoord;
@@ -878,63 +976,144 @@
     if(SET.ortho) return Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 0 : Math.PI) : (dy >= 0 ? Math.PI / 2 : -Math.PI / 2);
     return Math.hypot(dx, dy) > 1e-12 ? Math.atan2(dy, dx) : 0;
   }
-  A.input = function(text){
+  // lời nhắc phụ ngay trong lời nhắc điểm (FROM, M2P, TT, .X .Y .Z…): tạm thay prompt / base, xong thì trả về lời nhắc gốc
+  function subPrompt(r, label, steps, done){
+    const orig = r.res, oP = r.prompt, oB = r.base, oKw = r.kw, oNum = r.num, got = []; let trail = label;
+    const restore = () => { r.res = orig; r.prompt = oP; r.base = oB; r.kw = oKw; r.num = oNum; r._sub = false; };
+    const next = () => { const s = steps[got.length]; r.prompt = s.prompt; r.base = s.base ? s.base(got) : oB; r.kw = null; r.num = !!s.num; refresh(); paintSoon(); };
+    r._sub = true;
+    r.res = v => {
+      if(v.none || v.kw){ restore(); log(oP + ': ' + trail + ' *Huỷ*'); refresh(); paintSoon(); return; }
+      const s = steps[got.length];
+      const val = v.pt ? Object.assign({}, v.pt) : (v.num != null && s.num ? { num: v.num } : null); if(!val) return;
+      trail += ' ' + (typedNow || ''); got.push(val);
+      if(got.length < steps.length){ next(); return; }
+      restore(); r._echo = trail.replace(/\s+$/, ''); done(got, orig);
+    };
+    next();
+  }
+  const givePt = (r, res, pt) => { if(r.type === 'dist' && r.base) res({ num: Math.hypot(pt.x - r.base.x, pt.y - r.base.y), pt, typed: true }); else res({ pt, typed: true }); };
+  const clickLike = (r, pt) => { if(r.type === 'dist' && r.base) r.res({ num: Math.hypot(pt.x - r.base.x, pt.y - r.base.y), pt, typed: true }); else r.res({ pt, typed: true }); };
+  // gõ 1 số: theo đường truy bắt đang hiện (OTRACK / TT) hoặc theo hướng con trỏ từ điểm trước (ORTHO / POLAR / khoá góc)
+  function directDist(r, n){
+    const tr = lastPt && lastPt.track;
+    if(tr && !tr.multi && tr.base && tr.kind === 'track' && tr.base !== r.base) return { x: tr.base.x + n * Math.cos(tr.ang), y: tr.base.y + n * Math.sin(tr.ang) };
+    if(r.base){ const a = r.angLock != null ? r.angLock : dirFromCursor(r.base); return { x: r.base.x + n * Math.cos(a), y: r.base.y + n * Math.sin(a) }; }
+    return null;
+  }
+  // nhập gần đây (Recent Input, phím ↑ ↓ và chuột phải) theo loại lời nhắc
+  const RI = { pt: [], dist: [], ang: [], num: [], str: [], kw: [] };
+  function noteRecent(type, s){ const L = RI[type]; if(!L || !s) return; const i = L.indexOf(s); if(i >= 0) L.splice(i, 1); L.unshift(s); if(L.length > 20) L.pop(); }
+  A.recentInput = type => (RI[type] || []).slice();
+  A.noteRecent = noteRecent;
+  const SEL_HELP = 'Cần một điểm hoặc Window (W) / Last (L) / Crossing (C) / BOX / ALL / Fence (F) / WPolygon (WP) / CPolygon (CP) / Group (G) / Add (A) / Remove (R) / Multiple (M) / Previous (P) / Undo (U) / AUto (AU) / SIngle (SI)';
+  // bộ lọc điểm: lấy một phần toạ độ từ điểm thứ nhất, phần còn lại từ điểm thứ hai
+  const FILTERS = { '.X': ['YZ', (a, b) => ({ x: a.x, y: b.y })], '.Y': ['XZ', (a, b) => ({ x: b.x, y: a.y })], '.Z': ['XY', (a, b) => ({ x: b.x, y: b.y, z: a.z || 0 })],
+    '.XY': ['Z', (a, b) => ({ x: a.x, y: a.y, z: b.num != null ? b.num : (b.z || 0) })], '.XZ': ['Y', (a, b) => ({ x: a.x, y: b.y })], '.YZ': ['X', (a, b) => ({ x: b.x, y: a.y })] };
+  // opt.dyn = gõ ở ô nhập động cạnh con trỏ (chuột đang trên bản vẽ) — điểm thứ hai trở đi là toạ độ tương đối như AutoCAD
+  A.input = function(text, opt){ typedNow = String(text == null ? '' : text).trim(); try{ return inputImpl(text, opt || {}); } finally { typedNow = null; } };
+  function inputImpl(text, opt){
     const r = cur && cur.req; const t = String(text == null ? '' : text).trim();
     if(!cur) return false;
     if(!r){ return true; }
-    const T = t.toUpperCase().replace(/^'/, '');
-    if(TRANSPARENT.has(T.split(/\s+/)[0]) && !(r.kw && r.kw.some(k => deacc(k.k) === deacc(T)))){ try{ DVDCmd.runTransparent(T); }catch(_){} return true; }
+    const T = t.toUpperCase().replace(/^'/, ''), word = T.split(/\s+/)[0];
+    const kwHit = !!(r.kw && r.kw.some(k => deacc(k.k) === deacc(T)));
+    // lệnh trong suốt: 'ZOOM 'PAN 'CAL 'DIST 'LAYER 'OSMODE… (Z / P / RE không cần dấu ')
+    if(r.type !== 'str' && (t[0] === "'" || TRANSPARENT.has(word)) && !kwHit && T){ try{ if(window.DVDCmd && DVDCmd.runTransparent(T, t[0] === "'")) return true; }catch(err){ console.warn(err); } }
+    if(r.type === 'sel' && cur.selSub){ const f = cur.selSub; cur.selSub = null; r.prompt = f.oP; f.fn(t); refresh(); paintSelSoon(); return true; }
     if(!t){
       if(r.type === 'sel' && cur.poly){ finishPolySel(); return true; }
-      if(r.type === 'sel'){ if(win){ win = null; } r.res({ sel: [...cur.sel] }); return true; }
+      if(r.type === 'sel'){ if(win){ win = null; } cur.forceWin = null; r.res({ sel: [...cur.sel] }); return true; }
+      // nhập động: đã khoá độ dài / góc / X / Y bằng Tab → Enter nhận điểm đang hiện
+      if((r.type === 'pt' || r.type === 'dist') && (r.lenLock != null || r.angLock != null || r.xLock != null || r.yLock != null) && lastPt){ clickLike(r, { x: lastPt.x, y: lastPt.y }); return true; }
       r.res({ none: true }); return true;
     }
-    if(r.type === 'str'){ r.res({ str: t }); return true; }
-    // FROM (điểm gốc + độ lệch) / M2P (trung điểm giữa 2 điểm) — bắt điểm tạm như AutoCAD
-    if((r.type === 'pt' || r.type === 'dist') && /^(FROM|FRO|FR|M2P|MTP)$/.test(T) && !r._sub){
-      const orig = r.res, oP = r.prompt, oB = r.base, isFrom = T.startsWith('FR'), pts = [];
-      const restore = () => { r.res = orig; r.prompt = oP; r.base = oB; r._sub = false; };
-      r._sub = true; r.prompt = isFrom ? 'Điểm gốc (FROM)' : 'Điểm thứ nhất (trung điểm 2 điểm)';
-      r.res = v => {
-        if(v.none || v.kw){ restore(); refresh(); return; }
-        const pt = v.pt; if(!pt) return; pts.push(pt);
-        if(pts.length === 1){ if(isFrom){ r.base = pt; r.prompt = '<Độ lệch> — gõ @dx,dy hoặc @dài<góc'; } else r.prompt = 'Điểm thứ hai'; refresh(); paintSoon(); return; }
-        restore(); const out = isFrom ? pt : { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
-        if(r.type === 'dist' && r.base) r.res({ num: Math.hypot(out.x - r.base.x, out.y - r.base.y), pt: out }); else r.res({ pt: out, typed: true });
-      };
-      refresh(); return true;
+    if(r.type === 'str'){ noteRecent('str', t); r.res({ str: t }); return true; }
+    if((r.type === 'pt' || r.type === 'dist') && !r._sub){
+      if(/^(FROM|FRO|FR)$/.test(T)){ subPrompt(r, T, [{ prompt: 'Điểm gốc' }, { prompt: '<Độ lệch>', base: g => g[0] }], (g, res) => givePt(r, res, g[1])); return true; }
+      if(/^(M2P|MTP)$/.test(T)){ subPrompt(r, T, [{ prompt: 'Điểm thứ nhất của trung điểm' }, { prompt: 'Điểm thứ hai của trung điểm' }], (g, res) => givePt(r, res, { x: (g[0].x + g[1].x) / 2, y: (g[0].y + g[1].y) / 2 })); return true; }
+      if(T === 'TT'){ subPrompt(r, T, [{ prompt: 'Chỉ định điểm truy bắt tạm thời' }], g => { ttPts.push({ x: g[0].x, y: g[0].y }); r._echo = null; log('Đã lấy điểm truy bắt tạm — rê theo đường truy bắt rồi bấm, hoặc gõ khoảng cách.'); refresh(); paintSoon(); }); return true; }
+      if(FILTERS[T]){ const [need, mk] = FILTERS[T]; subPrompt(r, T, [{ prompt: T + ' của' }, { prompt: '(cần ' + need + ')', num: need === 'Z' }], (g, res) => givePt(r, res, mk(g[0], g[1]))); return true; }
+      // khoá góc (Angle Override): <45
+      const m = /^<{1,2}\s*(-?[\d.]+)$/.exec(T);
+      if(m){ if(!r.base){ log('Khoá góc cần có điểm trước đó.'); return true; } const a = num(m[1]); if(!isFinite(a)) return true; r.angLock = a * D2R; r.dynF = 0; log('Khoá góc: ' + (+a.toFixed(6)) + '°'); if(mouse) lastPt = computePoint(mouse, r, lastTouch); refresh(); paintSoon(); return true; }
     }
-    const kw = matchKw(r, t); if(kw){ r.res({ kw }); return true; }
+    const kw = matchKw(r, t); if(kw){ noteRecent('kw', t); r.res({ kw }); return true; }
+    if(r.parse){ const v = r.parse(t); if(v){ noteRecent(r.type, t); r.res(v); return true; } }   // lời nhắc tự hiểu cách gõ riêng (vd ZOOM: 2X)
     if(r.type === 'pt' || r.type === 'dist' || r.type === 'ang'){
       if(OS_KEY[T]){ osOverride = OS_KEY[T]; log('Bắt điểm 1 lần: ' + (OS_NAME[osOverride] || 'không')); refresh(); return true; }
     }
-    if(r.type === 'sel'){
-      if(T === 'ALL' || T === 'TẤT CẢ'){ for(const e of A.selectable()) cur.sel.add(e); A.expandGroups(cur.sel); log('Đã chọn ' + cur.sel.size); refresh(); paintSelSoon(); return true; }
-      if(T === 'P'){ for(const e of A.prevSel) if(modelEntities.indexOf(e) >= 0) cur.sel.add(e); log('Chọn lại: ' + cur.sel.size); refresh(); paintSelSoon(); return true; }
-      if(T === 'L'){ for(const e of A.lastAdded) if(modelEntities.indexOf(e) >= 0) cur.sel.add(e); refresh(); paintSelSoon(); return true; }
-      if(T === 'R'){ cur.remove = true; log('Chế độ bỏ chọn — bấm đối tượng để bỏ (gõ A để thêm lại)'); return true; }
-      if(T === 'A'){ cur.remove = false; return true; }
-      if(T === 'F' || T === 'WP' || T === 'CP' || T === 'FENCE' || T === 'WPOLYGON' || T === 'CPOLYGON'){ const m = T[0] === 'F' ? 'F' : T.slice(0, 2); cur.poly = { mode: m, pts: [] }; log(m === 'F' ? 'Hàng rào: bấm các điểm, Enter để chọn' : (m === 'WP' ? 'Đa giác trùm' : 'Đa giác cắt') + ': bấm các đỉnh, Enter để chọn'); refresh(); return true; }
-      log('Gõ ALL (tất cả), P (lần trước), L (vừa vẽ), R (bỏ), F (hàng rào), WP/CP (đa giác trùm/cắt), Enter (xong).'); return true;
+    if(r.type === 'sel') return selInput(r, T);
+    const n = parseLen(t), isNum = isFinite(n);
+    const rel = !!opt.dyn && SET.dynRel !== false;
+    if(r.type === 'pt' || (r.type === 'dist' && isNum && r.dynF === 1)){
+      // nhập động có ô: đang ở ô thứ hai (góc / Y) sau khi Tab
+      if(isNum && (r.dynF === 1 || r.xLock != null || r.yLock != null) && !r.num){
+        noteRecent('pt', t);
+        if(r.base){ const a = n * D2R, L = r.lenLock != null ? r.lenLock : (lastPt ? Math.hypot(lastPt.x - r.base.x, lastPt.y - r.base.y) : 0); clickLike(r, { x: r.base.x + L * Math.cos(a), y: r.base.y + L * Math.sin(a) }); return true; }
+        const x = r.dynF === 1 ? (r.xLock != null ? r.xLock : (lastPt ? lastPt.x : 0)) : n, y = r.dynF === 1 ? n : (r.yLock != null ? r.yLock : (lastPt ? lastPt.y : 0)); clickLike(r, { x, y }); return true;
+      }
     }
-    const n = num(t), isNum = /^-?[\d.]+(e-?\d+)?$/i.test(t.replace(',', '.'));
     if(r.type === 'pt'){
-      const p = parseCoord(t, r.base);
-      if(p){ r.res({ pt: p, typed: true }); return true; }
-      if(isNum && isFinite(n)){
-        if(r.num){ r.res({ num: n }); return true; }
-        if(r.base){ const a = dirFromCursor(r.base); r.res({ pt: { x: r.base.x + n * Math.cos(a), y: r.base.y + n * Math.sin(a) }, typed: true, dist: n }); return true; }
+      const bse = r._atBase || r.base;
+      if(t === '@'){ const p0 = bse || A.lastPoint; if(p0){ noteRecent('pt', t); r.res({ pt: { x: p0.x, y: p0.y }, typed: true }); return true; } }   // "@" = điểm cuối cùng (LASTPOINT)
+      const p = parseCoord(t, bse, rel);
+      if(p){ noteRecent('pt', t); r.res({ pt: p, typed: true }); return true; }
+      if(isNum){
+        if(r.num){ noteRecent('pt', t); r.res({ num: n }); return true; }
+        const d = directDist(r, n); if(d){ noteRecent('pt', t); r.res({ pt: d, typed: true, dist: n }); return true; }
       }
       log('Điểm không hợp lệ: "' + t + '" — dùng x,y · @dx,dy · dài<góc' + (r.base ? ' · hoặc 1 số (dài theo hướng con trỏ)' : '')); return true;
     }
     if(r.type === 'dist' || r.type === 'ang' || r.type === 'num'){
-      if(isNum && isFinite(n)){ r.res({ num: n }); return true; }
-      if(r.type === 'dist' && r.base){ const p = parseCoord(t, r.base); if(p){ r.res({ num: Math.hypot(p.x - r.base.x, p.y - r.base.y), pt: p }); return true; } }
+      if(isNum){ noteRecent(r.type, t); r.res({ num: n }); return true; }
+      if(r.type === 'dist' && r.base){ const p = parseCoord(t, r.base, rel); if(p){ noteRecent('dist', t); r.res({ num: Math.hypot(p.x - r.base.x, p.y - r.base.y), pt: p }); return true; } }
       log('Cần nhập số.'); return true;
     }
     if(r.type === 'kw'){ log('Tuỳ chọn không hợp lệ: ' + t); return true; }
     return true;
+  }
+  // thêm / bớt vào bộ chọn của lời nhắc "Chọn đối tượng" (ghi lại để U hoàn tác lần chọn)
+  function selAdd(list, remove){
+    if(!cur) return 0; const set = A.expandGroups(new Set(list)); const ch = [];
+    for(const e of set){ if(remove){ if(cur.sel.delete(e)) ch.push(e); } else if(!cur.sel.has(e)){ cur.sel.add(e); ch.push(e); } }
+    if(ch.length) (cur.selHist || (cur.selHist = [])).push({ remove: !!remove, ents: ch });
+    return ch.length;
+  }
+  function selSingleDone(r){ if(cur && cur.selSingle && cur.sel.size && cur.req === r){ cur.selSingle = false; r.res({ sel: [...cur.sel] }); } }
+  function selInput(r, T){
+    const done = msg => { if(msg) log(msg); refresh(); paintSelSoon(); selSingleDone(r); return true; };
+    const live = L => L.filter(e => modelEntities.indexOf(e) >= 0 && (!r.filter || r.filter(e)));
+    if(T === 'ALL' || T === 'TẤT CẢ'){ const n = selAdd(A.selectable().filter(e => !r.filter || r.filter(e)), cur.remove); return done('tìm thấy ' + n + ', tổng ' + cur.sel.size); }
+    if(T === 'P' || T === 'PREVIOUS'){ const n = selAdd(live(A.prevSel), cur.remove); return done('Chọn lại: ' + n + ', tổng ' + cur.sel.size); }
+    if(T === 'L' || T === 'LAST'){ const n = selAdd(live(A.lastAdded), cur.remove); return done('tìm thấy ' + n + ', tổng ' + cur.sel.size); }
+    if(T === 'R' || T === 'REMOVE'){ cur.remove = true; if(!r.prompt0){ r.prompt0 = r.prompt; r.prompt = 'Bỏ đối tượng'; } log('Bấm đối tượng cần bỏ khỏi bộ chọn (gõ A để thêm lại).'); refresh(); return true; }
+    if(T === 'A' || T === 'ADD'){ cur.remove = false; if(r.prompt0){ r.prompt = r.prompt0; r.prompt0 = null; } refresh(); return true; }
+    if(T === 'W' || T === 'WINDOW' || T === 'C' || T === 'CROSSING' || T === 'BOX'){ cur.forceWin = T === 'BOX' ? 'BOX' : T[0]; win = null; log((cur.forceWin === 'W' ? 'Khung trùm' : cur.forceWin === 'C' ? 'Khung cắt' : 'Khung') + ' — chỉ định góc thứ nhất'); refresh(); return true; }
+    if(T === 'F' || T === 'WP' || T === 'CP' || T === 'FENCE' || T === 'WPOLYGON' || T === 'CPOLYGON'){ const m = T[0] === 'F' ? 'F' : T.slice(0, 2); cur.poly = { mode: m, pts: [] }; log(m === 'F' ? 'Hàng rào: bấm các điểm, Enter để chọn' : (m === 'WP' ? 'Đa giác trùm' : 'Đa giác cắt') + ': bấm các đỉnh, Enter để chọn'); refresh(); return true; }
+    if(T === 'G' || T === 'GROUP'){ const oP = r.prompt; r.prompt = 'Nhập tên nhóm';
+      cur.selSub = { oP, fn: name => { const N = String(name || '').trim().toUpperCase().replace(/^\*/, ''); if(!N) return;
+        const mem = modelEntities.filter(e => e.grp && e.grp[0] === 'G' && String(e.blk || '').toUpperCase().replace(/^\*/, '') === N && !isLockedE(e) && !isHiddenE(e) && (!r.filter || r.filter(e)));
+        if(!mem.length){ log('Không có nhóm "' + String(name).trim() + '".'); return; } const n = selAdd(mem, cur.remove); done('tìm thấy ' + n + ', tổng ' + cur.sel.size); } };
+      refresh(); return true; }
+    if(T === 'U' || T === 'UNDO'){ const h = cur.selHist && cur.selHist.pop(); if(!h){ log('Không còn lần chọn nào để hoàn tác.'); return true; } for(const e of h.ents){ if(h.remove) cur.sel.add(e); else cur.sel.delete(e); } log('Hoàn tác lần chọn trước — tổng ' + cur.sel.size); refresh(); paintSelSoon(); return true; }
+    if(T === 'SI' || T === 'SINGLE'){ cur.selSingle = true; return true; }
+    if(T === 'M' || T === 'MULTIPLE' || T === 'AU' || T === 'AUTO' || T === 'O' || T === 'OBJECT'){ cur.forceWin = null; return true; }
+    if(T === '?'){ log(SEL_HELP); return true; }
+    log('*Lựa chọn không hợp lệ* — ' + SEL_HELP); return true;
+  }
+  // nhập động có ô (Tab): khoá giá trị ô đang gõ (độ dài / góc, hoặc X / Y với điểm đầu) rồi chuyển sang ô kia
+  A.dynTab = function(text){
+    const r = cur && cur.req; if(!r || !(r.type === 'pt' || r.type === 'dist') || !SET.dyn || r.num) return false;
+    const t = String(text || '').trim(); const v = t ? parseLen(t) : NaN;
+    if(t && !isFinite(v)) return false;
+    const f = r.dynF || 0;
+    if(r.base){ if(isFinite(v)){ if(f === 0) r.lenLock = Math.abs(v); else r.angLock = v * D2R; } }
+    else if(isFinite(v)){ if(f === 0) r.xLock = v; else r.yLock = v; }
+    r.dynF = 1 - f;
+    if(mouse) lastPt = computePoint(mouse, r, lastTouch); refresh(); paintSoon(); return true;
   };
+  A.dynField = () => { const r = cur && cur.req; return r ? (r.dynF || 0) : 0; };
   A.getNum = (prompt, o) => ask(Object.assign({ type: 'num', prompt }, o || {}));
 
   /* =====================================================================
@@ -972,10 +1151,10 @@
     const set = A.expandGroups(new Set([e])); let k = 0; for(const x of set){ if(cur.remove){ if(cur.sel.delete(x)) k++; } else if(!cur.sel.has(x)){ cur.sel.add(x); k++; } }
     log((cur.remove ? 'Bỏ ' : 'Thêm ') + k + ', tổng ' + cur.sel.size + ' — Enter / chuột phải để xong'); refresh(); paintSelSoon(); return true;
   };
-  function winSelect(x0, y0, x1, y1, filter){
+  function winSelect(x0, y0, x1, y1, filter, mode){
     const a = toWorld(x0, y0), b = toWorld(x1, y1);
     const box = { minx: Math.min(a.x, b.x), maxx: Math.max(a.x, b.x), miny: Math.min(a.y, b.y), maxy: Math.max(a.y, b.y) };
-    const crossing = x1 < x0; const out = [];
+    const crossing = mode === 'C' ? true : mode === 'W' ? false : x1 < x0; const out = [];
     for(const e of queryBox(box.minx, box.miny, box.maxx, box.maxy)){
       if(isLockedE(e) || (filter && !filter(e))) continue;
       if(e.type === 'HATCH'){ const bb = entBBox(e); if(!bb) continue; const inside = bb.x0 >= box.minx && bb.x1 <= box.maxx && bb.y0 >= box.miny && bb.y1 <= box.maxy; if(inside || (crossing && (G.ptInLoops({ x: (box.minx + box.maxx) / 2, y: (box.miny + box.maxy) / 2 }, e.loops || []) || (e.loops || []).some(lp => lp.some(p => p.x >= box.minx && p.x <= box.maxx && p.y >= box.miny && p.y <= box.maxy))))) out.push(e); continue; }
@@ -1116,7 +1295,7 @@
     if(!hasDoc()) return;
     // nút giữa: kéo màn hình (kích đúp = phóng vừa bản vẽ)
     if(ev.button === 1){ ev.preventDefault(); ev.stopPropagation(); const now = Date.now(); if(now - lastMidClick < 350){ try{ fitView(); }catch(_){} lastMidClick = 0; return; } lastMidClick = now; panDrag = { x: p.x, y: p.y, id: ev.pointerId }; try{ cv.setPointerCapture(ev.pointerId); }catch(_){} return; }
-    if(ev.button === 2){ ev.preventDefault(); ev.stopPropagation(); onRightClick(ev, p); return; }
+    if(ev.button === 2){ ev.preventDefault(); ev.stopPropagation(); rightDown(ev, p); return; }
     if(cur){
       if(touch){ down = { x: p.x, y: p.y, t: Date.now(), id: ev.pointerId, touch: true, moved: false, multi: pointers.size >= 1 }; return; }   // chạm: để app theo dõi ngón (chụm zoom)
       ev.stopPropagation(); ev.preventDefault();
@@ -1151,7 +1330,7 @@
         return;
       }
       mouse = p;
-      if(down.moved && !win){ const selReq = (!cur || (cur.req && cur.req.type === 'sel')) && !(cur && cur.poly); if(selReq) win = { x0: down.x, y0: down.y, x1: p.x, y1: p.y, owner: cur ? 'cmd' : 'idle', press: true }; }
+      if(down.moved && !win){ const selReq = (!cur || (cur.req && cur.req.type === 'sel')) && !(cur && cur.poly); if(selReq){ win = { x0: down.x, y0: down.y, x1: p.x, y1: p.y, owner: cur ? 'cmd' : 'idle', press: true, force: (cur && cur.forceWin) || undefined }; if(cur) cur.forceWin = null; } }
       if(win){ win.x1 = p.x; win.y1 = p.y; }
     }
   });
@@ -1183,7 +1362,7 @@
       if(r.type === 'sel'){ selClick(p, o); return; }
       if(r.type === 'pt' || r.type === 'dist' || r.type === 'ang'){
         const q = computePoint(p, r, o.touch); osOverride = null;
-        const pt = { x: q.x, y: q.y };
+        const pt = { x: q.x, y: q.y }; noteRecent(r.type === 'ang' ? 'pt' : r.type, A.fmt(pt.x).replace(/\.?0+$/, '') + ',' + A.fmt(pt.y).replace(/\.?0+$/, ''));
         if(r.type === 'pt') r.res({ pt, snap: q.snap });
         else if(r.type === 'dist'){ if(r.base) r.res({ num: Math.hypot(pt.x - r.base.x, pt.y - r.base.y), pt }); else r.res({ pt }); }
         else { if(r.base) r.res({ num: Math.atan2(pt.y - r.base.y, pt.x - r.base.x) * R2D, pt }); else r.res({ pt }); }
@@ -1220,20 +1399,20 @@
       if(P.mode === 'WP'){ if(allIn && !crosses(e)) hit.push(e); }
       else if(allIn || q.some(z => G.ptInPoly(z, pts)) || crosses(e)) hit.push(e);
     }
-    const set = A.expandGroups(new Set(hit)); let k = 0; for(const e of set){ if(cur.remove){ if(cur.sel.delete(e)) k++; } else if(!cur.sel.has(e)){ cur.sel.add(e); k++; } }
-    log((P.mode === 'F' ? 'Hàng rào' : P.mode === 'WP' ? 'Đa giác trùm' : 'Đa giác cắt') + ': ' + (cur.remove ? 'bỏ ' : 'thêm ') + k + ', tổng ' + cur.sel.size); refresh(); paintSelSoon(); paintSoon();
+    const k = selAdd(hit, cur.remove);
+    log((P.mode === 'F' ? 'Hàng rào' : P.mode === 'WP' ? 'Đa giác trùm' : 'Đa giác cắt') + ': ' + (cur.remove ? 'bỏ ' : 'thêm ') + k + ', tổng ' + cur.sel.size); refresh(); paintSelSoon(); paintSoon(); selSingleDone(r);
   }
   function selClick(p, o){
     const r = cur.req;
     if(cur.poly){ cur.poly.pts.push(toWorld(p.x, p.y)); paintSoon(); return; }
     if(win && win.owner === 'cmd' && !win.press){ const w0 = win; win = null; w0.x1 = p.x; w0.y1 = p.y; applyCmdWin(w0, o.shift); return; }
+    if(cur.forceWin && !r.single){ win = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, owner: 'cmd', press: false, force: cur.forceWin }; cur.forceWin = null; paintSoon(); return; }
     const hit = pickAt(p, { touch: o.touch, filter: r.filter, allowLocked: r.allowLocked });
     if(hit){
       if(r.single){ r.res({ sel: [hit], ent: hit, pt: toWorld(p.x, p.y), shift: !!o.shift }); return; }
-      const set = A.expandGroups(new Set([hit]));
-      const rem = o.shift || cur.remove;
-      for(const e of set){ if(rem) cur.sel.delete(e); else cur.sel.add(e); }
-      refresh(); paintSelSoon(); return;
+      const rem = o.shift || cur.remove, had = cur.sel.has(hit); const n = selAdd([hit], rem);
+      log(plainPrompt(r) + ': tìm thấy 1' + (rem ? ', bỏ ' + (n ? 1 : 0) : had ? ' (trùng)' : '') + ', tổng ' + cur.sel.size);
+      refresh(); paintSelSoon(); selSingleDone(r); return;
     }
     if(r.single){ if(r.allowNone){ r.res({ none: true, pt: toWorld(p.x, p.y) }); return; } log('Không trúng đối tượng nào.'); return; }
     win = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, owner: 'cmd', press: false };
@@ -1241,12 +1420,11 @@
   }
   function applyCmdWin(w0, shift){
     const r = cur && cur.req; if(!r || r.type !== 'sel') return;
-    const res = winSelect(w0.x0, w0.y0, w0.x1, w0.y1, r.filter);
+    const res = winSelect(w0.x0, w0.y0, w0.x1, w0.y1, r.filter, w0.force === 'BOX' ? null : w0.force);
     if(r.wantWindow){ r.res({ window: res, sel: [...A.expandGroups(new Set(res.list))] }); return; }
-    const set = A.expandGroups(new Set(res.list)); const rem = shift || cur.remove; let n = 0;
-    for(const e of set){ if(rem){ if(cur.sel.delete(e)) n++; } else if(!cur.sel.has(e)){ cur.sel.add(e); n++; } }
+    const rem = shift || cur.remove; const n = selAdd(res.list, rem);
     log((res.crossing ? 'Khung cắt' : 'Khung trùm') + ': ' + (rem ? 'bỏ ' : 'thêm ') + n + ', tổng ' + cur.sel.size);
-    refresh(); paintSelSoon();
+    refresh(); paintSelSoon(); selSingleDone(r);
   }
   function finishIdleWin(p, shift){ const w0 = win; win = null; w0.x1 = p.x; w0.y1 = p.y; if(Math.hypot(w0.x1 - w0.x0, w0.y1 - w0.y0) < 3){ paintSoon(); return; } applyIdleWin(w0, shift); }
   function applyIdleWin(w0, shift){
@@ -1287,6 +1465,15 @@
     selEnts.add(e); A.expandGroups(selEnts); refreshPanSel();
     if(A.showProps) A.showProps(true);
   });
+  // chuột phải: Shift / Ctrl + phải = menu bắt điểm; đang chạy lệnh: bấm nhanh = Enter, giữ ≥ 250 ms = menu lệnh (như "Time-sensitive right-click" của AutoCAD)
+  let rc = null;
+  function rightDown(ev, p){
+    if((ev.shiftKey || ev.ctrlKey) && cur && cur.req && A.osnapMenu){ A.osnapMenu(ev.clientX, ev.clientY); return; }
+    if(!cur || !A.cmdMenu){ onRightClick(ev, p); return; }
+    const R = rc = { x: ev.clientX, y: ev.clientY, p, done: false };
+    R.t = setTimeout(() => { if(rc !== R) return; R.done = true; rc = null; A.cmdMenu(R.x, R.y); }, SET.rcMs || 250);
+  }
+  window.addEventListener('pointerup', ev => { if(!rc || ev.button !== 2) return; const R = rc; rc = null; clearTimeout(R.t); if(!R.done) onRightClick(ev, R.p); }, true);
   function onRightClick(ev, p){
     if(cur){ if(win){ win = null; paintSoon(); return; } A.input(''); refresh(); return; }
     if(win){ win = null; paintSoon(); return; }

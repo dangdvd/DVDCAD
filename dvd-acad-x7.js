@@ -261,9 +261,12 @@
     DWGNAME: { d: 'Tên bản vẽ — chỉ đọc', s: 1, get: () => docName(), set: () => {} },
     ISODRAFT: { d: 'Vẽ trục đo (0 tắt, T trên, L trái, R phải)', s: 1, get: () => SET.iso ? SET.iso.toUpperCase()[0] : '0', set: v => setIso(String(v).trim().toUpperCase()) }
   };
-  A.sysvar = { get: n => V[n] ? V[n].get() : undefined, set: (n, v) => { if(!V[n]) return false; V[n].set(v); return true; }, list: () => Object.keys(V) };
-  async function askVar(n){ const x = V[n]; const cur = x.get(); const r = await A.getStr('Nhập giá trị mới cho ' + n + ' <' + cur + '>', { def: String(cur) }); if(r.str == null || r.str === '') return; x.set(r.str); log(n + ' = ' + V[n].get()); try{ draw(); A.paint(); }catch(_){} }
-  for(const n of Object.keys(V)){ if(DVDCmd.commands.some(c => c.k.includes(n))) continue; cmd([n], 'Biến hệ thống: ' + V[n].d, () => askVar(n)); }
+  async function askVar(n){ const x = V[n]; const cur = x.get(); if(x.ro){ log(n + ' = ' + cur + ' (chỉ đọc)'); return; } const r = await A.getStr('Nhập giá trị mới cho ' + n, { def: String(cur) }); if(r.str == null || r.str === '') return; x.set(r.str); log(n + ' = ' + V[n].get()); try{ draw(); A.paint(); }catch(_){} }
+  const regVar = n => { if(DVDCmd.commands.some(c => c.k.includes(n))) return; cmd([n], 'Biến hệ thống: ' + V[n].d, () => askVar(n)); };
+  // def: mô-đun khác khai báo thêm biến hệ thống (gõ tên ở dòng lệnh, SETVAR, (getvar) / (setvar) của LISP)
+  A.sysvar = { get: n => V[n] ? V[n].get() : undefined, set: (n, v) => { if(!V[n] || V[n].ro) return false; V[n].set(v); return true; }, list: () => Object.keys(V), desc: n => V[n] ? V[n].d : '',
+    def: (n, o) => { n = String(n).toUpperCase(); V[n] = o; regVar(n); } };
+  for(const n of Object.keys(V)) regVar(n);
   plain(['SETVAR', 'SET', 'SYSVAR'], 'Biến hệ thống (OSMODE, ORTHOMODE, PDMODE, CLAYER, TEXTSIZE…)', () => {
     const rows = () => Object.keys(V).sort().map(n => '<tr><td><b>' + n + '</b></td><td><input data-v="' + n + '" value="' + esc(V[n].get()) + '" style="width:120px"></td><td style="white-space:normal;opacity:.8;font-size:11.5px">' + esc(V[n].d) + '</td></tr>').join('');
     A.dialog({ title: 'Biến hệ thống (SETVAR)', wide: true, okText: 'Áp dụng', html: '<input id="svF" placeholder="Lọc tên biến…" style="width:100%;margin-bottom:6px"><div class="lm-tbl"><table><thead><tr><th>Tên</th><th>Giá trị</th><th>Ý nghĩa</th></tr></thead><tbody id="svB">' + rows() + '</tbody></table></div><p style="opacity:.75;font-size:12px">Cũng có thể gõ thẳng tên biến ở dòng lệnh, vd <code>OSMODE</code>, <code>PDMODE</code>.</p>',

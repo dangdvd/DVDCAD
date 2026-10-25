@@ -1,26 +1,71 @@
-# DVDCAD v4o — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5k — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
 
 ## Cách dùng chung (giống AutoCAD)
 - Gõ lệnh hoặc lệnh tắt rồi bấm **Enter** hoặc **Space**. **Enter** khi trống sẽ lặp lại lệnh trước. **Esc** để huỷ.
-- Lời nhắc hiện ở dòng lệnh. Bấm vào **chữ vàng** trong `[...]` hoặc gõ chữ tắt để chọn tuỳ chọn.
-- Khi đang chạy lệnh, **chuột phải = Enter**. Khi rảnh, chuột phải mở menu (lặp lệnh, sao chép/dán, di chuyển…).
-- **Chọn trước rồi gõ lệnh** cũng được: MOVE, COPY, ERASE… sẽ dùng luôn các đối tượng đang chọn.
+- Lời nhắc hiện ở dòng lệnh, kèm cả câu trả lời trong lịch sử (vd `Chỉ định điểm tiếp theo [Hoàn tác]: @100,0`) như AutoCAD.
+  Bấm vào **chữ vàng** trong `[...]` hoặc gõ chữ tắt để chọn tuỳ chọn; chữ tắt hiện nhỏ sau tên tuỳ chọn, vd `Hoàn tác(U)`.
+- Chuột phải khi đang chạy lệnh: **bấm nhanh = Enter**, **giữ chuột phải** = menu (Enter, Huỷ, nhập gần đây, tuỳ chọn, cách chọn, bắt điểm tạm, 'ZOOM, 'CAL).
+  **Shift + chuột phải** = menu bắt điểm 1 lần. Khi rảnh, chuột phải mở menu (lặp lệnh, sao chép/dán, di chuyển…).
+- **Chọn trước rồi gõ lệnh** cũng được: MOVE, COPY, ERASE… sẽ dùng luôn các đối tượng đang chọn (`PICKFIRST`).
+- Tên lệnh: `_LINE` (tên quốc tế), `.LINE` (lệnh gốc, bỏ qua UNDEFINE), `-LAYER` (bản dòng lệnh, dùng cho script), `'ZOOM` (trong suốt).
 - Nhập điểm:
-  - `x,y` là toạ độ tuyệt đối.
-  - `@dx,dy` là dời so với điểm trước.
-  - `@dài<góc` (hoặc `dài<góc`) là theo chiều dài và góc.
-  - Chỉ gõ **một số** thì đi theo hướng con trỏ, đúng như cách nhập khoảng cách trực tiếp của AutoCAD. Dùng chung với ORTHO hoặc POLAR rất tiện.
-- Bắt điểm một lần: khi được hỏi điểm, gõ `END`, `MID`, `CEN`, `INT`, `PER`, `TAN`, `NEA`, `QUA`, `NOD`, `INS` hoặc `NON`.
-- `FROM`: chọn điểm gốc rồi gõ độ lệch (`@500,200`) để lấy điểm cách gốc một khoảng.
-- `M2P`: lấy trung điểm giữa 2 điểm bất kỳ.
-- Khi chọn đối tượng, ngoài ALL, P, L, R còn gõ được:
-  - `F`: hàng rào, chọn các đối tượng mà đường gấp khúc cắt qua.
-  - `WP`: đa giác trùm, chỉ chọn đối tượng nằm trọn trong đa giác.
-  - `CP`: đa giác cắt, chọn đối tượng nằm trong hoặc chạm đa giác.
-  - Bấm các đỉnh rồi Enter.
+  - `x,y` (hoặc `x,y,z`): khi gõ ở ô **nhập động** cạnh con trỏ, điểm thứ hai trở đi là **tương đối** như AutoCAD; `#x,y` (hoặc `*x,y`) là tuyệt đối. Gõ khi chuột không ở trên bản vẽ, trong script hoặc LISP thì `x,y` là tuyệt đối. `DYNPICOORDS = 1` để luôn tuyệt đối.
+  - `@dx,dy` là dời so với điểm trước, `@dài<góc` theo chiều dài và góc, `@` một mình là chính điểm cuối cùng (`LASTPOINT`).
+  - Chỉ gõ **một số** thì đi theo hướng con trỏ (ORTHO / POLAR), hoặc theo đường truy bắt đang hiện (OTRACK / TT) tính từ điểm truy bắt.
+  - `<45` khoá hướng 45° cho điểm kế tiếp (Angle Override), rồi bấm hoặc gõ độ dài.
+  - Số có thể viết `2,5` `1/2` `3-1/2`. Bản vẽ đơn vị inch / feet nhận `5'6"`, `5'-6 1/2"`, `6"`.
+  - **Tab** trong nhập động: khoá ô đang gõ (độ dài / góc, hoặc X / Y) rồi sang ô kia — vd `100` Tab `30` Enter.
+  - **↓** ở lời nhắc có tuỳ chọn mở danh sách tuỳ chọn cạnh con trỏ; **↑ / ↓** gọi lại giá trị đã nhập gần đây.
+- Bắt điểm một lần: khi được hỏi điểm, gõ `END`, `MID`, `CEN`, `INT`, `PER`, `TAN`, `NEA`, `QUA`, `NOD`, `INS`, `EXT`, `PAR`, `GCE` hoặc `NON`.
+- `FROM`: chọn điểm gốc rồi gõ độ lệch (`@500,200`). `M2P`: trung điểm giữa 2 điểm. `TT`: điểm truy bắt tạm thời.
+- Bộ lọc điểm `.X` `.Y` `.Z` `.XY` `.XZ` `.YZ`: lấy một phần toạ độ từ điểm thứ nhất, phần còn lại từ điểm thứ hai (`.X` của … `(cần YZ)`).
+- **Lệnh trong suốt** (gõ `'` trước tên khi đang ở lời nhắc của lệnh khác): `'ZOOM` `'PAN` `'CAL` `'DIST` `'ID` `'LAYER` `'OSNAP` `'SETVAR` và mọi biến hệ thống (`'OSMODE`).
+  Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
+- Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
+- Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Lưu DWG gốc (v5k)
+- `SAVEDWG` ghi thẳng file **DWG 2000 (AC1015)** bằng bộ ghi có sẵn của DVDCAD — không cần ODA File Converter, chạy cả trên trình duyệt và điện thoại.
+- `SAVEAS` / **Ctrl+Shift+S** chọn được *Bản vẽ AutoCAD (\*.dwg)*; **Ctrl+S** sau đó ghi đè đúng định dạng đó.
+- Mở DWG: thuộc tính khối (ATTRIB) không còn bị đọc trùng hai lần.
+- Chi tiết, phiên bản DWG 2004 → 2018 qua ODA: mục **Lưu DWG** trong phần khối động bên dưới.
+
+## Dòng lệnh (v5j) — như AutoCAD 2027
+- **Gợi ý khi gõ** (AutoComplete) có biểu tượng, gồm:
+  - lệnh khớp đầu tên, lệnh chứa chuỗi gõ (tìm giữa chuỗi: `LINE` thấy `PLINE`, `XLINE`…), xếp lệnh hay dùng lên đầu;
+  - **từ đồng nghĩa**: `ROUND` → FILLET, `SYMBOL` → INSERT, `XOAY` → ROTATE, `CHUNHAT` → RECTANG…;
+  - **tự sửa lỗi gõ** (AutoCorrect): `LNIE` → LINE; sửa cùng một lỗi 3 lần thì lần sau tự chạy đúng lệnh;
+  - **biến hệ thống** kèm giá trị hiện tại;
+  - **nội dung bản vẽ**: lớp (bấm = đặt hiện hành), khối (chèn), mẫu hatch (tô), kiểu chữ (đặt hiện hành).
+  - Phần còn lại của tên lệnh hiện mờ (AutoAppend): **→** hoặc **Tab** để nhận.
+- Nút bên trái dòng lệnh: **✕** ẩn (Ctrl+9), **🔧 Tuỳ chỉnh** (bật / tắt từng loại gợi ý, số dòng lời nhắc, độ trong suốt, neo ở đáy cửa sổ, lịch sử), **▾ Lệnh gần đây**.
+- `INPUTSEARCHOPTIONS`: hộp thoại cài đặt gợi ý. Biến: `AUTOCOMPLETEMODE`, `AUTOCOMPLETEDELAY`, `INPUTSEARCHDELAY`, `CLIPROMPTLINES`, `DYNPICOORDS`, `DYNPROMPT`, `SHORTCUTMENUDURATION`, `PICKFIRST`, `LASTPOINT`, `CMDACTIVE`, `CMDNAMES`, `HPNAME`, `HPSCALE`, `HPANG`, `TEXTSTYLE`, `EXTMIN`, `EXTMAX`.
+- **F1** khi đang chạy lệnh mở thẳng trang trợ giúp của lệnh đó: cách dùng, tuỳ chọn, lời nhắc đầu, nút **Tìm trên ribbon** (chuyển tới tab và nhấp nháy nút lệnh).
+- **F2** mở rộng lịch sử ngay trên dòng lệnh, **Ctrl+F2** cửa sổ chữ (sao chép được).
+- `MULTIPLE` hỏi tên lệnh ngay trên dòng lệnh. `UNDO` nhận số bước, `BE`/`E` (gộp nhóm), `M`/`B` (đánh dấu / lùi về); `U` hoàn tác 1 bước.
+- Bản dòng lệnh cho script `.scr` và LISP: `-LAYER` (? M S N ON OFF C L LW F T LO U), `-INSERT`, `-BLOCK`, `-OSNAP`. Ví dụ:
+  ```
+  -LAYER M TUONG C 1 TUONG L DASHED TUONG
+  
+  -OSNAP END,MID,INT
+  LINE 0,0 100,0 100,50
+  
+  ```
+- Tuỳ chọn lệnh theo AutoCAD 2027:
+  - `PLINE`: Arc / Close / Halfwidth / **Length** / Undo / Width; khi vẽ cung: **Angle / CEnter / CLose / Direction** / Halfwidth / Line / **Radius / Second pt** / Undo / Width.
+  - `CIRCLE`: 3P / 2P / **Ttr**; `ELLIPSE`: **Arc** / Center; `XLINE`: Hor / Ver / **Ang / Bisect / Offset**.
+  - `RECTANG`: **Chamfer / Fillet / Width** rồi **Area** / Dimensions / **Rotation**.
+  - `TEXT`: Justify (đủ TL … BR) / **Style**; `MTEXT`: **Height / Justify / Rotation / Style / Width** (không hỏi lại cao chữ sau khung).
+  - `MOVE` / `COPY`: Enter ở điểm thứ hai = dùng điểm thứ nhất làm độ dời; `COPY` có **mOde** (Một lần / Nhiều lần), Array, **Exit**, Undo.
+  - `TRIM`: cuTting edges / **Crossing / Fence / mOde / eRase** / Undo; `EXTEND`: **Boundary edges** / Crossing / Fence / mOde / Undo; Shift + chọn để đổi cắt ↔ kéo dài.
+  - `FILLET`: Undo / Polyline / Radius / **Trim** / Multiple, Shift + chọn = góc nhọn; `CHAMFER`: Undo / Polyline / **Distance (2 khoảng) / Angle / Trim / mEthod** / Multiple.
+  - `ZOOM`: All / **Center** / Extents / Previous / **Scale** / Window / Object, gõ `2X` = so với màn hình hiện tại.
+  - `AREA`: Object / **Add area / Subtract area** (cộng dồn tổng diện tích); `DIST`: **Multiple points**; `MEASUREGEOM`: Distance / Radius / Angle / ARea / Quick / eXit.
+  - `DIVIDE` / `MEASURE`: **Block** (chèn khối, có xoay theo đối tượng); `PEDIT`: Close / Join / Width / **Fit / Spline / Decurve** / Reverse / **Undo**.
+  - `OFFSET`: thêm **Exit**; `DIMLINEAR`: **Mtext** / Text / Horizontal / Vertical / Rotated; `WIPEOUT`: Frames / **Polyline** (`P`).
 
 ## Nhiều bản vẽ cùng lúc
 Mỗi file mở ra là một **tab** (như AutoCAD). Bấm tab để chuyển. **Ctrl+Tab** chuyển tab kế tiếp. Ctrl+F4, chữ × hoặc bấm chuột giữa vào tab để đóng tab đó. Mọi thay đổi tự lưu theo từng file.
@@ -40,7 +85,7 @@ Mỗi file mở ra là một **tab** (như AutoCAD). Bấm tab để chuyển. *
 ## Phím tắt
 | Phím | Chức năng | Phím | Chức năng |
 |---|---|---|---|
-| F1 | Danh sách lệnh | F2 | Lịch sử dòng lệnh |
+| F1 | Trợ giúp (đang chạy lệnh: trang của lệnh đó) | F2 / Ctrl+F2 | Lịch sử dòng lệnh / cửa sổ chữ |
 | F3 | OSNAP bắt điểm | F7 | GRID lưới |
 | F8 | ORTHO (giữ Shift = tạm thời) | F9 | SNAP bước lưới |
 | F10 | POLAR góc cực | F11 | OTRACK truy bắt |
@@ -50,7 +95,8 @@ Mỗi file mở ra là một **tab** (như AutoCAD). Bấm tab để chuyển. *
 | Ctrl+Shift+C / V | Sao chép kèm điểm gốc / dán đúng toạ độ | Ctrl+N / O / S | Mới / mở / lưu |
 | Ctrl+Shift+S | Lưu thành DXF | Ctrl+P | In / xuất |
 | Ctrl+A | Chọn tất cả | Ctrl+9 / Ctrl+0 | Ẩn/hiện dòng lệnh / toàn màn hình |
-| Ctrl+Shift+A | Bật/tắt chọn cả nhóm/khối | | |
+| Ctrl+Shift+A | Bật/tắt chọn cả nhóm/khối | Tab | Nhập động: khoá ô, sang ô kia |
+| ↑ / ↓ | Lệnh trước / nhập gần đây; ↓ = danh sách tuỳ chọn | → | Nhận phần tên lệnh đang hiện mờ |
 | Delete | Xoá đối tượng đang chọn | Esc | Huỷ / bỏ chọn |
 
 Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thái để chọn nhanh bước góc hoặc loại điểm bắt.
@@ -752,10 +798,13 @@ Bố cục tab, bảng và biểu tượng theo AutoCAD để người dùng Aut
 - Định nghĩa khối động lưu trên máy theo tên khối nên dùng được cho mọi bản vẽ chèn khối đó.
 
 **Lưu DWG:**
-- `SAVEDWG` (`DWGOUT`) — lưu ra file **DWG**. `DWGSERVER` để chọn phiên bản DWG, đường dẫn ODA File Converter, địa chỉ máy chủ.
-  - Bản Windows: cài **ODA File Converter** (miễn phí) là lưu được ngay trên máy, không cần mạng hay máy chủ.
-  - Bản web: lưu qua máy chủ chuyển đổi của bạn (hướng dẫn bên dưới).
-- Chuẩn bị một lần trên máy tính: cài **ODA File Converter** (miễn phí) và **Node.js**, chạy `node server-dwg.js` (file có trong repo; đặt biến `ODA` trỏ tới ODAFileConverter). Điện thoại dùng được nếu cùng mạng với máy tính đó (nhập `http://<IP máy tính>:8787/convert`).
+- `SAVEDWG` (`DWGOUT`) — lưu ra file **DWG 2000** (AC1015) bằng bộ ghi có sẵn trong DVDCAD: chạy cả trên trình duyệt, điện thoại và bản Windows, không cần mạng hay cài thêm.
+  - Giữ: lớp (màu, bật/tắt, đóng băng, khoá, bề rộng nét, kiểu nét), kiểu nét có chữ / hình, kiểu chữ, khối + thuộc tính, kích thước (thẳng, chéo, góc, bán kính, đường kính), hatch đặc và hatch mẫu, đa tuyến có cung / độ rộng, MTEXT, elip, XLINE / RAY, vùng che (WIPEOUT), layout Model / Layout1, ảnh xem trước trong hộp thoại Mở.
+  - Dữ liệu riêng của DVDCAD (khối 3D tham số, vùng, thứ tự vẽ, chú thích theo tỉ lệ, ràng buộc, khối động) ghi kèm trong file: mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này.
+- `SAVEAS` / **Ctrl+Shift+S**: chọn *Bản vẽ AutoCAD (\*.dwg)* hoặc *DXF* trong hộp thoại lưu. Bản vẽ mở từ DWG thì hộp thoại gợi ý DWG trước. **Ctrl+S** sau đó ghi đè đúng định dạng đã chọn.
+- `DWGSERVER` — chọn phiên bản: **DWG 2000 (bộ ghi sẵn có, mặc định)**, hoặc DWG 2004 → 2018 qua **ODA File Converter** (miễn phí).
+  - Bản Windows: cài ODA File Converter là chuyển được ngay trên máy. Bản web: qua máy chủ chuyển đổi của bạn: cài ODA File Converter và **Node.js**, chạy `node server-dwg.js` (đặt biến `ODA` trỏ tới ODAFileConverter); điện thoại cùng mạng nhập `http://<IP máy tính>:8787/convert`.
+  - Không có ODA / máy chủ thì DVDCAD tự ghi DWG 2000.
 
 ## In bản vẽ (PLOT, Ctrl+P)
 Hộp thoại giống AutoCAD:
@@ -773,7 +822,7 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 
 ## Lưu & mở
 - Mọi thay đổi **tự lưu trên máy**, gắn với đúng file đó.
-- **Ctrl+S** ghi ra DXF. Trên Edge/Chrome máy tính, sau lần chọn chỗ lưu đầu tiên, các lần sau ghi thẳng vào file. Bản vẽ đang mở từ Drive thì đồng bộ lên Drive.
+- **Ctrl+S** ghi ra DWG hoặc DXF (chọn trong hộp thoại lần đầu). Trên Edge/Chrome máy tính, sau lần chọn chỗ lưu đầu tiên, các lần sau ghi thẳng vào file. Bản vẽ đang mở từ Drive thì đồng bộ lên Drive.
 - File DXF xuất ra giữ:
   - Bảng lớp (màu, bật/tắt, đóng băng, khoá, kiểu nét) và màu ByLayer.
   - Bảng kiểu nét, kiểu nét từng đối tượng và LTSCALE.
@@ -784,7 +833,7 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - **Bản vẽ mới** (`NEW`, Ctrl+N) dùng đơn vị mm và được lưu trong mục "Gần đây".
 
 ## Khác với AutoCAD
-- Lưu DXF ngay trong app. Lưu **DWG** cần máy chủ chuyển đổi (`SAVEDWG`, xem trên).
+- Lưu **DWG 2000** và DXF ngay trong app (`SAVEDWG`, `SAVEAS`). DWG 2004 → 2018 cần ODA File Converter hoặc máy chủ chuyển đổi (`DWGSERVER`).
 - Khối lưu ra DXF thành BLOCK + INSERT (kèm thuộc tính ATTDEF/ATTRIB); kích thước thẳng, bán kính, đường kính lưu thành DIMENSION. Kích thước góc lưu thành DIMENSION 3 điểm; bản khối bị sửa riêng lưu thành khối biến thể (TÊN$1…). Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước, và bám theo đường hình khi gốc đường gióng nằm đúng điểm đặc trưng (v5b). Kích thước góc chưa bám theo đường hình. AutoCAD đọc lại thấy kích thước thường (không liên kết).
 - Kích thước thẳng/chéo có sẵn trong file DWG/DXF cũng kéo ô nắm và STRETCH được. Khi sửa, kích thước được vẽ lại theo kiểu của DVDCAD: giữ cao chữ, số lẻ, mũi tên/gạch chéo. Kích thước góc và bán kính của file gốc chỉ chọn theo cụm.
 - DXF lưu mặc định **2018 (AC1032)**, chữ UTF-8, màu RGB. `DXFVERSION` chọn 2013 / 2010 / 2007 / 2004 / 2000, Tự động (2000/2004) hoặc R12 (phần mềm rất cũ). AutoCAD 2017 trở về trước không mở được file 2018 — chọn phiên bản thấp hơn.
@@ -792,8 +841,7 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Đa tuyến có cung giữ đúng cung khi di chuyển, xoay, lật, tỉ lệ, OFFSET, sửa bằng ô nắm và lưu DXF. TRIM, BREAK, EXTEND, JOIN, FILLET / CHAMFER đa tuyến, REVERSE cũng giữ cung. Cung ở đầu đa tuyến chưa EXTEND được (kéo ô nắm hoặc LENGTHEN).
 - Vùng (REGION) lưu ra DXF dạng đa tuyến kín kèm dữ liệu DVDCAD (mở lại trong DVDCAD vẫn là vùng; AutoCAD thấy đa tuyến). Spline / elip trong phép toán vùng được chia thành đoạn thẳng nhỏ.
 - DATALINK tự đọc lại file Excel trên Chrome / Edge máy tính. Trên iPhone / iPad / Safari: dùng `DATALINKURL` (Google Sheets / link CSV) để tự cập nhật, hoặc chọn lại file khi chạy DATALINKUPDATE.
-- Trình duyệt không tự ghi được DWG: `SAVEDWG` gửi DXF tới máy chủ ODA của bạn. Không có máy chủ thì lưu DXF, AutoCAD mở bình thường.
-- Ràng buộc tham số và định nghĩa khối động ghi kèm trong DXF (R2000+, mục DVDCAD_DATA) — mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này. Khối động lưu ra thành khối thường ở trạng thái hiện tại. Khối động trong file AutoCAD hiện đúng trạng thái đang lưu nhưng chưa đổi được tham số gốc của AutoCAD.
+- Ràng buộc tham số và định nghĩa khối động ghi kèm trong DXF (R2000+, mục DVDCAD_DATA) — mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này. Khối động lưu ra (DXF và DWG) thành khối thường ở trạng thái hiện tại; định dạng khối động riêng của AutoCAD chưa ghi được. Khối động trong file AutoCAD hiện đúng trạng thái đang lưu nhưng chưa đổi được tham số gốc của AutoCAD.
 - Vùng che ghi thành WIPEOUT, thứ tự vẽ ghi theo thứ tự trong file (AutoCAD hiện đúng trên/dưới). Chú thích theo tỉ lệ ghi thành chữ thường cho AutoCAD (DVDCAD mở lại vẫn theo tỉ lệ). Màu RGB ghi đúng, cả màu RGB của lớp khi mở lại. Màu sách màu (color book) đọc theo màu RGB tương ứng.
 - 3D chưa có: bo cạnh tuỳ ý trên khối sau cộng/trừ (chỉ bo được hộp, khối đùn, trụ), render dò tia chất lượng ảnh chụp.
 - Khối sau UNION/SUBTRACT là lưới tam giác: mặt cong hiện dạng nhiều mặt phẳng nhỏ.
