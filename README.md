@@ -20,15 +20,30 @@ Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn 
   - Tự hiện khi chưa mở bản vẽ nào; mở hoặc chuyển bản vẽ thì tự ẩn.
 - `NEW` nhận mẫu đơn vị (`A.newDrawing({ units })`).
 - `dvd-acad-pgp.js`: lệnh tắt mặc định giống `acad.pgp` của AutoCAD.
-  - 200 / 226 lệnh tắt trỏ đúng lệnh. 26 lệnh tắt còn lại chưa có lệnh trong DVDCAD.
+  - 207 / 226 lệnh tắt trỏ đúng lệnh. 19 lệnh tắt còn lại chưa có lệnh trong DVDCAD (render, sheet set, chuẩn bản vẽ…).
   - `DO` = DONUT (đo nhanh nay là `QM`), `T` = MTEXT (chữ một dòng vẫn là `DT`).
   - Thêm 26 lệnh tắt còn thiếu, như `PA`, `REA`, `RA`, `EXP`, `EPDF`, `ADC`, `ATI`, `BC`, `CLI`, `XB`, `TI`, `VSM`.
   - Lệnh tắt riêng của người dùng (ALIASEDIT) vẫn được ưu tiên.
 - Biểu tượng: vẽ thêm cho mọi lệnh còn thiếu, như REGEN, OOPS, CLOSE, QUIT, GOTO và các lệnh đóng bảng.
   Biến hệ thống dùng chung một biểu tượng. Gợi ý lệnh ở dòng lệnh có biểu tượng như AutoComplete của AutoCAD.
 - `LICENSE`: GPL-3.0 (mã nguồn mở, bắt buộc vì có LibreDWG).
+- **Viết lại 3 mô-đun v4k bị thiếu** (`index.html` vẫn nạp nhưng chưa từng có trong repo, nên các lệnh dưới đây không chạy):
+  - `dvd-acad-x3.js`:
+    - Thứ tự vẽ: `DRAWORDER` / `DR` (F B A U), `TEXTTOFRONT`, `HATCHTOBACK`.
+    - Vùng che: `WIPEOUT` / `WO` (điểm, D đa tuyến, F khung).
+    - Chú thích theo tỉ lệ: `CANNOSCALE` (ô ▲ 1:N ở thanh trạng thái), `ANNOTATIVE`.
+    - Lưu DWG: `SAVEDWG` / `DWGOUT`, `DWGSERVER`. Bản Windows chuyển bằng ODA File Converter trên máy.
+  - `dvd-acad-x4.js`: ràng buộc tham số.
+    - Lệnh: GC* (10 lệnh), DC* (6 lệnh), `GEOMCONSTRAINT`, `DIMCONSTRAINT`, `AUTOCONSTRAIN`, `PARAMETERS`, `DELCONSTRAINT`, `CONSTRAINTBAR`.
+    - Bộ giải lan từ đối tượng vừa sửa ra ngoài và móc vào `A.commit`, nên mọi cách sửa đều giữ ràng buộc, U hoàn tác cả nhóm.
+    - Giá trị là biểu thức (`d1*2`, `sqrt(d1^2+d2^2)`). Ràng buộc lưu kèm DXF.
+  - `dvd-acad-x5.js`: khối động.
+    - `BPARAMETER`: V hiển thị, L kéo giãn, F lật, X bỏ.
+    - Đổi trạng thái bằng `BDYN` hoặc mục "Khối động" trong bảng Thuộc tính. Bản chèn mới tự nhận định nghĩa.
+- Kiểm thử bộ cài thật: `desktop/test/installed.js` chạy trên `windows-latest` (cài lặng → kiểm tra file / gắn .dwg .dxf / lối tắt → chạy `smoke.js` trên `DVDCAD.exe` đã cài → gỡ cài).
+- Bản phát hành: đẩy thẻ `v*` (vd `v5.9.0`); ghi chú lấy từ `desktop/RELEASE-NOTES.md`.
 - `sw.js`: nạp từng file riêng. Trước đây thiếu một file (404) làm hỏng cả bộ nhớ offline.
-- Kiểm thử: `desktop/test/smoke.js` (27 bước). Gồm: mở DWG từ dòng lệnh, OPEN / SAVEAS / QSAVE qua hộp thoại, lưu lỗi, trang Start, lần chạy thứ 2, an toàn file / link, lệnh tắt acad.pgp.
+- Kiểm thử: `desktop/test/smoke.js` (29 bước). Gồm: mở DWG từ dòng lệnh, OPEN / SAVEAS / QSAVE qua hộp thoại, lưu lỗi, trang Start, lần chạy thứ 2, an toàn file / link, lệnh phục hồi + SAVEDWG, lệnh tắt acad.pgp.
 
 ## v5h: XCLIP giống AutoCAD
 - `index.html`:

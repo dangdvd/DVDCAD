@@ -52,6 +52,9 @@ jobs:
       - name: Dựng bộ cài và bản portable
         run: npx electron-builder --win nsis portable --x64 --publish never
 
+      - name: Cài thử bộ cài, chạy kiểm thử trên DVDCAD.exe đã cài, rồi gỡ cài
+        run: node test/installed.js
+
       - uses: actions/upload-artifact@v4
         with:
           name: DVDCAD-Windows
@@ -64,6 +67,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          name: DVDCAD ${{ github.ref_name }}
+          body_path: desktop/RELEASE-NOTES.md
           files: |
             desktop/dist/DVDCAD-Setup-*.exe
             desktop/dist/DVDCAD-*-portable.exe

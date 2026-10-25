@@ -1,5 +1,6 @@
 /* Kiểm thử nhanh bản Windows (chạy được trên Linux: xvfb-run -a node test/smoke.js).
-   Cần Playwright (npm i -D playwright hoặc bản cài sẵn). Hộp thoại Windows được thay bằng hàm giả trong tiến trình chính. */
+   Cần Playwright (npm i -D playwright hoặc bản cài sẵn). Hộp thoại Windows được thay bằng hàm giả trong tiến trình chính.
+   DVDCAD_EXE=<đường dẫn DVDCAD.exe đã cài>: chạy trên bản đóng gói thay vì mã nguồn (test/installed.js dùng). */
 'use strict';
 const { _electron: electron } = require('playwright');
 const path = require('path');
@@ -9,12 +10,14 @@ const { spawn } = require('child_process');
 
 const APP = path.resolve(__dirname, '..');
 const ROOT = path.resolve(APP, '..');
-const ELECTRON = require(path.join(APP, 'node_modules', 'electron'));
+const sandbox = process.getuid && process.getuid() === 0 ? ['--no-sandbox'] : [];
+const EXE = process.env.DVDCAD_EXE || '';
+const ELECTRON = EXE || require(path.join(APP, 'node_modules', 'electron'));
+const appArgs = (...files) => EXE ? files : [...sandbox, APP, ...files];
 const SHOTS = process.env.SHOTS || '';
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dvdcad-test-'));
 const userData = path.join(tmp, 'userData');
 const env = { ...process.env, DVDCAD_USER_DATA: userData };
-const sandbox = process.getuid && process.getuid() === 0 ? ['--no-sandbox'] : [];
 let failed = 0;
 function check(ok, msg){ console.log((ok ? '  ✓ ' : '  ✗ ') + msg); if(!ok) failed++; }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -23,7 +26,9 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
 (async () => {
   const dwgCopy = path.join(tmp, 'Mặt bằng tầng 1.dwg');
   fs.copyFileSync(path.join(ROOT, 'sample.dwg'), dwgCopy);
-  const app = await electron.launch({ executablePath: ELECTRON, args: [...sandbox, APP, dwgCopy], env });
+  // ODA File Converter giả (Linux / macOS): ghi 1 file DWG nhỏ vào thư mục ra — kiểm tra đường lưu DWG trên máy
+  if(process.platform !== 'win32'){ const fake = path.join(tmp, 'ODAFileConverter'); fs.writeFileSync(fake, '#!/bin/sh\nprintf "AC1032-dvdcad-test-%s" 0123456789012345678901234567890123456789 > "$2/drawing.dwg"\n', { mode: 0o755 }); env.ODA = fake; }
+  const app = await electron.launch({ executablePath: ELECTRON, args: appArgs(dwgCopy), env });
   const win = await app.firstWindow();
   const errors = [];
   win.on('pageerror', e => errors.push(e.message));
@@ -81,7 +86,7 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
 
   console.log('5. Mở thêm file khi app đang chạy (lần chạy thứ 2 chuyển file cho cửa sổ đang mở)');
   const dxf2 = path.join(tmp, 'thu-hai.dxf'); fs.copyFileSync(out, dxf2);
-  const p2 = spawn(ELECTRON, [...sandbox, APP, dxf2], { env, stdio: 'ignore' });
+  const p2 = spawn(ELECTRON, appArgs(dxf2), { env, stdio: 'ignore' });
   const exited = await new Promise(r => { const t = setTimeout(() => r(false), 20000); p2.on('exit', () => { clearTimeout(t); r(true); }); });
   check(exited, 'tiến trình thứ 2 tự thoát (chỉ 1 cửa sổ)');
   check(await until(() => win.evaluate(() => currentName === 'thu-hai.dxf')), 'file của lần chạy thứ 2 mở trong cửa sổ cũ');
@@ -96,7 +101,19 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
   check(await win.evaluate(() => fetch('./libredwg-web.wasm').then(r => r.headers.get('content-type'))) === 'application/wasm', 'WASM có MIME application/wasm');
   check(await win.evaluate(() => fetch('../../etc/passwd').then(r => r.status)) !== 200, 'không thoát ra ngoài thư mục app');
 
-  console.log('7. Lệnh tắt giống AutoCAD (acad.pgp)');
+  console.log('7. Lệnh phục hồi (x3 / x4 / x5) + lưu DWG');
+  check(await win.evaluate(() => ['DRAWORDER', 'WIPEOUT', 'CANNOSCALE', 'GCHORIZONTAL', 'DCALIGNED', 'PARAMETERS', 'BPARAMETER', 'BDYN', 'SAVEDWG'].every(n => DVDCmd.commands.some(c => c.k.includes(n)))), 'có DRAWORDER, WIPEOUT, CANNOSCALE, GC*/DC*, PARAMETERS, BPARAMETER, BDYN, SAVEDWG');
+  if(process.platform !== 'win32'){
+    const dwgOut = path.join(tmp, 'luu-ra.dwg');
+    await app.evaluate(({ dialog }, p) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: p }); }, dwgOut);
+    await win.evaluate(() => DVDCmd.run('SAVEDWG'));
+    check(await until(() => fs.existsSync(dwgOut) && fs.readFileSync(dwgOut, 'latin1').startsWith('AC1032')), 'SAVEDWG chuyển qua ODA File Converter trên máy và lưu .dwg');
+  }else{
+    await win.evaluate(() => DVDCmd.run('SAVEDWG'));
+    check(await until(() => win.evaluate(() => /ODA/.test(document.getElementById('toast').textContent))), 'SAVEDWG khi chưa cài ODA → hướng dẫn cài ODA File Converter');
+  }
+
+  console.log('8. Lệnh tắt giống AutoCAD (acad.pgp)');
   const al = await win.evaluate(() => {
     const by = new Map(); for(const c of DVDCmd.commands) for(const k of c.k) by.set(k, c);
     const bad = []; let ok = 0;
