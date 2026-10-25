@@ -6,6 +6,24 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5j: dòng lệnh và cách dùng lệnh như AutoCAD 2027
+- `dvd-cmd.js` (thanh dòng lệnh):
+  - Gợi ý khi gõ theo `INPUTSEARCHOPTIONS`: khớp đầu tên, giữa chuỗi, từ đồng nghĩa (`ROUND` → FILLET, `XOAY` → ROTATE), tự sửa lỗi gõ (sửa 3 lần thì tự chạy), biến hệ thống kèm giá trị, nội dung bản vẽ (lớp, khối, mẫu hatch, kiểu chữ). Xếp lệnh hay dùng lên đầu; phần còn lại của tên hiện mờ (→ / Tab để nhận).
+  - Nút ✕ / Tuỳ chỉnh / Lệnh gần đây; `CLIPROMPTLINES`, độ trong suốt, neo ở đáy cửa sổ. Lời nhắc dài xuống dòng thay vì bị cắt.
+  - ↑ / ↓ ở lời nhắc gọi lại nhập gần đây; ↓ mở danh sách tuỳ chọn cạnh con trỏ (DYNPROMPT); Tab khoá ô nhập động.
+  - F1 theo ngữ cảnh: trang cách dùng của lệnh đang chạy (`dvd-help.js`) + **Tìm trên ribbon** (`A.ribbonFind`). Ctrl+F2 = cửa sổ chữ.
+  - Lịch sử ghi "lời nhắc: câu trả lời" như AutoCAD, dạng mảnh để giao diện English dịch được (`log([...])`, `{ nt }` = giữ nguyên).
+- `dvd-acad-core.js` (bộ nhập):
+  - Nhập động: `x,y` của điểm thứ hai trở đi là tương đối (`DYNPICOORDS`), `#x,y` / `*x,y` tuyệt đối, `x,y,z`, `@` = LASTPOINT; số `1/2`, `3-1/2`, feet-inch `5'6"` (bản vẽ inch / feet).
+  - Khoá góc `<45`, bộ lọc điểm `.X .Y .Z .XY .XZ .YZ`, `TT`, `FROM`, `M2P`; gõ số theo đường truy bắt (OTRACK / TT); Tab khoá độ dài / góc / X / Y.
+  - Chọn đối tượng: `W`, `C`, `BOX`, `G`, `U`, `SI`, `M`, `AU`, `?` (thêm vào ALL / P / L / R / A / F / WP / CP có sẵn).
+  - Lệnh trong suốt chạy lồng (`'CAL`, `'DIST`, `'ID`, `'ZOOM`, `'LAYER`, biến hệ thống…) rồi trở lại lệnh đang dở; `'CAL` trả kết quả cho lời nhắc.
+  - Chuột phải: bấm nhanh = Enter, giữ = menu lệnh (`A.cmdMenu`); Shift + chuột phải = menu bắt điểm (`A.osnapMenu`).
+- `dvd-acad-cmdline.js` (mới): menu chuột phải, `INPUTSEARCHOPTIONS`, `-LAYER`, `-INSERT`, `-OSNAP`, `UNDO` (số bước, BE/E, M/B), `MULTIPLE` hỏi trên dòng lệnh, 17 biến hệ thống mới (`A.sysvar.def`).
+- `dvd-help.js` (mới): cách dùng của ~60 lệnh thông dụng + lời nhắc đầu của mọi lệnh (`tools/help/prompts.js` sinh tự động).
+- Tuỳ chọn lệnh theo AutoCAD 2027: PLINE (Length, cung Angle / CEnter / CLose / Direction / Radius / Second pt), CIRCLE (Ttr), RECTANG (Chamfer / Fillet / Width / Area / Rotation), ELLIPSE (Arc), XLINE (Ang / Bisect / Offset), TEXT (Style, 15 kiểu canh lề), MTEXT (Height / Justify / Rotation / Style / Width), MOVE / COPY (Enter = độ dời, mOde, Exit), TRIM / EXTEND (Crossing / Fence / mOde / eRase, Boundary edges = B), FILLET (Trim, Shift = góc nhọn), CHAMFER (2 khoảng, Angle, Trim, mEthod), ZOOM (Center / Scale / 2X), AREA (Add / Subtract), DIST (Multiple), MEASUREGEOM (Distance / Radius / Angle / ARea), DIVIDE / MEASURE (Block), PEDIT (Fit / Spline / Decurve / Undo), OFFSET (Exit), DIMLINEAR (Mtext / Text), WIPEOUT (Polyline = P), `-BLOCK`.
+- Kiểm thử: thêm mục 9 vào `desktop/test/smoke.js` (nhập động, khoá góc + `'CAL`, bộ lọc `.X`, script `-LAYER` + `UNDO BE/E`, gợi ý đồng nghĩa / sửa lỗi gõ / biến hệ thống, trợ giúp).
+
 ## v5i: bản Windows chạy offline + trang Start kiểu AutoCAD
 - **DVDCAD cho Windows** (`desktop/`, Electron): bộ cài `DVDCAD-Setup-*.exe` và bản portable, chạy hoàn toàn offline. Hướng dẫn: **[HUONG-DAN-WINDOWS.md](HUONG-DAN-WINDOWS.md)**.
   - Toàn bộ app (cả bộ đọc DWG WASM) đọc thẳng từ ổ đĩa qua `dvdcad://app/`, không cần service worker hay mạng.

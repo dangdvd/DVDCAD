@@ -17,6 +17,7 @@ def add(t,src):
 files=sorted(f for f in glob.glob(ROOT+'/dvd-*.js') if 'i18n' not in f)+[ROOT+'/index.html']+sorted(glob.glob(ROOT+'/addins/*.js'))+sorted(glob.glob(ROOT+'/addins/*.lsp'))
 for f in files:
     s=open(f,encoding='utf-8').read(); name=os.path.basename(f)
+    s=re.sub(r'/\* <PROMPTS> \*/.*?/\* </PROMPTS> \*/','',s,flags=re.S)   # lời nhắc tự sinh trong dvd-help.js: được dịch từng mảnh lúc hiển thị
     if f.endswith('.lsp'):
         for m in re.finditer(r'"((?:[^"\\]|\\.)*)"', '\n'.join(l.split(';')[0] if '"' not in l.split(';')[0] and ';' in l else l for l in s.split('\n'))):
             t=m.group(1).replace('\\n','\n')

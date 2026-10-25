@@ -62,27 +62,61 @@
     out[out.length - 1] = { x: P.x, y: P.y };
     return out;
   }
-  cmd(['PLINE', 'PL'], 'Vẽ đa tuyến (A = cung, L = thẳng, C = đóng, U = lùi, W = độ rộng, H = nửa độ rộng)', async () => {
+  // cung của đa tuyến theo các cách của AutoCAD: tiếp tuyến, 3 điểm, tâm, bán kính, góc ở tâm, hướng tiếp tuyến
+  function sampleArc(C, r, a0, sw){ const n = Math.max(4, Math.ceil(Math.abs(sw) / (5 * D2R))), out = []; for(let i = 0; i <= n; i++){ const a = a0 + sw * i / n; out.push({ x: C.x + r * Math.cos(a), y: C.y + r * Math.sin(a) }); } out.sw = sw; return out; }
+  function arcThrough(S, M, E){ const c = circum(S, M, E); if(!c) return null; const a0 = ang(c, S), am = ang(c, M), ae = ang(c, E); const ccw = G.norm(am - a0) <= G.norm(ae - a0); const sw = ccw ? G.norm(ae - a0) : -G.norm(a0 - ae); if(Math.abs(sw) < 1e-9) return null; const o = sampleArc(c, c.r, a0, sw); o[o.length - 1] = { x: E.x, y: E.y }; return o; }
+  function arcIncluded(S, E, deg){   // góc ở tâm có dấu (+ = ngược chiều kim đồng hồ)
+    const L = dist(S, E), th = deg * D2R; if(L < 1e-12 || Math.abs(th) < 1e-9 || Math.abs(th) >= TAU - 1e-9) return null;
+    const r = L / (2 * Math.sin(Math.abs(th) / 2)), d = (L / 2) / Math.tan(Math.abs(th) / 2), sg = th > 0 ? 1 : -1, ux = (E.x - S.x) / L, uy = (E.y - S.y) / L;
+    const C = { x: (S.x + E.x) / 2 - uy * d * sg, y: (S.y + E.y) / 2 + ux * d * sg }; const o = sampleArc(C, r, ang(C, S), th); o[o.length - 1] = { x: E.x, y: E.y }; return o;
+  }
+  function arcRadius(S, E, r, dir){   // bán kính cho trước: cung nhỏ, chọn chiều có tiếp tuyến đầu gần hướng hiện tại nhất
+    const L = dist(S, E); if(L < 1e-12 || r < L / 2 - 1e-9) return null; const th = 2 * Math.asin(Math.min(1, L / (2 * r))) * R2D;
+    let best = null, bd = -Infinity; for(const s of [1, -1]){ const a = arcIncluded(S, E, s * th); if(!a) continue; const tx = a[1].x - a[0].x, ty = a[1].y - a[0].y, tl = Math.hypot(tx, ty) || 1; const dt = (tx * dir.x + ty * dir.y) / tl; if(dt > bd){ bd = dt; best = a; } } return best;
+  }
+  function arcCenter(S, C, sweepDeg){ const r = dist(C, S); if(r < 1e-12 || Math.abs(sweepDeg) < 1e-9) return null; return sampleArc(C, r, ang(C, S), sweepDeg * D2R); }
+  cmd(['PLINE', 'PL'], 'Vẽ đa tuyến (A = cung, C = đóng, H = nửa độ rộng, L = độ dài, U = lùi, W = độ rộng)', async () => {
     let r = await A.getPoint('Chỉ định điểm đầu'); if(!r.pt) return;
     const V = [r.pt], lens = [1]; let arcMode = false, closed = false; const BV = [{ x: r.pt.x, y: r.pt.y }], lensB = [1];
     let wS = MEM.plw || 0, wE = MEM.plw || 0;   // độ rộng đầu / cuối của đoạn kế tiếp (như PLINEWID)
+    log('Độ rộng nét hiện hành = ' + fmt(wS));
     const setW = async half => { const k = half ? 0.5 : 1; const a = await A.getDist(half ? 'Nửa độ rộng đầu' : 'Độ rộng đầu', { def: wS * k, base: V[V.length - 1] }); if(a.num == null || a.num < 0) return; const b = await A.getDist(half ? 'Nửa độ rộng cuối' : 'Độ rộng cuối', { def: a.num, base: V[V.length - 1] }); if(b.num == null || b.num < 0) return; wS = a.num / k; wE = b.num / k; MEM.plw = wE; remember(); };
     const dirNow = () => { if(V.length >= 2){ const a = V[V.length - 2], b = V[V.length - 1], L = dist(a, b) || 1; return { x: (b.x - a.x) / L, y: (b.y - a.y) / L }; } return { x: 1, y: 0 }; };
-    const preview = (g, p) => { if(V.length > 1) g.poly(V, false, '#e8eef7'); if(arcMode){ const a = tangentArc(V[V.length - 1], dirNow(), p); if(a) g.poly(a, false, '#e8eef7'); } };
+    const last = () => V[V.length - 1];
+    const preview = (g, p) => { if(V.length > 1) g.poly(V, false, '#e8eef7'); if(arcMode){ const a = tangentArc(last(), dirNow(), p); if(a) g.poly(a, false, '#e8eef7'); } };
+    const addPt = p => { if(dist(last(), p) < 1e-12) return; V.push(p); BV[BV.length - 1].sw = wS; BV[BV.length - 1].ew = wE; BV.push({ x: p.x, y: p.y }); wS = wE; lens.push(V.length); lensB.push(BV.length); };
+    const addArc = a => { if(!a || a.length < 2){ log('Không tạo được cung.'); return false; } for(let i = 1; i < a.length; i++) V.push(a[i]); if(a.sw) BV[BV.length - 1].bulge = Math.tan(a.sw / 4); BV[BV.length - 1].sw = wS; BV[BV.length - 1].ew = wE; const E = a[a.length - 1]; BV.push({ x: E.x, y: E.y }); wS = wE; lens.push(V.length); lensB.push(BV.length); return true; };
+    const endPt = async (prompt, mkA, kw) => A.getPoint(prompt, { base: last(), rubber: false, kw, preview: (g, p) => { if(V.length > 1) g.poly(V, false, '#e8eef7'); const a = mkA(p); if(a) g.poly(a, false, '#e8eef7'); } });
     for(;;){
-      const kw = (arcMode ? [{ k: 'L', t: 'Thẳng' }, { k: 'C', t: 'Đóng' }, { k: 'U', t: 'Hoàn tác' }] : [{ k: 'A', t: 'Cung' }, { k: 'C', t: 'Đóng' }, { k: 'U', t: 'Hoàn tác' }]).concat([{ k: 'W', t: 'Độ rộng' }, { k: 'H', t: 'Nửa độ rộng' }]);
-      r = await A.getPoint(arcMode ? 'Chỉ định điểm cuối cung' : 'Chỉ định điểm tiếp theo', { base: V[V.length - 1], kw: V.length >= 3 ? kw : kw.filter(k => k.k !== 'C'), preview, rubber: !arcMode });
+      const kw = arcMode
+        ? [{ k: 'A', t: 'Góc' }, { k: 'CE', t: 'Tâm' }, { k: 'CL', t: 'Đóng' }, { k: 'D', t: 'Hướng' }, { k: 'H', t: 'Nửa độ rộng' }, { k: 'L', t: 'Thẳng' }, { k: 'R', t: 'Bán kính' }, { k: 'S', t: 'Điểm thứ hai' }, { k: 'U', t: 'Hoàn tác' }, { k: 'W', t: 'Độ rộng' }]
+        : [{ k: 'A', t: 'Cung' }, { k: 'C', t: 'Đóng' }, { k: 'H', t: 'Nửa độ rộng' }, { k: 'L', t: 'Độ dài' }, { k: 'U', t: 'Hoàn tác' }, { k: 'W', t: 'Độ rộng' }];
+      r = await A.getPoint(arcMode ? 'Chỉ định điểm cuối cung' : 'Chỉ định điểm tiếp theo', { base: last(), kw: V.length >= 3 ? kw : kw.filter(k => k.k !== 'C' && k.k !== 'CL'), preview, rubber: !arcMode });
       if(r.none) break;
-      if(r.kw === 'A'){ arcMode = true; continue; }
-      if(r.kw === 'L'){ arcMode = false; continue; }
+      if(r.kw === 'A' && !arcMode){ arcMode = true; continue; }
+      if(r.kw === 'L' && arcMode){ arcMode = false; continue; }
       if(r.kw === 'W' || r.kw === 'H'){ await setW(r.kw === 'H'); continue; }
-      if(r.kw === 'U'){ if(lens.length > 1){ lens.pop(); V.length = lens[lens.length - 1]; lensB.pop(); BV.length = lensB[lensB.length - 1]; delete BV[BV.length - 1].bulge; } continue; }
+      if(r.kw === 'U'){ if(lens.length > 1){ lens.pop(); V.length = lens[lens.length - 1]; lensB.pop(); BV.length = lensB[lensB.length - 1]; delete BV[BV.length - 1].bulge; } else log('Không còn đoạn nào để lùi.'); continue; }
       if(r.kw === 'C'){ closed = true; break; }
+      if(r.kw === 'CL'){ const a = tangentArc(last(), dirNow(), V[0]); if(a && a.sw){ addArc(a); V.pop(); BV.pop(); lensB[lensB.length - 1] = BV.length; } closed = true; break; }
+      if(r.kw === 'L'){   // độ dài: nối tiếp theo hướng đoạn trước (tiếp tuyến nếu đoạn trước là cung)
+        const d = await A.getDist('Chỉ định độ dài đường', { base: last(), def: MEM.pll }); const n = d.num != null ? d.num : MEM.pll; if(!(Math.abs(n) > 0)) continue; MEM.pll = n; const u = dirNow(); addPt({ x: last().x + u.x * n, y: last().y + u.y * n }); continue; }
+      if(r.kw === 'S'){ const m = await A.getPoint('Chỉ định điểm thứ hai trên cung', { base: last() }); if(!m.pt) continue; const S = last(); const e = await endPt('Chỉ định điểm cuối cung', p => arcThrough(S, m.pt, p)); if(e.pt) addArc(arcThrough(S, m.pt, e.pt)); continue; }
+      if(r.kw === 'D'){ const S = last(); const d = await A.getPoint('Chỉ định hướng tiếp tuyến tại điểm đầu cung', { base: S }); if(!d.pt) continue; const L = dist(S, d.pt); if(L < 1e-12) continue; const u = { x: (d.pt.x - S.x) / L, y: (d.pt.y - S.y) / L }; const e = await endPt('Chỉ định điểm cuối cung', p => tangentArc(S, u, p)); if(e.pt) addArc(tangentArc(S, u, e.pt)); continue; }
+      if(r.kw === 'R'){ const S = last(); const d = await A.getDist('Chỉ định bán kính cung', { base: S, def: MEM.plr }); const R0 = d.num != null ? Math.abs(d.num) : MEM.plr; if(!(R0 > 0)) continue; MEM.plr = R0; const u = dirNow();
+        const e = await endPt('Chỉ định điểm cuối cung', p => arcRadius(S, p, R0, u)); if(e.pt) addArc(arcRadius(S, e.pt, R0, u)); continue; }
+      if(r.kw === 'CE'){ const S = last(); const c = await A.getPoint('Chỉ định tâm cung', { base: S }); if(!c.pt) continue; const C = c.pt;
+        const e = await endPt('Chỉ định điểm cuối cung', p => arcCenter(S, C, G.norm(ang(C, p) - ang(C, S)) * R2D), [{ k: 'A', t: 'Góc' }, { k: 'L', t: 'Độ dài dây cung' }]);
+        if(e.kw === 'A'){ const g2 = await A.getAngle('Chỉ định góc ở tâm', { base: C }); if(g2.num != null) addArc(arcCenter(S, C, g2.num)); continue; }
+        if(e.kw === 'L'){ const l = await A.getDist('Chỉ định độ dài dây cung', { base: S }); const R0 = dist(C, S); if(l.num != null && Math.abs(l.num) <= 2 * R0) addArc(arcCenter(S, C, 2 * Math.asin(Math.abs(l.num) / (2 * R0)) * R2D)); continue; }
+        if(e.pt) addArc(arcCenter(S, C, G.norm(ang(C, e.pt) - ang(C, S)) * R2D)); continue; }
+      if(r.kw === 'A'){ const S = last(); const g2 = await A.getAngle('Chỉ định góc ở tâm', { def: MEM.pla }); const inc = g2.num != null ? g2.num : MEM.pla; if(!inc) continue; MEM.pla = inc;
+        const e = await endPt('Chỉ định điểm cuối cung', p => arcIncluded(S, p, inc), [{ k: 'CE', t: 'Tâm' }]);
+        if(e.kw === 'CE'){ const c = await A.getPoint('Chỉ định tâm cung', { base: S }); if(c.pt) addArc(arcCenter(S, c.pt, inc)); continue; }
+        if(e.pt) addArc(arcIncluded(S, e.pt, inc)); continue; }
       if(r.pt){
-        if(arcMode){ const a = tangentArc(V[V.length - 1], dirNow(), r.pt); if(!a) continue; for(let i = 1; i < a.length; i++) V.push(a[i]); if(a.sw) BV[BV.length - 1].bulge = Math.tan(a.sw / 4); BV[BV.length - 1].sw = wS; BV[BV.length - 1].ew = wE; BV.push({ x: r.pt.x, y: r.pt.y }); }
-        else { if(dist(V[V.length - 1], r.pt) < 1e-12) continue; V.push(r.pt); BV[BV.length - 1].sw = wS; BV[BV.length - 1].ew = wE; BV.push({ x: r.pt.x, y: r.pt.y }); }
-        wS = wE;
-        lens.push(V.length); lensB.push(BV.length);
+        if(arcMode){ const a = tangentArc(last(), dirNow(), r.pt); if(!a) continue; addArc(a); }
+        else addPt(r.pt);
       }
     }
     if(V.length >= 2){
@@ -94,18 +128,46 @@
   A.widthPoly = (raw, closed) => widePoly(raw, closed, {});
 
   const rectPts = (a, b) => [{ x: a.x, y: a.y }, { x: b.x, y: a.y }, { x: b.x, y: b.y }, { x: a.x, y: b.y }];
-  cmd(['RECTANG', 'REC', 'RECTANGLE'], 'Vẽ hình chữ nhật (D = theo kích thước)', async () => {
-    let r = await A.getPoint('Chỉ định góc thứ nhất'); if(!r.pt) return; const a = r.pt; let dims = null;
-    const corner = p => dims ? { x: a.x + (p.x >= a.x ? 1 : -1) * dims.w, y: a.y + (p.y >= a.y ? 1 : -1) * dims.h } : p;
+  // RECTANG như AutoCAD: [Vát góc/Bo góc/Độ rộng] cho góc thứ nhất; [Diện tích/Kích thước/Xoay] cho góc đối diện
+  cmd(['RECTANG', 'REC', 'RECTANGLE'], 'Vẽ hình chữ nhật (C = vát góc, F = bo góc, W = độ rộng; A = diện tích, D = kích thước, R = xoay)', async () => {
+    const st = MEM.rect = Object.assign({ c1: 0, c2: 0, fr: 0, w: 0, rot: 0 }, MEM.rect || {});
+    const mode = () => (st.fr ? 'Bo góc = ' + fmt(st.fr) : st.c1 ? 'Vát góc = ' + fmt(st.c1) + ' × ' + fmt(st.c2) : '') + (st.w ? (st.fr || st.c1 ? ', ' : '') + 'Độ rộng = ' + fmt(st.w) : '');
+    if(mode()) log('Chế độ hình chữ nhật hiện hành: ' + mode());
+    let r;
     for(;;){
-      r = await A.getPoint('Chỉ định góc đối diện', { base: a, rubber: false, kw: [{ k: 'D', t: 'Kích thước' }], preview: (g, p) => g.poly(rectPts(a, corner(p)), true) });
+      r = await A.getPoint('Chỉ định góc thứ nhất', { kw: [{ k: 'C', t: 'Vát góc' }, { k: 'F', t: 'Bo góc' }, { k: 'W', t: 'Độ rộng' }] });
+      if(r.kw === 'C'){ const a = await A.getDist('Khoảng vát thứ nhất của hình chữ nhật', { def: st.c1 }); if(a.num == null && !a.none) continue; const v1 = a.num != null ? Math.abs(a.num) : st.c1; const b = await A.getDist('Khoảng vát thứ hai của hình chữ nhật', { def: v1 }); st.c1 = v1; st.c2 = b.num != null ? Math.abs(b.num) : v1; if(st.c1) st.fr = 0; remember(); continue; }
+      if(r.kw === 'F'){ const a = await A.getDist('Bán kính bo góc của hình chữ nhật', { def: st.fr }); if(a.num != null){ st.fr = Math.abs(a.num); if(st.fr){ st.c1 = st.c2 = 0; } remember(); } continue; }
+      if(r.kw === 'W'){ const a = await A.getDist('Độ rộng nét của hình chữ nhật', { def: st.w }); if(a.num != null){ st.w = Math.abs(a.num); remember(); } continue; }
+      break;
+    }
+    if(!r.pt) return; const a = r.pt; let dims = null, rot = (st.rot || 0) * D2R;
+    const rectAt = p => { const c = Math.cos(rot), s = Math.sin(rot), dx = p.x - a.x, dy = p.y - a.y; let u = dx * c + dy * s, v = -dx * s + dy * c; if(dims){ u = (u >= 0 ? 1 : -1) * dims.w; v = (v >= 0 ? 1 : -1) * dims.h; } const P = (uu, vv) => ({ x: a.x + uu * c - vv * s, y: a.y + uu * s + vv * c }); return [P(0, 0), P(u, 0), P(u, v), P(0, v)]; };
+    const build = pts => {
+      if(Math.abs(dist(pts[0], pts[1])) < 1e-12 || Math.abs(dist(pts[0], pts[3])) < 1e-12) return null;
+      let BV = pts.map(q => ({ x: q.x, y: q.y }));
+      if(st.fr > 0 || st.c1 > 0) for(let k = 3; k >= 0; k--){ const nv = st.fr > 0 ? cornerBV(BV, true, k, 'fillet', st.fr) : cornerBV(BV, true, k, 'chamfer', st.c1, st.c2); if(nv) BV = nv; }
+      if(st.w > 0 && typeof polyWidthQuads === 'function') return widePoly(BV.map(q => ({ x: q.x, y: q.y, bulge: q.bulge || 0, sw: st.w, ew: st.w })), true, mk('POLYLINE', {}));
+      const e = mk('POLYLINE', { vertices: BV.map(q => ({ x: q.x, y: q.y })), closed: true }); if(BV.some(q => q.bulge) && A.setBV) A.setBV(e, BV); return e;
+    };
+    const done = pts => { const e = build(pts); if(!e){ log('Hình chữ nhật suy biến.'); return false; } A.commit({ add: [e] }); return true; };
+    for(;;){
+      r = await A.getPoint('Chỉ định góc đối diện', { base: a, rubber: false, kw: [{ k: 'A', t: 'Diện tích' }, { k: 'D', t: 'Kích thước' }, { k: 'R', t: 'Xoay' }], preview: (g, p) => g.poly(rectAt(p), true) });
       if(r.none) return;
+      if(r.kw === 'A'){
+        const ar = await A.getNum('Nhập diện tích hình chữ nhật theo đơn vị hiện hành', { def: MEM.rarea || 100 }); const S = ar.num != null ? Math.abs(ar.num) : (MEM.rarea || 100); if(!(S > 0)) continue; MEM.rarea = S;
+        const k = await A.getKw('Tính kích thước theo', { kw: [{ k: 'L', t: 'Chiều dài' }, { k: 'W', t: 'Chiều rộng' }], def: 'Chiều dài' });
+        const isW = k.kw === 'W'; const v = await A.getDist(isW ? 'Nhập chiều rộng hình chữ nhật' : 'Nhập chiều dài hình chữ nhật', { base: a, def: isW ? MEM.rh : MEM.rw }); const L = v.num != null ? Math.abs(v.num) : (isW ? MEM.rh : MEM.rw); if(!(L > 0)) continue;
+        const W1 = isW ? S / L : L, H1 = isW ? L : S / L; MEM.rw = W1; MEM.rh = H1; remember(); dims = { w: W1, h: H1 };
+        const c = Math.cos(rot), s = Math.sin(rot); if(done(rectAt({ x: a.x + W1 * c - H1 * s, y: a.y + W1 * s + H1 * c }))) return; continue;
+      }
       if(r.kw === 'D'){
-        const w = await A.getDist('Chiều dài', { base: a, def: MEM.rw }); const W1 = w.num != null ? Math.abs(w.num) : MEM.rw; if(!(W1 > 0)) continue;
-        const h = await A.getDist('Chiều rộng', { base: a, def: MEM.rh }); const H1 = h.num != null ? Math.abs(h.num) : MEM.rh; if(!(H1 > 0)) continue;
+        const w = await A.getDist('Chiều dài hình chữ nhật', { base: a, def: MEM.rw }); const W1 = w.num != null ? Math.abs(w.num) : MEM.rw; if(!(W1 > 0)) continue;
+        const h = await A.getDist('Chiều rộng hình chữ nhật', { base: a, def: MEM.rh }); const H1 = h.num != null ? Math.abs(h.num) : MEM.rh; if(!(H1 > 0)) continue;
         MEM.rw = W1; MEM.rh = H1; remember(); dims = { w: W1, h: H1 }; continue;
       }
-      if(r.pt){ const b = r.typed && !dims ? r.pt : corner(r.pt); if(Math.abs(b.x - a.x) < 1e-12 || Math.abs(b.y - a.y) < 1e-12){ log('Hình chữ nhật suy biến.'); continue; } A.commit({ add: [mk('POLYLINE', { vertices: rectPts(a, b), closed: true })] }); return; }
+      if(r.kw === 'R'){ const g = await A.getAngle('Chỉ định góc xoay', { base: a, def: st.rot || 0 }); if(g.num != null){ st.rot = g.num; rot = g.num * D2R; remember(); } continue; }
+      if(r.pt){ if(done(rectAt(r.pt))) return; continue; }
     }
   });
 
@@ -117,8 +179,9 @@
   }
   G.circum = circum;
   cmd(['CIRCLE', 'C'], 'Vẽ đường tròn (tâm–bán kính, D, 2P, 3P)', async () => {
-    let r = await A.getPoint('Chỉ định tâm đường tròn', { kw: [{ k: '3P', t: '3 điểm' }, { k: '2P', t: '2 điểm' }] });
+    let r = await A.getPoint('Chỉ định tâm đường tròn', { kw: [{ k: '3P', t: '3 điểm' }, { k: '2P', t: '2 điểm' }, { k: 'T', t: 'Tiếp tuyến, tiếp tuyến, bán kính' }] });
     if(r.none) return;
+    if(r.kw === 'T'){ if(A.circleTTRFlow) await A.circleTTRFlow(); return; }
     if(r.kw === '2P'){
       const p1 = await A.getPoint('Chỉ định đầu thứ nhất của đường kính'); if(!p1.pt) return;
       const p2 = await A.getPoint('Chỉ định đầu thứ hai của đường kính', { base: p1.pt, preview: (g, p) => g.circle({ x: (p1.pt.x + p.x) / 2, y: (p1.pt.y + p.y) / 2 }, dist(p1.pt, p) / 2) }); if(!p2.pt) return;
@@ -182,13 +245,24 @@
     if(b <= a) return { type: 'ELLIPSE', cx: c.x, cy: c.y, mx: ax.x, my: ax.y, ratio: b / a, p1: 0, p2: TAU };
     const ux = ax.x / a, uy = ax.y / a; return { type: 'ELLIPSE', cx: c.x, cy: c.y, mx: -uy * b, my: ux * b, ratio: a / b, p1: 0, p2: TAU };
   }
-  cmd(['ELLIPSE', 'EL'], 'Vẽ elip (trục + nửa trục kia, hoặc C = theo tâm)', async () => {
-    let r = await A.getPoint('Chỉ định đầu trục elip', { kw: [{ k: 'C', t: 'Tâm' }] }); if(r.none) return;
+  cmd(['ELLIPSE', 'EL'], 'Vẽ elip (trục + nửa trục kia, C = theo tâm, A = cung elip)', async () => {
+    let r = await A.getPoint('Chỉ định đầu trục elip', { kw: [{ k: 'A', t: 'Cung' }, { k: 'C', t: 'Tâm' }] }); if(r.none) return;
+    let arcE = false;
+    if(r.kw === 'A'){ arcE = true; r = await A.getPoint('Chỉ định đầu trục của cung elip', { kw: [{ k: 'C', t: 'Tâm' }] }); if(r.none) return; }
     let c, ax;
     if(r.kw === 'C'){ const r1 = await A.getPoint('Chỉ định tâm elip'); if(!r1.pt) return; c = r1.pt; const r2 = await A.getPoint('Chỉ định đầu trục', { base: c }); if(!r2.pt) return; ax = { x: r2.pt.x - c.x, y: r2.pt.y - c.y }; }
     else { const p1 = r.pt; const r2 = await A.getPoint('Chỉ định đầu kia của trục', { base: p1 }); if(!r2.pt) return; c = { x: (p1.x + r2.pt.x) / 2, y: (p1.y + r2.pt.y) / 2 }; ax = { x: (r2.pt.x - p1.x) / 2, y: (r2.pt.y - p1.y) / 2 }; }
     const r3 = await A.getDist('Chỉ định khoảng tới trục kia', { base: c, preview: (g, p) => { const e = ellipseFrom(c, ax, dist(c, p)); if(e) g.ent(e); } });
     if(r3.num == null) return; const e = ellipseFrom(c, ax, r3.num); if(!e) return;
+    if(arcE){   // góc đầu / cuối đo từ trục lớn (như AutoCAD); điểm có góc θ ứng với tham số t: tan t = tan θ / tỉ số trục
+      const mA = Math.atan2(e.my, e.mx), toT = th => Math.atan2(Math.sin(th), e.ratio * Math.cos(th));
+      const angOf = g => g.pt ? Math.atan2(g.pt.y - c.y, g.pt.x - c.x) - mA : g.num * D2R;
+      const g1 = await A.getAngle('Chỉ định góc đầu', { base: c }); if(g1.num == null && !g1.pt) return; const th1 = angOf(g1);
+      const arcOf = th2 => { const w = Object.assign({}, e); w.p1 = G.norm(toT(th1)); w.p2 = G.norm(toT(th2)); if(w.p2 <= w.p1 + 1e-12) w.p2 += TAU; return w; };
+      const g2 = await A.getAngle('Chỉ định góc cuối', { base: c, kw: [{ k: 'I', t: 'Góc ở tâm' }], preview: (g, p) => g.ent(arcOf(Math.atan2(p.y - c.y, p.x - c.x) - mA)) });
+      let th2; if(g2.kw === 'I'){ const gi = await A.getAngle('Chỉ định góc ở tâm của cung', { def: 180 }); th2 = th1 + (gi.num != null ? gi.num : 180) * D2R; } else if(g2.num != null || g2.pt) th2 = angOf(g2); else return;
+      A.commit({ add: [A.newProps(arcOf(th2))] }); return;
+    }
     A.commit({ add: [A.newProps(e)] });
   });
 
@@ -220,9 +294,38 @@
   cmd(['POINT', 'PO'], 'Đặt điểm (nhiều lần, Enter để thôi)', async () => {
     for(;;){ const r = await A.getPoint('Chỉ định điểm'); if(!r.pt) return; A.commit({ add: [mk('POINT', { x: r.pt.x, y: r.pt.y })] }); }
   });
+  // hướng của đoạn thẳng gần điểm bấm (LINE / XLINE / đoạn của đa tuyến)
+  function segDir(e, p){
+    if(e.type === 'LINE'){ const L = Math.hypot(e.x2 - e.x1, e.y2 - e.y1) || 1; return { a: { x: e.x1, y: e.y1 }, u: { x: (e.x2 - e.x1) / L, y: (e.y2 - e.y1) / L } }; }
+    if(e.type === 'XLINE') return { a: { x: e.x, y: e.y }, u: { x: e.dx, y: e.dy } };
+    const c = G.curveOf(e); if(!c) return null; let best = null, bd = Infinity; for(const q of c.pieces){ if(q.t !== 's') continue; const n = G.nearOnPiece(q, p); const d = Math.hypot(n.x - p.x, n.y - p.y); if(d < bd){ bd = d; best = q; } }
+    if(!best) return null; const L = Math.hypot(best.bx - best.ax, best.by - best.ay) || 1; return { a: { x: best.ax, y: best.ay }, u: { x: (best.bx - best.ax) / L, y: (best.by - best.ay) / L } };
+  }
+  const lineLike = e => e.type === 'LINE' || e.type === 'XLINE' || e.type === 'POLYLINE';
   async function xlineRay(isRay){
-    let r = await A.getPoint(isRay ? 'Chỉ định điểm đầu tia' : 'Chỉ định điểm', { kw: isRay ? [] : [{ k: 'H', t: 'Ngang' }, { k: 'V', t: 'Dọc' }] });
+    let r = await A.getPoint(isRay ? 'Chỉ định điểm đầu tia' : 'Chỉ định điểm', { kw: isRay ? [] : [{ k: 'H', t: 'Ngang' }, { k: 'V', t: 'Dọc' }, { k: 'A', t: 'Góc' }, { k: 'B', t: 'Phân giác' }, { k: 'O', t: 'Song song' }] });
     if(r.none) return;
+    const xl = (p, u) => mk('XLINE', { x: p.x, y: p.y, dx: u.x, dy: u.y, ray: false });
+    if(r.kw === 'A'){
+      const ra = await A.getAngle('Nhập góc của đường dựng', { def: MEM.xla || 0, kw: [{ k: 'R', t: 'Tham chiếu' }] }); let deg;
+      if(ra.kw === 'R'){ const rl = await A.getEnt('Chọn một đường thẳng', { filter: lineLike }); if(!rl.ent) return; const sd = segDir(rl.ent, rl.pt); if(!sd) return; const ro = await A.getAngle('Nhập góc của đường dựng so với đường đã chọn', { def: 0 }); deg = Math.atan2(sd.u.y, sd.u.x) * R2D + (ro.num || 0); }
+      else deg = ra.num != null ? ra.num : (MEM.xla || 0);
+      MEM.xla = deg; remember(); const u = { x: Math.cos(deg * D2R), y: Math.sin(deg * D2R) };
+      for(;;){ const p = await A.getPoint('Chỉ định điểm đi qua', { preview: (g, q) => g.ent({ type: 'XLINE', x: q.x, y: q.y, dx: u.x, dy: u.y }) }); if(!p.pt) return; A.commit({ add: [xl(p.pt, u)] }); }
+    }
+    if(r.kw === 'B'){
+      const v = await A.getPoint('Chỉ định đỉnh của góc'); if(!v.pt) return; const s0 = await A.getPoint('Chỉ định điểm đầu của góc', { base: v.pt }); if(!s0.pt) return;
+      const bis = q => { const a1 = ang(v.pt, s0.pt), a2 = ang(v.pt, q); const m = a1 + G.norm(a2 - a1) / 2; return { x: Math.cos(m), y: Math.sin(m) }; };
+      for(;;){ const e = await A.getPoint('Chỉ định điểm cuối của góc', { base: v.pt, preview: (g, q) => { const u = bis(q); g.ent({ type: 'XLINE', x: v.pt.x, y: v.pt.y, dx: u.x, dy: u.y }); } }); if(!e.pt) return; A.commit({ add: [xl(v.pt, bis(e.pt))] }); }
+    }
+    if(r.kw === 'O'){
+      const d = await A.getDist('Chỉ định khoảng song song', { kw: [{ k: 'T', t: 'Đi qua điểm' }], def: MEM.xlo != null ? MEM.xlo : 'Đi qua điểm' });
+      const through = d.kw === 'T' || (d.none && MEM.xlo == null); const dd = d.num != null ? Math.abs(d.num) : MEM.xlo; if(!through){ MEM.xlo = dd; remember(); }
+      for(;;){ const sl = await A.getEnt('Chọn một đường thẳng', { filter: lineLike }); if(!sl.ent) return; const sd = segDir(sl.ent, sl.pt); if(!sd) continue;
+        const at = q => { if(through) return q; const nx = -sd.u.y, ny = sd.u.x, side = (q.x - sd.a.x) * nx + (q.y - sd.a.y) * ny >= 0 ? 1 : -1; return { x: sd.a.x + nx * dd * side, y: sd.a.y + ny * dd * side }; };
+        const p = await A.getPoint(through ? 'Chỉ định điểm đi qua' : 'Chỉ định phía cần song song', { preview: (g, q) => { const o = at(q); g.ent({ type: 'XLINE', x: o.x, y: o.y, dx: sd.u.x, dy: sd.u.y }); } }); if(!p.pt) return;
+        A.commit({ add: [xl(at(p.pt), sd.u)] }); }
+    }
     if(r.kw === 'H' || r.kw === 'V'){ for(;;){ const p = await A.getPoint('Chỉ định điểm đi qua'); if(!p.pt) return; A.commit({ add: [mk('XLINE', { x: p.pt.x, y: p.pt.y, dx: r.kw === 'H' ? 1 : 0, dy: r.kw === 'H' ? 0 : 1, ray: false })] }); } }
     const b = r.pt;
     for(;;){
@@ -254,23 +357,47 @@
   });
 
   async function textCmd(multi){
-    let ha = 'left', va = 'alphabetic', p;
-    if(multi){
+    let ha = 'left', va = 'alphabetic', p, mRot = null;
+    if(multi){   // MTEXT như AutoCAD: góc thứ nhất, rồi góc đối diện hoặc [Cao chữ/Canh lề/Xoay/Kiểu chữ/Chiều rộng]; không hỏi lại cao chữ
+      log('Kiểu chữ hiện hành: "' + (A.TS ? A.TS.cur : 'Standard') + '"  Cao chữ: ' + fmt(MEM.th || defaultTextH()));
       const a = await A.getPoint('Chỉ định góc thứ nhất'); if(!a.pt) return;
-      const b = await A.getPoint('Chỉ định góc đối diện', { base: a.pt, rubber: false, preview: (g, q) => g.poly(rectPts(a.pt, q), true, '#e8eef7', [5, 4]) }); if(!b.pt) return;
-      p = { x: Math.min(a.pt.x, b.pt.x), y: Math.max(a.pt.y, b.pt.y) }; va = 'top';
+      let jk = MEM.mtj || 'TL', b;
+      for(;;){
+        b = await A.getPoint('Chỉ định góc đối diện', { base: a.pt, rubber: false, kw: [{ k: 'H', t: 'Cao chữ' }, { k: 'J', t: 'Canh lề' }, { k: 'R', t: 'Xoay' }, { k: 'S', t: 'Kiểu chữ' }, { k: 'W', t: 'Chiều rộng' }], preview: (g, q) => g.poly(rectPts(a.pt, q), true, '#e8eef7', [5, 4]) });
+        if(b.kw === 'H'){ const v = await A.getDist('Chỉ định chiều cao chữ', { base: a.pt, def: MEM.th || defaultTextH() }); if(v.num != null && Math.abs(v.num) > 0){ MEM.th = Math.abs(v.num); remember(); } continue; }
+        if(b.kw === 'J'){ const j = await A.getKw('Nhập kiểu canh lề', { kw: ['TL', 'TC', 'TR', 'ML', 'MC', 'MR', 'BL', 'BC', 'BR'].map(k => ({ k, t: k })), def: jk }); if(j.kw){ jk = j.kw; MEM.mtj = jk; remember(); } continue; }
+        if(b.kw === 'R'){ const g = await A.getAngle('Chỉ định góc xoay', { base: a.pt, def: 0 }); if(g.num != null) mRot = g.num; continue; }
+        if(b.kw === 'S'){ const v = await A.getStr('Nhập tên kiểu chữ hoặc [?]', { def: A.TS ? A.TS.cur : 'Standard' }); const n = String(v.str || '').trim(); if(n === '?') log('Kiểu chữ: ' + (A.TS ? Object.keys(A.TS.list).join(', ') : 'Standard')); else if(n && A.tsSetCur && !A.tsSetCur(n)) log('Không có kiểu chữ "' + n + '".'); continue; }
+        if(b.kw === 'W'){ const v = await A.getDist('Chỉ định chiều rộng', { base: a.pt }); if(v.num != null && Math.abs(v.num) > 0){ b = { pt: { x: a.pt.x + Math.abs(v.num), y: a.pt.y - (MEM.th || defaultTextH()) } }; break; } continue; }
+        break;
+      }
+      if(!b.pt) return;
+      const x0 = Math.min(a.pt.x, b.pt.x), x1 = Math.max(a.pt.x, b.pt.x), y0 = Math.min(a.pt.y, b.pt.y), y1 = Math.max(a.pt.y, b.pt.y);
+      ha = jk[1] === 'C' ? 'center' : jk[1] === 'R' ? 'right' : 'left'; va = jk[0] === 'M' ? 'middle' : jk[0] === 'B' ? 'bottom' : 'top';
+      p = { x: ha === 'center' ? (x0 + x1) / 2 : ha === 'right' ? x1 : x0, y: va === 'middle' ? (y0 + y1) / 2 : va === 'bottom' ? y0 : y1 };
     } else {
-      let r = await A.getPoint('Chỉ định điểm đặt chữ', { kw: [{ k: 'J', t: 'Canh lề' }] }); if(r.none) return;
-      if(r.kw === 'J'){
-        const j = await A.getKw('Canh lề', { kw: [{ k: 'L', t: 'Trái' }, { k: 'C', t: 'Giữa' }, { k: 'R', t: 'Phải' }, { k: 'M', t: 'Chính giữa' }, { k: 'TL', t: 'Trên trái' }] });
-        if(j.kw === 'C'){ ha = 'center'; } else if(j.kw === 'R'){ ha = 'right'; } else if(j.kw === 'M'){ ha = 'center'; va = 'middle'; } else if(j.kw === 'TL'){ va = 'top'; }
-        r = await A.getPoint('Chỉ định điểm canh lề'); if(!r.pt) return;
+      let r;
+      for(;;){
+        if(A.TS) log('Kiểu chữ hiện hành: "' + A.TS.cur + '"  Cao chữ: ' + fmt(MEM.th || defaultTextH()));
+        r = await A.getPoint('Chỉ định điểm đầu của chữ', { kw: [{ k: 'J', t: 'Canh lề' }, { k: 'S', t: 'Kiểu chữ' }] }); if(r.none) return;
+        if(r.kw === 'S'){ const v = await A.getStr('Nhập tên kiểu chữ hoặc [?]', { def: A.TS ? A.TS.cur : 'Standard' }); const n = String(v.str || '').trim(); if(n === '?'){ log('Kiểu chữ: ' + (A.TS ? Object.keys(A.TS.list).join(', ') : 'Standard')); continue; } if(n && A.tsSetCur && !A.tsSetCur(n)) log('Không có kiểu chữ "' + n + '".'); continue; }
+        break;
+      }
+      if(r.kw === 'J'){   // các kiểu canh lề của AutoCAD (trừ Align / Fit)
+        const J = { L: ['left', 'alphabetic'], C: ['center', 'alphabetic'], R: ['right', 'alphabetic'], M: ['center', 'middle'],
+          TL: ['left', 'top'], TC: ['center', 'top'], TR: ['right', 'top'], ML: ['left', 'middle'], MC: ['center', 'middle'], MR: ['right', 'middle'], BL: ['left', 'bottom'], BC: ['center', 'bottom'], BR: ['right', 'bottom'] };
+        const j = await A.getKw('Nhập tuỳ chọn canh lề', { kw: [{ k: 'L', t: 'Trái' }, { k: 'C', t: 'Giữa' }, { k: 'R', t: 'Phải' }, { k: 'M', t: 'Chính giữa' },
+          { k: 'TL', t: 'Trên trái' }, { k: 'TC', t: 'Trên giữa' }, { k: 'TR', t: 'Trên phải' }, { k: 'ML', t: 'Giữa trái' }, { k: 'MC', t: 'Giữa giữa' }, { k: 'MR', t: 'Giữa phải' }, { k: 'BL', t: 'Dưới trái' }, { k: 'BC', t: 'Dưới giữa' }, { k: 'BR', t: 'Dưới phải' }] });
+        if(j.kw && J[j.kw]){ ha = J[j.kw][0]; va = J[j.kw][1]; }
+        r = await A.getPoint(j.kw === 'C' || j.kw === 'BC' ? 'Chỉ định điểm giữa đường chân chữ' : j.kw === 'R' || j.kw === 'BR' ? 'Chỉ định điểm cuối đường chân chữ' : 'Chỉ định điểm canh lề'); if(!r.pt) return;
       }
       p = r.pt;
     }
     const dh = MEM.th || defaultTextH();
-    const rh = await A.getDist('Chỉ định chiều cao chữ', { base: p, def: dh }); const h = rh.num != null ? Math.abs(rh.num) : dh; if(!(h > 0)) return; MEM.th = h; lastTextH = h;
-    let rot = 0;
+    let h = dh;
+    if(!multi){ const rh = await A.getDist('Chỉ định chiều cao chữ', { base: p, def: dh }); h = rh.num != null ? Math.abs(rh.num) : dh; }
+    if(!(h > 0)) return; MEM.th = h; lastTextH = h;
+    let rot = multi && mRot != null ? mRot : 0;
     if(!multi){ const ra = await A.getAngle('Chỉ định góc xoay chữ', { base: p, def: MEM.trot || 0 }); rot = ra.num != null ? ra.num : (MEM.trot || 0); MEM.trot = rot; }
     remember();
     const s = await askText({ title: multi ? 'Nội dung chữ nhiều dòng' : 'Nội dung chữ', value: '' });
@@ -296,7 +423,7 @@
     const s = await A.getSel('Chọn đối tượng'); const sel = s.sel || []; if(!sel.length) return;
     let r = await basePoint(); let base, to;
     if(r.none || r.kw === 'D'){ const d = await A.getPoint('Chỉ định độ dời dx,dy', { def: '0,0' }); if(!d.pt) return; base = { x: 0, y: 0 }; to = d.pt; }
-    else { base = r.pt; const r2 = await A.getPoint('Chỉ định điểm thứ hai', { base, preview: (g, p) => g.shift(sel, p.x - base.x, p.y - base.y) }); if(!r2.pt) return; to = r2.pt; }
+    else { base = r.pt; const r2 = await A.getPoint('Chỉ định điểm thứ hai', { base, def: 'dùng điểm thứ nhất làm độ dời', preview: (g, p) => g.shift(sel, p.x - base.x, p.y - base.y) }); if(r2.none){ to = { x: base.x * 2, y: base.y * 2 }; } else if(!r2.pt) return; else to = r2.pt; }
     const dx = to.x - base.x, dy = to.y - base.y; if(!dx && !dy) return;
     A.commit({ rep: transformAll(sel, w => translateEnt(w, dx, dy)) }, 'Đã di chuyển ' + sel.length + ' đối tượng');
     clearSelSafe();
@@ -304,12 +431,21 @@
   function clearSelSafe(){ try{ selEnts.clear(); hideSelBar(); }catch(_){} }
   cmd(['COPY', 'CO', 'CP'], 'Sao chép (nhiều lần, Enter để thôi)', async () => {
     const s = await A.getSel('Chọn đối tượng'); const sel = s.sel || []; if(!sel.length) return;
-    let r = await basePoint(); let base;
+    const single = () => MEM.copyMode === 'S';
+    log('Thiết lập hiện tại: Chế độ sao chép = ' + (single() ? 'Một lần' : 'Nhiều lần'));
+    let r;
+    for(;;){
+      r = await A.getPoint('Chỉ định điểm gốc', { kw: [{ k: 'D', t: 'Độ dời' }, { k: 'O', t: 'Chế độ' }], def: 'Độ dời' });
+      if(r.kw === 'O'){ const k = await A.getKw('Nhập chế độ sao chép', { kw: [{ k: 'S', t: 'Một lần' }, { k: 'M', t: 'Nhiều lần' }], def: single() ? 'Một lần' : 'Nhiều lần' }); if(k.kw){ MEM.copyMode = k.kw; remember(); } continue; }
+      break;
+    }
+    let base;
     if(r.none || r.kw === 'D'){ const d = await A.getPoint('Chỉ định độ dời dx,dy'); if(!d.pt) return; A.commit({ add: remapGroups(sel.map(e => { const w = copyOf(e); translateEnt(w, d.pt.x, d.pt.y); return w; })) }); return; }
     base = r.pt; const stack = [];
     for(;;){
-      const r2 = await A.getPoint('Chỉ định điểm thứ hai', { base, kw: [{ k: 'A', t: 'Mảng' }, { k: 'U', t: 'Hoàn tác' }], preview: (g, p) => g.shift(sel, p.x - base.x, p.y - base.y) });
-      if(r2.none) return;
+      const r2 = await A.getPoint('Chỉ định điểm thứ hai', { base, kw: stack.length ? [{ k: 'A', t: 'Mảng' }, { k: 'E', t: 'Thoát' }, { k: 'U', t: 'Hoàn tác' }] : [{ k: 'A', t: 'Mảng' }], def: stack.length ? 'Thoát' : 'dùng điểm thứ nhất làm độ dời', preview: (g, p) => g.shift(sel, p.x - base.x, p.y - base.y) });
+      if(r2.kw === 'E') return;
+      if(r2.none){ if(!stack.length) A.commit({ add: remapGroups(sel.map(e => { const w = copyOf(e); translateEnt(w, base.x, base.y); return w; })) }); return; }
       if(r2.kw === 'U'){ if(stack.length){ stack.pop(); undoEdit(); } continue; }
       if(r2.kw === 'A'){
         const n = await A.getNum('Nhập số bản trong mảng (kể cả gốc)', { def: MEM.can || 3 }); const N = Math.round(n.num || MEM.can || 3); if(N < 2) continue; MEM.can = N; remember();
@@ -317,7 +453,7 @@
         const add = []; for(let i = 1; i < N; i++){ const dx = (p2.pt.x - base.x) * i, dy = (p2.pt.y - base.y) * i; add.push(...remapGroups(sel.map(e => { const w = copyOf(e); translateEnt(w, dx, dy); return w; }))); }
         A.commit({ add }); stack.push(1); continue;
       }
-      if(r2.pt){ const dx = r2.pt.x - base.x, dy = r2.pt.y - base.y; A.commit({ add: remapGroups(sel.map(e => { const w = copyOf(e); translateEnt(w, dx, dy); return w; })) }); stack.push(1); }
+      if(r2.pt){ const dx = r2.pt.x - base.x, dy = r2.pt.y - base.y; A.commit({ add: remapGroups(sel.map(e => { const w = copyOf(e); translateEnt(w, dx, dy); return w; })) }); stack.push(1); if(single()) return; }
     }
   });
   async function refAngle(base){
@@ -559,22 +695,44 @@
     return 'Chỉ kéo dài được đường thẳng, cung, đa tuyến hở.';
   }
   async function trimExtendCmd(modeTE){
-    let edges = null;
-    log(modeTE === 'trim' ? 'Cắt nhanh: bấm phần cần bỏ (mọi đối tượng là cạnh cắt) · T = chọn cạnh cắt · giữ Shift để kéo dài' : 'Kéo dài nhanh: bấm gần đầu cần kéo dài · T = chọn ranh giới · giữ Shift để cắt');
+    const isT = modeTE === 'trim'; let edges = null;
+    const ek = isT ? 'T' : 'B', et = isT ? 'Cạnh cắt' : 'Cạnh biên';
+    const pickEdges = async () => { const s = await A.getSel(isT ? 'Chọn cạnh cắt (Enter = tất cả)' : 'Chọn cạnh biên (Enter = tất cả)', { pre: false }); edges = s.sel && s.sel.length ? s.sel : null; hl(edges || []); };
+    log('Thiết lập hiện tại: Chiếu = UCS, Cạnh = Không kéo dài, Chế độ = ' + (MEM.trimStd ? 'Chuẩn' : 'Nhanh'));
+    if(MEM.trimStd) await pickEdges();
+    const apply = (e, pt, m) => { const msg = m === 'trim' ? doTrim(e, pt, edges) : doExtend(e, pt, edges); if(edges) edges = edges.filter(x => modelEntities.indexOf(x) >= 0); return msg; };
     for(;;){
-      const r = await A.getEnt(modeTE === 'trim' ? 'Chọn đối tượng cần cắt' : 'Chọn đối tượng cần kéo dài', { kw: [{ k: 'T', t: edges ? 'Cạnh cắt (đang chọn ' + edges.length + ')' : 'Cạnh cắt' }, { k: 'U', t: 'Hoàn tác' }], filter: curveable });
-      if(r.kw === 'T'){ const s = await A.getSel('Chọn cạnh cắt / ranh giới (Enter = tất cả)', { pre: false }); edges = s.sel && s.sel.length ? s.sel : null; hl(edges || []); continue; }
+      const kw = [{ k: ek, t: edges ? et + ' (đang chọn ' + edges.length + ')' : et }, { k: 'C', t: 'Khung cắt' }, { k: 'F', t: 'Hàng rào' }, { k: 'O', t: 'Chế độ' }].concat(isT ? [{ k: 'R', t: 'Xoá' }] : []).concat([{ k: 'U', t: 'Hoàn tác' }]);
+      const r = await A.getEnt(isT ? 'Chọn đối tượng cần cắt, hoặc Shift + chọn để kéo dài' : 'Chọn đối tượng cần kéo dài, hoặc Shift + chọn để cắt', { kw, filter: curveable });
+      if(r.kw === ek){ await pickEdges(); continue; }
       if(r.kw === 'U'){ undoEdit(); continue; }
+      if(r.kw === 'O'){ const k = await A.getKw('Nhập chế độ cắt / kéo dài', { kw: [{ k: 'Q', t: 'Nhanh' }, { k: 'S', t: 'Chuẩn' }], def: MEM.trimStd ? 'Chuẩn' : 'Nhanh' }); if(k.kw){ MEM.trimStd = k.kw === 'S'; remember(); if(!MEM.trimStd){ edges = null; hl([]); } else await pickEdges(); } continue; }
+      if(r.kw === 'R'){ const s = await A.getSel('Chọn đối tượng cần xoá', { pre: false }); const list = (s.sel || []).filter(e => !A.isLocked(e)); if(list.length) A.commit({ del: list }, 'Đã xoá ' + list.length + ' đối tượng'); if(edges) edges = edges.filter(x => modelEntities.indexOf(x) >= 0); hl(edges || []); continue; }
+      if(r.kw === 'C' || r.kw === 'F'){
+        // khung cắt / hàng rào: mọi đối tượng chạm khung (hàng rào) được cắt / kéo dài tại chỗ chạm, như AutoCAD
+        const pts = [], box = r.kw === 'C';
+        if(box){ const a = await A.getPoint('Chỉ định góc thứ nhất'); if(!a.pt) continue; const b = await A.getPoint('Chỉ định góc đối diện', { base: a.pt, rubber: false, preview: (g, p) => g.poly(rectPts(a.pt, p), true, '#33dd88', [6, 4]) }); if(!b.pt) continue; pts.push(...rectPts(a.pt, b.pt)); }
+        else { const a = await A.getPoint('Chỉ định điểm đầu của hàng rào'); if(!a.pt) continue; pts.push(a.pt);
+          for(;;){ const q = await A.getPoint('Chỉ định điểm tiếp theo của hàng rào', { base: pts[pts.length - 1], kw: [{ k: 'U', t: 'Hoàn tác' }], preview: (g, p) => g.poly(pts.concat([p]), false, '#ffcf33', [6, 4]) }); if(q.kw === 'U'){ if(pts.length > 1) pts.pop(); continue; } if(!q.pt) break; pts.push(q.pt); }
+          if(pts.length < 2) continue; }
+        const segs = []; for(let i = 0; i < (box ? pts.length : pts.length - 1); i++){ const a = pts[i], b = pts[(i + 1) % pts.length]; segs.push({ t: 's', ax: a.x, ay: a.y, bx: b.x, by: b.y, u0: 0, u1: 1 }); }
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for(const q of pts){ x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); }
+        const cands = A.queryBox(x0, y0, x1, y1, 20000).filter(e => curveable(e) && !A.isLocked(e) && !(edges && edges.includes(e)));
+        let n = 0;
+        for(const e0 of cands){ if(modelEntities.indexOf(e0) < 0) continue; const c = G.curveOf(e0); if(!c) continue; let hit = null;
+          for(const pc of c.pieces){ for(const sg of segs){ const xs = G.xPieces(pc, sg); if(xs.length){ hit = xs[0]; break; } } if(hit) break; }
+          if(!hit && box){ const pc = c.pieces[Math.floor(c.pieces.length / 2)]; const q = pc ? (pc.t === 's' ? { x: (pc.ax + pc.bx) / 2, y: (pc.ay + pc.by) / 2 } : G.nearOnPiece(pc, { x: (x0 + x1) / 2, y: (y0 + y1) / 2 })) : null; if(q && G.ptInPoly(q, pts)) hit = q; }
+          if(!hit) continue; if(!apply(e0, { x: hit.x, y: hit.y }, modeTE)) n++; }
+        log((isT ? 'Đã cắt ' : 'Đã kéo dài ') + n + ' đối tượng.'); continue;
+      }
       if(!r.ent) break;
-      const m = r.shift ? (modeTE === 'trim' ? 'extend' : 'trim') : modeTE;
-      const msg = m === 'trim' ? doTrim(r.ent, r.pt, edges) : doExtend(r.ent, r.pt, edges);
-      if(msg) log(msg);
-      if(edges) edges = edges.filter(x => modelEntities.indexOf(x) >= 0);
+      const m = r.shift ? (isT ? 'extend' : 'trim') : modeTE;
+      const msg = apply(r.ent, r.pt, m); if(msg) log(msg);
     }
     hl([]);
   }
-  cmd(['TRIM', 'TR'], 'Cắt phần thừa (bấm phần cần bỏ)', () => trimExtendCmd('trim'));
-  cmd(['EXTEND', 'EX'], 'Kéo dài tới đối tượng gần nhất', () => trimExtendCmd('extend'));
+  cmd(['TRIM', 'TR'], 'Cắt phần thừa (bấm phần cần bỏ; T = cạnh cắt, C = khung cắt, F = hàng rào, O = chế độ, R = xoá)', () => trimExtendCmd('trim'));
+  cmd(['EXTEND', 'EX'], 'Kéo dài tới đối tượng gần nhất (B = cạnh biên, C = khung cắt, F = hàng rào, O = chế độ)', () => trimExtendCmd('extend'));
   A.doTrim = doTrim; A.doExtend = doExtend;
 
   // FILLET / CHAMFER
@@ -585,66 +743,94 @@
     return { l1: { x1: K1.x, y1: K1.y, x2: P.x, y2: P.y }, l2: { x1: K2.x, y1: K2.y, x2: P.x, y2: P.y } };
   }
   // bo / vát 1 góc của đa tuyến có cung (hai đoạn kề là đoạn thẳng) → cung thật (bulge)
-  function cornerBV(V, closed, k, kind, val){
+  function cornerBV(V, closed, k, kind, val, val2){
     const n = V.length; if(!closed && (k <= 0 || k >= n - 1)) return null; const ip = (k - 1 + n) % n, inx = (k + 1) % n;
     if(V[ip].bulge || V[k].bulge) return null;
     const P = V[k], A1 = V[ip], B1 = V[inx]; const L1 = dist(A1, P), L2 = dist(P, B1); if(L1 < 1e-12 || L2 < 1e-12) return null;
     const u1 = { x: (P.x - A1.x) / L1, y: (P.y - A1.y) / L1 }, u2 = { x: (B1.x - P.x) / L2, y: (B1.y - P.y) / L2 };
     const phi = Math.atan2(u1.x * u2.y - u1.y * u2.x, u1.x * u2.x + u1.y * u2.y); if(Math.abs(phi) < 1e-9 || Math.abs(Math.abs(phi) - Math.PI) < 1e-9) return null;
-    const t = kind === 'fillet' ? val * Math.tan(Math.abs(phi) / 2) : val; if(t > L1 + 1e-9 || t > L2 + 1e-9) return null;
-    const T1 = { x: P.x - u1.x * t, y: P.y - u1.y * t }, T2 = { x: P.x + u2.x * t, y: P.y + u2.y * t };
+    let t = kind === 'fillet' ? val * Math.tan(Math.abs(phi) / 2) : val, t2 = kind === 'chamfer' && val2 != null ? val2 : t;
+    if(kind === 'chamfer' && val2 && typeof val2 === 'object'){ const th = val2.a * D2R, sn = Math.sin(Math.PI - Math.abs(phi) + th); if(Math.abs(sn) < 1e-9) return null; t2 = val * Math.sin(th) / sn; if(!(t2 > 0)) return null; }   // chiều dài + góc (vát theo góc)
+    if(t > L1 + 1e-9 || t2 > L2 + 1e-9) return null;
+    const T1 = { x: P.x - u1.x * t, y: P.y - u1.y * t }, T2 = { x: P.x + u2.x * t2, y: P.y + u2.y * t2 };
     if(kind === 'fillet') T1.bulge = Math.tan(phi / 4);
     const out = V.slice(); out.splice(k, 1, T1, T2); return out.filter((q, i) => i === 0 || dist(q, out[i - 1]) > 1e-12);
   }
   G.cornerBV = cornerBV;
+  // vát 2 đường thẳng với 2 khoảng vát (hoặc chiều dài + góc so với đường thứ nhất)
+  function chamfer2(L1, t1, L2, t2, d1, d2, angDeg){
+    const P = lineIntersect(L1, L2); if(!P) return null;
+    const dirTo = (L, t) => { const l = Math.hypot(L.x2 - L.x1, L.y2 - L.y1) || 1, u = { x: (L.x2 - L.x1) / l, y: (L.y2 - L.y1) / l }; return (t.x - P.x) * u.x + (t.y - P.y) * u.y >= 0 ? u : { x: -u.x, y: -u.y }; };
+    const keep = (L, u) => { const e1 = { x: L.x1, y: L.y1 }, e2 = { x: L.x2, y: L.y2 }; return (e1.x - P.x) * u.x + (e1.y - P.y) * u.y >= (e2.x - P.x) * u.x + (e2.y - P.y) * u.y ? e1 : e2; };
+    const u1 = dirTo(L1, t1), u2 = dirTo(L2, t2);
+    if(angDeg != null){ const phi = Math.acos(Math.max(-1, Math.min(1, u1.x * u2.x + u1.y * u2.y))), th = angDeg * D2R, sn = Math.sin(phi + th); if(Math.abs(sn) < 1e-9) return null; d2 = d1 * Math.sin(th) / sn; if(!(d2 > 0)) return null; }
+    const K1 = keep(L1, u1), K2 = keep(L2, u2); if(d1 > dist(P, K1) + 1e-9 || d2 > dist(P, K2) + 1e-9) return null;
+    const C1 = { x: P.x + u1.x * d1, y: P.y + u1.y * d1 }, C2 = { x: P.x + u2.x * d2, y: P.y + u2.y * d2 };
+    return { l1: { x1: K1.x, y1: K1.y, x2: C1.x, y2: C1.y }, l2: { x1: K2.x, y1: K2.y, x2: C2.x, y2: C2.y }, line: { x1: C1.x, y1: C1.y, x2: C2.x, y2: C2.y } };
+  }
   async function cornerCmd(kind){
-    const key = kind === 'fillet' ? 'fr' : 'cd';
+    const isF = kind === 'fillet', key = isF ? 'fr' : 'cd';
     let val = MEM[key] != null ? MEM[key] : 0;
-    log((kind === 'fillet' ? 'Bán kính bo' : 'Khoảng vát') + ' hiện tại = ' + fmt(val));
+    const trimOn = () => MEM.ftrim !== false;
+    const cd2 = () => MEM.cd2 != null ? MEM.cd2 : val, angM = () => MEM.cma || 0, byAng = () => !isF && MEM.cme === 'A';
+    log(isF ? 'Thiết lập hiện tại: Chế độ = ' + (trimOn() ? 'CẮT' : 'KHÔNG CẮT') + ', Bán kính = ' + fmt(val)
+      : '(Chế độ ' + (trimOn() ? 'CẮT' : 'KHÔNG CẮT') + ') ' + (byAng() ? 'Chiều dài vát = ' + fmt(val) + ', Góc = ' + fmt(angM()) + '°' : 'Khoảng vát 1 = ' + fmt(val) + ', Khoảng vát 2 = ' + fmt(cd2())));
+    const v2 = () => isF ? undefined : (byAng() ? { a: angM() } : cd2());
+    const cornerP = (V, closed, k) => cornerBV(V, closed, k, kind, val, v2());
+    const BVof = e => (A.bvOf && A.bvOf(e)) || (e.vertices || []).map(q => ({ x: q.x, y: q.y }));
     let multiple = false;
+    const setTrim = async () => { const k = await A.getKw('Nhập chế độ cắt', { kw: [{ k: 'T', t: 'Cắt' }, { k: 'N', t: 'Không cắt' }], def: trimOn() ? 'Cắt' : 'Không cắt' }); if(k.kw){ MEM.ftrim = k.kw === 'T'; remember(); } };
+    const setVal = async () => {
+      if(isF){ const v = await A.getDist('Chỉ định bán kính bo', { def: val }); if(v.num != null){ val = Math.abs(v.num); MEM[key] = val; remember(); } return; }
+      const a = await A.getDist('Chỉ định khoảng vát thứ nhất', { def: val }); if(a.num == null && !a.none) return; const d1 = a.num != null ? Math.abs(a.num) : val;
+      const b = await A.getDist('Chỉ định khoảng vát thứ hai', { def: d1 }); val = d1; MEM[key] = d1; MEM.cd2 = b.num != null ? Math.abs(b.num) : d1; MEM.cme = 'D'; remember(); };
+    const setAng = async () => { const a = await A.getDist('Chỉ định chiều dài vát trên đường thứ nhất', { def: val }); if(a.num == null && !a.none) return; const d1 = a.num != null ? Math.abs(a.num) : val;
+      const g = await A.getAngle('Chỉ định góc vát so với đường thứ nhất', { def: angM() }); val = d1; MEM[key] = d1; MEM.cma = g.num != null ? g.num : angM(); MEM.cme = 'A'; remember(); };
     for(;;){
-      const r1 = await A.getEnt('Chọn đối tượng thứ nhất', { kw: [{ k: kind === 'fillet' ? 'R' : 'D', t: kind === 'fillet' ? 'Bán kính' : 'Khoảng vát' }, { k: 'P', t: 'Đa tuyến' }, { k: 'M', t: 'Nhiều lần' }, { k: 'U', t: 'Hoàn tác' }], filter: e => e.type === 'LINE' || e.type === 'POLYLINE' });
-      if(r1.kw === 'R' || r1.kw === 'D'){ const v = await A.getDist(kind === 'fillet' ? 'Chỉ định bán kính bo' : 'Chỉ định khoảng vát', { def: val }); if(v.num != null){ val = Math.abs(v.num); MEM[key] = val; remember(); } continue; }
+      const kw = isF ? [{ k: 'U', t: 'Hoàn tác' }, { k: 'P', t: 'Đa tuyến' }, { k: 'R', t: 'Bán kính' }, { k: 'T', t: 'Cắt' }, { k: 'M', t: 'Nhiều lần' }]
+        : [{ k: 'U', t: 'Hoàn tác' }, { k: 'P', t: 'Đa tuyến' }, { k: 'D', t: 'Khoảng vát' }, { k: 'A', t: 'Góc' }, { k: 'T', t: 'Cắt' }, { k: 'E', t: 'Phương pháp' }, { k: 'M', t: 'Nhiều lần' }];
+      const r1 = await A.getEnt(isF ? 'Chọn đối tượng thứ nhất' : 'Chọn đường thứ nhất', { kw, filter: e => e.type === 'LINE' || e.type === 'POLYLINE' });
+      if(r1.kw === 'R' || r1.kw === 'D'){ await setVal(); continue; }
+      if(r1.kw === 'A'){ await setAng(); continue; }
+      if(r1.kw === 'T'){ await setTrim(); continue; }
+      if(r1.kw === 'E'){ const k = await A.getKw('Nhập phương pháp vát', { kw: [{ k: 'D', t: 'Khoảng vát' }, { k: 'A', t: 'Góc' }], def: byAng() ? 'Góc' : 'Khoảng vát' }); if(k.kw){ MEM.cme = k.kw; remember(); } continue; }
       if(r1.kw === 'M'){ multiple = true; log('Chế độ nhiều lần.'); continue; }
       if(r1.kw === 'U'){ undoEdit(); continue; }
       if(r1.kw === 'P'){
-        const rp = await A.getEnt('Chọn đa tuyến', { filter: e => e.type === 'POLYLINE' }); if(!rp.ent) continue;
-        if(!(val > 0)){ log('Đặt bán kính/khoảng > 0 trước.'); continue; }
-        const BV0 = A.bvOf(rp.ent) || (rp.ent.vertices || []).map(q => ({ x: q.x, y: q.y })); const closed = !!rp.ent.closed; let n = 0;   /* như AutoCAD: góc bo thành cung thật (bulge), không chia thành đoạn nhỏ */
-        if(BV0){ let V = BV0.map(q => Object.assign({}, q)); for(let k = closed ? V.length - 1 : V.length - 2; k >= (closed ? 0 : 1); k--){ const nv = cornerBV(V, closed, k, kind, val); if(nv){ V = nv; n++; } }
-          if(n){ const w = copyOf(rp.ent); A.setBV(w, V); A.commit({ rep: [[rp.ent, w]] }, (kind === 'fillet' ? 'Đã bo ' : 'Đã vát ') + n + ' góc'); } else log('Không bo/vát được góc nào.'); if(!multiple) return; continue; }
-        let V = rp.ent.vertices.slice();
-        for(let k = closed ? V.length - 1 : V.length - 2; k >= (closed ? 0 : 1); k--){ const nv = polyCorner(V, closed, k, kind, val); if(nv){ V = nv; n++; } }
-        if(n){ const w = copyOf(rp.ent); w.vertices = V; delete w.wq; A.commit({ rep: [[rp.ent, w]] }, (kind === 'fillet' ? 'Đã bo ' : 'Đã vát ') + n + ' góc'); } else log('Không bo/vát được góc nào.');
+        const rp = await A.getEnt(isF ? 'Chọn đa tuyến 2D' : 'Chọn đa tuyến 2D', { filter: e => e.type === 'POLYLINE' }); if(!rp.ent) continue;
+        if(!(val > 0)){ log('Đặt bán kính / khoảng vát > 0 trước.'); continue; }
+        const closed = !!rp.ent.closed; let V = BVof(rp.ent).map(q => Object.assign({}, q)), n = 0;   /* như AutoCAD: góc bo thành cung thật (bulge), không chia thành đoạn nhỏ */
+        for(let k = closed ? V.length - 1 : V.length - 2; k >= (closed ? 0 : 1); k--){ const nv = cornerP(V, closed, k); if(nv){ V = nv; n++; } }
+        if(n){ const w = copyOf(rp.ent); delete w.wq; A.setBV(w, V); A.commit({ rep: [[rp.ent, w]] }, (isF ? 'Đã bo ' : 'Đã vát ') + n + ' góc'); log(n + ' đường đã được ' + (isF ? 'bo' : 'vát') + '.'); } else log('Không bo/vát được góc nào.');
         if(!multiple) return; continue;
       }
       if(!r1.ent) return;
       const e1 = r1.ent;
-      if(e1.type === 'POLYLINE' && A.bvOf(e1)){
-        const BV = A.bvOf(e1); let k = -1, bd = Infinity; for(let i = 0; i < BV.length; i++){ const d = dist(BV[i], r1.pt); if(d < bd){ bd = d; k = i; } }
-        if(!(val > 0)){ log('Đa tuyến: đặt bán kính/khoảng > 0.'); if(!multiple) return; continue; }
-        const nv = cornerBV(BV.map(q => Object.assign({}, q)), !!e1.closed, k, kind, val); if(!nv){ log('Không bo/vát được góc này.'); if(!multiple) return; continue; }
-        const w = copyOf(e1); A.setBV(w, nv); A.commit({ rep: [[e1, w]] }); if(!multiple) return; continue;
-      }
       if(e1.type === 'POLYLINE'){
-        const V = e1.vertices; let k = -1, bd = Infinity; for(let i = 0; i < V.length; i++){ const d = dist(V[i], r1.pt); if(d < bd){ bd = d; k = i; } }
-        if(!(val > 0)){ log('Đa tuyến: đặt bán kính/khoảng > 0.'); if(!multiple) return; continue; }
-        const nv = polyCorner(V, !!e1.closed, k, kind, val); if(!nv){ log('Không bo/vát được góc này.'); if(!multiple) return; continue; }
-        const w = copyOf(e1); w.vertices = nv; delete w.wq; A.commit({ rep: [[e1, w]] }); if(!multiple) return; continue;
+        const BV = BVof(e1); let k = -1, bd = Infinity; for(let i = 0; i < BV.length; i++){ const d = dist(BV[i], r1.pt); if(d < bd){ bd = d; k = i; } }
+        if(!(val > 0)){ log('Đa tuyến: đặt bán kính / khoảng vát > 0.'); if(!multiple) return; continue; }
+        const nv = cornerP(BV.map(q => Object.assign({}, q)), !!e1.closed, k); if(!nv){ log('Không bo/vát được góc này.'); if(!multiple) return; continue; }
+        const w = copyOf(e1); delete w.wq; A.setBV(w, nv); A.commit({ rep: [[e1, w]] }); if(!multiple) return; continue;
       }
       hl([e1]);
-      const r2 = await A.getEnt('Chọn đối tượng thứ hai', { filter: e => e.type === 'LINE' && e !== e1 }); hl([]);
+      let r2;
+      for(;;){ r2 = await A.getEnt(isF ? 'Chọn đối tượng thứ hai, hoặc Shift + chọn để tạo góc nhọn' : 'Chọn đường thứ hai, hoặc Shift + chọn để tạo góc nhọn', { kw: [{ k: isF ? 'R' : 'D', t: isF ? 'Bán kính' : 'Khoảng vát' }].concat(isF ? [] : [{ k: 'A', t: 'Góc' }, { k: 'E', t: 'Phương pháp' }]), filter: e => e.type === 'LINE' && e !== e1 });
+        if(r2.kw === 'R' || r2.kw === 'D'){ await setVal(); continue; } if(r2.kw === 'A'){ await setAng(); continue; }
+        if(r2.kw === 'E'){ const k = await A.getKw('Nhập phương pháp vát', { kw: [{ k: 'D', t: 'Khoảng vát' }, { k: 'A', t: 'Góc' }], def: byAng() ? 'Góc' : 'Khoảng vát' }); if(k.kw){ MEM.cme = k.kw; remember(); } continue; }
+        break; }
+      hl([]);
       if(!r2.ent) return;
-      const res = val > 0 ? cornerOp(e1, r1.pt, r2.ent, r2.pt, kind, val) : cornerZero(e1, r1.pt, r2.ent, r2.pt);
+      const zero = r2.shift || !(val > 0);
+      const res = zero ? cornerZero(e1, r1.pt, r2.ent, r2.pt) : isF ? cornerOp(e1, r1.pt, r2.ent, r2.pt, kind, val) : chamfer2(e1, r1.pt, r2.ent, r2.pt, val, cd2(), byAng() ? angM() : null);
       if(!res){ log('Không thực hiện được (song song hoặc giá trị quá lớn).'); if(!multiple) return; continue; }
-      const w1 = copyOf(e1), w2 = copyOf(r2.ent); Object.assign(w1, res.l1); Object.assign(w2, res.l2);
       const add = []; const pr = { layer: e1.layer || '0', col: e1.col }; if(e1.bl) pr.bl = 1; if(res.arc) add.push(Object.assign({ type: 'ARC' }, res.arc, pr)); if(res.line) add.push(Object.assign({ type: 'LINE' }, res.line, pr));
-      A.commit({ rep: [[e1, w1], [r2.ent, w2]], add });
+      if(trimOn() || zero){ const w1 = copyOf(e1), w2 = copyOf(r2.ent); Object.assign(w1, res.l1); Object.assign(w2, res.l2); A.commit({ rep: [[e1, w1], [r2.ent, w2]], add }); }
+      else if(add.length) A.commit({ add });
       if(!multiple) return;
     }
   }
-  cmd(['FILLET', 'F'], 'Bo góc 2 đường (R = bán kính, 0 = nối góc)', () => cornerCmd('fillet'));
-  cmd(['CHAMFER', 'CHA'], 'Vát góc 2 đường (D = khoảng vát)', () => cornerCmd('chamfer'));
+  cmd(['FILLET', 'F'], 'Bo góc 2 đường (R = bán kính, P = đa tuyến, T = cắt / không cắt, M = nhiều lần; Shift + chọn = góc nhọn)', () => cornerCmd('fillet'));
+  cmd(['CHAMFER', 'CHA'], 'Vát góc 2 đường (D = 2 khoảng vát, A = chiều dài + góc, T = cắt, E = phương pháp, P = đa tuyến)', () => cornerCmd('chamfer'));
 
   // BREAK / BREAKATPOINT
   function doBreak(e, p1, p2){
@@ -745,15 +931,27 @@
       const k = await A.getKw('Đối tượng không phải đa tuyến — chuyển thành đa tuyến?', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: 'Có' }); if(k.kw === 'N') return;
       const w = { type: 'POLYLINE', layer: e.layer, col: e.col, vertices: endpointsOf(e), closed: false }; if(e.bl) w.bl = 1; A.commit({ rep: [[e, w]] }); e = w;
     }
+    const hist = [];
+    const fitPts = (V, closed) => sampleCatmull(V, closed, 12).map(q => ({ x: q.x, y: q.y }));
+    const bspline = (V, closed) => {   // B-spline bậc 3 dùng các đỉnh làm điểm điều khiển (như PEDIT > Spline)
+      const P = closed ? V.concat(V.slice(0, 3)) : [V[0], V[0]].concat(V, [V[V.length - 1], V[V.length - 1]]); const out = [];
+      for(let i = 0; i + 3 < P.length; i++){ for(let k = 0; k < 10; k++){ const t = k / 10, t2 = t * t, t3 = t2 * t; const b0 = (1 - 3 * t + 3 * t2 - t3) / 6, b1 = (4 - 6 * t2 + 3 * t3) / 6, b2 = (1 + 3 * t + 3 * t2 - 3 * t3) / 6, b3 = t3 / 6;
+        out.push({ x: b0 * P[i].x + b1 * P[i + 1].x + b2 * P[i + 2].x + b3 * P[i + 3].x, y: b0 * P[i].y + b1 * P[i + 1].y + b2 * P[i + 2].y + b3 * P[i + 3].y }); } }
+      if(!closed) out.push({ x: V[V.length - 1].x, y: V[V.length - 1].y }); return out; };
+    const change = (w, msg) => { hist.push(e); A.commit({ rep: [[e, w]] }, msg); e = w; };
     for(;;){
       hl([e]);
-      const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: 'C', t: e.closed ? 'Mở' : 'Đóng' }, { k: 'J', t: 'Nối' }, { k: 'W', t: 'Độ rộng' }, { k: 'R', t: 'Đảo chiều' }, { k: 'X', t: 'Thoát' }] });
+      const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: 'C', t: e.closed ? 'Mở' : 'Đóng' }, { k: 'J', t: 'Nối' }, { k: 'W', t: 'Độ rộng' }, { k: 'F', t: 'Làm trơn' }, { k: 'S', t: 'Spline' }, { k: 'D', t: 'Bỏ làm trơn' }, { k: 'R', t: 'Đảo chiều' }, { k: 'U', t: 'Hoàn tác' }] });
       if(k.none || k.kw === 'X') break;
+      if(k.kw === 'U'){ if(!hist.length){ log('Không còn thao tác PEDIT nào để hoàn tác.'); continue; } undoEdit(); e = hist.pop(); continue; }
+      if(k.kw === 'F' || k.kw === 'S'){ const base0 = e.pfit || ((A.bvOf && A.bvOf(e)) ? null : e.vertices.map(q => ({ x: q.x, y: q.y }))); if(!base0 || base0.length < 3){ log('Đa tuyến cần ≥ 3 đỉnh thẳng (không có cung).'); continue; }
+        const w = copyOf(e); w.pfit = base0; w.vertices = k.kw === 'F' ? fitPts(base0, !!e.closed) : bspline(base0, !!e.closed); delete w.bv; delete w.bvs; delete w.wq; change(w, k.kw === 'F' ? 'Đã làm trơn đa tuyến' : 'Đã chuyển đa tuyến thành spline'); continue; }
+      if(k.kw === 'D'){ if(!e.pfit){ log('Đa tuyến chưa được làm trơn.'); continue; } const w = copyOf(e); w.vertices = e.pfit.map(q => ({ x: q.x, y: q.y })); delete w.pfit; delete w.wq; change(w, 'Đã bỏ làm trơn'); continue; }
       if(k.kw === 'W'){ const d = await A.getDist('Độ rộng mới cho cả đa tuyến (0 = nét mảnh)', { def: 0 }); if(d.num == null || d.num < 0) continue; const w = copyOf(e);
         if(d.num > 0){ const src = (A.bvOf && A.bvOf(e)) || e.vertices; const raw = src.map(p => ({ x: p.x, y: p.y, bulge: p.bulge || 0, sw: d.num, ew: d.num })); const cl = !!e.closed; delete w.bv; delete w.bvs; widePoly(raw, cl, w); }
-        else { delete w.wq; delete w.pw; } A.commit({ rep: [[e, w]] }, 'Đã đổi độ rộng đa tuyến'); e = w; continue; }
-      if(k.kw === 'C'){ const w = copyOf(e); w.closed = !w.closed; delete w.wq; A.commit({ rep: [[e, w]] }); e = w; continue; }
-      if(k.kw === 'R'){ const w = copyOf(e); if(!A.bvReverse(w, !!w.closed)){ w.vertices = w.vertices.slice().reverse(); delete w.wq; } A.commit({ rep: [[e, w]] }); e = w; continue; }
+        else { delete w.wq; delete w.pw; } change(w, 'Đã đổi độ rộng đa tuyến'); continue; }
+      if(k.kw === 'C'){ const w = copyOf(e); w.closed = !w.closed; delete w.wq; if(w.pfit) w.vertices = fitPts(w.pfit, w.closed); change(w); continue; }
+      if(k.kw === 'R'){ const w = copyOf(e); if(!A.bvReverse(w, !!w.closed)){ w.vertices = w.vertices.slice().reverse(); delete w.wq; } if(w.pfit) w.pfit = w.pfit.slice().reverse(); change(w); continue; }
       if(k.kw === 'J'){ if(e.closed){ log('Đa tuyến kín — mở ra trước khi nối.'); continue; } const s = await A.getSel('Chọn đối tượng cần nối vào', { pre: false }); const res = doJoin([e].concat((s.sel || []).filter(x => x !== e))); if(res){ const m = res.find(x => x.type === 'POLYLINE') || res[0]; if(m) e = m; } continue; }
     }
     hl([]);
@@ -867,26 +1065,48 @@
   const fAr = v => { try{ return formatArea(v); }catch(_){ return fmt(v); } };
   cmd(['DIST', 'DI'], 'Khoảng cách giữa 2 điểm (in ra dòng lệnh)', async () => {
     const a = await A.getPoint('Chỉ định điểm thứ nhất'); if(!a.pt) return;
-    const b = await A.getPoint('Chỉ định điểm thứ hai', { base: a.pt }); if(!b.pt) return;
+    const b = await A.getPoint('Chỉ định điểm thứ hai', { base: a.pt, kw: [{ k: 'M', t: 'Nhiều điểm' }] });
+    if(b.kw === 'M'){   // tổng độ dài qua nhiều điểm (như DIST > Multiple points)
+      const P = [a.pt];
+      for(;;){ let L = 0; for(let i = 1; i < P.length; i++) L += dist(P[i - 1], P[i]); if(P.length > 1) log('Khoảng cách = ' + fmt(L) + ' (' + fD(L) + ')');
+        const q = await A.getPoint('Chỉ định điểm tiếp theo', { base: P[P.length - 1], kw: P.length > 1 ? [{ k: 'U', t: 'Hoàn tác' }, { k: 'T', t: 'Tổng' }] : [], def: P.length > 1 ? 'Tổng' : undefined, preview: (g, p) => g.poly(P.concat([p]), false, '#9fd0ff') });
+        if(q.kw === 'U'){ if(P.length > 1) P.pop(); continue; } if(q.kw === 'T' || !q.pt){ if(P.length > 1){ const m = 'Tổng khoảng cách = ' + fmt(L) + ' (' + fD(L) + ')'; log(m); say(m); } return; } P.push(q.pt); }
+    }
+    if(!b.pt) return;
     const dx = b.pt.x - a.pt.x, dy = b.pt.y - a.pt.y, d = Math.hypot(dx, dy);
     const msg = 'Khoảng cách = ' + fmt(d) + (fD(d) !== fmt(d) ? ' (' + fD(d) + ')' : '') + ', Góc = ' + fmtA(Math.atan2(dy, dx) * R2D) + ', ΔX = ' + fmt(dx) + ', ΔY = ' + fmt(dy);
     log(msg); say(msg); try{ showVal('D ' + fmt(d)); }catch(_){}
   });
-  cmd(['AREA', 'AA'], 'Diện tích & chu vi (điểm, hoặc O = chọn đối tượng)', async () => {
-    let r = await A.getPoint('Chỉ định điểm góc thứ nhất', { kw: [{ k: 'O', t: 'Đối tượng' }] }); if(r.none) return;
-    let pts = [], closed = true;
-    if(r.kw === 'O'){
-      const s = await A.getEnt('Chọn đối tượng', { filter: e => /^(CIRCLE|POLYLINE|ELLIPSE|HATCH|ARC|SOLID)$/.test(e.type) }); if(!s.ent) return; const e = s.ent;
-      if(e.type === 'CIRCLE'){ const ar = Math.PI * e.r * e.r; const m = 'Diện tích = ' + fmt(ar) + ' (' + fAr(ar) + '), Chu vi = ' + fmt(TAU * e.r); log(m); say(m); return; }
-      if(e.type === 'HATCH'){ let ar = 0; for(const lp of e.loops) ar += G.area(lp); const m = 'Diện tích hatch ≈ ' + fmt(Math.abs(ar)) + ' (' + fAr(Math.abs(ar)) + ')'; log(m); say(m); return; }
+  // AREA như AutoCAD: điểm góc hoặc [Đối tượng/Cộng diện tích/Trừ diện tích] <Đối tượng>; chế độ cộng / trừ giữ tổng diện tích
+  async function areaOne(fromPt){
+    let pts = [];
+    if(!fromPt){
+      const s = await A.getEnt('Chọn đối tượng', { filter: e => /^(CIRCLE|POLYLINE|ELLIPSE|HATCH|ARC|SOLID)$/.test(e.type) }); if(!s.ent) return null; const e = s.ent;
+      if(e.type === 'CIRCLE') return { ar: Math.PI * e.r * e.r, per: TAU * e.r };
+      if(e.type === 'HATCH'){ let ar = 0; for(const lp of e.loops) ar += G.area(lp); return { ar: Math.abs(ar), per: null }; }
       const c = G.curveOf(e); pts = c.pieces.map(p => ({ x: p.ax, y: p.ay })); if(!c.closed) pts.push({ x: c.pieces[c.pieces.length - 1].bx, y: c.pieces[c.pieces.length - 1].by });
     } else {
-      pts.push(r.pt);
-      for(;;){ const q = await A.getPoint('Chỉ định điểm tiếp theo (Enter = xong)', { base: pts[pts.length - 1], preview: (g, p) => { g.fill([pts.concat([p])], 'rgba(90,169,255,.18)'); g.poly(pts.concat([p]), true, '#9fd0ff'); } }); if(!q.pt) break; pts.push(q.pt); }
+      pts.push(fromPt);
+      for(;;){ const q = await A.getPoint('Chỉ định điểm tiếp theo', { base: pts[pts.length - 1], kw: pts.length > 1 ? [{ k: 'U', t: 'Hoàn tác' }] : [], def: pts.length > 2 ? 'Tổng' : undefined, preview: (g, p) => { g.fill([pts.concat([p])], 'rgba(90,169,255,.18)'); g.poly(pts.concat([p]), true, '#9fd0ff'); } });
+        if(q.kw === 'U'){ if(pts.length > 1) pts.pop(); continue; } if(!q.pt) break; pts.push(q.pt); }
     }
-    if(pts.length < 3){ log('Cần ≥ 3 điểm.'); return; }
-    const ar = Math.abs(G.area(pts)); let per = 0; for(let i = 0; i < pts.length; i++) per += dist(pts[i], pts[(i + 1) % pts.length]);
-    const m = 'Diện tích = ' + fmt(ar) + ' (' + fAr(ar) + '), Chu vi = ' + fmt(per) + ' (' + fD(per) + ')'; log(m); say(m); void closed;
+    if(pts.length < 3){ log('Cần ≥ 3 điểm.'); return null; }
+    let per = 0; for(let i = 0; i < pts.length; i++) per += dist(pts[i], pts[(i + 1) % pts.length]);
+    return { ar: Math.abs(G.area(pts)), per };
+  }
+  cmd(['AREA', 'AA'], 'Diện tích & chu vi (điểm, O = đối tượng, A = cộng, S = trừ)', async () => {
+    const show = (m, v) => { const t = 'Diện tích = ' + fmt(v.ar) + ' (' + fAr(v.ar) + ')' + (v.per != null ? ', Chu vi = ' + fmt(v.per) + ' (' + fD(v.per) + ')' : ''); log(t); return t; };
+    let mode = null, total = 0;
+    for(;;){
+      const kw = mode ? [{ k: 'O', t: 'Đối tượng' }, mode === 'A' ? { k: 'S', t: 'Trừ diện tích' } : { k: 'A', t: 'Cộng diện tích' }] : [{ k: 'O', t: 'Đối tượng' }, { k: 'A', t: 'Cộng diện tích' }, { k: 'S', t: 'Trừ diện tích' }];
+      const r = await A.getPoint('Chỉ định điểm góc thứ nhất', { kw, def: mode ? undefined : 'Đối tượng' });
+      if(r.kw === 'A' || r.kw === 'S'){ mode = r.kw; log(mode === 'A' ? 'Chế độ CỘNG — tổng diện tích = ' + fmt(total) : 'Chế độ TRỪ — tổng diện tích = ' + fmt(total)); continue; }
+      if(!mode && (r.none || r.kw === 'O')){ const v = await areaOne(null); if(v) say(show('', v)); return; }
+      if(r.none) break;
+      const v = await areaOne(r.kw === 'O' ? null : r.pt); if(!v) continue;
+      show('', v); total += mode === 'S' ? -v.ar : v.ar; const t = 'Tổng diện tích = ' + fmt(total) + ' (' + fAr(Math.abs(total)) + ')'; log(t); say(t);
+      if(!mode) return;
+    }
   });
   cmd(['ID'], 'Toạ độ 1 điểm', async () => { const r = await A.getPoint('Chỉ định điểm'); if(!r.pt) return; const m = 'X = ' + fmt(r.pt.x) + '   Y = ' + fmt(r.pt.y); log(m); say(m); });
   const TYPE_VN = { LINE: 'Đường thẳng', CIRCLE: 'Đường tròn', ARC: 'Cung', POLYLINE: 'Đa tuyến', TEXT: 'Chữ', ELLIPSE: 'Elip', SOLID: 'Vùng đặc', HATCH: 'Hatch', POINT: 'Điểm', XLINE: 'Đường dựng' };
@@ -915,16 +1135,34 @@
     if(c.closed && c.kind !== 'line') out.unshift(c.at(0));
     return out;
   }
+  // tuỳ chọn Khối của DIVIDE / MEASURE: chèn khối thay cho điểm, có thể xoay theo hướng đối tượng
+  async function askMarkBlock(){
+    const v = await A.getStr('Nhập tên khối cần chèn'); const name = String(v.str || '').trim(); if(!name) return null;
+    const B = A.blockList ? A.blockList() : { file: [], lib: [] }; const src = B.file.includes(name) ? 'file' : B.lib.includes(name) ? 'lib' : null;
+    if(!src){ log('Không có khối "' + name + '".'); return null; }
+    const k = await A.getKw('Xoay khối theo hướng đối tượng?', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: 'Có' });
+    return { name, src, align: k.kw !== 'N' };
+  }
+  function markAt(e, pts, blk){
+    if(!blk) return pts.map(p => mk('POINT', { x: p.x, y: p.y }));
+    const c = G.curveOf(e); const out = [];
+    for(const p of pts){ let rot = 0; if(blk.align && c){ let best = null, bd = Infinity; for(const q of c.pieces){ const n = G.nearOnPiece(q, p); const d = Math.hypot(n.x - p.x, n.y - p.y); if(d < bd){ bd = d; best = q; } }
+        if(best) rot = best.t === 's' ? Math.atan2(best.by - best.ay, best.bx - best.ax) * R2D : (Math.atan2(p.y - best.cy, p.x - best.cx) * R2D + (best.sw >= 0 ? 90 : -90)); }
+      out.push(...remapGroups(instBlock(blk.name, blk.src, p, 1, rot))); }
+    return out;
+  }
   cmd(['DIVIDE', 'DIV'], 'Chia đều đối tượng bằng các điểm', async () => {
     const r = await A.getEnt('Chọn đối tượng cần chia', { filter: curveable }); if(!r.ent) return;
-    const n = await A.getNum('Nhập số đoạn', { def: MEM.divn || 4 }); const N = Math.round(n.num || MEM.divn || 4); if(!(N >= 2 && N <= 32767)) return; MEM.divn = N; remember();
-    const pts = pointsAlong(r.ent, N); A.commit({ add: pts.map(p => mk('POINT', { x: p.x, y: p.y })) }, 'Đã chia thành ' + N + ' đoạn');
+    let n = await A.getNum('Nhập số đoạn', { def: MEM.divn || 4, kw: [{ k: 'B', t: 'Khối' }] }); const blk = n.kw === 'B' ? await askMarkBlock() : null; if(n.kw === 'B'){ if(!blk) return; n = await A.getNum('Nhập số đoạn', { def: MEM.divn || 4 }); }
+    const N = Math.round(n.num || MEM.divn || 4); if(!(N >= 2 && N <= 32767)) return; MEM.divn = N; remember();
+    const pts = pointsAlong(r.ent, N); A.commit({ add: markAt(r.ent, pts, blk) }, 'Đã chia thành ' + N + ' đoạn');
   });
   cmd(['MEASURE', 'ME'], 'Đặt điểm cách đều theo chiều dài', async () => {
     const r = await A.getEnt('Chọn đối tượng', { filter: curveable }); if(!r.ent) return;
-    const d = await A.getDist('Chỉ định chiều dài đoạn', { def: MEM.mesd }); const D = d.num != null ? Math.abs(d.num) : MEM.mesd; if(!(D > 0)) return; MEM.mesd = D; remember();
+    let d = await A.getDist('Chỉ định chiều dài đoạn', { def: MEM.mesd, kw: [{ k: 'B', t: 'Khối' }] }); const blk = d.kw === 'B' ? await askMarkBlock() : null; if(d.kw === 'B'){ if(!blk) return; d = await A.getDist('Chỉ định chiều dài đoạn', { def: MEM.mesd }); }
+    const D = d.num != null ? Math.abs(d.num) : MEM.mesd; if(!(D > 0)) return; MEM.mesd = D; remember();
     const pts = pointsAlong(r.ent, 0, D); if(pts.length > 20000){ say('Quá nhiều điểm.'); return; }
-    A.commit({ add: pts.map(p => mk('POINT', { x: p.x, y: p.y })) }, 'Đã đặt ' + pts.length + ' điểm');
+    A.commit({ add: markAt(r.ent, pts, blk) }, 'Đã đặt ' + pts.length + ' điểm');
   });
 
   /* ===================================================================
@@ -1058,10 +1296,11 @@
     let forced = aligned ? 'A' : null, txtOv = null, rotFixed = null;
     for(;;){
       const phiOf = L => forced === 'A' ? ang(o.p1, o.p2) * R2D : forced === 'H' ? 0 : forced === 'V' ? 90 : rotFixed != null ? rotFixed : autoPhi(o.p1, o.p2, L);
-      const kw = aligned ? [{ k: 'T', t: 'Chữ' }] : [{ k: 'T', t: 'Chữ' }, { k: 'H', t: 'Ngang' }, { k: 'V', t: 'Dọc' }, { k: 'R', t: 'Xoay' }];
+      const kw = aligned ? [{ k: 'M', t: 'Chữ nhiều dòng' }, { k: 'T', t: 'Chữ' }] : [{ k: 'M', t: 'Chữ nhiều dòng' }, { k: 'T', t: 'Chữ' }, { k: 'H', t: 'Ngang' }, { k: 'V', t: 'Dọc' }, { k: 'R', t: 'Xoay' }];
       const r = await A.getPoint('Chỉ định vị trí đường kích thước', { kw, rubber: false, preview: (g, p) => { const d = dimLinearEnts(o.p1, o.p2, p, phiOf(p), txtOv); if(d) g.ents(d.ents, '#e8eef7'); } });
       if(r.none) return;
-      if(r.kw === 'T'){ const s = await askText({ title: 'Nội dung kích thước (để trống = đo tự động)', value: '' }); txtOv = s && s.trim() ? s.trim() : null; continue; }
+      if(r.kw === 'M'){ const s = await askText({ title: 'Nội dung kích thước (để trống = đo tự động)', value: txtOv || '' }); txtOv = s && s.trim() ? s.trim() : null; continue; }
+      if(r.kw === 'T'){ const s = await A.getStr('Nhập chữ kích thước (Enter = đo tự động)'); txtOv = s.str && s.str.trim() ? s.str.trim() : null; continue; }
       if(r.kw === 'H' || r.kw === 'V'){ forced = r.kw; continue; }
       if(r.kw === 'R'){ const a = await A.getAngle('Chỉ định góc đường kích thước', { def: 0 }); rotFixed = a.num != null ? a.num : 0; forced = null; continue; }
       if(!r.pt) return;
@@ -1182,6 +1421,7 @@
   };
   const HS = A.HS = Object.assign({ pat: 'ANSI31', scale: 0, ang: 0, col: '' }, (() => { try{ return JSON.parse(localStorage.getItem('dvd:hatch') || '{}'); }catch(_){ return {}; } })());
   const hsSave = () => { try{ localStorage.setItem('dvd:hatch', JSON.stringify(HS)); }catch(_){} };
+  A.setHatchPattern = p => { if(!PATS[p]) return false; HS.pat = p; hsSave(); return true; };
   function hash01(i, j, k){ let h = (i * 374761393 + j * 668265263 + k * 1274126177) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
   // đoạn thẳng mẫu (toạ độ thế giới) trong hộp bb — dùng cả để vẽ lẫn xuất DXF
   function patternSegs(e, bb, maxN){
@@ -1403,6 +1643,9 @@
   const LIBK = 'dvd:blocklib';
   const lib = () => { try{ return JSON.parse(localStorage.getItem(LIBK) || '{}'); }catch(_){ return {}; } };
   const saveLib = o => { try{ localStorage.setItem(LIBK, JSON.stringify(o)); return true; }catch(_){ say('Bộ nhớ đầy — không lưu được khối.'); return false; } };
+  // tên khối cho ô tìm ở dòng lệnh: khối trong bản vẽ + thư viện của tôi; chèn thẳng theo tên
+  A.blockList = () => ({ file: fileBlockNames(), lib: Object.keys(lib()).sort() });
+  A.insertBlock = (name, src) => { A._insPick = { name, src: src || (fileBlockNames().includes(name) ? 'file' : 'lib') }; DVDCmd.run('INSERT'); };
   function fileBlockNames(){ const b = window._dvdBlocks || {}; return Object.keys(b).filter(n => n && !n.startsWith('*') && !/^_/.test(n)).sort((a, b2) => a.localeCompare(b2, undefined, { numeric: true })); }
   const blkCache = new Map();
   A.blockLib = lib; A.saveBlockLib = o => { const r = saveLib(o); blkCache.clear(); return r; }; A.fileBlockNames = () => fileBlockNames(); A.chooseBlock = () => chooseBlock(); A.blockPrims = (n, s) => blockPrims(n, s);
@@ -1414,6 +1657,7 @@
     if(out) blkCache.set(ck, out);
     return out;
   }
+  A.instBlock = (...a) => instBlock(...a);
   function instBlock(name, src, ins, sc, rotDeg){
     const B = blockPrims(name, src); if(!B) return [];
     const gid = A.newGroupId('B'); const lay = A.LS.cur || '0'; const l0 = A.layerHex('0');
@@ -1436,7 +1680,7 @@
     finally { Object.assign(view, sv); _RTW = svW; _RTH = svH; }
   }
   cmd(['INSERT', 'I', 'DDINSERT'], 'Chèn khối (của bản vẽ hoặc thư viện của tôi)', async () => {
-    const pick = await chooseBlock(); if(!pick) return;
+    const pre = A._insPick; A._insPick = null; const pick = pre || await chooseBlock(); if(!pick) return;
     let sc = MEM.isc || 1, rot = MEM.irot || 0;
     for(;;){
       const r = await A.getPoint('Chỉ định điểm chèn "' + pick.name + '"', { kw: [{ k: 'S', t: 'Tỉ lệ (' + fmt(sc) + ')' }, { k: 'R', t: 'Xoay (' + rot + '°)' }], rubber: false, preview: (g, p) => g.ents(instBlock(pick.name, pick.src, p, sc, rot).slice(0, 1500), '#cfe3ff') });
@@ -1470,17 +1714,31 @@
         cancel: () => res(null) });
     });
   }
+  // tạo khối (thư viện của tôi) từ các đối tượng đã chọn rồi thay chúng bằng bản chèn của khối
+  function makeBlock(sel, b, nm){
+    const L = lib();
+    L[nm] = { base: b, ents: sel.map(e => { const o = serializeEnt(e); delete o.grp; delete o.blk; return o; }), t: Date.now() };
+    if(!saveLib(L)) return; blkCache.delete('lib|' + nm);
+    const gid = A.newGroupId('B');
+    const bm = { name: nm, src: 'lib', lay: A.LS.cur || '0', a: 1, b: 0, c: 0, d: 1, e: b.x, f: b.y };
+    A.commit({ rep: transformAll(sel, w => { w.grp = gid; w.blk = nm; w.bm = bm; w.bip = { x: b.x, y: b.y }; if(w.attdef){ w.att = w.attdef.tag; w.attp = w.attdef.prompt; w.text = w.attdef.def || ''; delete w.attdef; } }) }, 'Đã tạo khối "' + nm + '" (' + sel.length + ' nét) — dùng INSERT để chèn ở bản vẽ khác');
+  }
   cmd(['BLOCK', 'B', 'BMAKE'], 'Tạo khối từ đối tượng (lưu vào thư viện của tôi)', async () => {
     const s = await A.getSel('Chọn đối tượng tạo khối'); const sel = s.sel || []; if(!sel.length) return;
     if(sel.length > 6000){ say('Khối quá lớn (>6000 nét).'); return; }
     const b = await A.getPoint('Chỉ định điểm gốc của khối'); if(!b.pt) return;
     const name = await askText({ title: 'Tên khối', value: '' }); if(name == null) return; const nm = name.trim().replace(/[<>\/\\":;?*|=`]/g, '_'); if(!nm){ say('Cần đặt tên.'); return; }
-    const L = lib(); if(L[nm] && !confirm('Đã có khối "' + nm + '". Ghi đè?')) return;
-    L[nm] = { base: b.pt, ents: sel.map(e => { const o = serializeEnt(e); delete o.grp; delete o.blk; return o; }), t: Date.now() };
-    if(!saveLib(L)) return; blkCache.delete('lib|' + nm);
-    const gid = A.newGroupId('B');
-    const bm = { name: nm, src: 'lib', lay: A.LS.cur || '0', a: 1, b: 0, c: 0, d: 1, e: b.pt.x, f: b.pt.y };
-    A.commit({ rep: transformAll(sel, w => { w.grp = gid; w.blk = nm; w.bm = bm; w.bip = { x: b.pt.x, y: b.pt.y }; if(w.attdef){ w.att = w.attdef.tag; w.attp = w.attdef.prompt; w.text = w.attdef.def || ''; delete w.attdef; } }) }, 'Đã tạo khối "' + nm + '" (' + sel.length + ' nét) — dùng INSERT để chèn ở bản vẽ khác');
+    if(lib()[nm] && !confirm('Đã có khối "' + nm + '". Ghi đè?')) return;
+    makeBlock(sel, b.pt, nm);
+  });
+  // -BLOCK: tạo khối hoàn toàn bằng dòng lệnh (cho script / LISP)
+  cmd(['-BLOCK', '-B'], 'Tạo khối bằng dòng lệnh: tên, điểm gốc, chọn đối tượng', async () => {
+    const r = await A.getStr('Nhập tên khối hoặc [?]'); const nm = String(r.str || '').trim().replace(/[<>\/\\":;*|=`]/g, '_'); if(!nm) return;
+    if(nm === '?'){ log('Khối: ' + Object.keys(lib()).sort().join(', ')); return; }
+    if(lib()[nm]){ const k = await A.getKw('Khối "' + nm + '" đã có. Định nghĩa lại?', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: 'Không' }); if(k.kw !== 'Y') return; }
+    const b = await A.getPoint('Chỉ định điểm gốc chèn'); if(!b.pt) return;
+    const s = await A.getSel('Chọn đối tượng', { pre: false }); const sel = s.sel || []; if(!sel.length) return; if(sel.length > 6000){ say('Khối quá lớn (>6000 nét).'); return; }
+    makeBlock(sel, b.pt, nm);
   });
   cmd(['GROUP', 'G'], 'Gộp nhóm (chọn 1 lần cả nhóm)', async () => {
     const s = await A.getSel('Chọn đối tượng cần gộp nhóm'); const sel = s.sel || []; if(sel.length < 2){ log('Cần ≥ 2 đối tượng.'); return; }
@@ -1548,13 +1806,21 @@
   const viewStack = [];
   A.pushView = () => { viewStack.push({ scale: view.scale, offsetX: view.offsetX, offsetY: view.offsetY, rot: view.rot }); if(viewStack.length > 30) viewStack.shift(); };
   A.prevView = () => { const v = viewStack.pop(); if(!v){ log('Không còn khung nhìn trước.'); return; } Object.assign(view, v); try{ updateCompass(); }catch(_){} draw(); };
-  cmd(['ZOOM', 'Z'], 'Phóng: khung (bấm 2 góc), E = vừa bản vẽ, P = trước, số = hệ số', async () => {
-    const r = await A.getPoint('Chỉ định góc khung, nhập hệ số, hoặc', { noSnap: true, num: true, kw: [{ k: 'E', t: 'Vừa bản vẽ' }, { k: 'A', t: 'Tất cả' }, { k: 'P', t: 'Trước' }, { k: 'W', t: 'Khung' }, { k: 'O', t: 'Đối tượng' }] });
+  // ZOOM như AutoCAD: góc khung · hệ số (2 = so với toàn bộ, 2X = so với màn hình hiện tại) · [Tất cả/Tâm/Vừa bản vẽ/Trước/Tỉ lệ/Khung/Đối tượng]
+  const zoomX = t => { const m = /^\s*([\d.]+)\s*X(P)?\s*$/i.exec(t); return m && +m[1] > 0 ? { zx: +m[1] } : null; };
+  const zoomBy = f => { if(f > 0){ A.pushView(); applyZoom(f, W() / 2, H() / 2); draw(); } };
+  cmd(['ZOOM', 'Z'], 'Phóng: khung (bấm 2 góc), A/E = vừa bản vẽ, C = tâm, P = trước, S = tỉ lệ (2X), O = đối tượng', async () => {
+    const r = await A.getPoint('Chỉ định góc khung, nhập hệ số tỉ lệ (nX hoặc nXP), hoặc', { noSnap: true, num: true, parse: zoomX, kw: [{ k: 'A', t: 'Tất cả' }, { k: 'C', t: 'Tâm' }, { k: 'E', t: 'Vừa bản vẽ' }, { k: 'P', t: 'Trước' }, { k: 'S', t: 'Tỉ lệ' }, { k: 'W', t: 'Khung' }, { k: 'O', t: 'Đối tượng' }] });
     if(r.none) return;
+    if(r.zx){ zoomBy(r.zx); return; }
     if(r.kw === 'E' || r.kw === 'A'){ A.pushView(); fitView(); return; }
     if(r.kw === 'P'){ A.prevView(); return; }
     if(r.kw === 'O'){ const s = await A.getSel('Chọn đối tượng'); const bb = bboxOf(s.sel || []); if(bb){ A.pushView(); zoomToWorldRect(bb.x0, bb.y0, bb.x1, bb.y1); } return; }
-    if(r.num != null){ if(r.num > 0){ A.pushView(); applyZoom(r.num, W() / 2, H() / 2); draw(); } return; }
+    if(r.kw === 'S'){ const v = await A.getNum('Nhập hệ số tỉ lệ (nX hoặc nXP)', { parse: zoomX }); if(v.zx) zoomBy(v.zx); else if(v.num > 0) zoomBy(v.num); return; }
+    if(r.kw === 'C'){ const c = await A.getPoint('Chỉ định điểm tâm', { noSnap: true }); if(!c.pt) return; const h0 = H() / view.scale;
+      const v = await A.getDist('Nhập độ phóng (nX) hoặc chiều cao khung nhìn', { def: +h0.toPrecision(6), parse: zoomX }); const hh = v.zx ? h0 / v.zx : v.num != null ? Math.abs(v.num) : h0; if(!(hh > 0)) return;
+      A.pushView(); view.scale = H() / hh; view.offsetX = W() / 2 - c.pt.x * view.scale; view.offsetY = H() / 2 + c.pt.y * view.scale; draw(); return; }
+    if(r.num != null){ zoomBy(r.num); return; }
     let a = r.pt; if(r.kw === 'W'){ const q = await A.getPoint('Chỉ định góc thứ nhất', { noSnap: true }); if(!q.pt) return; a = q.pt; }
     const b = await A.getPoint('Chỉ định góc đối diện', { noSnap: true, base: a, rubber: false, preview: (g, p) => g.poly(rectPts(a, p), true, '#5aa9ff') }); if(!b.pt) return;
     A.pushView(); zoomToWorldRect(a.x, a.y, b.pt.x, b.pt.y);

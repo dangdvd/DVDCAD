@@ -12,7 +12,7 @@
   const VI = new RegExp('[' + VIC + VIC.toUpperCase() + ']');
   let LANG = (() => { try{ const l = localStorage.getItem(KEY); if(l === 'vi' || l === 'en') return l; }catch(_){} return /^vi\b/i.test(navigator.language || '') ? 'vi' : 'en'; })();
   const DICT = Object.create(null); let buckets = null;
-  const ASCIIVI = /^\s*(Cao|Canh|Xem|Sau|Cung|Nhanh|Hai ngang|Theo khung)\b/;   /* vài chữ Việt không dấu */
+  const ASCIIVI = /^\s*(Cao|Canh|Xem|Sau|Cung|Nhanh|Xoay|Hai ngang|Theo khung)\b/;   /* vài chữ Việt không dấu */
   const SAFE1 = new Set(['Đo']);   /* từ đơn luôn dịch được (đầu câu ghép: `Đo ${tên}: …`) */
   const need = s => VI.test(s) || ASCIIVI.test(s);
   const norm = s => String(s).replace(/\s+/g, ' ').trim();

@@ -65,10 +65,10 @@
      ===================================================================== */
   const area2 = P => { let s = 0; for(let i = 0, j = P.length - 1; i < P.length; j = i++) s += (P[j].x + P[i].x) * (P[j].y - P[i].y); return s / 2; };
   function makeWipe(P){ const w = { type: 'POLYLINE', closed: true, vertices: P.map(p => ({ x: p.x, y: p.y })), wipe: 1, dord: maxOrd() + 1 }; A.newProps(w); delete w.lt; delete w.lw; return w; }
-  cmd(['WIPEOUT', 'WO'], 'Vùng che: bấm các điểm, D = chọn đa tuyến kín, F = khung viền', async () => {
+  cmd(['WIPEOUT', 'WO'], 'Vùng che: bấm các điểm, P = chọn đa tuyến kín, F = khung viền', async () => {
     const P = [];
     for(;;){
-      const kw = P.length ? (P.length > 1 ? [{ k: 'U', t: 'Bỏ điểm' }] : []) : [{ k: 'F', t: 'Khung' }, { k: 'D', t: 'Đa tuyến' }];
+      const kw = P.length ? (P.length > 1 ? [{ k: 'U', t: 'Bỏ điểm' }] : []) : [{ k: 'F', t: 'Khung' }, { k: 'P', t: 'Đa tuyến' }];
       const r = await A.getPoint(P.length ? (P.length < 3 ? 'Chỉ định điểm tiếp theo' : 'Chỉ định điểm tiếp theo (Enter = xong)') : 'Chỉ định điểm đầu', {
         kw, def: P.length ? undefined : 'Đa tuyến', base: P[P.length - 1],
         preview: P.length ? (g, p) => { const Q = P.concat([p]); g.fill([Q], 'rgba(90,169,255,.18)'); g.poly(Q, true); } : null });
@@ -78,7 +78,7 @@
         const m = v.kw === 'OFF' ? 0 : v.kw === 'D' ? 2 : (v.kw === 'ON' || v.none) ? 1 : null;
         if(m != null && A.sysvar){ A.sysvar.set('WIPEOUTFRAME', m); log('WIPEOUTFRAME = ' + m); } return;
       }
-      if(r.kw === 'D' || (!P.length && r.none)){
+      if(r.kw === 'P' || (!P.length && r.none)){
         const s = await A.getEnt('Chọn đa tuyến kín', { filter: e => e.type === 'POLYLINE' && (e.closed || (e.vertices && e.vertices.length > 2)) });
         if(!s.ent) return; const pl = s.ent, V = pl.vertices;
         if(!V || V.length < 3){ log('Đa tuyến cần ít nhất 3 đỉnh.'); return; }

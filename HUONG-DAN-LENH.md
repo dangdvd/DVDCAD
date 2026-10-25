@@ -1,26 +1,65 @@
-# DVDCAD v4o — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5j — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
 
 ## Cách dùng chung (giống AutoCAD)
 - Gõ lệnh hoặc lệnh tắt rồi bấm **Enter** hoặc **Space**. **Enter** khi trống sẽ lặp lại lệnh trước. **Esc** để huỷ.
-- Lời nhắc hiện ở dòng lệnh. Bấm vào **chữ vàng** trong `[...]` hoặc gõ chữ tắt để chọn tuỳ chọn.
-- Khi đang chạy lệnh, **chuột phải = Enter**. Khi rảnh, chuột phải mở menu (lặp lệnh, sao chép/dán, di chuyển…).
-- **Chọn trước rồi gõ lệnh** cũng được: MOVE, COPY, ERASE… sẽ dùng luôn các đối tượng đang chọn.
+- Lời nhắc hiện ở dòng lệnh, kèm cả câu trả lời trong lịch sử (vd `Chỉ định điểm tiếp theo [Hoàn tác]: @100,0`) như AutoCAD.
+  Bấm vào **chữ vàng** trong `[...]` hoặc gõ chữ tắt để chọn tuỳ chọn; chữ tắt hiện nhỏ sau tên tuỳ chọn, vd `Hoàn tác(U)`.
+- Chuột phải khi đang chạy lệnh: **bấm nhanh = Enter**, **giữ chuột phải** = menu (Enter, Huỷ, nhập gần đây, tuỳ chọn, cách chọn, bắt điểm tạm, 'ZOOM, 'CAL).
+  **Shift + chuột phải** = menu bắt điểm 1 lần. Khi rảnh, chuột phải mở menu (lặp lệnh, sao chép/dán, di chuyển…).
+- **Chọn trước rồi gõ lệnh** cũng được: MOVE, COPY, ERASE… sẽ dùng luôn các đối tượng đang chọn (`PICKFIRST`).
+- Tên lệnh: `_LINE` (tên quốc tế), `.LINE` (lệnh gốc, bỏ qua UNDEFINE), `-LAYER` (bản dòng lệnh, dùng cho script), `'ZOOM` (trong suốt).
 - Nhập điểm:
-  - `x,y` là toạ độ tuyệt đối.
-  - `@dx,dy` là dời so với điểm trước.
-  - `@dài<góc` (hoặc `dài<góc`) là theo chiều dài và góc.
-  - Chỉ gõ **một số** thì đi theo hướng con trỏ, đúng như cách nhập khoảng cách trực tiếp của AutoCAD. Dùng chung với ORTHO hoặc POLAR rất tiện.
-- Bắt điểm một lần: khi được hỏi điểm, gõ `END`, `MID`, `CEN`, `INT`, `PER`, `TAN`, `NEA`, `QUA`, `NOD`, `INS` hoặc `NON`.
-- `FROM`: chọn điểm gốc rồi gõ độ lệch (`@500,200`) để lấy điểm cách gốc một khoảng.
-- `M2P`: lấy trung điểm giữa 2 điểm bất kỳ.
-- Khi chọn đối tượng, ngoài ALL, P, L, R còn gõ được:
-  - `F`: hàng rào, chọn các đối tượng mà đường gấp khúc cắt qua.
-  - `WP`: đa giác trùm, chỉ chọn đối tượng nằm trọn trong đa giác.
-  - `CP`: đa giác cắt, chọn đối tượng nằm trong hoặc chạm đa giác.
-  - Bấm các đỉnh rồi Enter.
+  - `x,y` (hoặc `x,y,z`): khi gõ ở ô **nhập động** cạnh con trỏ, điểm thứ hai trở đi là **tương đối** như AutoCAD; `#x,y` (hoặc `*x,y`) là tuyệt đối. Gõ khi chuột không ở trên bản vẽ, trong script hoặc LISP thì `x,y` là tuyệt đối. `DYNPICOORDS = 1` để luôn tuyệt đối.
+  - `@dx,dy` là dời so với điểm trước, `@dài<góc` theo chiều dài và góc, `@` một mình là chính điểm cuối cùng (`LASTPOINT`).
+  - Chỉ gõ **một số** thì đi theo hướng con trỏ (ORTHO / POLAR), hoặc theo đường truy bắt đang hiện (OTRACK / TT) tính từ điểm truy bắt.
+  - `<45` khoá hướng 45° cho điểm kế tiếp (Angle Override), rồi bấm hoặc gõ độ dài.
+  - Số có thể viết `2,5` `1/2` `3-1/2`. Bản vẽ đơn vị inch / feet nhận `5'6"`, `5'-6 1/2"`, `6"`.
+  - **Tab** trong nhập động: khoá ô đang gõ (độ dài / góc, hoặc X / Y) rồi sang ô kia — vd `100` Tab `30` Enter.
+  - **↓** ở lời nhắc có tuỳ chọn mở danh sách tuỳ chọn cạnh con trỏ; **↑ / ↓** gọi lại giá trị đã nhập gần đây.
+- Bắt điểm một lần: khi được hỏi điểm, gõ `END`, `MID`, `CEN`, `INT`, `PER`, `TAN`, `NEA`, `QUA`, `NOD`, `INS`, `EXT`, `PAR`, `GCE` hoặc `NON`.
+- `FROM`: chọn điểm gốc rồi gõ độ lệch (`@500,200`). `M2P`: trung điểm giữa 2 điểm. `TT`: điểm truy bắt tạm thời.
+- Bộ lọc điểm `.X` `.Y` `.Z` `.XY` `.XZ` `.YZ`: lấy một phần toạ độ từ điểm thứ nhất, phần còn lại từ điểm thứ hai (`.X` của … `(cần YZ)`).
+- **Lệnh trong suốt** (gõ `'` trước tên khi đang ở lời nhắc của lệnh khác): `'ZOOM` `'PAN` `'CAL` `'DIST` `'ID` `'LAYER` `'OSNAP` `'SETVAR` và mọi biến hệ thống (`'OSMODE`).
+  Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
+- Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
+- Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Dòng lệnh (v5j) — như AutoCAD 2027
+- **Gợi ý khi gõ** (AutoComplete) có biểu tượng, gồm:
+  - lệnh khớp đầu tên, lệnh chứa chuỗi gõ (tìm giữa chuỗi: `LINE` thấy `PLINE`, `XLINE`…), xếp lệnh hay dùng lên đầu;
+  - **từ đồng nghĩa**: `ROUND` → FILLET, `SYMBOL` → INSERT, `XOAY` → ROTATE, `CHUNHAT` → RECTANG…;
+  - **tự sửa lỗi gõ** (AutoCorrect): `LNIE` → LINE; sửa cùng một lỗi 3 lần thì lần sau tự chạy đúng lệnh;
+  - **biến hệ thống** kèm giá trị hiện tại;
+  - **nội dung bản vẽ**: lớp (bấm = đặt hiện hành), khối (chèn), mẫu hatch (tô), kiểu chữ (đặt hiện hành).
+  - Phần còn lại của tên lệnh hiện mờ (AutoAppend): **→** hoặc **Tab** để nhận.
+- Nút bên trái dòng lệnh: **✕** ẩn (Ctrl+9), **🔧 Tuỳ chỉnh** (bật / tắt từng loại gợi ý, số dòng lời nhắc, độ trong suốt, neo ở đáy cửa sổ, lịch sử), **▾ Lệnh gần đây**.
+- `INPUTSEARCHOPTIONS`: hộp thoại cài đặt gợi ý. Biến: `AUTOCOMPLETEMODE`, `AUTOCOMPLETEDELAY`, `INPUTSEARCHDELAY`, `CLIPROMPTLINES`, `DYNPICOORDS`, `DYNPROMPT`, `SHORTCUTMENUDURATION`, `PICKFIRST`, `LASTPOINT`, `CMDACTIVE`, `CMDNAMES`, `HPNAME`, `HPSCALE`, `HPANG`, `TEXTSTYLE`, `EXTMIN`, `EXTMAX`.
+- **F1** khi đang chạy lệnh mở thẳng trang trợ giúp của lệnh đó: cách dùng, tuỳ chọn, lời nhắc đầu, nút **Tìm trên ribbon** (chuyển tới tab và nhấp nháy nút lệnh).
+- **F2** mở rộng lịch sử ngay trên dòng lệnh, **Ctrl+F2** cửa sổ chữ (sao chép được).
+- `MULTIPLE` hỏi tên lệnh ngay trên dòng lệnh. `UNDO` nhận số bước, `BE`/`E` (gộp nhóm), `M`/`B` (đánh dấu / lùi về); `U` hoàn tác 1 bước.
+- Bản dòng lệnh cho script `.scr` và LISP: `-LAYER` (? M S N ON OFF C L LW F T LO U), `-INSERT`, `-BLOCK`, `-OSNAP`. Ví dụ:
+  ```
+  -LAYER M TUONG C 1 TUONG L DASHED TUONG
+  
+  -OSNAP END,MID,INT
+  LINE 0,0 100,0 100,50
+  
+  ```
+- Tuỳ chọn lệnh theo AutoCAD 2027:
+  - `PLINE`: Arc / Close / Halfwidth / **Length** / Undo / Width; khi vẽ cung: **Angle / CEnter / CLose / Direction** / Halfwidth / Line / **Radius / Second pt** / Undo / Width.
+  - `CIRCLE`: 3P / 2P / **Ttr**; `ELLIPSE`: **Arc** / Center; `XLINE`: Hor / Ver / **Ang / Bisect / Offset**.
+  - `RECTANG`: **Chamfer / Fillet / Width** rồi **Area** / Dimensions / **Rotation**.
+  - `TEXT`: Justify (đủ TL … BR) / **Style**; `MTEXT`: **Height / Justify / Rotation / Style / Width** (không hỏi lại cao chữ sau khung).
+  - `MOVE` / `COPY`: Enter ở điểm thứ hai = dùng điểm thứ nhất làm độ dời; `COPY` có **mOde** (Một lần / Nhiều lần), Array, **Exit**, Undo.
+  - `TRIM`: cuTting edges / **Crossing / Fence / mOde / eRase** / Undo; `EXTEND`: **Boundary edges** / Crossing / Fence / mOde / Undo; Shift + chọn để đổi cắt ↔ kéo dài.
+  - `FILLET`: Undo / Polyline / Radius / **Trim** / Multiple, Shift + chọn = góc nhọn; `CHAMFER`: Undo / Polyline / **Distance (2 khoảng) / Angle / Trim / mEthod** / Multiple.
+  - `ZOOM`: All / **Center** / Extents / Previous / **Scale** / Window / Object, gõ `2X` = so với màn hình hiện tại.
+  - `AREA`: Object / **Add area / Subtract area** (cộng dồn tổng diện tích); `DIST`: **Multiple points**; `MEASUREGEOM`: Distance / Radius / Angle / ARea / Quick / eXit.
+  - `DIVIDE` / `MEASURE`: **Block** (chèn khối, có xoay theo đối tượng); `PEDIT`: Close / Join / Width / **Fit / Spline / Decurve** / Reverse / **Undo**.
+  - `OFFSET`: thêm **Exit**; `DIMLINEAR`: **Mtext** / Text / Horizontal / Vertical / Rotated; `WIPEOUT`: Frames / **Polyline** (`P`).
 
 ## Nhiều bản vẽ cùng lúc
 Mỗi file mở ra là một **tab** (như AutoCAD). Bấm tab để chuyển. **Ctrl+Tab** chuyển tab kế tiếp. Ctrl+F4, chữ × hoặc bấm chuột giữa vào tab để đóng tab đó. Mọi thay đổi tự lưu theo từng file.
@@ -40,7 +79,7 @@ Mỗi file mở ra là một **tab** (như AutoCAD). Bấm tab để chuyển. *
 ## Phím tắt
 | Phím | Chức năng | Phím | Chức năng |
 |---|---|---|---|
-| F1 | Danh sách lệnh | F2 | Lịch sử dòng lệnh |
+| F1 | Trợ giúp (đang chạy lệnh: trang của lệnh đó) | F2 / Ctrl+F2 | Lịch sử dòng lệnh / cửa sổ chữ |
 | F3 | OSNAP bắt điểm | F7 | GRID lưới |
 | F8 | ORTHO (giữ Shift = tạm thời) | F9 | SNAP bước lưới |
 | F10 | POLAR góc cực | F11 | OTRACK truy bắt |
@@ -50,7 +89,8 @@ Mỗi file mở ra là một **tab** (như AutoCAD). Bấm tab để chuyển. *
 | Ctrl+Shift+C / V | Sao chép kèm điểm gốc / dán đúng toạ độ | Ctrl+N / O / S | Mới / mở / lưu |
 | Ctrl+Shift+S | Lưu thành DXF | Ctrl+P | In / xuất |
 | Ctrl+A | Chọn tất cả | Ctrl+9 / Ctrl+0 | Ẩn/hiện dòng lệnh / toàn màn hình |
-| Ctrl+Shift+A | Bật/tắt chọn cả nhóm/khối | | |
+| Ctrl+Shift+A | Bật/tắt chọn cả nhóm/khối | Tab | Nhập động: khoá ô, sang ô kia |
+| ↑ / ↓ | Lệnh trước / nhập gần đây; ↓ = danh sách tuỳ chọn | → | Nhận phần tên lệnh đang hiện mờ |
 | Delete | Xoá đối tượng đang chọn | Esc | Huỷ / bỏ chọn |
 
 Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thái để chọn nhanh bước góc hoặc loại điểm bắt.

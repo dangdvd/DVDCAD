@@ -124,6 +124,37 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
   check(!al.bad.length && al.ok >= 200, al.ok + ' lệnh tắt trỏ đúng lệnh' + (al.bad.length ? '; sai: ' + al.bad.join(', ') : ''));
   check(al.spot, 'DO = DONUT, T = MTEXT, DT = TEXT, QM = đo nhanh, PA = PASTESPEC, REA = REGENALL');
 
+  console.log('9. Dòng lệnh kiểu AutoCAD 2027');
+  const cl = await win.evaluate(async () => {
+    const w = (ms = 40) => new Promise(r => setTimeout(r, ms));
+    const run = async (...xs) => { DVDCmd.run(xs[0]); await w(); for(const x of xs.slice(1)){ if(!DVDAcad.busy()) break; DVDAcad.input(x.t != null ? x.t : x, x.t != null ? { dyn: true } : undefined); await w(); } for(let i = 0; i < 5 && DVDAcad.busy(); i++){ DVDAcad.cancel(); await w(); } };
+    const lines = () => modelEntities.filter(e => e.type === 'LINE').map(e => [e.x1, e.y1, e.x2, e.y2].map(v => Math.round(v * 1000) / 1000).join(','));
+    DVDAcad.newDrawing(); await w(600); try{ if(DVDAcad.hideStart) DVDAcad.hideStart(); }catch(_){}
+    DVDAcad.commit({ del: modelEntities.slice() });
+    const o = {};
+    // nhập động: điểm thứ hai x,y tương đối, # tuyệt đối; khoá góc; bộ lọc .X; 'CAL đưa kết quả vào lời nhắc
+    await run('LINE', '0,0', { t: '100,0' }, { t: '#0,50' }); o.dyn = lines().join(' ');
+    DVDAcad.commit({ del: modelEntities.slice() });
+    await run('LINE', '0,0', '<90', "'CAL", '20*2'); o.cal = lines().join(' ');
+    DVDAcad.commit({ del: modelEntities.slice() });
+    await run('LINE', '0,0', '.X', '30,5', '7,40'); o.filt = lines().join(' ');
+    // script -LAYER + UNDO nhóm
+    o.before = lines().length;
+    await DVDAcad.runScript('-LAYER M TUONG C 1 TUONG \nUNDO BE\nLINE 0,10 10,10 \nLINE 0,20 10,20 \nUNDO E\nU\n'); await w(200);
+    o.layer = DVDAcad.LS.cur + ' ' + DVDAcad.layerHex('TUONG'); o.undo = lines().length;
+    // gợi ý: đồng nghĩa, sửa lỗi gõ, biến hệ thống
+    const sug = async t => { const i = document.querySelector('#dvdCmd input'); i.focus(); i.value = t; i.dispatchEvent(new Event('input')); await w(60); const s = document.querySelector('#dvdCmd .sug').innerText; i.value = ''; i.dispatchEvent(new Event('input')); return s; };
+    o.syn = /FILLET/.test(await sug('ROUND')); o.typo = /LINE/.test(await sug('LNIE')); o.sv = /OSMODE/.test(await sug('OSM'));
+    o.help = !!(window.DVD_HELP && DVD_HELP.TRIM && window.DVD_HELP_PROMPTS && DVD_HELP_PROMPTS.LINE);
+    return o;
+  });
+  check(cl.dyn === '0,0,100,0 100,0,0,50', 'nhập động: x,y tương đối cho điểm thứ hai, #x,y tuyệt đối: ' + cl.dyn);
+  check(cl.cal === '0,0,0,40', "khoá góc <90 + 'CAL 20*2 đưa 40 vào lời nhắc: " + cl.cal);
+  check(cl.filt === '0,0,30,40', 'bộ lọc điểm .X: ' + cl.filt);
+  check(cl.layer === 'TUONG #ff0000' && cl.undo === cl.before, 'script -LAYER M/C, UNDO BE/E + U hoàn tác cả nhóm: ' + cl.layer + ', còn ' + cl.undo + '/' + cl.before + ' đường');
+  check(cl.syn && cl.typo && cl.sv, 'gợi ý khi gõ: đồng nghĩa (ROUND → FILLET), sửa lỗi gõ (LNIE → LINE), biến hệ thống (OSM → OSMODE)');
+  check(cl.help, 'trợ giúp F1 có trang cách dùng + lời nhắc đầu của lệnh');
+
   check(!errors.length, 'không có lỗi JavaScript' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await app.close();
   fs.rmSync(tmp, { recursive: true, force: true });

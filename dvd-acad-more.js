@@ -408,10 +408,22 @@
     }
     return res;
   }
-  cmd(['MEASUREGEOM', 'MEA', 'QUICKMEASURE'], 'Đo nhanh: rê chuột để thấy khoảng cách tới các cạnh xung quanh', async () => {
+  // MEASUREGEOM như AutoCAD 2027: mặc định Đo nhanh; [Khoảng cách/Bán kính/Góc/Diện tích/Nhanh/Thoát]
+  async function mgRadius(lbl){ const r = await A.getEnt('Chọn cung hoặc đường tròn', { filter: e => e.type === 'CIRCLE' || e.type === 'ARC' }); if(!r.ent) return; const m = 'Bán kính = ' + lbl(r.ent.r) + ', Đường kính = ' + lbl(2 * r.ent.r); log(m); try{ toast(m); }catch(_){} }
+  async function mgAngle(){
+    const r = await A.getEnt('Chọn cung, đường tròn, đường thẳng, hoặc <chỉ định đỉnh>', { filter: e => /^(LINE|ARC|CIRCLE|POLYLINE)$/.test(e.type), allowNone: true }); let deg = null;
+    const segAng = (e, p) => { if(e.type === 'LINE') return Math.atan2(e.y2 - e.y1, e.x2 - e.x1); const c = A.G.curveOf(e); let best = null, bd = Infinity; for(const q of c.pieces){ if(q.t !== 's') continue; const n = A.G.nearOnPiece(q, p); const d = Math.hypot(n.x - p.x, n.y - p.y); if(d < bd){ bd = d; best = q; } } return best ? Math.atan2(best.by - best.ay, best.bx - best.ax) : null; };
+    if(r.ent && r.ent.type === 'ARC'){ deg = (((r.ent.a2 - r.ent.a1) % 360) + 360) % 360; }
+    else if(r.ent && r.ent.type === 'CIRCLE'){ const c = { x: r.ent.cx, y: r.ent.cy }; const p2 = await A.getPoint('Chỉ định điểm thứ hai của góc', { base: c }); if(!p2.pt) return; deg = (((Math.atan2(p2.pt.y - c.y, p2.pt.x - c.x) - Math.atan2(r.pt.y - c.y, r.pt.x - c.x)) * 180 / Math.PI) % 360 + 360) % 360; }
+    else if(r.ent){ const a1 = segAng(r.ent, r.pt); const r2 = await A.getEnt('Chọn đường thứ hai', { filter: e => e.type === 'LINE' || e.type === 'POLYLINE' }); if(!r2.ent) return; const a2 = segAng(r2.ent, r2.pt); if(a1 == null || a2 == null) return; deg = (((a2 - a1) * 180 / Math.PI) % 180 + 180) % 180; }
+    else { const v = await A.getPoint('Chỉ định đỉnh của góc'); if(!v.pt) return; const p1 = await A.getPoint('Chỉ định điểm đầu của góc', { base: v.pt }); if(!p1.pt) return; const p2 = await A.getPoint('Chỉ định điểm cuối của góc', { base: v.pt }); if(!p2.pt) return;
+      deg = (((Math.atan2(p2.pt.y - v.pt.y, p2.pt.x - v.pt.x) - Math.atan2(p1.pt.y - v.pt.y, p1.pt.x - v.pt.x)) * 180 / Math.PI) % 360 + 360) % 360; if(deg > 180) deg = 360 - deg; }
+    if(deg != null){ const m = 'Góc = ' + (+deg.toFixed(4)) + '°'; log(m); try{ toast(m); }catch(_){} }
+  }
+  cmd(['MEASUREGEOM', 'MEA', 'QUICKMEASURE'], 'Đo: rê chuột đo nhanh; D = khoảng cách, R = bán kính, A = góc, AR = diện tích', async () => {
     const lbl = v => { try{ return formatDist(v); }catch(_){ return (A.fmt ? A.fmt(v) : String(v)); } };
     for(;;){
-      const r = await A.getPoint('Rê chuột lên hình để đo nhanh (Enter / Esc để thoát)', { rubber: false, preview: (g, p) => {
+      const r = await A.getPoint('Rê chuột để đo nhanh, hoặc', { rubber: false, kw: [{ k: 'D', t: 'Khoảng cách' }, { k: 'R', t: 'Bán kính' }, { k: 'A', t: 'Góc' }, { k: 'AR', t: 'Diện tích' }, { k: 'Q', t: 'Nhanh' }, { k: 'X', t: 'Thoát' }], def: 'Thoát', preview: (g, p) => {
         const h = rayHits(p); const C = '#ff9f1a';
         if(h.l && h.r){ g.line({ x: h.l.x, y: p.y }, { x: h.r.x, y: p.y }, C); g.label({ x: (h.l.x + h.r.x) / 2, y: p.y }, lbl(h.r.x - h.l.x), C); }
         else { for(const k of ['l', 'r']) if(h[k]){ g.line(p, h[k], C, [4, 3]); g.label(h[k], lbl(h[k].t), C); } }
@@ -419,6 +431,10 @@
         else { for(const k of ['u', 'd']) if(h[k]){ g.line(p, h[k], '#5fd3ff', [4, 3]); g.label(h[k], lbl(h[k].t), '#5fd3ff'); } }
         for(const k of ['l', 'r', 'u', 'd']) if(h[k]) g.dot(h[k], k === 'l' || k === 'r' ? C : '#5fd3ff');
       } });
+      if(r.kw === 'Q') continue;
+      if(r.kw === 'D' || r.kw === 'AR'){ setTimeout(() => DVDCmd.run(r.kw === 'D' ? 'DIST' : 'AREA'), 0); return; }
+      if(r.kw === 'R'){ await mgRadius(lbl); continue; }
+      if(r.kw === 'A'){ await mgAngle(); continue; }
       if(!r.pt) return;
       const h = rayHits(r.pt); const parts = []; if(h.l && h.r) parts.push('Ngang = ' + lbl(h.r.x - h.l.x)); if(h.u && h.d) parts.push('Dọc = ' + lbl(h.u.y - h.d.y)); if(parts.length) log(parts.join(' · '));
     }
@@ -430,6 +446,7 @@
   A.FONT_FILE = FONT_FILE;
   const TS = A.TS = (() => { let o = null; try{ o = JSON.parse(localStorage.getItem('dvd:tstyle') || 'null'); }catch(_){} if(!o || !o.list || !o.list.Standard) o = { cur: 'Standard', list: { Standard: { font: 'Arial', wf: 1 } } }; if(!o.list[o.cur]) o.cur = 'Standard'; return o; })();
   const tsSave = () => { try{ localStorage.setItem('dvd:tstyle', JSON.stringify(TS)); }catch(_){} if(A.onTStyle) A.onTStyle(); };
+  A.tsSetCur = name => { if(!TS.list[name]) return false; TS.cur = name; tsSave(); return true; };
   A.tsApply = (w, name) => { const st = TS.list[name]; if(!st) return; w.style = name; w.ff = st.font; if(st.wf && Math.abs(st.wf - 1) > 1e-3) w.xs = st.wf; else delete w.xs; };
   const _np = A.newProps;
   A.newProps = function(e){ const r = _np.apply(this, arguments); if(e && e.type === 'TEXT' && e.ff == null){ const st = TS.list[TS.cur]; if(st){ e.style = TS.cur; e.ff = st.font; if(st.wf && Math.abs(st.wf - 1) > 1e-3 && e.xs == null) e.xs = st.wf; } } return r; };

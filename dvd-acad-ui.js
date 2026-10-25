@@ -343,6 +343,9 @@
   #dvdDyn .pr{background:rgba(245,247,250,.96);color:#1a1f27;padding:3px 7px;border:1px solid #9aa4b2;border-radius:2px;margin-bottom:2px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #dvdDyn .vals{display:flex;gap:3px}
   #dvdDyn .in{background:#fff;color:#0b4fa0;border:1px solid #3d9ae8;padding:2px 7px;border-radius:2px;font:600 12px ui-monospace,Consolas,monospace;min-width:54px}
+  #dvdDyn .in:not(.on){background:#eef1f5;color:#4f5b6b;border-color:#b3bdc9}
+  #dvdDyn .in .lock{width:9px;height:11px;margin-left:4px;vertical-align:-1px;fill:none;stroke:currentColor;stroke-width:1.3}
+  #dvdDyn .pr .dd{color:#0b4fa0;font-weight:700;margin-left:2px}
   .dvd-dlg .modal{max-height:86vh}
   .dvd-form{display:flex;flex-direction:column;gap:6px}
   .dvd-frow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-dim)}
@@ -454,6 +457,8 @@
   .ic .fl0{fill:#7d8796;stroke:#1d232b;stroke-width:.8} .ic .fl1{fill:#f6c445;stroke:#1d232b;stroke-width:.8} .ic .fl2{fill:#4ba7ff;stroke:#1d232b;stroke-width:.8} .ic .fl3{fill:#5fd07a;stroke:#1d232b;stroke-width:.8}
   .ic .f1{fill:#a8d4ff;stroke:#17324f;stroke-width:.8} .ic .f2{fill:#4b93dc;stroke:#17324f;stroke-width:.8} .ic .f3{fill:#2b62a0;stroke:#17324f;stroke-width:.8} .ic .f2n{fill:#4b93dc;stroke:none} .ic .f2s{fill:#4b93dc;fill-opacity:.35}
   .ac-rtip .ic .fd{fill:#dfe6ef;fill-opacity:1}
+  .ac-find{outline:2px solid #ffd24a !important;outline-offset:1px;border-radius:4px;animation:acFind .55s ease-in-out 6 alternate}
+  @keyframes acFind{from{box-shadow:0 0 0 0 rgba(255,210,74,.95)}to{box-shadow:0 0 0 8px rgba(255,210,74,0)}}
 `;
   const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
@@ -733,6 +738,30 @@
     slideEl.addEventListener('click', onRibClick); slideEl.addEventListener('pointerdown', e => e.stopPropagation());
     slideEl.querySelector('.ac-ptitle').onclick = closeSlide;
   }
+  // "Tìm trên ribbon" (nút trong trợ giúp, như Find của AutoCAD): chuyển tới tab chứa lệnh, mở phần mở rộng nếu cần rồi nhấp nháy nút
+  A.ribbonFind = function(name, dry){
+    name = String(name || '').toUpperCase(); const base = c => String(c || '').split('|')[0];
+    const has = it => !!it && it.t !== 'ctl' && (base(it.cmd) === name || (it.menu || []).some(m => base(m[0]) === name));
+    const flat = arr => { const o = []; for(const it of arr || []) if(it.t === 'col') o.push(...it.items); else o.push(it); return o; };
+    const order = wsTabs().concat(Object.keys(RIB).filter(k => !wsTabs().includes(k)));
+    for(const tk of order){ const T = RIB[tk]; if(!T || !T.panels) continue;
+      for(let pi = 0; pi < T.panels.length; pi++){ const p = T.panels[pi]; const main = flat(p.items).find(has), more = main ? null : flat(p.more).find(has);
+        if(!main && !more) continue;
+        if(dry) return true;
+        if(!wsTabs().includes(tk)){ const w = Object.keys(WS).find(k => WS[k].tabs.includes(tk)); if(w){ WSK = w; try{ localStorage.setItem('dvd:ws', w); }catch(_){} syncWS(); } }
+        top.classList.remove('min'); curTab = tk; try{ localStorage.setItem('dvd:rtab', curTab); }catch(_){} renderTabs(); renderRibbon();
+        setTimeout(() => {
+          if(more) openSlide(pi);
+          const root = more ? slideEl : ribEl.querySelector('.ac-panel[data-p="' + pi + '"]'); const it = main || more;
+          let el = root && [...root.querySelectorAll('[data-c]')].find(b => base(b.dataset.c) === name);
+          if(!el && root && it.menu){ const ix = ITEMS.indexOf(it); if(ix >= 0) el = root.querySelector('[data-menu="' + ix + '"]'); }
+          const tgt = el && el.offsetParent ? el : root; if(!tgt) return;
+          try{ tgt.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }catch(_){}
+          tgt.classList.add('ac-find'); setTimeout(() => tgt.classList.remove('ac-find'), 3400);
+        }, 90);
+        return true; } }
+    return false;
+  };
   document.addEventListener('pointerdown', e => { if(slideEl && !slideEl.contains(e.target) && !e.target.closest('[data-more]')) closeSlide(); }, true);
   let _rbT = 0; window.addEventListener('resize', () => { clearTimeout(_rbT); _rbT = setTimeout(() => { if(document.documentElement.classList.contains('acad')) renderRibbon(); }, 150); });
   function onRibClick(e){

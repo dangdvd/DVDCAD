@@ -62,13 +62,15 @@
     let best = null, bs = Infinity; for(const c of cands){ const s = dist(tanPt(o1, c), o1.p) + dist(tanPt(o2, c), o2.p); if(s < bs){ bs = s; best = c; } } return best;
   }
   A.circleTTR = circleTTR;
-  cmd(['CIRCLETTR', 'TTR'], 'Đường tròn tiếp xúc 2 đối tượng với bán kính cho trước (Tan, Tan, Radius)', async () => {
+  // dùng chung cho CIRCLETTR và tuỳ chọn T (Ttr) của CIRCLE
+  A.circleTTRFlow = async () => {
     const r1 = await A.getEnt('Chỉ định điểm trên đối tượng tiếp tuyến thứ nhất', { filter: tanFilter }); if(!r1.ent) return;
     const r2 = await A.getEnt('Chỉ định điểm trên đối tượng tiếp tuyến thứ hai', { filter: tanFilter }); if(!r2.ent) return;
     const d = await A.getDist('Bán kính đường tròn', { def: A.MEM.cr || 100 }); const r = d.num != null ? Math.abs(d.num) : (A.MEM.cr || 100); if(!(r > 0)) return; A.MEM.cr = r;
     const o1 = tanObj(r1), o2 = tanObj(r2); const c = o1 && o2 ? circleTTR(o1, o2, r) : null; if(!c){ log('Không có đường tròn nào thoả mãn.'); return; }
     A.commit({ add: [mk('CIRCLE', { cx: c.x, cy: c.y, r })] }, 'Đường tròn TTR r=' + fmt(r));
-  });
+  };
+  cmd(['CIRCLETTR', 'TTR'], 'Đường tròn tiếp xúc 2 đối tượng với bán kính cho trước (Tan, Tan, Radius)', () => A.circleTTRFlow());
   function circleTTT(objs){
     const P = objs.map(o => o.p); const ax = P[0].x, ay = P[0].y, bx = P[1].x, by = P[1].y, cx = P[2].x, cy = P[2].y;
     const d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by)); let x = [(ax + bx + cx) / 3, (ay + by + cy) / 3, 1];
