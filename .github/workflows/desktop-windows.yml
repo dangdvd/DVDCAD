@@ -1,6 +1,7 @@
 # Dựng DVDCAD cho Windows (bộ cài NSIS + bản portable) trên máy Windows của GitHub.
 # - Mỗi lần đẩy mã lên main / bấm "Run workflow": tải file .exe ở mục Artifacts của lần chạy.
-# - Đẩy thẻ phiên bản (vd: git tag v5.9.0 && git push origin v5.9.0): tạo thêm GitHub Release kèm file .exe.
+# - Đẩy thẻ phiên bản (vd: git tag v5.9.0 && git push origin v5.9.0), hoặc bấm "Run workflow" trên main và nhập
+#   release_tag (vd v5.9.0): tạo thêm GitHub Release kèm file .exe (thẻ được tạo trên đúng commit vừa dựng).
 name: DVDCAD Windows
 
 on:
@@ -22,6 +23,11 @@ on:
       - 'dvd-acad-start.js'
       - '.github/workflows/desktop-windows.yml'
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tạo GitHub Release với thẻ này (vd v5.9.0) — để trống nếu chỉ dựng thử'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -63,11 +69,13 @@ jobs:
             desktop/dist/DVDCAD-*-portable.exe
           if-no-files-found: error
 
-      - name: GitHub Release (khi đẩy thẻ v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: GitHub Release (khi đẩy thẻ v* hoặc chạy tay với release_tag)
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && startsWith(inputs.release_tag, 'v'))
         uses: softprops/action-gh-release@v2
         with:
-          name: DVDCAD ${{ github.ref_name }}
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: DVDCAD ${{ inputs.release_tag || github.ref_name }}
           body_path: desktop/RELEASE-NOTES.md
           files: |
             desktop/dist/DVDCAD-Setup-*.exe
