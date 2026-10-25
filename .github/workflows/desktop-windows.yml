@@ -2,6 +2,9 @@
 # - Mỗi lần đẩy mã lên main / bấm "Run workflow": tải file .exe ở mục Artifacts của lần chạy.
 # - Đẩy thẻ phiên bản (vd: git tag v5.9.0 && git push origin v5.9.0), hoặc bấm "Run workflow" trên main và nhập
 #   release_tag (vd v5.9.0): tạo thêm GitHub Release kèm file .exe (thẻ được tạo trên đúng commit vừa dựng).
+# - Kiểm tra DWG: smoke test ghi DWG 2000 gốc, rồi ODA File Converter đọc + audit lại các file đó (artifact DVDCAD-DWG-kiem-tra).
+# - Ký số (không bắt buộc, xem HUONG-DAN-WINDOWS.md): có secret WIN_CSC_LINK (+ WIN_CSC_KEY_PASSWORD) thì ký bằng file .pfx;
+#   có secret AZURE_CLIENT_SECRET và biến AZURE_SIGN_ENDPOINT thì ký bằng Azure Trusted Signing. Không có thì dựng bản chưa ký như cũ.
 name: DVDCAD Windows
 
 on:
@@ -35,6 +38,9 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
+    env:
+      HAS_PFX: ${{ secrets.WIN_CSC_LINK != '' }}
+      HAS_AZURE: ${{ secrets.AZURE_CLIENT_SECRET != '' && vars.AZURE_SIGN_ENDPOINT != '' }}
     defaults:
       run:
         working-directory: desktop
@@ -50,13 +56,86 @@ jobs:
       - name: Cài Electron + electron-builder
         run: npm ci
 
-      - name: Kiểm thử nhanh (mở DWG/DXF, hộp thoại Mở/Lưu, trang Bắt đầu)
+      - name: Kiểm thử nhanh (mở DWG/DXF, hộp thoại Mở/Lưu, trang Bắt đầu, ghi DWG gốc)
+        env:
+          DVD_DWG_OUT: ${{ runner.temp }}\dwg-out
         run: |
           npm install --no-save playwright@1.63.0
           node test/smoke.js
 
-      - name: Dựng bộ cài và bản portable
+      # DWG do bộ ghi gốc của DVDCAD tạo → ODA File Converter (cùng lõi đọc DWG với nhiều phần mềm CAD) đọc + audit.
+      # Không chặn bản dựng nếu không tải được ODA; nếu ODA không đọc được file thì bước này báo đỏ để xem lại.
+      - name: Kiểm tra DWG gốc bằng ODA File Converter (đọc + audit)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'dwg-out'; $res = Join-Path $env:RUNNER_TEMP 'dwg-oda'
+          if(-not (Test-Path $out)){ Write-Warning 'Không có file DWG để kiểm tra.'; exit 0 }
+          try{ $page = (Invoke-WebRequest -UseBasicParsing -Uri 'https://www.opendesign.com/guestfiles/oda_file_converter' -TimeoutSec 60).Content }
+          catch{ Write-Warning "Không tải được trang ODA: $_"; exit 0 }
+          $url = $null
+          $h = [regex]::Match($page, 'href="([^"]*ODAFileConverter[^"]*amd64dll[^"]*\.msi)"')
+          if($h.Success){ $url = $h.Groups[1].Value; if($url -notmatch '^https?:'){ $url = 'https://www.opendesign.com' + $url } }
+          else { $n = [regex]::Match($page, 'ODAFileConverter_QT\d*_vc\d+_amd64dll_[\d.]+\.msi'); if($n.Success){ $url = 'https://www.opendesign.com/guestfiles/get?filename=' + $n.Value } }
+          if(-not $url){ Write-Warning 'Không tìm thấy bộ cài ODA File Converter (Windows x64) trên trang tải.'; exit 0 }
+          $msi = Join-Path $env:RUNNER_TEMP 'oda.msi'
+          try{ Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $msi -TimeoutSec 900 }catch{ Write-Warning "Không tải được $url : $_"; exit 0 }
+          Start-Process msiexec.exe -ArgumentList '/i', "`"$msi`"", '/qn', '/norestart' -Wait
+          $exe = Get-ChildItem 'C:\Program Files\ODA', 'C:\Program Files (x86)\ODA' -Recurse -Filter ODAFileConverter.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if(-not $exe){ Write-Warning 'Cài ODA File Converter không thành công.'; exit 0 }
+          New-Item -ItemType Directory -Force $res | Out-Null
+          Start-Process $exe.FullName -ArgumentList "`"$out`"", "`"$res`"", 'ACAD2018', 'DXF', '0', '1', '*.DWG' -Wait -NoNewWindow
+          $bad = 0
+          foreach($f in Get-ChildItem $out -Filter *.dwg){
+            $dxf = Join-Path $res ($f.BaseName + '.dxf'); $err = Join-Path $res ($f.BaseName + '.err')
+            if(Test-Path $err){ Write-Host "::warning::ODA audit $($f.Name): $((Get-Content $err -Raw).Trim())" }
+            if(-not (Test-Path $dxf) -or (Get-Item $dxf).Length -lt 1000){ Write-Host "::error::ODA File Converter không đọc được $($f.Name)"; $bad++ }
+            else { Write-Host "✓ ODA đọc được $($f.Name) ($($f.Length) byte) → DXF $((Get-Item $dxf).Length) byte" }
+          }
+          if($bad){ exit 1 }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: DVDCAD-DWG-kiem-tra
+          path: |
+            ${{ runner.temp }}/dwg-out
+            ${{ runner.temp }}/dwg-oda
+          if-no-files-found: ignore
+
+      - name: Dựng bộ cài và bản portable (chưa ký số)
+        if: env.HAS_PFX != 'true' && env.HAS_AZURE != 'true'
         run: npx electron-builder --win nsis portable --x64 --publish never
+
+      - name: Dựng + ký số bằng chứng thư .pfx (secret WIN_CSC_LINK)
+        if: env.HAS_PFX == 'true'
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: npx electron-builder --win nsis portable --x64 --publish never
+
+      - name: Dựng + ký số bằng Azure Trusted Signing
+        if: env.HAS_PFX != 'true' && env.HAS_AZURE == 'true'
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: >-
+          npx electron-builder --win nsis portable --x64 --publish never
+          -c.win.azureSignOptions.endpoint="${{ vars.AZURE_SIGN_ENDPOINT }}"
+          -c.win.azureSignOptions.codeSigningAccountName="${{ vars.AZURE_SIGN_ACCOUNT }}"
+          -c.win.azureSignOptions.certificateProfileName="${{ vars.AZURE_SIGN_PROFILE }}"
+          -c.win.azureSignOptions.publisherName="${{ vars.AZURE_SIGN_PUBLISHER }}"
+
+      - name: Kiểm tra chữ ký số
+        if: env.HAS_PFX == 'true' || env.HAS_AZURE == 'true'
+        shell: pwsh
+        run: |
+          Get-ChildItem dist\DVDCAD-*.exe | ForEach-Object {
+            $s = Get-AuthenticodeSignature $_.FullName
+            Write-Host "$($_.Name): $($s.Status) — $($s.SignerCertificate.Subject)"
+            if ($s.Status -ne 'Valid') { throw "Chữ ký số không hợp lệ: $($_.Name)" }
+          }
 
       - name: Cài thử bộ cài, chạy kiểm thử trên DVDCAD.exe đã cài, rồi gỡ cài
         run: node test/installed.js

@@ -599,12 +599,19 @@
   }
   async function saveDxfLocal(forcePick){
     if(!modelEntities || !modelEntities.length){ say('Chưa có bản vẽ.'); return; }
-    let dxf; try{ dxf = entitiesToDXF(modelEntities); }catch(e){ say('Không tạo được DXF.'); return; }
     if(!('showSaveFilePicker' in window) || isMobile()){ exportDXF(false); return; }
+    const A = window.DVDAcad, canDwg = !!(A && A.dwgNative);
     try{
       let h = (!forcePick && S.saveHandle) || null;
-      if(!h){ h = await window.showSaveFilePicker({ suggestedName: baseName(currentName) + '_DVDCAD.dxf', types: [{ description: 'DXF (AutoCAD)', accept: { 'application/dxf': ['.dxf'] } }] }); S.saveHandle = h; }
-      const w = await h.createWritable(); await w.write(dxf); await w.close();
+      if(!h){
+        // như AutoCAD: chọn DWG hoặc DXF trong hộp thoại; bản vẽ mở từ DWG thì gợi ý DWG trước
+        const dwgFirst = canDwg && /\.dwg$/i.test(currentName || '');
+        const tD = { description: 'Bản vẽ AutoCAD (*.dwg)', accept: { 'application/acad': ['.dwg'] } }, tX = { description: 'DXF (AutoCAD)', accept: { 'application/dxf': ['.dxf'] } };
+        h = await window.showSaveFilePicker({ suggestedName: baseName(currentName) + '_DVDCAD.' + (dwgFirst ? 'dwg' : 'dxf'), types: canDwg ? (dwgFirst ? [tD, tX] : [tX, tD]) : [tX] }); S.saveHandle = h;
+      }
+      const asDwg = canDwg && /\.dwg$/i.test(h.name || '');
+      let data; try{ data = asDwg ? (A.dwgBytes ? await A.dwgBytes() : A.dwgNative(modelEntities)) : entitiesToDXF(modelEntities); }catch(e){ say('Không tạo được ' + (asDwg ? 'DWG' : 'DXF') + ': ' + (e && e.message || e)); return; }
+      const w = await h.createWritable(); await w.write(data); await w.close();
       say('Đã lưu ' + h.name + ' (Ctrl+S lần sau ghi đè file này).');
     }catch(e){ if(!e || e.name !== 'AbortError') say('Không lưu được: ' + (e && e.message || e)); }
   }

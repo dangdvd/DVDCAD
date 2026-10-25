@@ -5252,5 +5252,22 @@
 "← Danh sách lệnh": "← Command list",
 "↓ = danh sách tuỳ chọn": "↓ = list optional",
 "⌕ Tìm trên ribbon": "⌕ Find on ribbon",
-"Xoay": "Rotation"
+"Xoay": "Rotation",
+"Bản vẽ AutoCAD (*.dwg)": "AutoCAD Drawing (*.dwg)",
+"Chưa có ODA File Converter / máy chủ chuyển DWG.": "No ODA File Converter / DWG conversion server.",
+"Chưa có ODA File Converter trên máy.": "ODA File Converter is not installed on this computer.",
+"Cài đặt lưu DWG: DWG 2000 gốc hoặc phiên bản mới hơn qua ODA File Converter / máy chủ chuyển đổi": "DWG save settings: native DWG 2000, or newer versions via ODA File Converter / a conversion server",
+"DWG 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (AutoCAD 2000 trở lên đều mở được). Phiên bản mới hơn cần ODA File Converter (hoặc máy chủ) — nếu không có, DVDCAD tự ghi DWG 2000.": "DWG 2000 is written directly by the DVDCAD writer, nothing else to install (AutoCAD 2000 and later open it). Newer versions need ODA File Converter (or a server) — without it, DVDCAD writes DWG 2000.",
+"DWG 2000 — bộ ghi sẵn có (không cần ODA)": "DWG 2000 — built-in writer (no ODA needed)",
+"DWG: trùng handle": "DWG: duplicate handle",
+"Không tạo được": "Could not create",
+"Lưu (Ctrl+S): Drive hoặc file DWG / DXF trên máy": "Save (Ctrl+S): Drive or a DWG / DXF file on this computer",
+"Lưu ra file DWG: DWG 2000 gốc (không cần ODA) hoặc DWG 2004–2018 qua ODA File Converter": "Save as a DWG file: native DWG 2000 (no ODA needed) or DWG 2004–2018 via ODA File Converter",
+"Lưu thành (DWG / DXF)…": "Save As (DWG / DXF)…",
+"Lưu thành file DWG / DXF mới (Ctrl+Shift+S)": "Save as a new DWG / DXF file (Ctrl+Shift+S)",
+"Thiếu bộ ghi DWG (dvd-dwg.js).": "DWG writer is missing (dvd-dwg.js).",
+"Thiếu bộ ghi DXF 2000.": "DXF 2000 writer is missing.",
+"Đang ghi DWG…": "Writing DWG…",
+"→ ghi DWG 2000 bằng bộ ghi sẵn có.": "→ writing DWG 2000 with the built-in writer.",
+"— chuyển qua ODA File Converter": "— via ODA File Converter"
 }

@@ -103,14 +103,46 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
 
   console.log('7. Lệnh phục hồi (x3 / x4 / x5) + lưu DWG');
   check(await win.evaluate(() => ['DRAWORDER', 'WIPEOUT', 'CANNOSCALE', 'GCHORIZONTAL', 'DCALIGNED', 'PARAMETERS', 'BPARAMETER', 'BDYN', 'SAVEDWG'].every(n => DVDCmd.commands.some(c => c.k.includes(n)))), 'có DRAWORDER, WIPEOUT, CANNOSCALE, GC*/DC*, PARAMETERS, BPARAMETER, BDYN, SAVEDWG');
-  if(process.platform !== 'win32'){
-    const dwgOut = path.join(tmp, 'luu-ra.dwg');
-    await app.evaluate(({ dialog }, p) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: p }); }, dwgOut);
-    await win.evaluate(() => DVDCmd.run('SAVEDWG'));
-    check(await until(() => fs.existsSync(dwgOut) && fs.readFileSync(dwgOut, 'latin1').startsWith('AC1032')), 'SAVEDWG chuyển qua ODA File Converter trên máy và lưu .dwg');
-  }else{
-    await win.evaluate(() => DVDCmd.run('SAVEDWG'));
-    check(await until(() => win.evaluate(() => /ODA/.test(document.getElementById('toast').textContent))), 'SAVEDWG khi chưa cài ODA → hướng dẫn cài ODA File Converter');
+  {
+    const stubSave = p => app.evaluate(({ dialog }, p) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: p }); }, p);
+    const head = p => { try{ return fs.readFileSync(p, 'latin1').slice(0, 6); }catch(_){ return ''; } };
+    const reopen = p => win.evaluate(async p => { const r = await window.dvdDesktop.readFile(p); const u = new Uint8Array(r.data); await loadDWG(u.slice().buffer, 'kiem-tra.dwg'); await new Promise(q => setTimeout(q, 300)); return modelEntities.length; }, p);
+    const outDir = process.env.DVD_DWG_OUT || '';   // CI: thư mục chép file DWG để ODA File Converter kiểm tra lại
+    const keep = (p, name) => { if(outDir){ fs.mkdirSync(outDir, { recursive: true }); fs.copyFileSync(p, path.join(outDir, name)); } };
+    const n0 = await win.evaluate(() => modelEntities.length);
+    // mặc định: DWG 2000 gốc (dvd-dwg.js), không cần ODA
+    const dwgNat = path.join(tmp, 'luu-goc.dwg'); await stubSave(dwgNat);
+    await win.evaluate(() => { localStorage.removeItem('dvd:dwgsrv'); DVDCmd.run('SAVEDWG'); });
+    check(await until(() => head(dwgNat) === 'AC1015', 60000), 'SAVEDWG mặc định ghi DWG 2000 gốc (AC1015), không cần ODA File Converter');
+    keep(dwgNat, 'mat-bang-tang-1.dwg');
+    check(await reopen(dwgNat) === n0, 'mở lại DWG vừa ghi: đủ ' + n0 + ' đối tượng');
+    // Lưu thành (SAVEAS) chọn đuôi .dwg → DWG
+    const dwgAs = path.join(tmp, 'luu-thanh.dwg'); await stubSave(dwgAs);
+    await win.evaluate(() => DVDCmd.run('SAVEAS'));
+    check(await until(() => head(dwgAs) === 'AC1015', 60000), 'SAVEAS chọn *.dwg → ghi DWG');
+    // bản vẽ tổng hợp: kích thước, hatch, chữ tiếng Việt, khối 3D, vùng che… → DWG → mở lại
+    const syn = await win.evaluate(async () => { const A = DVDAcad, w = ms => new Promise(r => setTimeout(r, ms));
+      A.newDrawing(); await w(600); try{ A.hideStart && A.hideStart(); }catch(_){}
+      for(const n of ['GAS_LINE', 'FENCELINE1']) try{ A.loadLT(n); }catch(_){}
+      const add = es => A.commit({ add: [].concat(es).filter(Boolean).map(e => A.newProps ? A.newProps(e) : e) });
+      add([{ type: 'LINE', x1: 0, y1: 0, x2: 120, y2: 0, lt: 'GAS_LINE' }, { type: 'LINE', x1: 0, y1: 10, x2: 120, y2: 10, lt: 'FENCELINE1' }, { type: 'CIRCLE', cx: 200, cy: 200, r: 20 }]);
+      const c = modelEntities.find(e => e.type === 'CIRCLE'); add(A.makeDimRad(c, { x: 230, y: 230 }, false)); add(A.makeDimRad(c, { x: 170, y: 235 }, true));
+      add(A.makeDimAng({ x: 300, y: 0 }, 0, Math.PI / 3, { x: 340, y: 15 })); add(A.makeDimLinear({ x: 0, y: 50 }, { x: 80, y: 90 }, { x: 40, y: 110 }, 0));
+      add([{ type: 'HATCH', loops: [[{ x: 0, y: 200 }, { x: 50, y: 200 }, { x: 50, y: 250 }, { x: 0, y: 250 }]], pat: 'ANSI31', psc: 1, pang: 0 }, { type: 'HATCH', loops: [[{ x: 60, y: 200 }, { x: 110, y: 200 }, { x: 85, y: 250 }]], pat: 'SOLID', solid: true },
+        { type: 'TEXT', x: 0, y: -30, h: 5, text: 'Chữ tiếng Việt: ĐƯỜNG ỐNG Ø100', rot: 15 }, { type: 'TEXT', x: 0, y: -60, h: 3.5, text: 'Dòng một\nDòng hai', mt: 1 }, { type: 'ELLIPSE', cx: 400, cy: 0, mx: 30, my: 0, ratio: 0.5, p1: 0, p2: Math.PI }]);
+      for(const s of ['BOX\n700,0\n740,40\n25\n', 'WIPEOUT\n100,500\n140,500\n140,540\n100,540\n\n']){ await A.runScript(s); await w(300); for(let i = 0; i < 5 && A.busy(); i++){ A.cancel(); await w(60); } }
+      const sig = () => modelEntities.map(e => e.type + (e.blk ? '*' : '') + (e.wipe ? 'W' : '') + '|' + (e.layer || '0') + '|' + (e.lt || '') + '|' + (e.text || '')).sort().join('\n');
+      const s0 = sig(), dwg = A.dwgNative(); await loadDWG(dwg.slice().buffer, 'tong-hop.dwg'); await w(300);
+      let bin = ''; for(let i = 0; i < dwg.length; i += 0x8000) bin += String.fromCharCode.apply(null, dwg.subarray(i, i + 0x8000));
+      return { same: sig() === s0, n: modelEntities.length, s3d: modelEntities.some(e => e.type === 'SOLID3D'), wipe: modelEntities.some(e => e.wipe), b64: btoa(bin) }; });
+    check(syn.same && syn.s3d && syn.wipe, 'bản vẽ tổng hợp (kích thước, hatch, chữ Việt, kiểu nét chữ/hình, khối 3D, vùng che) → DWG → mở lại giống hệt (' + syn.n + ' đối tượng)');
+    if(outDir){ fs.mkdirSync(outDir, { recursive: true }); fs.writeFileSync(path.join(outDir, 'tong-hop.dwg'), Buffer.from(syn.b64, 'base64')); }
+    // phiên bản mới hơn qua ODA File Converter (Linux/macOS: ODA giả ghi AC1032; Windows chưa cài ODA → tự ghi DWG 2000)
+    const dwgOda = path.join(tmp, 'luu-oda.dwg'); await stubSave(dwgOda);
+    await win.evaluate(() => { localStorage.setItem('dvd:dwgsrv', JSON.stringify({ url: '', ver: 'ACAD2018' })); DVDCmd.run('SAVEDWG'); });
+    if(process.platform !== 'win32') check(await until(() => head(dwgOda) === 'AC1032'), 'DWG 2018 qua ODA File Converter trên máy');
+    else check(await until(() => /^AC10(15|32)$/.test(head(dwgOda)), 60000), 'DWG 2018: qua ODA nếu máy đã cài, chưa cài → tự ghi DWG 2000 gốc (' + head(dwgOda) + ')');
+    await win.evaluate(() => localStorage.removeItem('dvd:dwgsrv'));
   }
 
   console.log('8. Lệnh tắt giống AutoCAD (acad.pgp)');

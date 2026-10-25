@@ -564,7 +564,7 @@
     ] },
     output: { en: 'Output', vi: 'Xuất', panels: [
       { id: 'plot', en: 'Plot', vi: 'In', items: [big('PLOT', 'Plot', 'In bản vẽ'), big('PUBLISH', 'Batch\nPlot', 'In\nhàng loạt'), col(sm('LAYOUTS', 'Page Setup', 'Layout & khổ giấy'), sm('STYLESMANAGER', 'Plot Style Manager', 'Kiểu in .ctb'), sm('EXPORT', 'Export Image', 'Xuất ảnh / PDF'))] },
-      { id: 'exp', en: 'Export', vi: 'Xuất file', items: [big('EXPORT', 'Export\nPDF', 'Xuất\nPDF'), big('SAVEDWG', 'Save\nDWG', 'Lưu\nDWG'), col(sm('DXFOUT', 'Export DXF', 'Xuất DXF'), sm('SAVEAS', 'Save As DXF', 'Lưu thành DXF'), sm('DWGSERVER', 'DWG Server', 'Máy chủ DWG')), col(sm('DXFVERSION', 'DXF Version', 'Phiên bản DXF'), sm('ETRANSMIT', 'eTransmit', 'Đóng gói gửi đi'), sm('ARCHIVE', 'Archive', 'Lưu trữ .zip')), col(sm('TIFOUT', 'Export TIFF', 'Xuất ảnh TIFF'), sm('BMPOUT', 'Export BMP', 'Xuất ảnh BMP'))] },
+      { id: 'exp', en: 'Export', vi: 'Xuất file', items: [big('EXPORT', 'Export\nPDF', 'Xuất\nPDF'), big('SAVEDWG', 'Save\nDWG', 'Lưu\nDWG'), col(sm('DXFOUT', 'Export DXF', 'Xuất DXF'), sm('SAVEAS', 'Save As', 'Lưu thành'), sm('DWGSERVER', 'DWG Server', 'Máy chủ DWG')), col(sm('DXFVERSION', 'DXF Version', 'Phiên bản DXF'), sm('ETRANSMIT', 'eTransmit', 'Đóng gói gửi đi'), sm('ARCHIVE', 'Archive', 'Lưu trữ .zip')), col(sm('TIFOUT', 'Export TIFF', 'Xuất ảnh TIFF'), sm('BMPOUT', 'Export BMP', 'Xuất ảnh BMP'))] },
       { id: 'exp3', en: '3D Print', vi: 'Xuất 3D', items: [big('3DPRINT', '3D\nPrint', 'In\n3D'), col(sm('EXPORTSTL', 'Export STL', 'Xuất STL'), sm('EXPORTOBJ', 'Export OBJ', 'Xuất OBJ'))] }
     ] },
     collab: { en: 'Collaborate', vi: 'Cộng tác', panels: [
@@ -857,7 +857,7 @@
   // menu ứng dụng
   $('acLogo').onclick = e => { const r = e.currentTarget.getBoundingClientRect(); menu(r.left, r.bottom + 2, [
     { t: 'Bản vẽ mới', k: 'Ctrl+N', ic: 'NEW', fn: () => A.newDrawing() }, { t: 'Mở…', k: 'Ctrl+O', ic: 'OPEN', fn: () => click('openBtn') }, { t: 'Mở từ Google Drive…', ic: 'DRIVE', fn: ACT.DOPEN },
-    { sep: 1 }, { t: 'Lưu', k: 'Ctrl+S', ic: 'SAVE', fn: () => run('QSAVE') }, { t: 'Lưu thành DXF…', k: 'Ctrl+Shift+S', ic: 'SAVEAS', fn: () => run('SAVEAS') }, { t: 'Lưu DXF lên Drive', ic: 'DRIVE', fn: ACT.DSAVE },
+    { sep: 1 }, { t: 'Lưu', k: 'Ctrl+S', ic: 'SAVE', fn: () => run('QSAVE') }, { t: 'Lưu thành (DWG / DXF)…', k: 'Ctrl+Shift+S', ic: 'SAVEAS', fn: () => run('SAVEAS') }, { t: 'Lưu DXF lên Drive', ic: 'DRIVE', fn: ACT.DSAVE },
     { sep: 1 }, { t: 'In bản vẽ (Plot)…', k: 'Ctrl+P', ic: 'PLOT', fn: () => run('PLOT') }, { t: 'Xuất ảnh / PDF theo màn hình…', ic: 'EXPORT', fn: () => click('exportBtn') }, { t: 'Chia sẻ link…', ic: 'SHARE', fn: () => run('SHARE') },
     { sep: 1 }, { t: 'Bản vẽ mẫu', ic: 'LAYOUT', fn: () => click('sampleBtn') }, { t: 'Danh sách lệnh', k: 'F1', ic: 'HELP', fn: () => DVDCmd.showHelp() }
   ]); };
