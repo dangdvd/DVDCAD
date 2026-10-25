@@ -31,6 +31,15 @@
   const CLOUD = '<path class="fa" d="M7 19h10.5a4 4 0 0 0 .5-8 6 6 0 0 0-11.4-1.5A4.8 4.8 0 0 0 7 19z"/>';
   const ISO = (cls) => '<path class="' + (cls || '') + '" d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>';
   const PAPER = '<path class="fd" d="M6 3h12v18H6z"/>';
+  // dấu phụ ở góc dưới phải: × đỏ = đóng / tắt, ✓ xanh = xong / bật, bánh răng = cài đặt, mắt xích = liên kết, sao = trình hướng dẫn
+  const BADGE = '<circle class="fbg" cx="18" cy="18" r="5.2"/>';
+  const BX = BADGE + '<path class="r" d="M15.8 15.8l4.4 4.4M20.2 15.8l-4.4 4.4" stroke-width="1.8"/>';
+  const BOK = BADGE + '<path class="g" d="M15.4 18.1l1.9 1.9 3.4-3.7" stroke-width="1.8"/>';
+  const BGEAR = BADGE + '<circle class="a" cx="18" cy="18" r="1.6"/><path class="a" d="M18 14.6v1.2M18 20.2v1.2M14.6 18h1.2M20.2 18h1.2M15.6 15.6l.85.85M19.55 19.55l.85.85M15.6 20.4l.85-.85M19.55 16.45l.85-.85" stroke-width="1.4"/>';
+  const BLINK = BADGE + '<path class="g" d="M16.6 19.4l2.8-2.8M16 17.4l-.8.8a1.5 1.5 0 0 0 2.1 2.1l.8-.8M20 18.6l.8-.8a1.5 1.5 0 0 0-2.1-2.1l-.8.8" stroke-width="1.3"/>';
+  const BSTAR = BADGE + '<path class="fy" d="M18 13.8l1.2 2.5 2.7.3-2 1.9.5 2.7-2.4-1.3-2.4 1.3.5-2.7-2-1.9 2.7-.3z"/>';
+  const REGENAR = '<path class="a" d="M4 11a8 8 0 0 1 14.2-4.6M20 13a8 8 0 0 1-14.2 4.6"/><path class="a" d="M18.6 2.8l-.4 3.7-3.7-.5M5.4 21.2l.4-3.7 3.7.5"/>';
+  const PALETTES = '<rect class="fd" x="3" y="4" width="7" height="14" rx="1"/><rect x="3" y="4" width="7" height="14" rx="1"/><path class="a" d="M5 7.5h3M5 10.5h3M5 13.5h3"/><rect x="12" y="4" width="8.5" height="8" rx="1" opacity=".6"/>';
 
   const I = {
     /* ---------- VẼ ---------- */
@@ -514,9 +523,33 @@
     SEPARATE: BOX(2, 19, 7, 7, 5) + BOX(14, 13, 6, 6, 4) + AR(11, 15, 14, 12, 'y'),
     AUTOCOMPLETE: '<rect class="fd" x="2" y="4" width="20" height="7" rx="1"/><rect x="2" y="4" width="20" height="7" rx="1"/><path class="a" d="M4.5 7.5h6M12 6v3"/><rect class="fa" x="4" y="13" width="16" height="7"/><path class="a" d="M6 15.5h8M6 18h5"/>',
     DRAGMODE: '<rect x="3" y="3" width="9" height="9" stroke-dasharray="2 1.5"/><rect class="fa" x="11" y="11" width="9" height="9"/><rect class="a" x="11" y="11" width="9" height="9"/>' + AR(6, 6, 13, 13, 'y'),
+    /* ---------- lệnh hệ thống, đóng / mở bảng (v5i) ---------- */
+    REGEN: '<path class="fd" d="M8 9h8v6H8z"/><path d="M8 9h8v6H8zM8 15l8-6"/>' + REGENAR,
+    REGENALL: '<path class="fd" d="M6.5 9h5v6h-5zM12.5 9h5v6h-5z"/><path d="M6.5 9h5v6h-5zM12.5 9h5v6h-5z"/>' + REGENAR,
+    OOPS: '<rect x="3" y="9" width="10" height="9" stroke-dasharray="2 1.6"/><path class="g" d="M21 19v-6a4 4 0 0 0-4-4H10"/><path class="g" d="M13 6l-3 3 3 3"/>',
+    CLOSE: DOC + BX,
+    CLOSEALL: '<path d="M8.5 1.5H17l3.5 3.5v12" opacity=".55"/>' + DOC + BX,
+    QUIT: '<path class="fd" d="M4 3h10v18H4z"/><path d="M4 3h10v18H4z"/><circle class="pd" cx="11.3" cy="12" r="1"/>' + AR(15, 12, 22, 12, 'y'),
+    GOTO: '<circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5"/><circle class="pa" cx="12" cy="12" r="1.8"/>',
+    VIEWRES: '<path d="M3 20v-5l1.5-4.2 3-3.3 4-2"/><path class="a" d="M11.5 5.5A8.5 8.5 0 0 1 21 14v6"/>' + P(11.5, 5.5),
+    SYSVAR: '<rect class="fd" x="2.5" y="5" width="19" height="14" rx="2"/><rect x="2.5" y="5" width="19" height="14" rx="2"/><path class="a" d="M6.5 9.5l4 5M10.5 9.5l-4 5"/><path d="M13.5 11h4.5M13.5 14h4.5"/>',
+    DATE: '<rect class="fd" x="3" y="5" width="18" height="16" rx="1.5"/><rect x="3" y="5" width="18" height="16" rx="1.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path class="a" d="M7 14h2M11 14h2M15 14h2M7 17.5h2M11 17.5h2"/>',
+    HIDEPALETTES: PALETTES + BX,
+    SHOWPALETTES: PALETTES + BOK,
+    SAMPLE: DOC + '<path class="a" d="M8 10.5h8v8H8zM12 10.5v8M8 14.5h4"/>',
     COUNT_: ''
   };
-  delete I.COUNT_; I.TPDISPLAY = I.TRANSPARENCY; I.TRANSPARENCYDISPLAY = I.TRANSPARENCY; I.LOGFILEOFF = I.LOGFILEON; I.RIBBONCLOSE = I.RIBBON; I.COMMANDLINE = I.RIBBON; I.MPEDIT = I.PEDIT || I.MPEDIT; I.XDLIST = I.LIST || I.XDLIST; I.XDATA = I.XDLIST; I.DIMLAYER = I.DIMSTYLE || I.DIMLAYER; I.CLASSICLAYER = I.LAYER || I.CLASSICLAYER; I.EATTEXT = I.ATTEXPORT || I.EATTEXT; I.GOTOURL = I.HYPERLINK || I.GOTOURL; I.NEWVIEW = I.VIEW || I.NEWVIEW; I.SAVEALL = I.SAVE || I.SAVEALL; I.PREVIEW = I.PLOT || I.PREVIEW; I.DCLINEAR = I.DCHORIZONTAL || I.DCLINEAR; ['3DFORBIT', '3DCORBIT', '3DPAN', '3DZOOM', '3DSWIVEL', '3DDISTANCE'].forEach(k => { I[k] = I['3DORBIT'] || I[k]; }); I['3DFLY'] = I['3DWALK'] || I['3DFLY']; I['3DCLIP'] = I.SECTIONPLANE || I['3DCLIP']; I.WORKSPACE = I.SETTINGS || I.WORKSPACE; I.AP = I.APPLOAD; I.ADDINS = I.APPLOAD; I.NAPADDIN = I.APPLOAD; I.VLIDE = I.VLISP; I.LISPCONSOLE = I.VLISP; I.SURFTAB1 = I.SURFTAB; I.SURFTAB2 = I.SURFTAB; I.PSOLID = I.POLYSOLID; I.DDA = I.DIMDISASSOCIATE; I.DRE = I.DIMREASSOCIATE; I.DIMREASSOC = I.DIMREASSOCIATE; I.DIMROT = I.DIMROTATED; I['-VPOINT'] = I.VPOINT; I.VP = I.DDVPOINT; I.HI = I.HIDE; I.EXOFFSET = I.OFFSET || I.EXOFFSET; I.SAVEIMG = I.PNGOUT || I.SAVEIMG; I.MTEDIT = I.DDEDIT || I.TEXTEDIT || I.MTEDIT; I.EXCHPROP = I.CHPROP || I.EXCHPROP; I.TEXTSCR = I.HISTORY; I.COMMANDHISTORY = I.HISTORY; I.BATTORDER = I.BATTMAN; I.TEXTSTYLE = I.STYLE; I.VIEWS3 = I.VIEWBASE; I.HINHCHIEU = I.VIEWBASE; I.PAGESETUP = I.PLOT; I.FILLMODE = I.FILL; I.MS = I.MSPACE; I.PS = I.PSPACE; I.DJL = I.DIMJOGLINE; I.RCP = I.REVCLOUDPROPERTIES; I.XPLODE = I.EXPLODE; I.ARRAYCLASSIC = I.ARRAYRECT || I.ARRAY; I.HGB = I.HATCHGENERATEBOUNDARY; I.DIMSMART = I.DIM; I.MLE = I.MLEADEREDIT; I.DWGCOMPARE = I.COMPARE; I.VSCURRENT = I.VISUALSTYLES; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.DATALINKURL = I.DATALINK; I.DXFVERSION = I.DXFOUT; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
+  delete I.COUNT_; I.QM = I.DO;
+  // lệnh đóng bảng / bật tắt dùng lại biểu tượng gốc + dấu phụ
+  I.PROPERTIESCLOSE = I.PROPERTIES + BX; I.LAYERCLOSE = I.LAYER + BX; I.QCCLOSE = I.CAL + BX; I.COMMANDLINEHIDE = I.CMDLINE + BX;
+  I.REFCLOSE = I.REFEDIT + BOK; I.ARRAYCLOSE = I.ARRAYEDIT + BOK; I.ARRAYASSOCIATIVITY = I.ARRAYRECT + BLINK;
+  I.MLSTYLE = I.MLINE + BGEAR; I.HATCHSET = I.HATCH + BGEAR; I.LAYOUTWIZARD = I.LAYOUT + BSTAR;
+  I.QQUIT = I.QUIT; I.GRAPHSCR = I.DISPLAY; I.SAVEIMG = I.JPGOUT; I.WIPEOUTFRAME = I.WIPEOUTFRAME || I.WIPEOUT; I.LAYERPMODE = I.LAYERP;
+  I.UNION3D = I.UNION; I.SUBTRACT3D = I.SUBTRACT; I.INTERSECT3D = I.INTERSECT; I.MASSPROP3D = I.MASSPROP;
+  // biến hệ thống (gõ ở dòng lệnh như AutoCAD) — một biểu tượng chung
+  for(const v of ['OSMODE', 'ORTHOMODE', 'SNAPMODE', 'GRIDMODE', 'SNAPUNIT', 'POLARANG', 'POLARMODE', 'AUTOSNAP', 'DYNMODE', 'APERTURE', 'PICKBOX', 'CURSORSIZE', 'ROLLOVERTIPS',
+    'CLAYER', 'CECOLOR', 'CELTYPE', 'CELWEIGHT', 'CELTSCALE', 'TEXTSIZE', 'OFFSETDIST', 'FILLETRAD', 'PDMODE', 'PDSIZE', 'INSUNITS', 'MIRRTEXT', 'TILEMODE', 'DWGNAME']) if(!I[v]) I[v] = I.SYSVAR;
+  I.TPDISPLAY = I.TRANSPARENCY; I.TRANSPARENCYDISPLAY = I.TRANSPARENCY; I.LOGFILEOFF = I.LOGFILEON; I.RIBBONCLOSE = I.RIBBON; I.COMMANDLINE = I.RIBBON; I.MPEDIT = I.PEDIT || I.MPEDIT; I.XDLIST = I.LIST || I.XDLIST; I.XDATA = I.XDLIST; I.DIMLAYER = I.DIMSTYLE || I.DIMLAYER; I.CLASSICLAYER = I.LAYER || I.CLASSICLAYER; I.EATTEXT = I.ATTEXPORT || I.EATTEXT; I.GOTOURL = I.HYPERLINK || I.GOTOURL; I.NEWVIEW = I.VIEW || I.NEWVIEW; I.SAVEALL = I.SAVE || I.SAVEALL; I.PREVIEW = I.PLOT || I.PREVIEW; I.DCLINEAR = I.DCHORIZONTAL || I.DCLINEAR; ['3DFORBIT', '3DCORBIT', '3DPAN', '3DZOOM', '3DSWIVEL', '3DDISTANCE'].forEach(k => { I[k] = I['3DORBIT'] || I[k]; }); I['3DFLY'] = I['3DWALK'] || I['3DFLY']; I['3DCLIP'] = I.SECTIONPLANE || I['3DCLIP']; I.WORKSPACE = I.SETTINGS || I.WORKSPACE; I.AP = I.APPLOAD; I.ADDINS = I.APPLOAD; I.NAPADDIN = I.APPLOAD; I.VLIDE = I.VLISP; I.LISPCONSOLE = I.VLISP; I.SURFTAB1 = I.SURFTAB; I.SURFTAB2 = I.SURFTAB; I.PSOLID = I.POLYSOLID; I.DDA = I.DIMDISASSOCIATE; I.DRE = I.DIMREASSOCIATE; I.DIMREASSOC = I.DIMREASSOCIATE; I.DIMROT = I.DIMROTATED; I['-VPOINT'] = I.VPOINT; I.VP = I.DDVPOINT; I.HI = I.HIDE; I.EXOFFSET = I.OFFSET || I.EXOFFSET; I.SAVEIMG = I.PNGOUT || I.SAVEIMG; I.MTEDIT = I.DDEDIT || I.TEXTEDIT || I.MTEDIT; I.EXCHPROP = I.CHPROP || I.EXCHPROP; I.TEXTSCR = I.HISTORY; I.COMMANDHISTORY = I.HISTORY; I.BATTORDER = I.BATTMAN; I.TEXTSTYLE = I.STYLE; I.VIEWS3 = I.VIEWBASE; I.HINHCHIEU = I.VIEWBASE; I.PAGESETUP = I.PLOT; I.FILLMODE = I.FILL; I.MS = I.MSPACE; I.PS = I.PSPACE; I.DJL = I.DIMJOGLINE; I.RCP = I.REVCLOUDPROPERTIES; I.XPLODE = I.EXPLODE; I.ARRAYCLASSIC = I.ARRAYRECT || I.ARRAY; I.HGB = I.HATCHGENERATEBOUNDARY; I.DIMSMART = I.DIM; I.MLE = I.MLEADEREDIT; I.DWGCOMPARE = I.COMPARE; I.VSCURRENT = I.VISUALSTYLES; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.DATALINKURL = I.DATALINK; I.DXFVERSION = I.DXFOUT; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
   I.TIFFOUT = I.TIFOUT; I.IMP = I.IMPORT; I.SOLIDSEPARATE = I.SEPARATE; I.LIGHTLISTCLOSE = I.LIGHTLIST; I.RECOVERALL = I.RECOVER || I.RECOVERALL; I['3DPRINT'] = I.EXPORTSTL || I['3DPRINT']; I.EXPORTTOAUTOCAD = I.SAVEAS || I.EXPORTTOAUTOCAD; I.XBIND = I.XREF || I.XBIND; I.DVIEW = I['3DORBIT'] || I.DVIEW; I.SOLPROF = I.FLATSHOT || I.SOLPROF; I.SOLVIEW = I.VIEWBASE || I.SOLVIEW; I.PASTESPEC = I.PASTECLIP || I.PASTESPEC; I.COPYLINK = I.COPYCLIP || I.COPYLINK; I.TPNAVIGATE = I.TOOLPALETTES || I.TPNAVIGATE; I.MATBROWSEROPEN = I.MATERIALS || I.MATBROWSEROPEN; I.SHEETSET = I.PUBLISH || I.SHEETSET; I.SSM = I.SHEETSET; I['3DALIGN'] = I.ALIGN || I['3DALIGN'];
   I.XCLIPFRAME = I.XCLIPFRAME || '<rect x="3" y="3" width="18" height="18" stroke-dasharray="2 1.5"/><rect class="fa3" x="6" y="6" width="12" height="12"/><rect class="a" x="6" y="6" width="12" height="12" stroke-width="2"/>';
   window.DVDIcons = I;

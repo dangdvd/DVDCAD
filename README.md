@@ -1,8 +1,34 @@
 # DVDCAD — PWA xem bản vẽ DWG/DXF (cài được, chạy offline)
 
+> **Bản Windows** (cài như phần mềm, chạy offline, giao diện kiểu AutoCAD): xem **[HUONG-DAN-WINDOWS.md](HUONG-DAN-WINDOWS.md)**.
+
 Ứng dụng web một trang: **xem** bản vẽ, **đo khoảng cách** (có bắt điểm), **thêm ghi chú**.
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
+
+## v5i: bản Windows chạy offline + trang Start kiểu AutoCAD
+- **DVDCAD cho Windows** (`desktop/`, Electron): bộ cài `DVDCAD-Setup-*.exe` và bản portable, chạy hoàn toàn offline. Hướng dẫn: **[HUONG-DAN-WINDOWS.md](HUONG-DAN-WINDOWS.md)**.
+  - Toàn bộ app (cả bộ đọc DWG WASM) đọc thẳng từ ổ đĩa qua `dvdcad://app/`, không cần service worker hay mạng.
+  - `OPEN` / Ctrl+O mở hộp thoại *Select File* của Windows (chọn nhiều file, mỗi file một tab). Ctrl+S ghi đè đúng file đã lưu; ghi qua file tạm nên không hỏng file cũ nếu lỗi giữa chừng.
+  - Nhấp đúp file .dwg / .dxf trong Explorer (bộ cài gắn sẵn), kéo thả file vào cửa sổ. Chỉ một cửa sổ: file mở thêm thành tab mới.
+  - Chỉ đọc / ghi file người dùng đã chọn; link web mở bằng trình duyệt mặc định.
+  - GitHub Actions `.github/workflows/desktop-windows.yml` dựng bộ cài trên `windows-latest`; đẩy thẻ `v*` thì tạo Release.
+- `dvd-desktop.js`: cầu nối trong giao diện (trên trình duyệt không làm gì).
+- `dvd-acad-start.js`: tab **Start** là một trang riêng như AutoCAD (ẩn ribbon).
+  - Bản vẽ mới theo mẫu: mm (acadiso), m, inch (acad). Ngoài ra có Mở…, Google Drive, Bản vẽ mẫu, và mục Tìm hiểu.
+  - Bản vẽ gần đây dạng lưới ảnh thu nhỏ hoặc danh sách; tìm theo tên, sắp xếp, ghim, xoá khỏi danh sách, mở thư mục chứa file.
+  - Tự hiện khi chưa mở bản vẽ nào; mở hoặc chuyển bản vẽ thì tự ẩn.
+- `NEW` nhận mẫu đơn vị (`A.newDrawing({ units })`).
+- `dvd-acad-pgp.js`: lệnh tắt mặc định giống `acad.pgp` của AutoCAD.
+  - 200 / 226 lệnh tắt trỏ đúng lệnh. 26 lệnh tắt còn lại chưa có lệnh trong DVDCAD.
+  - `DO` = DONUT (đo nhanh nay là `QM`), `T` = MTEXT (chữ một dòng vẫn là `DT`).
+  - Thêm 26 lệnh tắt còn thiếu, như `PA`, `REA`, `RA`, `EXP`, `EPDF`, `ADC`, `ATI`, `BC`, `CLI`, `XB`, `TI`, `VSM`.
+  - Lệnh tắt riêng của người dùng (ALIASEDIT) vẫn được ưu tiên.
+- Biểu tượng: vẽ thêm cho mọi lệnh còn thiếu, như REGEN, OOPS, CLOSE, QUIT, GOTO và các lệnh đóng bảng.
+  Biến hệ thống dùng chung một biểu tượng. Gợi ý lệnh ở dòng lệnh có biểu tượng như AutoComplete của AutoCAD.
+- `LICENSE`: GPL-3.0 (mã nguồn mở, bắt buộc vì có LibreDWG).
+- `sw.js`: nạp từng file riêng. Trước đây thiếu một file (404) làm hỏng cả bộ nhớ offline.
+- Kiểm thử: `desktop/test/smoke.js` (27 bước). Gồm: mở DWG từ dòng lệnh, OPEN / SAVEAS / QSAVE qua hộp thoại, lưu lỗi, trang Start, lần chạy thứ 2, an toàn file / link, lệnh tắt acad.pgp.
 
 ## v5h: XCLIP giống AutoCAD
 - `index.html`:
@@ -328,7 +354,10 @@ Nếu bạn sửa file rồi upload lại mà máy vẫn hiện bản cũ: mở 
 thành `'dvdcad-v2'` (tăng số), upload lại. Service worker sẽ xoá cache cũ và nạp bản mới.
 
 ## Giấy phép
-- Mã ứng dụng (phần `index.html`, `sw.js`…) bạn tự do dùng/sửa.
-- **LibreDWG** (`libredwg-web.js`, `libredwg-web.wasm`) theo **GPL-3.0**. Nếu bạn **phân phối** app này,
-  cần tuân thủ điều khoản GPL (giữ thông báo giấy phép và cung cấp mã nguồn khi được yêu cầu).
+DVDCAD là phần mềm **mã nguồn mở** theo giấy phép **GNU GPL phiên bản 3 hoặc mới hơn** (xem [LICENSE](LICENSE)).
+- Ai cũng được dùng, sửa và phân phối lại DVDCAD, kể cả cho mục đích thương mại. Bản phân phối lại phải giữ giấy phép GPL và kèm mã nguồn.
+- **LibreDWG** (`libredwg-web.js`, `libredwg-web.wasm`) theo **GPL-3.0**, nên bản đóng gói (web và Windows) cũng phải theo GPL-3.0.
   Nguồn: https://github.com/mlightcad/libredwg-web và https://github.com/LibreDWG/libredwg
+- Thư viện kèm theo giữ giấy phép riêng: three.js (MIT), pdf.js (Apache-2.0), SheetJS (Apache-2.0), polygon-clipping (MIT) — xem `vendor/`.
+- DVDCAD dùng **tên lệnh và cách dùng giống AutoCAD** để người dùng chuyển sang không bỡ ngỡ, nhưng biểu tượng và mã nguồn là của riêng DVDCAD.
+  DVDCAD không liên quan tới Autodesk; AutoCAD là thương hiệu của Autodesk, Inc.

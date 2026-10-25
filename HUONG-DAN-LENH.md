@@ -56,7 +56,7 @@ Mỗi file mở ra là một **tab** (như AutoCAD). Bấm tab để chuyển. *
 Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thái để chọn nhanh bước góc hoặc loại điểm bắt.
 
 ## Danh sách lệnh
-**Vẽ:** `BOUNDARY BO` (bấm trong vùng kín → đa tuyến kín) · `DONUT` · `LINE L` · `PLINE PL` (A = cung, C = đóng) · `RECTANG REC` (D = kích thước) · `CIRCLE C` (D, 2P, 3P) · `ARC A` (3 điểm, C = tâm) · `ELLIPSE EL` · `POLYGON POL` · `POINT PO` · `XLINE XL` · `RAY` · `SPLINE SPL` · `REVCLOUD RC` · `TEXT T/DT` · `MTEXT MT` · `HATCH H` (bấm điểm trong vùng kín; S = chọn đường kín; T = mẫu và tỉ lệ)
+**Vẽ:** `BOUNDARY BO` (bấm trong vùng kín → đa tuyến kín) · `DONUT DO` · `LINE L` · `PLINE PL` (A = cung, C = đóng) · `RECTANG REC` (D = kích thước) · `CIRCLE C` (D, 2P, 3P) · `ARC A` (3 điểm, C = tâm) · `ELLIPSE EL` · `POLYGON POL` · `POINT PO` · `XLINE XL` · `RAY` · `SPLINE SPL` · `REVCLOUD RC` · `TEXT DT` · `MTEXT MT/T` · `HATCH H` (bấm điểm trong vùng kín; S = chọn đường kín; T = mẫu và tỉ lệ)
 
 **Sửa:** `OVERKILL` (xoá nét trùng, gộp đoạn thẳng chồng nhau) · `ALIGN AL` (căn theo 2 cặp điểm: dời + xoay, có thể tỉ lệ) · `MOVE M` · `COPY CO` · `ROTATE RO` (C = sao chép, R = tham chiếu) · `SCALE SC` · `MIRROR MI` · `OFFSET O` (T = đi qua) · `ARRAY AR` (chữ nhật hoặc tròn) · `STRETCH S` (khung cắt) · `TRIM TR` · `EXTEND EX` (bấm phần cần bỏ hoặc kéo dài; giữ Shift để đổi qua lại) · `FILLET F` (R, P = cả đa tuyến, bán kính 0 = nối góc) · `CHAMFER CHA` · `BREAK BR` · `BREAKATPOINT BRP` · `JOIN J` · `EXPLODE X` · `LENGTHEN LEN` · `PEDIT PE` · `ERASE E` · `OOPS` · `MATCHPROP MA` · `DDEDIT ED`
 
@@ -129,7 +129,7 @@ Bấm chuột phải lên nút **POLAR** hoặc **OSNAP** ở thanh trạng thá
 - `ISOLATEOBJECTS` chỉ hiện các đối tượng đã chọn. `HIDEOBJECTS` ẩn các đối tượng đã chọn. `UNISOLATEOBJECTS` hiện lại tất cả.
 - Thanh trạng thái có biểu tượng bóng đèn. Bóng đèn chuyển đỏ khi đang ẩn bớt đối tượng.
 
-**Hỏi / đo:** `MEASUREGEOM MEA` (đo nhanh: rê chuột thấy ngay khoảng cách ngang/dọc tới các cạnh xung quanh) · `DIST DI` · `AREA AA` (O = chọn đối tượng) · `ID` · `LIST LI` · `DIVIDE DIV` · `MEASURE ME` · `DO` (đo nhanh, lưu dạng đánh dấu)
+**Hỏi / đo:** `MEASUREGEOM MEA` (đo nhanh: rê chuột thấy ngay khoảng cách ngang/dọc tới các cạnh xung quanh) · `DIST DI` · `AREA AA` (O = chọn đối tượng) · `ID` · `LIST LI` · `DIVIDE DIV` · `MEASURE ME` · `QM` (đo nhanh, lưu dạng đánh dấu)
 
 **Xem / file:** `ZOOM Z` (E, W, P, số, O) · `PAN` · `REGEN RE` · `NEW` · `OPEN` · `QSAVE` · `SAVEAS` · `EXPORT/PLOT` · `DSETTINGS DS` · `UNITS` · `FIND` · `COMPARE` · `DRIVE` · `SHARE`
 

@@ -527,7 +527,7 @@
       { id: 'cl', en: 'Centerlines', vi: 'Đường tâm', pri: 5, items: [big('CENTERMARK', 'Center\nMark', 'Dấu\ntâm'), big('CENTERLINE', 'Centerline', 'Đường\ntâm')] },
       { id: 'lead', en: 'Leaders', vi: 'Ghi chú dẫn', pri: 4, items: [big('MLEADER', 'Multileader', 'Ghi chú\ndẫn'), col(sm('QLEADER', 'Leader', 'Dẫn nhiều đoạn'), sm('MLEADERSTYLE', 'Multileader Style', 'Kiểu ghi chú dẫn'))] },
       { id: 'tables', en: 'Tables', vi: 'Bảng', pri: 6, items: [big('TABLE', 'Table', 'Bảng'), col(sm('TABLEDIT', 'Edit Table', 'Sửa bảng'), sm('DATALINK', 'Link Data', 'Liên kết Excel'), sm('TABLEEXPORT', 'Export', 'Xuất CSV / Excel'))] },
-      { id: 'markup', en: 'Markup', vi: 'Đánh dấu', pri: 7, items: [big('REVCLOUD', 'Revision\nCloud', 'Khoanh\nmây', S({ menu: M_REV })), col(sm('WIPEOUT', 'Wipeout', 'Vùng che'), sm('NOTE', 'Markup Note', 'Ghi chú markup'), sm('DO', 'Quick Measure', 'Đo đánh dấu'))] },
+      { id: 'markup', en: 'Markup', vi: 'Đánh dấu', pri: 7, items: [big('REVCLOUD', 'Revision\nCloud', 'Khoanh\nmây', S({ menu: M_REV })), col(sm('WIPEOUT', 'Wipeout', 'Vùng che'), sm('NOTE', 'Markup Note', 'Ghi chú markup'), sm('QM', 'Quick Measure', 'Đo đánh dấu'))] },
       { id: 'ascale', en: 'Annotation Scaling', vi: 'Tỉ lệ chú thích', pri: 3, items: [big('CANNOSCALE', 'Annotation\nScale', 'Tỉ lệ\nchú thích'), col(sm('ANNOTATIVE', 'Annotative', 'Gán theo tỉ lệ'))] },
       { id: 'ahatch', en: 'Hatch', vi: 'Hatch', pri: 8, items: [big('HATCH', 'Hatch', 'Tô\nhatch', S({ menu: M_HATCH })), col(sm('HATCHTOBACK', 'Send to Back', 'Xuống dưới'))] }
     ] },
@@ -566,7 +566,7 @@
       { id: 'share', en: 'Share', vi: 'Chia sẻ', items: [big('SHARE', 'Share\nDrawing', 'Chia sẻ\nlink'), big('COLLAB', 'Co-Edit', 'Cùng\nsửa'), col(sm('SYNC', 'Sync Now', 'Đồng bộ ngay'), sm('DSET', 'Google Settings', 'Cài đặt Google'))] },
       { id: 'gdrive', en: 'Google Drive', vi: 'Google Drive', items: [big('DRIVE', 'Drive', 'Drive'), col(sm('DOPEN', 'Open from Drive', 'Mở từ Drive'), sm('DUP', 'Upload Drawing', 'Tải bản vẽ lên'), sm('DSAVE', 'Save DXF to Drive', 'Lưu DXF lên Drive'))] },
       { id: 'cmp', en: 'Compare', vi: 'So sánh', items: [big('COMPARE', 'DWG\nCompare', 'So sánh\nbản vẽ')] },
-      { id: 'cmark', en: 'Markup', vi: 'Đánh dấu', items: [col(sm('NOTE', 'Markup Note', 'Ghi chú'), sm('DO', 'Quick Measure', 'Đo đánh dấu'), sm('REVCLOUD', 'Revision Cloud', 'Khoanh mây'))] }
+      { id: 'cmark', en: 'Markup', vi: 'Đánh dấu', items: [col(sm('NOTE', 'Markup Note', 'Ghi chú'), sm('QM', 'Quick Measure', 'Đo đánh dấu'), sm('REVCLOUD', 'Revision Cloud', 'Khoanh mây'))] }
     ] },
     express: { en: 'Express Tools', vi: 'Express Tools', panels: [
       { id: 'xblk', en: 'Blocks', vi: 'Khối', items: [big('BURST', 'Explode\nAttributes', 'Phá khối\ngiữ chữ'), col(sm('NCOPY', 'Copy Nested Objects', 'Chép nét trong khối'), sm('WBLOCK', 'Write Block', 'Ghi khối ra file'), sm('BLOCKLIB', 'Blocks Library', 'Thư viện khối'))] },

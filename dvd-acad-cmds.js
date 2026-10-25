@@ -277,8 +277,8 @@
     if(s == null || !s.trim()) return;
     A.commit({ add: [mk('TEXT', { x: p.x, y: p.y, text: s.replace(/\r/g, ''), h, rot, ha, va })] });
   }
-  cmd(['TEXT', 'DT', 'DTEXT', 'T'], 'Viết chữ (điểm, cao, góc, nội dung)', () => textCmd(false));
-  cmd(['MTEXT', 'MT'], 'Chữ nhiều dòng trong khung', () => textCmd(true));
+  cmd(['TEXT', 'DT', 'DTEXT'], 'Viết chữ (điểm, cao, góc, nội dung)', () => textCmd(false));
+  cmd(['MTEXT', 'MT', 'T'], 'Chữ nhiều dòng trong khung', () => textCmd(true));   // T = MTEXT như acad.pgp
   cmd(['DDEDIT', 'ED', 'TEXTEDIT'], 'Sửa nội dung chữ', async () => {
     for(;;){
       const r = await A.getEnt('Chọn chữ cần sửa', { filter: e => e.type === 'TEXT' }); if(!r.ent) return;
@@ -1533,13 +1533,15 @@
   /* ===================================================================
      BẢN VẼ MỚI · ZOOM
      =================================================================== */
-  function newDrawing(){
+  // opt.units = $INSUNITS của mẫu: 4 mm (mặc định, như acadiso.dwt), 6 m, 1 inch (acad.dwt) — chọn ở trang Bắt đầu
+  function newDrawing(opt){
+    const units = (opt && typeof opt === 'object' && opt.units) || 4;
     let n = 1; try{ n = (parseInt(localStorage.getItem('dvd:newN') || '0') || 0) + 1; localStorage.setItem('dvd:newN', String(n)); }catch(_){}
     const name = 'Drawing' + n + '.dxf';
-    const text = ['999', 'DVDCAD-NEW ' + Date.now(), '0', 'SECTION', '2', 'HEADER', '9', '$ACADVER', '1', 'AC1009', '9', '$INSUNITS', '70', '4', '0', 'ENDSEC', '0', 'SECTION', '2', 'TABLES', '0', 'TABLE', '2', 'LAYER', '70', '1', '0', 'LAYER', '2', '0', '70', '0', '62', '7', '6', 'CONTINUOUS', '0', 'ENDTAB', '0', 'ENDSEC', '0', 'SECTION', '2', 'ENTITIES', '0', 'ENDSEC', '0', 'EOF', ''].join('\r\n');
+    const text = ['999', 'DVDCAD-NEW ' + Date.now(), '0', 'SECTION', '2', 'HEADER', '9', '$ACADVER', '1', 'AC1009', '9', '$INSUNITS', '70', String(units), '0', 'ENDSEC', '0', 'SECTION', '2', 'TABLES', '0', 'TABLE', '2', 'LAYER', '70', '1', '0', 'LAYER', '2', '0', '70', '0', '62', '7', '6', 'CONTINUOUS', '0', 'ENDTAB', '0', 'ENDSEC', '0', 'SECTION', '2', 'ENTITIES', '0', 'ENDSEC', '0', 'EOF', ''].join('\r\n');
     try{ loadDXF(text, name); }catch(err){ console.error(err); }
     try{ recordRecent(drawingKey(text, name), name, 'dxf', text); }catch(_){}
-    log('Bản vẽ mới ' + name + ' (đơn vị mm). Dùng Ctrl+S để lưu ra DXF.');
+    log('Bản vẽ mới ' + name + (units === 1 ? ' (đơn vị inch).' : units === 6 ? ' (đơn vị m).' : ' (đơn vị mm).') + ' Dùng Ctrl+S để lưu ra DXF.');
   }
   A.newDrawing = newDrawing;
   plain(['NEW', 'QNEW'], 'Bản vẽ mới (trống)', newDrawing);

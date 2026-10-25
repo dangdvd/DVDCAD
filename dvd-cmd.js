@@ -51,7 +51,7 @@
     C(['PROPERTIES', 'PR', 'PROPS', 'CH', 'MO'], 'Bật/tắt bảng Thuộc tính (Ctrl+1)', () => togglePalette()),
     C(['LAYER', 'LA'], 'Quản lý lớp', () => { if(ACAD() && ACAD().openLayerManager) ACAD().openLayerManager(); else { const b = $('layerBtn'); if(b) b.click(); } }),
     C(['SELECTALL', 'ALL'], 'Chọn tất cả (Ctrl+A)', () => selectAll()),
-    C(['DO', 'QM', 'MEASUREGEOM', 'MEA'], 'Đo nhanh có ghi lại trên bản vẽ (lớp đo)', () => measure('aligned')),
+    C(['QM', 'MEASUREGEOM', 'MEA'], 'Đo nhanh có ghi lại trên bản vẽ (lớp đo)', () => measure('aligned')),   // DO để dành cho DONUT như AutoCAD
     C(['NOTE', 'GC', 'MARKUP'], 'Ghi chú / khoanh mây (lớp ghi chú)', () => { if(hasDrawing()) setMode('note'); }),
     C(['ZE', 'ZA'], 'Phóng vừa bản vẽ', () => zoomCmd('E')),
     C(['ZW'], 'Phóng theo khung', () => zoomCmd('W')),
@@ -153,6 +153,7 @@
   #dvdCmd .sug div{display:flex;gap:10px;padding:7px 11px;font-size:12.5px;cursor:pointer;color:var(--ink-dim)}
   #dvdCmd .sug div b{min-width:96px;color:var(--ink);font:700 12px ui-monospace,Menlo,Consolas,monospace}
   #dvdCmd .sug div.on,#dvdCmd .sug div:hover{background:rgba(56,189,248,.14);color:var(--ink)}
+  #dvdCmd .sug div .ic{width:16px;height:16px;flex:0 0 16px;--ic-bg:#11151d}
   #dvdProps{position:absolute;right:66px;top:62px;z-index:8;width:280px;max-height:calc(100% - 140px);overflow-y:auto;display:none;
     background:rgba(17,21,29,.96);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);backdrop-filter:blur(8px);font-size:12.5px}
   #dvdProps.show{display:block}
@@ -242,7 +243,9 @@
     pre.sort((a, b) => Math.min(...a.k.filter(k => k.startsWith(q)).map(k => k.length)) - Math.min(...b.k.filter(k => k.startsWith(q)).map(k => k.length)));
     sugList = [...exact, ...pre, ...desc].slice(0, 8); sugIdx = sugList.length ? 0 : -1;
     if(!sugList.length){ hideSug(); return; }
-    sugEl.innerHTML = sugList.map((c, i) => '<div data-i="' + i + '" class="' + (i === sugIdx ? 'on' : '') + '"><b>' + esc(c.k.slice(0, 3).join(' · ')) + '</b><span>' + esc(c.d) + '</span></div>').join('');
+    // biểu tượng cạnh từng gợi ý như AutoComplete của AutoCAD (chế độ máy tính có bộ biểu tượng)
+    const A = ACAD(), icoOf = c => { if(!A || !A.ico || !A.ICONS) return ''; const k = c.k.find(x => A.ICONS[x] || (window.DVDIcons && DVDIcons[x])); return k ? A.ico(k) : '<span class="ic"></span>'; };
+    sugEl.innerHTML = sugList.map((c, i) => '<div data-i="' + i + '" class="' + (i === sugIdx ? 'on' : '') + '">' + icoOf(c) + '<b>' + esc(c.k.slice(0, 3).join(' · ')) + '</b><span>' + esc(c.d) + '</span></div>').join('');
     sugEl.classList.add('show');
   }
   function moveSug(d){ if(!sugList.length) return; sugIdx = (sugIdx + d + sugList.length) % sugList.length; sugEl.querySelectorAll('[data-i]').forEach((x, i) => x.classList.toggle('on', i === sugIdx)); }

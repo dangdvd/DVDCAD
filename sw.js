@@ -5,7 +5,7 @@
      ngay lần đầu mở một file .dwg khi có mạng -> các lần sau dùng offline được.
    Đổi số phiên bản CACHE bên dưới mỗi khi cập nhật file để buộc làm mới.
    HTML dùng network-first: có mạng luôn lấy bản mới nhất, mất mạng mới dùng cache. */
-const CACHE = 'dvdcad-v5h';
+const CACHE = 'dvdcad-v5i';
 const CORE = [
   './',
   './index.html',
@@ -18,12 +18,13 @@ const CORE = [
   './dvd-config.js',
   './dvd-collab-core.js',
   './dvd-cloud.js',
-  './dvd-cmd.js','./dvd-acad-core.js','./dvd-acad-cmds.js','./dvd-icons.js','./dvd-acad-ui.js','./dvd-acad-more.js','./dvd-acad-ext.js','./dvd-acad-pro.js','./dvd-acad-3d.js','./dvd-acad-3dx.js','./dvd-acad-3dy.js','./dvd-acad-x2.js', './dvd-acad-x3.js', './dvd-acad-x4.js', './dvd-acad-x5.js', './dvd-acad-x6.js', './dvd-acad-x7.js', './dvd-acad-x8.js', './dvd-acad-x9.js', './dvd-acad-dxf.js','./dvd-acad-x10.js','./dvd-acad-x11.js','./dvd-acad-x12.js','./dvd-acad-x13.js','./dvd-acad-x14.js','./dvd-acad-x15.js','./dvd-acad-x16.js','./dvd-acad-x17.js','./dvd-i18n.js','./dvd-i18n-en.js','./dvd-lisp.js','./dvd-addins.js','./addins/qs-khoi-luong.js','./addins/lisp-tien-ich.lsp','./ADDIN-API.md','./dvd-acis.js','./vendor/three.min.js'
+  './dvd-cmd.js','./dvd-acad-core.js','./dvd-acad-cmds.js','./dvd-icons.js','./dvd-acad-ui.js','./dvd-acad-more.js','./dvd-acad-ext.js','./dvd-acad-pro.js','./dvd-acad-3d.js','./dvd-acad-3dx.js','./dvd-acad-3dy.js','./dvd-acad-x2.js', './dvd-acad-x3.js', './dvd-acad-x4.js', './dvd-acad-x5.js', './dvd-acad-x6.js', './dvd-acad-x7.js', './dvd-acad-x8.js', './dvd-acad-x9.js', './dvd-acad-dxf.js','./dvd-acad-x10.js','./dvd-acad-x11.js','./dvd-acad-x12.js','./dvd-acad-x13.js','./dvd-acad-x14.js','./dvd-acad-x15.js','./dvd-acad-x16.js','./dvd-acad-x17.js','./dvd-i18n.js','./dvd-i18n-en.js','./dvd-lisp.js','./dvd-addins.js','./dvd-acad-pgp.js','./dvd-desktop.js','./dvd-acad-start.js','./addins/qs-khoi-luong.js','./addins/lisp-tien-ich.lsp','./ADDIN-API.md','./dvd-acis.js','./vendor/three.min.js'
 ];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).catch(() => {}));
+  // nạp từng file riêng: thiếu 1 file (404) không làm hỏng cả bộ nhớ offline như addAll
+  e.waitUntil(caches.open(CACHE).then((c) => Promise.all(CORE.map((u) => c.add(u).catch(() => {})))).catch(() => {}));
 });
 
 self.addEventListener('activate', (e) => {
