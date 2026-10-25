@@ -279,7 +279,11 @@
   .ac-tabs button{font:600 12.5px system-ui,sans-serif;color:#b9c2cf;background:none;border:none;padding:6px 14px 6px;cursor:pointer;border-bottom:2px solid transparent}
   .ac-tabs button:hover{color:#fff}
   .ac-tabs button.on{color:#fff;border-bottom-color:#3d9ae8;background:#353c48;border-radius:4px 4px 0 0}
-  .ac-ribbon{display:flex;gap:0;height:100px;background:#353c48;border-top:1px solid #3f4754;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+  .ac-tabs button.ctx{color:#7ee0a0;background:rgba(46,160,90,.14);border-radius:4px 4px 0 0}
+  .ac-tabs button.ctx.on{color:#fff;background:#2c6e46;border-bottom-color:#5fd38d}
+  .ac-html{display:flex;align-items:stretch}
+  .ac-ribbon{display:flex;gap:0;height:100px;background:#353c48;border-top:1px solid #3f4754;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  .ac-ribbon::-webkit-scrollbar{display:none}
   #acadTop.min .ac-ribbon{display:none}
   .ac-panel{display:flex;flex-direction:column;border-right:1px solid #2a3039;flex:0 0 auto}
   .ac-pbody{flex:1;display:flex;align-items:stretch;gap:2px;padding:4px 5px 2px}
@@ -294,14 +298,14 @@
   .ac-rbtn.on,.ac-rbig.on{background:#2f6db0;border-color:#4a8fd6}
   .ac-panel.ico-only .ac-rbtn span{display:none}
   .ac-panel.ico-only .ac-rbtn{padding:0 4px}
-  .ac-ctl{display:flex;flex-direction:column;gap:4px;padding:2px 2px;min-width:200px}
+  .ac-ctl{display:flex;flex-direction:column;gap:4px;padding:2px 2px;width:200px;flex:0 0 auto}
   .ac-ctl select,.ac-laybtn{height:24px;background:#262b34;color:#e6eaf0;border:1px solid #4a5363;border-radius:3px;font:12px system-ui,sans-serif;padding:0 6px;cursor:pointer;width:100%}
   .ac-laybtn{display:flex;align-items:center;gap:6px;text-align:left}
   .ac-p3{gap:3px}
   #acadStatus button.iso-on{color:#ff5b5b}
   .ac-p3 select{height:22px;font-size:11.5px}
   .ac-laybtn .sw,.ac-lrow .sw{width:12px;height:12px;border:1px solid rgba(255,255,255,.4);flex:0 0 auto}
-  .ac-laybtn .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ac-laybtn .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ac-laybtn .ic{width:14px;height:14px}
   .ac-pop{position:fixed;z-index:70;background:#2b313b;border:1px solid #4a5363;border-radius:4px;box-shadow:0 10px 30px rgba(0,0,0,.55);max-height:60vh;overflow-y:auto;min-width:220px;padding:3px 0;font:12.5px system-ui,sans-serif;color:#e6eaf0}
   .ac-pop .it{display:flex;align-items:center;gap:8px;padding:5px 12px;cursor:pointer;white-space:nowrap}
@@ -347,6 +351,72 @@
   #dvdDyn .in .lock{width:9px;height:11px;margin-left:4px;vertical-align:-1px;fill:none;stroke:currentColor;stroke-width:1.3}
   #dvdDyn .pr .dd{color:#0b4fa0;font-weight:700;margin-left:2px}
   .dvd-dlg .modal{max-height:86vh}
+  /* ---- hộp thoại: bản điện thoại giữ kiểu cũ (Huỷ bên trái, nút to); bản máy tính như AutoCAD 2027 ---- */
+  .dvd-dlg .dvd-tb{display:flex;align-items:center;gap:4px}
+  .dvd-dlg .dvd-tb h3{flex:1;margin:0 0 4px}
+  html:not(.acad) .dvd-dlg .dvd-tbh,html:not(.acad) .dvd-dlg .dvd-tbx,html:not(.acad) .dvd-dlg .dvd-help{display:none}
+  html:not(.acad) .dvd-dlg .modal-actions .dvd-cancel{order:-1}
+  .dvd-fl{display:flex;gap:6px;margin-right:auto}
+  html.acad{--acw-bg:#3b4452;--acw-tb:#2b313b;--acw-ln:#1d2128;--acw-in:#262b34;--acw-inb:#5a6578;--acw-btn:#4a5466;--acw-btnb:#636f85;--acw-tx:#e8ecf2;--acw-dim:#b4bdca;--acw-acc:#0696d7;--acw-font:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",sans-serif}
+  html.acad .overlay{background:rgba(8,10,14,.22)}
+  html.acad .modal{display:flex;flex-direction:column;background:var(--acw-bg);border:1px solid var(--acw-ln);border-radius:3px;padding:0;max-height:90vh;overflow:hidden;box-shadow:0 14px 44px rgba(0,0,0,.6);font:12px/1.35 var(--acw-font);color:var(--acw-tx);width:auto;min-width:340px;max-width:min(560px,96vw)}
+  html.acad .modal.wide{max-width:min(820px,96vw)}
+  html.acad .modal.xwide{max-width:min(1040px,97vw)}
+  html.acad .modal.acw-free{max-width:97vw}
+  html.acad .modal > *{flex:0 0 auto}
+  html.acad .modal > :not(.dvd-tb):not(.modal-actions):not(h3:first-child){margin-left:12px;margin-right:12px}
+  html.acad .modal > h3:first-child,html.acad .dvd-tb{display:flex;align-items:center;height:30px;margin:0 0 10px;padding:0 0 0 12px;background:var(--acw-tb);border-bottom:1px solid var(--acw-ln);font:400 12.5px var(--acw-font);color:#f2f5f9;user-select:none;-webkit-user-select:none}
+  html.acad .dvd-tb{cursor:default}
+  html.acad .dvd-tb h3{flex:1;margin:0;font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html.acad .dvd-tb button{width:40px;height:29px;border:none;background:none;color:#d6dce5;font:15px var(--acw-font);cursor:pointer;flex:0 0 auto}
+  html.acad .dvd-tb .dvd-tbh{width:30px;font-size:13px}
+  html.acad .dvd-tb button:hover{background:#3d4553;color:#fff}
+  html.acad .dvd-tb .dvd-tbx:hover{background:#c42b1c;color:#fff}
+  html.acad .modal > p,html.acad .modal .dvd-body > p{font-size:12px;color:var(--acw-dim);margin:0 12px 8px}
+  html.acad .dvd-dlg .dvd-body{flex:1 1 auto;overflow:auto;min-height:0;padding:0 12px 2px;margin:0 !important}
+  html.acad .dvd-dlg .dvd-body p{margin:0 0 8px}
+  html.acad .modal-actions{display:flex;justify-content:flex-end;align-items:center;gap:7px;margin:12px 0 0;padding:10px 12px 12px;border-top:1px solid rgba(0,0,0,.18)}
+  html.acad .modal-actions button,html.acad .acw-btn{flex:0 0 auto;min-width:76px;height:24px;padding:0 12px;border-radius:2px;background:var(--acw-btn);border:1px solid var(--acw-btnb);color:#eef2f7;font:400 12px var(--acw-font);cursor:pointer;white-space:nowrap}
+  html.acad .modal-actions button:hover,html.acad .acw-btn:hover{background:#56627a;border-color:#7a879e}
+  html.acad .modal-actions button:disabled,html.acad .acw-btn:disabled{opacity:.45;cursor:default;background:var(--acw-btn);border-color:var(--acw-btnb)}
+  html.acad .modal-actions button:focus-visible,html.acad .acw-btn:focus-visible{outline:1px dotted #fff;outline-offset:-4px}
+  html.acad .modal-actions .btn-ok,html.acad .modal-actions .btn-solid,html.acad .acw-btn.def{background:var(--acw-btn);color:#fff;border-color:var(--acw-acc);box-shadow:inset 0 0 0 1px var(--acw-acc)}
+  html.acad .modal-actions .btn-ok:hover,html.acad .modal-actions .btn-solid:hover{background:#0b6fa6}
+  html.acad .modal-actions .btn-danger,html.acad .modal-actions .danger{background:var(--acw-btn);color:#ff9c9c;border-color:#8a4b4b}
+  html.acad .modal-actions .dvd-help{margin-left:0}
+  html.acad .modal.dvd-flash{animation:dvdFlash .12s 3 alternate}
+  html.acad .overlay.dvd-modeless{background:none;pointer-events:none;align-items:flex-start;justify-content:flex-start;padding:150px 0 0 24px}
+  html.acad .overlay.dvd-modeless .modal{pointer-events:auto;box-shadow:0 8px 30px rgba(0,0,0,.55)}
+  @keyframes dvdFlash{to{box-shadow:0 0 0 2px var(--acw-acc),0 14px 44px rgba(0,0,0,.6)}}
+  /* ô nhập, hộp chọn, ô đánh dấu kiểu Windows */
+  html.acad .modal input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),html.acad .modal select,html.acad .modal textarea,html.acad .acw input:not([type=checkbox]):not([type=radio]),html.acad .acw select{height:22px;background:var(--acw-in);color:var(--acw-tx);border:1px solid var(--acw-inb);border-radius:2px;padding:0 6px;font:12px var(--acw-font);outline:none;box-sizing:border-box}
+  html.acad .modal textarea{height:auto;padding:4px 6px;font:12px/1.4 Consolas,ui-monospace,monospace}
+  html.acad .modal select{padding:0 2px 0 4px}
+  html.acad .modal input:focus,html.acad .modal select:focus,html.acad .modal textarea:focus{border-color:var(--acw-acc)}
+  html.acad .modal input[disabled],html.acad .modal select[disabled]{opacity:.5}
+  html.acad .modal input[type=checkbox],html.acad .modal input[type=radio]{width:13px;height:13px;margin:0;accent-color:var(--acw-acc);flex:0 0 auto}
+  html.acad .dvd-form{gap:5px}
+  html.acad .dvd-frow{gap:8px;font-size:12px;color:var(--acw-tx);min-height:22px}
+  html.acad .dvd-frow > span:first-child{flex:0 0 44%}
+  html.acad .dvd-frow .v{align-items:center}
+  html.acad .dvd-frow input,html.acad .dvd-frow select{border-radius:2px}
+  html.acad .dvd-sub{display:flex;align-items:center;gap:6px;font:600 11.5px var(--acw-font);color:var(--acw-tx);text-transform:none;letter-spacing:0;margin:10px 0 5px}
+  html.acad .dvd-sub::after{content:"";flex:1;height:1px;background:#56627a}
+  html.acad .sheet-item{font:12.5px var(--acw-font);padding:7px 10px;border-radius:2px;margin-bottom:4px;background:var(--acw-btn);border:1px solid var(--acw-btnb)}
+  html.acad .sheet-item:hover{background:#56627a}
+  html.acad .ds-tabs,html.acad .acw-tabs{display:flex;gap:0;margin:0 0 -1px;flex-wrap:wrap;position:relative;z-index:1}
+  html.acad .ds-tabs button,html.acad .acw-tabs button{padding:4px 11px;border-radius:2px 2px 0 0;border:1px solid transparent;border-bottom:none;background:none;color:var(--acw-dim);font:12px var(--acw-font);cursor:pointer;margin-right:1px}
+  html.acad .ds-tabs button:hover,html.acad .acw-tabs button:hover{color:#fff;background:#434c5c}
+  html.acad .ds-tabs button.on,html.acad .acw-tabs button.on{color:#fff;background:var(--acw-bg);border-color:#6a768c;box-shadow:inset 0 2px 0 var(--acw-acc)}
+  html.acad .ds-tabs + *,html.acad .ds-pane,html.acad .acw-pane{border:1px solid #6a768c;padding:10px;border-radius:0 2px 2px 2px}
+  html.acad .ds-pane:not(.on){display:none}
+  html.acad .lm-bar button{padding:0 9px;height:24px;border-radius:2px;background:var(--acw-btn);border-color:var(--acw-btnb);font:12px var(--acw-font)}
+  html.acad .lm-bar button:hover{background:#56627a}
+  html.acad .lm-tbl{border-radius:0;border-color:var(--acw-inb);background:var(--acw-in)}
+  html.acad .lm-tbl table{font:12px var(--acw-font)}
+  html.acad .lm-tbl th{background:#434c5b;color:var(--acw-tx);font-weight:400;border-right:1px solid #5a6578;padding:3px 6px}
+  html.acad .lm-tbl td{padding:2px 6px}
+  html.acad .lm-tbl tr.cur td{background:#0b5f8f}
   .dvd-form{display:flex;flex-direction:column;gap:6px}
   .dvd-frow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-dim)}
   .dvd-frow > span:first-child{flex:0 0 46%}
@@ -437,6 +507,13 @@
   .ac-slide{position:fixed;z-index:69;background:#3b4452;border:1px solid #5a6680;box-shadow:0 10px 26px rgba(0,0,0,.5);display:flex;flex-direction:column}
   .ac-slbody{display:grid;grid-template-columns:repeat(2,minmax(150px,auto));gap:1px;padding:4px}
   .ac-slide .ac-ptitle{cursor:pointer;background:#3f6ea5;color:#fff}
+  .ac-fly{background:#353c48;border-color:#56627a}
+  .ac-panel.collapsed .ac-rbig.open{background:#3f6ea5;border-color:#5a8fd0}
+  .ac-fly .ac-pbody{height:76px;padding:4px 5px 2px}
+  .ac-fly .ac-ptitle{background:#2f3541;color:#aab3c0;cursor:default}
+  .ac-fly .ac-ptitle.more{cursor:pointer}
+  .ac-fly .ac-slbody{border-top:1px solid #2a3039}
+  .ac-fly:not(.mo) .ac-slbody{display:none}
   .ac-rtip{position:fixed;z-index:90;max-width:340px;background:#f4f6f9;color:#1d232c;border:1px solid #8f9aaa;border-radius:2px;box-shadow:0 6px 18px rgba(0,0,0,.45);padding:8px 10px 6px;font:12px "Segoe UI",system-ui,sans-serif;pointer-events:none}
   .ac-rtip.sm{padding:3px 7px}
   .ac-rtip .tt{font-weight:700;font-size:13px;margin-bottom:3px}
@@ -505,8 +582,8 @@
         col(ic('ERASE', 'Erase', 'Xoá'), ic('EXPLODE', 'Explode', 'Phá khối'), ic('OFFSET', 'Offset', 'Song song')), col(ic('DRAWORDER|F', 'Draworder', 'Thứ tự vẽ', S({ menu: M_DO })), ic('BREAKATPOINT', 'Break at Point', 'Tách tại điểm'), ic('JOIN', 'Join', 'Nối'))],
         more: [sm('BREAK', 'Break', 'Bẻ gãy'), sm('BREAKATPOINT', 'Break at Point', 'Tách tại điểm'), sm('JOIN', 'Join', 'Nối'), sm('CHAMFER', 'Chamfer', 'Vát góc'), sm('BLEND', 'Blend Curves', 'Nối cong trơn'), sm('LENGTHEN', 'Lengthen', 'Đổi chiều dài'), sm('PEDIT', 'Edit Polyline', 'Sửa đa tuyến'), sm('MPEDIT', 'Multiple Polyline Edit', 'Sửa nhiều đa tuyến'), sm('REVERSE', 'Reverse', 'Đảo chiều'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer'), sm('ALIGN', 'Align', 'Căn chỉnh'), sm('OVERKILL', 'Delete Duplicate Objects', 'Xoá nét trùng'), sm('DRAWORDER|F', 'Draworder', 'Thứ tự vẽ', { menu: M_DO }), sm('EXTRIM', 'Extended Trim', 'Cắt theo đường kín'), sm('COPYM', 'Multiple Copy', 'Sao chép nhiều'), sm('SPLINEDIT', 'Edit Spline', 'Sửa spline'), sm('HATCHEDIT', 'Edit Hatch', 'Sửa hatch'), sm('CHPROP', 'Change Properties', 'Đổi thuộc tính'), sm('FLATTEN', 'Flatten', 'Làm phẳng'), sm('ARRAYEDIT', 'Edit Array', 'Sửa mảng'), sm('XCLIP', 'Clip Block / Xref', 'Cắt khối / XREF'), sm('GROUPEDIT', 'Group Edit', 'Sửa nhóm'), sm('UNION', 'Union (Region)', 'Cộng vùng'), sm('SUBTRACT', 'Subtract (Region)', 'Trừ vùng'), sm('INTERSECT', 'Intersect (Region)', 'Giao vùng')] },
       { id: 'annot', en: 'Annotation', vi: 'Chú thích', pri: 7, items: [big('MTEXT', 'Text', 'Chữ', S({ menu: M_TEXT })), big('DIMLINEAR', 'Dimension', 'Kích\nthước', S({ menu: M_DIM })),
-        col(sm('MLEADER', 'Leader', 'Ghi chú dẫn', S({ menu: M_LEAD })), sm('TABLE', 'Table', 'Bảng'), sm('DIMSTYLE', 'Dimension Style', 'Kiểu kích thước'))],
-        more: [sm('STYLE', 'Text Style', 'Kiểu chữ'), sm('QDIM', 'Quick Dimension', 'Kích thước nhanh'), sm('DIMCONTINUE', 'Continue', 'Nối tiếp'), sm('DIMBASELINE', 'Baseline', 'Cùng gốc'), sm('CENTERMARK', 'Center Mark', 'Dấu tâm'), sm('CENTERLINE', 'Centerline', 'Đường tâm'), sm('ANNOTATIVE', 'Annotative', 'Chú thích theo tỉ lệ'), sm('DIMJOGGED', 'Jogged', 'Bán kính gấp khúc'), sm('TOLERANCE', 'Tolerance', 'Dung sai hình học'), sm('FIELD', 'Field', 'Trường tự cập nhật')] },
+        col(sm('MLEADER', 'Leader', 'Ghi chú dẫn', S({ menu: M_LEAD })), sm('TABLE', 'Table', 'Bảng'))],
+        more: [sm('STYLE', 'Text Style', 'Kiểu chữ'), sm('DIMSTYLE', 'Dimension Style', 'Kiểu kích thước'), sm('MLEADERSTYLE', 'Multileader Style', 'Kiểu ghi chú dẫn'), sm('QDIM', 'Quick Dimension', 'Kích thước nhanh'), sm('DIMCONTINUE', 'Continue', 'Nối tiếp'), sm('DIMBASELINE', 'Baseline', 'Cùng gốc'), sm('CENTERMARK', 'Center Mark', 'Dấu tâm'), sm('CENTERLINE', 'Centerline', 'Đường tâm'), sm('ANNOTATIVE', 'Annotative', 'Chú thích theo tỉ lệ'), sm('DIMJOGGED', 'Jogged', 'Bán kính gấp khúc'), sm('TOLERANCE', 'Tolerance', 'Dung sai hình học'), sm('FIELD', 'Field', 'Trường tự cập nhật')] },
       P_LAYERS,
       { id: 'block', en: 'Block', vi: 'Khối', pri: 8, items: [big('INSERT', 'Insert', 'Chèn\nkhối'), col(sm('BLOCK', 'Create', 'Tạo khối'), sm('REFEDIT', 'Edit', 'Sửa khối'), sm('EATTEDIT', 'Edit Attributes', 'Sửa thuộc tính'))],
         more: [sm('ATTDEF', 'Define Attributes', 'Định nghĩa thuộc tính'), sm('BLOCKLIB', 'Blocks Library', 'Thư viện khối'), sm('BPARAMETER', 'Block Parameters', 'Tham số khối động'), sm('BDYN', 'Dynamic State', 'Trạng thái khối động'), sm('WBLOCK', 'Write Block', 'Ghi khối ra file'), sm('RENAME', 'Rename', 'Đổi tên')] },
@@ -514,7 +591,7 @@
       { id: 'groups', en: 'Groups', vi: 'Nhóm', pri: 9, items: [big('GROUP', 'Group', 'Nhóm'), col(sm('UNGROUP', 'Ungroup', 'Bỏ nhóm'), sm('PICKSTYLE', 'Group Selection', 'Chọn cả nhóm'))] },
       { id: 'util', en: 'Utilities', vi: 'Tiện ích', pri: 9, items: [big('MEASUREGEOM', 'Measure', 'Đo', S({ menu: M_MEA })), col(sm('QSELECT', 'Quick Select', 'Chọn nhanh'), sm('SELECTALL', 'Select All', 'Chọn tất cả'), sm('COUNT', 'Count', 'Đếm khối'))],
         more: [sm('ID', 'ID Point', 'Toạ độ điểm'), sm('LIST', 'List', 'Liệt kê'), sm('SELECTSIMILAR', 'Select Similar', 'Chọn tương tự'), sm('CAL', 'QuickCalc', 'Máy tính')] },
-      { id: 'clip', en: 'Clipboard', vi: 'Bộ nhớ tạm', pri: 10, items: [big('PASTECLIP', 'Paste', 'Dán', S({ menu: M_PASTE })), col(sm('CUTCLIP', 'Cut', 'Cắt'), sm('COPYCLIP', 'Copy Clip', 'Sao chép'), sm('COPYBASE', 'Copy with Base Point', 'Sao chép kèm gốc'))] }
+      { id: 'clip', en: 'Clipboard', vi: 'Bộ nhớ tạm', pri: 10, items: [big('PASTECLIP', 'Paste', 'Dán', S({ menu: M_PASTE })), col(ic('CUTCLIP', 'Cut', 'Cắt'), ic('COPYCLIP', 'Copy Clip', 'Sao chép'), ic('COPYBASE', 'Copy with Base Point', 'Sao chép kèm gốc'))] }
     ] },
     insert: { en: 'Insert', vi: 'Chèn', panels: [
       { id: 'iblock', en: 'Block', vi: 'Khối', items: [big('INSERT', 'Insert', 'Chèn\nkhối'), big('EATTEDIT', 'Edit\nAttribute', 'Sửa\nthuộc tính'), col(sm('BLOCKLIB', 'Blocks Library', 'Thư viện khối'), sm('GROUP', 'Group', 'Nhóm'), sm('UNGROUP', 'Ungroup', 'Bỏ nhóm'))] },
@@ -635,11 +712,11 @@
     TGRID: () => A.toggle('grid'), TLWT: () => { click('displayBtn'); setTimeout(() => { click('togLW'); click('displayClose'); }, 20); }, TBG: () => click('themeBtn'),
     DISPLAY: () => click('displayBtn'), CMDLINE: () => DVDCmd.toggleBar(), HISTORY: () => DVDCmd.toggleHistory(),
     LAYOUTS: () => click('layoutBtn'), CLEAN: () => { document.documentElement.classList.toggle('acad-clean'); setTimeout(() => { try{ resize(); }catch(_){} }, 30); },
-    DSETTINGS: () => openDrafting(), TOSNAP: () => A.toggle('osnap'), TORTHO: () => A.toggle('ortho'), TPOLAR: () => A.toggle('polar'),
+    DSETTINGS: () => A.openDrafting(), TOSNAP: () => A.toggle('osnap'), TORTHO: () => A.toggle('ortho'), TPOLAR: () => A.toggle('polar'),
     CALIB: () => { click('displayBtn'); setTimeout(() => click('openCalib'), 20); }, COUNT: () => { click('displayBtn'); setTimeout(() => click('openCount'), 20); },
     DOPEN: () => window.DVDCloud && DVDCloud.openFromDrive(), DUP: () => window.DVDCloud && DVDCloud.uploadCurrentToDrive(), DSAVE: () => window.DVDCloud && DVDCloud.saveDxfToDrive(),
     COLLAB: () => window.DVDCloud && (DVDCloud.state.collab ? DVDCloud.stopCollab() : DVDCloud.enableCollab()), DSET: () => window.DVDCloud && DVDCloud.openSettings(),
-    BLOCKLIB: () => openBlockLib(), LAYER: () => openLayerManager(), NEW: () => A.newDrawing(), LINETYPE: () => openLinetypes(), LWEIGHT: () => openLweight()
+    BLOCKLIB: () => openBlockLib(), LAYER: () => (A.openLayerManager || openLayerManager)(), NEW: () => A.newDrawing(), LINETYPE: () => (A.openLinetypes || openLinetypes)(), LWEIGHT: () => (A.openLweight || openLweight)()
   };
   // chạy lệnh rồi tự trả lời từ khoá ở lời nhắc chọn tuỳ chọn đầu tiên (vd DRAWORDER → F)
   function runKw(c, kw){ run(c); let n = 0; const t = setInterval(() => { const r = A.reqInfo ? A.reqInfo() : null; if(!A.busy() || ++n > 1200){ clearInterval(t); return; } if(r && r.type === 'kw'){ clearInterval(t); A.input(kw); } }, 50); }
@@ -669,9 +746,10 @@
   const wsTabs = () => WS[WSK].tabs;
   let curTab = 'home'; try{ curTab = localStorage.getItem('dvd:rtab') || 'home'; }catch(_){} if(!wsTabs().includes(curTab)) curTab = wsTabs()[0];
   const tabsEl = $('acTabs'), ribEl = $('acRibbon');
-  function renderTabs(){ tabsEl.innerHTML = wsTabs().map(k => '<button data-t="' + k + '" class="' + (k === curTab ? 'on' : '') + '" data-tip="' + esc(L2(RIB[k])) + '">' + esc(L(RIB[k])) + '</button>').join('') + '<span class="ac-tabsp"></span><button class="ac-tabmin" id="acRibMin" title="Thu gọn / mở ribbon (bấm đúp tên tab)">' + (top.classList.contains('min') ? '▾' : '▴') + '</button>'; }
+  let ctxTab = null, ctxPrev = null;
+  function renderTabs(){ tabsEl.innerHTML = wsTabs().concat(ctxTab ? [ctxTab] : []).map(k => '<button data-t="' + k + '" class="' + (k === curTab ? 'on' : '') + (k === ctxTab ? ' ctx' : '') + '" data-tip="' + esc(L2(RIB[k])) + '">' + esc(L(RIB[k])) + '</button>').join('') + '<span class="ac-tabsp"></span><button class="ac-tabmin" id="acRibMin" title="Thu gọn / mở ribbon (bấm đúp tên tab)">' + (top.classList.contains('min') ? '▾' : '▴') + '</button>'; }
   tabsEl.addEventListener('click', e => { if(e.target.closest('#acRibMin')){ toggleMin(); return; } const b = e.target.closest('[data-t]'); if(!b) return;
-    if(top.classList.contains('min')){ top.classList.remove('min'); } curTab = b.dataset.t; try{ localStorage.setItem('dvd:rtab', curTab); }catch(_){} renderTabs(); renderRibbon(); setTimeout(() => { try{ resize(); }catch(_){} }, 20); });
+    if(top.classList.contains('min')){ top.classList.remove('min'); } curTab = b.dataset.t; if(curTab !== ctxTab) try{ localStorage.setItem('dvd:rtab', curTab); }catch(_){} renderTabs(); renderRibbon(); setTimeout(() => { try{ resize(); }catch(_){} }, 20); });
   function toggleMin(){ top.classList.toggle('min'); renderTabs(); setTimeout(() => { try{ resize(); }catch(_){} }, 20); }
   tabsEl.addEventListener('dblclick', e => { if(e.target.closest('[data-t]')) toggleMin(); });
   // nút tách: nhớ lựa chọn cuối
@@ -694,41 +772,62 @@
   }
   let ITEMS = [];   // các nút đang hiện (để mở menu tách)
   const reg = it => { ITEMS.push(it); return ITEMS.length - 1; };
-  function itemsHTML(items){ let h = ''; for(const it of items){ if(it.t === 'col') h += '<div class="ac-col">' + it.items.map(x => btnHTML(x, reg(x))).join('') + '</div>'; else if(it.t === 'ctl') h += ctlHTML(it.kind); else h += btnHTML(it, reg(it)); } return h; }
+  function itemsHTML(items){ let h = ''; for(const it of items){ if(it.t === 'col') h += '<div class="ac-col">' + it.items.map(x => btnHTML(x, reg(x))).join('') + '</div>'; else if(it.t === 'ctl') h += ctlHTML(it.kind); else if(it.t === 'html') h += '<div class="ac-html" data-h="' + reg(it) + '">' + it.html() + '</div>'; else h += btnHTML(it, reg(it)); } return h; }
+  const bindHtml = root => root.querySelectorAll('[data-h]').forEach(el => { const it = ITEMS[+el.dataset.h]; try{ if(it && it.bind) it.bind(el); }catch(_){} });
+  let fitting = false;
   function renderRibbon(){
-    const T = RIB[curTab]; let h = ''; ITEMS = []; closeSlide();
+    const T = RIB[curTab]; let h = ''; ITEMS = []; closeSlide(); fitting = true;
     T.panels.forEach((p, pi) => {
       p.items.forEach(it => { if(it.split) it._k = p.id + ':' + it.cmd; if(it.t === 'col') it.items.forEach(x => { if(x.split) x._k = p.id + ':' + x.cmd; }); });
       h += '<div class="ac-panel" data-p="' + pi + '"><div class="ac-pbody">' + itemsHTML(p.items) + '</div><div class="ac-ptitle' + (p.more ? ' more' : '') + '"' + (p.more ? ' data-more="' + pi + '" title="Thêm công cụ"' : '') + '>' + esc(L(p)) + (p.more ? ' <i>▾</i>' : '') + '</div></div>';
     });
-    ribEl.innerHTML = h; syncCtl(); fitRibbon();
+    ribEl.innerHTML = h; ribEl.scrollLeft = 0; bindHtml(ribEl); syncCtl(); try{ fitRibbon(); } finally { fitting = false; }
   }
-  // màn hình hẹp: thu gọn bảng từ phải sang trái thành 1 nút (như AutoCAD)
+  // màn hình hẹp: thu gọn dần như AutoCAD — bảng ít dùng thành 1 nút, rồi bỏ chữ ở nút nhỏ, rồi thu gọn tiếp từ phải sang trái.
+  // Ribbon không có thanh cuộn ngang (thanh cuộn che mất tên bảng); hẹp quá mức thì vẫn lăn chuột để xem phần còn lại.
+  let fitMax = false;
   function fitRibbon(){
+    fitMax = false;
     const panels = [...ribEl.querySelectorAll('.ac-panel')];
-    const over = () => ribEl.scrollWidth > ribEl.clientWidth + 2;
+    const over = () => ribEl.scrollWidth > ribEl.clientWidth + 1;
+    if(!ribEl.clientWidth || !over()) return;
     const PP = RIB[curTab].panels;
-    const collapse = i => { const P = PP[i]; const first = P.items.find(x => x.cmd) || (P.items[0] && P.items[0].items && P.items[0].items[0]) || {};
+    const collapse = i => { if(panels[i].classList.contains('collapsed')) return; const P = PP[i]; const first = P.items.find(x => x.cmd) || (P.items[0] && P.items[0].items && P.items[0].items[0]) || {};
       panels[i].querySelector('.ac-pbody').innerHTML = '<button class="ac-rbig" data-panel="' + i + '" data-tl="' + esc(L(P)) + '">' + ico(iconOf(first.cmd || 'TOOLS', first.icon)) + '<span>' + esc(L(P)) + '<i class="dd">▾</i></span></button>'; panels[i].classList.add('collapsed'); };
     const pri = i => PP[i].pri == null ? 3 : PP[i].pri;
     const order = PP.map((_, i) => i).sort((a, b) => pri(b) - pri(a) || b - a);
-    const done = new Set();
-    for(const i of order){ if(!over()) return; if(pri(i) < 7) break; collapse(i); done.add(i); }
-    for(const i of PP.map((_, i) => i)){ if(!over()) return; if(pri(i) === 0) panels[i].classList.add('ico-only'); }
-    for(const i of order){ if(!over()) return; if(done.has(i) || pri(i) === 0) continue; collapse(i); done.add(i); }
-    for(let i = PP.length - 1; i >= 1 && over(); i--){ if(!done.has(i)){ collapse(i); done.add(i); } }
+    const steps = [];
+    for(const i of order) if(pri(i) >= 7) steps.push(() => collapse(i));
+    for(const i of PP.keys()) if(pri(i) === 0) steps.push(() => panels[i].classList.add('ico-only'));
+    for(const i of order) if(pri(i) > 0 && pri(i) < 7) steps.push(() => collapse(i));
+    for(let i = PP.length - 1; i >= 1; i--) steps.push(() => collapse(i));
+    for(const st of steps){ st(); if(!over()) return; }
+    fitMax = true;
   }
-  // danh sách lệnh của 1 bảng (để mở menu khi bảng bị thu gọn)
-  function panelItems(P, withMore){ const items = [];
-    const add = it => { if(it.t === 'col') return it.items.forEach(add); if(it.t === 'ctl'){ if(it.kind === 'layer') ['LAYER', 'LAYMCUR', 'LAYISO', 'LAYUNISO', 'LAYON', 'LAYTHW'].forEach(c => items.push({ t: c === 'LAYER' ? 'Layer Properties' : ((cmdInfo(c) || { d: c }).d), ic: c, fn: () => doCmd(c) })); else { items.push({ t: L({ en: 'Properties', vi: 'Bảng thuộc tính' }), ic: 'PROPS', fn: () => run('PROPERTIES') }); items.push({ t: L({ en: 'Linetype…', vi: 'Kiểu nét…' }), ic: 'LINETYPE', fn: () => openLinetypes() }); items.push({ t: L({ en: 'Lineweight…', vi: 'Bề rộng nét…' }), ic: 'LWEIGHT', fn: () => openLweight() }); } return; }
-      if(it.menu){ it.menu.forEach(([c, en, vi]) => items.push({ t: L({ en, vi }), ic: iconOf(c), fn: () => pickSplit(it, c) })); return; }
-      items.push({ t: L(it).replace(/\n/g, ' '), ic: iconOf(it.cmd, it.icon), fn: () => doCmd(it.cmd) }); };
-    P.items.forEach(add); if(withMore && P.more){ items.push({ sep: 1 }); P.more.forEach(add); } return items; }
-  function panelMenu(i, el){ const r = el.getBoundingClientRect(); menu(r.left, r.bottom + 2, panelItems(RIB[curTab].panels[i], true)); }
-  function pickSplit(it, c){ if(it.split){ SPL[splitKey(it)] = c; try{ localStorage.setItem('dvd:split', JSON.stringify(SPL)); }catch(_){} setTimeout(() => { const sl = slideOpen; renderRibbon(); if(sl != null) openSlide(sl); }, 0); } doCmd(c); }
+  // đo lại khi bề ngang ribbon hay nội dung đổi: cửa sổ phóng to / thu nhỏ, tỉ lệ màn hình Windows, phông nạp xong, ô lớp đổi…
+  let _fitRaf = 0;
+  function refitRibbon(){ if(fitting) return; cancelAnimationFrame(_fitRaf); _fitRaf = requestAnimationFrame(() => { if(!document.documentElement.classList.contains('acad') || top.classList.contains('min') || !ribEl.clientWidth) return; const sl = slideOpen; renderRibbon(); if(typeof sl === 'string') openFly(+sl.slice(1)); }); }
+  const checkFit = () => { if(!fitting && !fitMax && ribEl.clientWidth && ribEl.scrollWidth > ribEl.clientWidth + 1) refitRibbon(); };
+  if(window.ResizeObserver){ let lastW = -1; new ResizeObserver(() => { const w = ribEl.clientWidth; if(w !== lastW){ const grow = w > lastW; lastW = w; if(w && (grow || ribEl.scrollWidth > w + 1 || ribEl.querySelector('.collapsed,.ico-only'))) refitRibbon(); } }).observe(ribEl); }
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(() => refitRibbon());
+  ribEl.addEventListener('wheel', e => { if(ribEl.scrollWidth <= ribEl.clientWidth + 1) return; ribEl.scrollLeft += (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY); e.preventDefault(); }, { passive: false });
+  A.ribbonFit = () => ({ over: ribEl.scrollWidth - ribEl.clientWidth, collapsed: [...ribEl.querySelectorAll('.ac-panel.collapsed')].map(p => L(RIB[curTab].panels[+p.dataset.p])), icoOnly: [...ribEl.querySelectorAll('.ac-panel.ico-only')].map(p => L(RIB[curTab].panels[+p.dataset.p])) });
+  function pickSplit(it, c){ if(it.split){ SPL[splitKey(it)] = c; try{ localStorage.setItem('dvd:split', JSON.stringify(SPL)); }catch(_){} setTimeout(() => { const sl = slideOpen; renderRibbon(); if(typeof sl === 'string') openFly(+sl.slice(1)); else if(sl != null) openSlide(sl); }, 0); } doCmd(c); }
   // phần mở rộng của bảng (bấm tên bảng ▾)
   let slideEl = null, slideOpen = null;
-  function closeSlide(){ if(slideEl){ slideEl.remove(); slideEl = null; } slideOpen = null; ribEl.querySelectorAll('.ac-ptitle.open').forEach(x => x.classList.remove('open')); }
+  function closeSlide(){ if(slideEl){ slideEl.remove(); slideEl = null; } slideOpen = null; ribEl.querySelectorAll('.ac-ptitle.open,.ac-rbig.open').forEach(x => x.classList.remove('open')); }
+  // bảng bị thu gọn: bấm nút → bảng mở ra ngay dưới, đủ các nút như khi ribbon rộng (giống AutoCAD)
+  function openFly(pi){
+    closeSlide(); const P = RIB[curTab].panels[pi]; const pan = ribEl.querySelector('.ac-panel[data-p="' + pi + '"]'); if(!P || !pan) return;
+    slideEl = document.createElement('div'); slideEl.className = 'ac-slide ac-fly'; slideOpen = 'f' + pi;
+    slideEl.innerHTML = '<div class="ac-pbody">' + itemsHTML(P.items) + '</div>' + (P.more ? '<div class="ac-slbody">' + P.more.map(x => btnHTML(x, reg(x))).join('') + '</div>' : '') +
+      '<div class="ac-ptitle' + (P.more ? ' more" data-flymore="1" title="Thêm công cụ' : '') + '">' + esc(L(P)) + (P.more ? ' <i>▾</i>' : '') + '</div>';
+    document.body.appendChild(slideEl); const r = pan.getBoundingClientRect();
+    slideEl.style.left = Math.max(2, Math.min(r.left, innerWidth - slideEl.offsetWidth - 4)) + 'px'; slideEl.style.top = (r.bottom - 1) + 'px';
+    const b = pan.querySelector('.ac-rbig'); if(b) b.classList.add('open');
+    slideEl.addEventListener('click', onRibClick); slideEl.addEventListener('pointerdown', e => e.stopPropagation());
+    bindHtml(slideEl); syncCtl();
+  }
   function openSlide(pi){
     closeSlide(); const P = RIB[curTab].panels[pi]; if(!P || !P.more) return; const pan = ribEl.querySelector('.ac-panel[data-p="' + pi + '"]'); if(!pan) return;
     slideEl = document.createElement('div'); slideEl.className = 'ac-slide'; slideOpen = pi;
@@ -743,7 +842,7 @@
     name = String(name || '').toUpperCase(); const base = c => String(c || '').split('|')[0];
     const has = it => !!it && it.t !== 'ctl' && (base(it.cmd) === name || (it.menu || []).some(m => base(m[0]) === name));
     const flat = arr => { const o = []; for(const it of arr || []) if(it.t === 'col') o.push(...it.items); else o.push(it); return o; };
-    const order = wsTabs().concat(Object.keys(RIB).filter(k => !wsTabs().includes(k)));
+    const order = wsTabs().concat(Object.keys(RIB).filter(k => !wsTabs().includes(k) && !RIB[k].ctx));
     for(const tk of order){ const T = RIB[tk]; if(!T || !T.panels) continue;
       for(let pi = 0; pi < T.panels.length; pi++){ const p = T.panels[pi]; const main = flat(p.items).find(has), more = main ? null : flat(p.more).find(has);
         if(!main && !more) continue;
@@ -767,7 +866,8 @@
   function onRibClick(e){
     hideTip();
     const mo = e.target.closest('[data-more]'); if(mo){ const pi = +mo.dataset.more; if(slideOpen === pi) closeSlide(); else openSlide(pi); return; }
-    const pc0 = e.target.closest('[data-panel]'); if(pc0){ panelMenu(+pc0.dataset.panel, pc0); return; }
+    const fm = e.target.closest('[data-flymore]'); if(fm){ slideEl && slideEl.classList.toggle('mo'); return; }
+    const pc0 = e.target.closest('[data-panel]'); if(pc0){ const pi = +pc0.dataset.panel; if(slideOpen === 'f' + pi) closeSlide(); else openFly(pi); return; }
     const ddb = e.target.closest('.ac-dd'); if(ddb){ openSplit(ITEMS[+ddb.dataset.menu], ddb.closest('.ac-sgrp') || ddb); return; }
     const b = e.target.closest('[data-c]'); if(!b) return;
     if(b.classList.contains('has-dd')){ const r = b.getBoundingClientRect(); if((e.clientY - r.top) > r.height * 0.62){ openSplit(ITEMS[+b.dataset.menu], b); return; } }
@@ -800,17 +900,20 @@
   function setWS(k){ if(!WS[k]) return; WSK = k; try{ localStorage.setItem('dvd:ws', k); }catch(_){} if(!wsTabs().includes(curTab)) curTab = wsTabs()[0]; renderTabs(); renderRibbon(); syncWS(); }
   function setLang(l){ if(l !== 'vi' && l !== 'en') return; if(window.DVDI18N) DVDI18N.set(l); LANG = l; try{ localStorage.setItem('dvd:riblang', l); }catch(_){} renderTabs(); renderRibbon(); syncWS(); try{ if(A.onLangChange) A.onLangChange(l); }catch(_){} }
   function syncWS(){ const b = $('acWS'); if(b) b.innerHTML = ico('SETTINGS') + '<span>' + esc(L(WS[WSK])) + '</span><i>▾</i>'; }
+  A.ribbonCtx = k => { if(k && RIB[k]){ if(ctxTab !== k){ if(!ctxTab) ctxPrev = curTab; ctxTab = k; curTab = k; } } else if(ctxTab){ const was = ctxTab; ctxTab = null; if(curTab === was) curTab = ctxPrev && wsTabs().includes(ctxPrev) ? ctxPrev : wsTabs()[0]; } else return; renderTabs(); renderRibbon(); };
+  A.ribbonAct = (name, fn) => { ACT[name] = fn; };
   A.ribbon = { setWS, setLang, get ws(){ return WSK; }, get lang(){ return LANG; }, get tab(){ return curTab; }, RIB, WS, render: () => { renderTabs(); renderRibbon(); } };
   function ctlHTML(kind){
     if(kind === 'layer') return '<div class="ac-ctl"><button class="ac-laybtn" id="acLayBtn" title="Lớp hiện hành — bấm để chọn / bật tắt"><span class="sw"></span><span class="nm">0</span>▾</button><div style="display:flex;gap:2px">' + [['LAYMCUR', 'Make Current', 'Lấy lớp của đối tượng làm hiện hành'], ['LAYISO', 'Isolate', 'Cô lập lớp'], ['LAYUNISO', 'Unisolate', 'Bỏ cô lập'], ['LAYOFF', 'Off', 'Tắt lớp (bấm đối tượng)'], ['LAYFRZ', 'Freeze', 'Đóng băng lớp'], ['LAYLCK', 'Lock', 'Khoá lớp'], ['LAYON', 'Turn All Layers On', 'Bật tất cả lớp'], ['LAYTHW', 'Thaw All Layers', 'Rã băng tất cả']].map(([c, en, vi]) => '<button class="ac-rbtn ac-ic" data-c="' + c + '" data-tl="' + esc(L({ en, vi })) + '" data-ts="' + esc(L2({ en, vi })) + '">' + ico(c) + '</button>').join('') + '</div></div>';
     if(kind === 'color') return '<div class="ac-ctl" style="min-width:170px"><select id="acColSel" title="Màu cho đối tượng mới / đang chọn"></select><button class="ac-rbtn" data-c="PROPERTIES" title="Bảng thuộc tính (Ctrl+1)">' + ico('PROPS') + '<span>Bảng thuộc tính</span></button></div>';
-    if(kind === 'props3') return '<div class="ac-ctl ac-p3" style="min-width:150px;max-width:170px"><select id="acColSel" title="Màu — đối tượng mới / đang chọn"></select><select id="acLwSel" title="Bề rộng nét — đối tượng mới / đang chọn"></select><select id="acLtSel" title="Kiểu nét — đối tượng mới / đang chọn"></select></div>';
+    if(kind === 'props3') return '<div class="ac-ctl ac-p3" style="width:160px"><select id="acColSel" title="Màu — đối tượng mới / đang chọn"></select><select id="acLwSel" title="Bề rộng nét — đối tượng mới / đang chọn"></select><select id="acLtSel" title="Kiểu nét — đối tượng mới / đang chọn"></select></div>';
     return '';
   }
   function syncCtl(){
     const lb = $('acLayBtn'); if(lb){ const n = A.LS.cur || '0'; lb.querySelector('.nm').textContent = n; lb.querySelector('.sw').style.background = A.layerHex(n); lb.onclick = () => { const r = lb.getBoundingClientRect(); layerDrop(r.left, r.bottom + 2); }; }
     syncColor(); syncP3();
     document.querySelectorAll('[data-tog]').forEach(b => b.classList.toggle('on', !!SET[b.dataset.tog]));
+    checkFit();
   }
   function syncColor(){
     const cs = $('acColSel'); if(cs){ const sel = A.LS.color; const COLS = [['BYLAYER', '■ ByLayer'], ['#ff0000', '■ Đỏ'], ['#ffff00', '■ Vàng'], ['#00ff00', '■ Xanh lá'], ['#00ffff', '■ Lục lam'], ['#0000ff', '■ Xanh dương'], ['#ff00ff', '■ Tím'], ['#ffffff', '■ Trắng'], ['#808080', '■ Xám'], ['#ff7f00', '■ Cam']];
@@ -969,6 +1072,7 @@
     items.push({ sep: 1 }, { t: 'Tải thêm kiểu nét…', ic: 'LTYPE', fn: () => loadLtDialog(list => { if(list.length) cb(list[0]); }) });
     menu(rect.left, rect.bottom + 2, items);
   }
+  A.loadLtDialog = done => loadLtDialog(done);
   function loadLtDialog(done){
     const all = Object.keys(STD_LT_ISO).filter(n => !LTYPES[n]);
     if(!all.length){ say('Đã tải đủ các kiểu nét chuẩn.'); if(done) done([]); return; }
@@ -977,41 +1081,65 @@
       ok: root => { const list = [...root.querySelectorAll('input[type=checkbox]:checked')].map(i => i.dataset.n); for(const n of list) A.loadLT(n); if(list.length) say('Đã tải ' + list.length + ' kiểu nét.'); if(done) done(list); } });
   }
   let ltRoot = null;
+  // Linetype Manager — bố cục như AutoCAD: bộ lọc, Tải / Xoá / Hiện hành / Chi tiết, danh sách, khung chi tiết (tỉ lệ)
   function openLinetypes(){
-    let sel = A.LS.lt || 'BYLAYER';
-    const d = A.dialog({ title: 'Quản lý kiểu nét (Linetype Manager)', wide: true, okText: 'Đóng', noCancel: true,
-      html: '<div class="lm-bar"><button data-a="load">' + ico('LTYPE') + 'Tải…</button><button data-a="cur">✓ Đặt hiện hành</button><button data-a="del">✕ Xoá</button></div><div class="lm-tbl"><table><thead><tr><th>HH</th><th>Kiểu nét</th><th>Hình dạng</th><th>Mô tả</th><th style="text-align:right">Dùng</th></tr></thead><tbody></tbody></table></div>' +
-        '<label class="dvd-frow"><span>Tỉ lệ toàn cục (LTSCALE)</span><span class="v"><input id="ltG" inputmode="decimal" style="width:110px"></span></label><label class="dvd-frow"><span>Tỉ lệ cho đối tượng mới (CELTSCALE)</span><span class="v"><input id="ltC" inputmode="decimal" style="width:110px"></span></label>' +
-        '<p style="margin:6px 0 0">Nét đứt hiện theo <b>tỉ lệ toàn cục × tỉ lệ riêng của đối tượng</b>. Bản vẽ mm tỉ lệ 1:100 thường đặt LTSCALE khoảng 50–100. Kiểu nét được lưu khi xuất DXF.</p>',
+    let sel = A.LS.lt || 'BYLAYER', filt = 'all', inv = false, det = true; try{ det = localStorage.getItem('dvd:ltdet') !== '0'; }catch(_){}
+    const btn = (id, t) => '<button type="button" class="acw-btn" id="' + id + '">' + t + '</button>';
+    const d = A.dialog({ title: 'Quản lý kiểu nét', wide: true, help: 'LINETYPE',
+      html: '<div class="acw"><div style="display:flex;gap:12px;align-items:flex-start"><div style="flex:1"><div class="acw-lab">Lọc kiểu nét</div><div style="display:flex;gap:12px;align-items:center"><select id="ltF" style="width:220px"><option value="all">Hiện tất cả kiểu nét</option><option value="used">Hiện kiểu nét đang dùng</option></select><label class="acw-ck"><input type="checkbox" id="ltInv"><span>Đảo bộ lọc</span></label></div></div>' +
+        '<div style="display:grid;grid-template-columns:auto auto;gap:6px">' + btn('ltLoad', 'Tải…') + btn('ltDel', 'Xoá') + btn('ltCur', 'Hiện hành') + btn('ltDet', 'Ẩn chi tiết') + '</div></div>' +
+        '<div class="acw-row" style="margin:8px 0 4px"><span>Kiểu nét hiện hành:</span> <b id="ltCurN" style="font-weight:400"></b></div>' +
+        '<div class="lm-tbl" style="max-height:240px"><table><thead><tr><th>Kiểu nét</th><th>Hình dạng</th><th>Mô tả</th><th style="text-align:right">Dùng</th></tr></thead><tbody></tbody></table></div>' +
+        '<fieldset class="acw-grp" id="ltDetG" style="margin-top:8px"><legend>Chi tiết</legend><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">' +
+          '<label class="acw-row"><span class="l">Tên:</span><input id="ltNm" disabled></label><label class="acw-row"><span class="l">Hệ số tỉ lệ toàn cục (LTSCALE):</span><input id="ltG" inputmode="decimal" style="width:100px"></label>' +
+          '<label class="acw-row"><span class="l">Mô tả:</span><input id="ltDs" disabled></label><label class="acw-row"><span class="l">Tỉ lệ đối tượng mới (CELTSCALE):</span><input id="ltC" inputmode="decimal" style="width:100px"></label>' +
+          '<label class="acw-ck dis"><input type="checkbox" checked disabled><span>Tỉ lệ theo đơn vị không gian giấy</span></label><label class="acw-row dis"><span class="l">Bề rộng bút ISO:</span><select disabled style="width:100px"><option>1.0 mm</option></select></label></div>' +
+          '<div class="acw-note">Nét đứt hiện theo tỉ lệ toàn cục × tỉ lệ riêng của đối tượng. Bản vẽ mm tỉ lệ 1:100 thường đặt LTSCALE khoảng 50–100.</div></fieldset></div>',
       ok: root => { const g = +String(root.querySelector('#ltG').value).replace(',', '.'), c = +String(root.querySelector('#ltC').value).replace(',', '.'); if(g > 0 && g !== LTSCALE) A.setLTScale(g); if(c > 0) A.setCELTS(c); ltRoot = null; syncCtl(); try{ DVDCmd.refreshPalette(true); }catch(_){} },
-      onOpen: root => { ltRoot = root; } });
-    const root = d.root;
+      cancel: () => { ltRoot = null; }, onOpen: root => { ltRoot = root; } });
+    const root = d.root; root.querySelector('.modal').style.width = 'min(660px,97vw)';
     root.querySelector('#ltG').value = +(+LTSCALE).toPrecision(6); root.querySelector('#ltC').value = +(+(A.LS.celts || 1)).toPrecision(6);
+    const showDet = () => { root.querySelector('#ltDetG').style.display = det ? '' : 'none'; root.querySelector('#ltDet').textContent = det ? 'Ẩn chi tiết' : 'Hiện chi tiết'; };
     const render = () => {
       const used = {}; for(const e of modelEntities){ if(e.lt) used[e.lt] = (used[e.lt] || 0) + 1; } for(const v of Object.values(LAYER_LT)) if(v) used[v] = (used[v] || 0) + 0;
-      const names = ['BYLAYER', 'BYBLOCK'].concat(A.ltNames());
+      let names = ['BYLAYER', 'BYBLOCK'].concat(A.ltNames()); if(filt === 'used'){ const u = n => n in used || n === (A.LS.lt || 'BYLAYER') || n === 'CONTINUOUS'; names = names.filter(n => inv ? !u(n) : u(n)); } else if(inv) names = [];
       root.querySelector('tbody').innerHTML = names.map(n => { const df = /^(BYLAYER|BYBLOCK)$/.test(n) ? null : A.ltDefOf(n);
-        return '<tr data-n="' + esc(n) + '" class="' + (n === (A.LS.lt || 'BYLAYER') ? 'cur' : '') + '" style="' + (n === sel ? 'outline:1px solid #3d9ae8' : '') + '"><td>' + (n === (A.LS.lt || 'BYLAYER') ? '<b style="color:#7ee787">✓</b>' : '') + '</td><td>' + esc(ltLabel(n)) + '</td><td>' + (df ? '<canvas width="140" height="14" data-n="' + esc(n) + '"></canvas>' : '') + '</td><td style="color:#aab3c0">' + esc(df ? (df.desc || '') : '') + '</td><td style="text-align:right;color:#aab3c0">' + (used[n] || '') + '</td></tr>'; }).join('');
+        return '<tr data-n="' + esc(n) + '" class="' + (n === sel ? 'cur' : '') + '"><td>' + esc(ltLabel(n)) + '</td><td>' + (df ? '<canvas width="140" height="14" data-n="' + esc(n) + '"></canvas>' : '') + '</td><td style="color:#aab3c0">' + esc(df ? df.desc || '' : '') + '</td><td style="text-align:right;color:#aab3c0">' + (used[n] || '') + '</td></tr>'; }).join('');
       root.querySelectorAll('canvas[data-n]').forEach(c => { const df = A.ltDefOf(c.dataset.n); ltPreview(c, df ? df.pat : []); });
+      root.querySelector('#ltCurN').textContent = ltLabel(A.LS.lt || 'BYLAYER');
+      const df = /^(BYLAYER|BYBLOCK)$/.test(sel) ? null : A.ltDefOf(sel); root.querySelector('#ltNm').value = ltLabel(sel); root.querySelector('#ltDs').value = df ? df.desc || '' : '';
     };
-    render();
+    render(); showDet();
+    root.querySelector('#ltF').onchange = e => { filt = e.target.value; render(); };
+    root.querySelector('#ltInv').onchange = e => { inv = e.target.checked; render(); };
     root.querySelector('tbody').addEventListener('click', e => { const tr = e.target.closest('tr[data-n]'); if(!tr) return; sel = tr.dataset.n; render(); });
     root.querySelector('tbody').addEventListener('dblclick', e => { const tr = e.target.closest('tr[data-n]'); if(!tr) return; A.setCurLT(tr.dataset.n); sel = tr.dataset.n; render(); syncCtl(); });
-    root.querySelector('.lm-bar').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if(!b) return; const a = b.dataset.a;
-      if(a === 'load') loadLtDialog(() => render());
-      if(a === 'cur'){ A.setCurLT(sel); render(); syncCtl(); }
-      if(a === 'del'){ if(/^(BYLAYER|BYBLOCK|CONTINUOUS)$/.test(sel)){ say('Không xoá được ' + ltLabel(sel) + '.'); return; }
+    root.querySelector('#ltLoad').onclick = () => loadLtDialog(() => render());
+    root.querySelector('#ltCur').onclick = () => { A.setCurLT(sel); render(); syncCtl(); };
+    root.querySelector('#ltDet').onclick = () => { det = !det; try{ localStorage.setItem('dvd:ltdet', det ? '1' : '0'); }catch(_){} showDet(); };
+    root.querySelector('#ltDel').onclick = () => { if(/^(BYLAYER|BYBLOCK|CONTINUOUS)$/.test(sel)){ say('Không xoá được ' + ltLabel(sel) + '.'); return; }
         if(modelEntities.some(x => x.lt === sel) || Object.values(LAYER_LT).includes(sel) || A.LS.lt === sel){ say('Kiểu nét đang được dùng — không xoá được.'); return; }
-        delete LTYPES[sel]; delete A.LS.ltd[sel]; A.lsSave(); sel = 'BYLAYER'; render(); } });
+        delete LTYPES[sel]; delete A.LS.ltd[sel]; A.lsSave(); sel = 'BYLAYER'; render(); };
   }
   A.openLinetypes = openLinetypes;
+  // Lineweight Settings — như AutoCAD: danh sách bề rộng (chọn = bề rộng hiện hành), đơn vị liệt kê, hiện bề rộng nét
   function openLweight(){
-    const L = A.LW_LIST.filter(v => v > 0);
-    A.dialog({ title: 'Bề rộng nét (Lineweight Settings)', html:
-      '<label class="dvd-frow"><span>Hiện bề rộng nét (LWT)</span><span class="v"><input type="checkbox" id="lwShow"' + (showLW ? ' checked' : '') + '></span></label>' +
-      '<label class="dvd-frow"><span>Bề rộng cho đối tượng mới</span><span class="v"><select id="lwCur"><option value="BYLAYER">ByLayer</option>' + L.map(v => '<option value="' + v + '"' + (A.LS.lw === v ? ' selected' : '') + '>' + (v / 100).toFixed(2) + ' mm</option>').join('') + '</select></span></label>' +
-      '<p style="margin:6px 0 0">Bề rộng được hiển thị theo tỉ lệ in thật (mm trên giấy) khi bật LWT. Đổi bề rộng của lớp trong <b>Quản lý lớp</b>.</p>',
-      ok: root => { const on = root.querySelector('#lwShow').checked; if(on !== !!showLW){ showLW = on; try{ syncDisplayToggles(); }catch(_){} draw(); } A.setCurLW(root.querySelector('#lwCur').value); syncCtl(); setTimeout(syncSB, 30); } });
+    let unit = 'mm'; try{ unit = localStorage.getItem('dvd:lwunit') === 'in' ? 'in' : 'mm'; }catch(_){}
+    const L = ['BYLAYER', 'BYBLOCK', 0].concat(A.LW_LIST.filter(v => v > 0)); let cur = A.LS.lw === 'BYLAYER' || A.LS.lw == null ? 'BYLAYER' : A.LS.lw;
+    const lab = v => v === 'BYLAYER' ? 'ByLayer' : v === 'BYBLOCK' ? 'ByBlock' : v === 0 ? 'Mặc định' : unit === 'in' ? (v / 2540).toFixed(3) + '"' : (v / 100).toFixed(2) + ' mm';
+    const d = A.dialog({ title: 'Cài đặt bề rộng nét', help: 'LWEIGHT', html: '<div class="acw" style="display:flex;gap:14px;width:470px"><fieldset class="acw-grp" style="flex:0 0 170px"><legend>Bề rộng nét</legend><div class="acw-list" id="lwL" style="height:230px"></div></fieldset>' +
+      '<div style="flex:1"><fieldset class="acw-grp"><legend>Đơn vị liệt kê</legend><label class="acw-ck"><input type="radio" name="lwU" value="mm"' + (unit === 'mm' ? ' checked' : '') + '><span>Milimét (mm)</span></label><br><label class="acw-ck"><input type="radio" name="lwU" value="in"' + (unit === 'in' ? ' checked' : '') + '><span>Inch (in)</span></label></fieldset>' +
+      '<label class="acw-ck" style="margin:4px 0 8px"><input type="checkbox" id="lwShow"' + (showLW ? ' checked' : '') + '><span>Hiện bề rộng nét</span></label>' +
+      '<label class="acw-row dis"><span class="l">Mặc định:</span><select disabled style="width:100px"><option>0.25 mm</option></select></label>' +
+      '<fieldset class="acw-grp dis" style="margin-top:8px;opacity:.55"><legend>Chỉnh tỉ lệ hiển thị</legend><input type="range" disabled style="width:100%"></fieldset>' +
+      '<div class="acw-note">Bề rộng hiện theo mm trên giấy khi bật hiện bề rộng nét. Đổi bề rộng của lớp trong Quản lý lớp.</div></div></div>' +
+      '<div class="acw-row" style="margin-top:4px"><span>Bề rộng nét hiện hành:</span> <b id="lwCurN" style="font-weight:400"></b></div>',
+      ok: root => { const on = root.querySelector('#lwShow').checked; if(on !== !!showLW){ showLW = on; try{ syncDisplayToggles(); }catch(_){} draw(); } A.setCurLW(cur === 'BYBLOCK' ? 'BYLAYER' : cur); try{ localStorage.setItem('dvd:lwunit', unit); }catch(_){} syncCtl(); setTimeout(syncSB, 30); } });
+    const root = d.root;
+    const render = () => { root.querySelector('#lwL').innerHTML = L.map(v => '<div class="it' + (String(v) === String(cur) ? ' on' : '') + '" data-v="' + v + '"' + (v === 'BYBLOCK' ? ' style="opacity:.5" title="Chưa hỗ trợ ByBlock"' : '') + '><span style="display:inline-block;width:54px;height:' + (typeof v === 'number' && v > 0 ? Math.max(1, Math.min(7, Math.round(v / 30))) : 1) + 'px;background:#e6eaf0;vertical-align:middle;margin-right:6px"></span>' + esc(lab(v)) + '</div>').join(''); root.querySelector('#lwCurN').textContent = lab(cur); };
+    root.querySelector('#lwL').addEventListener('click', e => { const it = e.target.closest('.it'); if(!it || it.dataset.v === 'BYBLOCK') return; cur = /^\d+$/.test(it.dataset.v) ? +it.dataset.v : it.dataset.v; render(); });
+    root.querySelectorAll('input[name=lwU]').forEach(r => r.onchange = () => { unit = r.value; render(); });
+    render();
   }
   A.openLweight = openLweight;
 
@@ -1058,13 +1186,13 @@
   const nav = document.querySelector('nav.toolbar'); (nav || stageEl).insertAdjacentElement('afterend', sb);
   function syncSB(){ sb.querySelectorAll('[data-k]').forEach(b => b.classList.toggle('on', !!SET[b.dataset.k])); const lw = sb.querySelector('[data-x="lwt"]'); try{ lw.classList.toggle('on', !!showLW); }catch(_){} try{ sb.querySelector('[data-x="tpd"]').classList.toggle('on', !!TPDISPLAY); }catch(_){} syncCtl(); }
   sb.addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; if(b.dataset.k){ A.toggle(b.dataset.k); syncSB(); return; }
-    const x = b.dataset.x; if(x === 'tpd'){ TPDISPLAY = !TPDISPLAY; try{ localStorage.setItem('dvd:tpdisp', TPDISPLAY ? '1' : '0'); }catch(_){} try{ bbDirty = true; draw(); }catch(_){} syncSB(); } else if(x === 'lwt'){ ACT.TLWT(); setTimeout(syncSB, 60); } else if(x === 'ds') openDrafting(); else if(x === 'pr') DVDCmd.togglePalette(); else if(x === 'cl') ACT.CLEAN();
+    const x = b.dataset.x; if(x === 'tpd'){ TPDISPLAY = !TPDISPLAY; try{ localStorage.setItem('dvd:tpdisp', TPDISPLAY ? '1' : '0'); }catch(_){} try{ bbDirty = true; draw(); }catch(_){} syncSB(); } else if(x === 'lwt'){ ACT.TLWT(); setTimeout(syncSB, 60); } else if(x === 'ds') A.openDrafting(); else if(x === 'pr') DVDCmd.togglePalette(); else if(x === 'cl') ACT.CLEAN();
     else if(x === 'iso'){ const r = b.getBoundingClientRect(); menu(r.left - 120, r.top - 110, [{ t: 'Cô lập đối tượng', ic: 'ISOLATEOBJECTS', fn: () => run('ISOLATEOBJECTS') }, { t: 'Ẩn đối tượng', ic: 'HIDEOBJECTS', fn: () => run('HIDEOBJECTS') }, { t: 'Hiện lại tất cả', ic: 'UNISOLATEOBJECTS', dis: !(A.objIsolated && A.objIsolated()), fn: () => run('UNISOLATEOBJECTS') }]); } });
   A.onIsolate = () => { const b = sb.querySelector('[data-x="iso"]'); if(b) b.classList.toggle('iso-on', !!(A.objIsolated && A.objIsolated())); };
   sb.addEventListener('contextmenu', e => { const b = e.target.closest('[data-k]'); e.preventDefault(); if(!b) return; const k = b.dataset.k;
-    if(k === 'polar'){ menu(e.clientX, e.clientY - 220, [5, 10, 15, 22.5, 30, 45, 90].map(v => ({ t: v + '°' + (SET.polarAng == v ? '  ✓' : ''), fn: () => { SET.polarAng = v; SET.polar = true; SET.ortho = false; A.saveSet(); syncSB(); } })).concat([{ sep: 1 }, { t: 'Cài đặt…', fn: () => openDrafting('po') }])); return; }
-    if(k === 'osnap'){ menu(e.clientX, e.clientY - 300, A.OS_ALL.map(m => ({ t: (SET.osm.includes(m) ? '✓ ' : '   ') + A.OS_NAME[m], fn: () => { const i = SET.osm.indexOf(m); if(i >= 0) SET.osm.splice(i, 1); else SET.osm.push(m); SET.osnap = true; A.saveSet(); syncSB(); } })).concat([{ sep: 1 }, { t: 'Cài đặt…', fn: () => openDrafting('os') }])); return; }
-    openDrafting(k === 'grid' || k === 'snap' ? 'gr' : k === 'dyn' ? 'dy' : 'os'); });
+    if(k === 'polar'){ menu(e.clientX, e.clientY - 220, [5, 10, 15, 22.5, 30, 45, 90].map(v => ({ t: v + '°' + (SET.polarAng == v ? '  ✓' : ''), fn: () => { SET.polarAng = v; SET.polar = true; SET.ortho = false; A.saveSet(); syncSB(); } })).concat([{ sep: 1 }, { t: 'Cài đặt…', fn: () => A.openDrafting('po') }])); return; }
+    if(k === 'osnap'){ menu(e.clientX, e.clientY - 300, A.OS_ALL.map(m => ({ t: (SET.osm.includes(m) ? '✓ ' : '   ') + A.OS_NAME[m], fn: () => { const i = SET.osm.indexOf(m); if(i >= 0) SET.osm.splice(i, 1); else SET.osm.push(m); SET.osnap = true; A.saveSet(); syncSB(); } })).concat([{ sep: 1 }, { t: 'Cài đặt…', fn: () => A.openDrafting('os') }])); return; }
+    A.openDrafting(k === 'grid' || k === 'snap' ? 'gr' : k === 'dyn' ? 'dy' : 'os'); });
   A.onSetChange = syncSB;
   const coordEl = $('acCoord');
   A.onMouse = m => { if(!coordEl) return; try{ const w = toWorld(m.x, m.y); const p = A.SET.snap ? { x: Math.round(w.x / A.gridSpacing()) * A.gridSpacing(), y: Math.round(w.y / A.gridSpacing()) * A.gridSpacing() } : w; coordEl.textContent = A.fmt(p.x) + ', ' + A.fmt(p.y) + ', 0'; }catch(_){} };

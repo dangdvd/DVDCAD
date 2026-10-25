@@ -6,6 +6,23 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5l: hộp thoại và ribbon như AutoCAD 2027
+- Khung hộp thoại chung (`A.dialog` trong `dvd-acad-cmds.js`):
+  - thanh tiêu đề kéo được, nút **?** / **×**, nút OK · Cancel · Help ở góc dưới phải;
+  - kiểu `modeless` cho bảng nổi (vẫn vẽ được phía sau).
+  - Giao diện điện thoại giữ kiểu cũ (nút to, Huỷ bên trái).
+- `dvd-acad-dlg.js` (mới):
+  - bộ dựng điều khiển (khung nhóm, tab, listbox, ô màu / kiểu nét / bề rộng nét, canvas xem trước);
+  - các hộp thoại theo bố cục AutoCAD: Dimension Style Manager (7 tab + xem trước + Compare), Text Style, Layer Properties Manager (bảng nổi), Drafting Settings, Drawing Units, bảng Blocks + CLASSICINSERT, Block Definition, Attribute Definition, Hatch and Gradient + tab ngữ cảnh Hatch Creation, Options.
+- Lõi kích thước (`dvd-acad-cmds.js`):
+  - thêm các biến kiểu như AutoCAD: DIMCLRD/E/T, DIMLWD/E, DIMLTYPE, DIMSD1/2, DIMSE1/2, DIMFXL, 20 mũi tên DIMBLK1/2, DIMCEN, DIMTAD, DIMJUST, DIMTIH, DIMSCALE, DIMLUNIT, DIMDSEP, DIMRND, DIMZIN, DIMAUNIT, DIMALT…, DIMTOL / DIMLIM;
+  - thư viện kiểu có tên (`A.dimStyles`); sửa kiểu thì kích thước dùng kiểu đó dựng lại.
+- Ribbon:
+  - không còn thanh cuộn ngang; thu gọn bảng theo bề ngang thật (ResizeObserver, nạp phông);
+  - bảng thu gọn bật ra đủ nút; tab ngữ cảnh (`A.ribbonCtx`).
+- Viết lại theo AutoCAD: Plot, Insert Table, Quick Select, Linetype Manager, Lineweight Settings, Point Style.
+- Sửa bảng mã `$INSUNITS` (7 = km, 10 = yard, 15 = decameter).
+
 ## v5k: tự ghi DWG (AutoCAD 2000), không cần ODA File Converter
 - `dvd-dwg.js`: bộ ghi **DWG R2000 (AC1015)** bằng JavaScript, chạy trong trình duyệt, điện thoại và bản Windows.
   - Đầu vào là DXF 2000 của `dvd-acad-dxf.js` (`A.dxfR2000`), nên DWG giữ đúng những gì DXF giữ: bảng lớp / kiểu nét (cả kiểu nét có chữ, hình) / kiểu chữ / dimstyle / VPORT / APPID, khối + thuộc tính, DIMENSION (thẳng, chéo, góc 3 điểm, bán kính, đường kính), HATCH đặc và mẫu, LWPOLYLINE (cung, độ rộng), TEXT / MTEXT, SOLID / 3DFACE, ELLIPSE, XLINE / RAY, WIPEOUT, từ điển, LAYOUT, MLINESTYLE, XRECORD.
