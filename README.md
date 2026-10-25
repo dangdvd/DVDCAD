@@ -1,8 +1,26 @@
 # DVDCAD — PWA xem bản vẽ DWG/DXF (cài được, chạy offline)
 
+> **Bản Windows** (cài như phần mềm, chạy offline, giao diện kiểu AutoCAD): xem **[HUONG-DAN-WINDOWS.md](HUONG-DAN-WINDOWS.md)**.
+
 Ứng dụng web một trang: **xem** bản vẽ, **đo khoảng cách** (có bắt điểm), **thêm ghi chú**.
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly).
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
+
+## v5i: bản Windows chạy offline + trang Start kiểu AutoCAD
+- **DVDCAD cho Windows** (`desktop/`, Electron): bộ cài `DVDCAD-Setup-*.exe` và bản portable, chạy hoàn toàn offline. Hướng dẫn: **[HUONG-DAN-WINDOWS.md](HUONG-DAN-WINDOWS.md)**.
+  - Toàn bộ app (cả bộ đọc DWG WASM) đọc thẳng từ ổ đĩa qua `dvdcad://app/`, không cần service worker hay mạng.
+  - `OPEN` / Ctrl+O mở hộp thoại *Select File* của Windows (chọn nhiều file, mỗi file một tab). Ctrl+S ghi đè đúng file đã lưu; ghi qua file tạm nên không hỏng file cũ nếu lỗi giữa chừng.
+  - Nhấp đúp file .dwg / .dxf trong Explorer (bộ cài gắn sẵn), kéo thả file vào cửa sổ. Chỉ một cửa sổ: file mở thêm thành tab mới.
+  - Chỉ đọc / ghi file người dùng đã chọn; link web mở bằng trình duyệt mặc định.
+  - GitHub Actions `.github/workflows/desktop-windows.yml` dựng bộ cài trên `windows-latest`; đẩy thẻ `v*` thì tạo Release.
+- `dvd-desktop.js`: cầu nối trong giao diện (trên trình duyệt không làm gì).
+- `dvd-acad-start.js`: tab **Start** là một trang riêng như AutoCAD (ẩn ribbon).
+  - Bản vẽ mới theo mẫu: mm (acadiso), m, inch (acad). Ngoài ra có Mở…, Google Drive, Bản vẽ mẫu, và mục Tìm hiểu.
+  - Bản vẽ gần đây dạng lưới ảnh thu nhỏ hoặc danh sách; tìm theo tên, sắp xếp, ghim, xoá khỏi danh sách, mở thư mục chứa file.
+  - Tự hiện khi chưa mở bản vẽ nào; mở hoặc chuyển bản vẽ thì tự ẩn.
+- `NEW` nhận mẫu đơn vị (`A.newDrawing({ units })`).
+- `sw.js`: nạp từng file riêng. Trước đây thiếu một file (404) làm hỏng cả bộ nhớ offline.
+- Kiểm thử: `desktop/test/smoke.js` (25 bước). Gồm: mở DWG từ dòng lệnh, OPEN / SAVEAS / QSAVE qua hộp thoại, lưu lỗi, trang Start, lần chạy thứ 2, an toàn file / link.
 
 ## v5h: XCLIP giống AutoCAD
 - `index.html`:

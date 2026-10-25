@@ -285,6 +285,15 @@
 "(đơn vị bản vẽ)": [
 "index.html"
 ],
+"(đơn vị inch).": [
+"dvd-acad-cmds.js"
+],
+"(đơn vị m).": [
+"dvd-acad-cmds.js"
+],
+"(đơn vị mm).": [
+"dvd-acad-cmds.js"
+],
 "(đơn vị mm). Dùng Ctrl+S để lưu ra DXF.": [
 "dvd-acad-cmds.js"
 ],
@@ -869,8 +878,14 @@
 "dvd-cmd.js",
 "index.html"
 ],
+"Bản vẽ (*.dwg; *.dxf)": [
+"dvd-desktop.js"
+],
 "Bản vẽ CAD (.dwg, .dxf)": [
 "dvd-cloud.js"
+],
+"Bản vẽ DWG / DXF": [
+"dvd-acad-start.js"
 ],
 "Bản vẽ chưa có khối 3D — dùng BOX, CYLINDER, EXTRUDE, PRESSPULL hoặc WALL3D để tạo. Đang hiện nét 2D ở cao độ 0.": [
 "dvd-acad-3d.js"
@@ -904,10 +919,12 @@
 "dvd-acad-more.js"
 ],
 "Bản vẽ mẫu": [
+"dvd-acad-start.js",
 "dvd-acad-ui.js"
 ],
 "Bản vẽ mới": [
 "dvd-acad-cmds.js",
+"dvd-acad-start.js",
 "dvd-acad-ui.js",
 "dvd-acad-ui.js:attr",
 "dvd-cmd.js"
@@ -917,6 +934,9 @@
 ],
 "Bản vẽ mới (trống)": [
 "dvd-acad-cmds.js"
+],
+"Bản vẽ mới theo mẫu mặc định (Ctrl+N)": [
+"dvd-acad-start.js:attr"
 ],
 "Bản vẽ này chỉ có không gian Model.": [
 "index.html"
@@ -1254,6 +1274,9 @@
 ],
 "Bỏ cô lập lớp": [
 "dvd-acad-cmds.js"
+],
+"Bỏ ghim": [
+"dvd-acad-start.js"
 ],
 "Bỏ hết": [
 "dvd-acad-ui.js"
@@ -1802,6 +1825,9 @@
 "Chưa có bản vẽ": [
 "index.html:html"
 ],
+"Chưa có bản vẽ gần đây": [
+"dvd-acad-start.js"
+],
 "Chưa có bản vẽ để xuất.": [
 "index.html"
 ],
@@ -1936,6 +1962,9 @@
 "Chạy file script AutoCAD (.scr): chuỗi lệnh tự động": [
 "dvd-acad-x6.js"
 ],
+"Chạy offline · bản vẽ nằm trên máy này": [
+"dvd-acad-start.js"
+],
 "Chạy script": [
 "dvd-acad-ui.js",
 "dvd-addins.js"
@@ -1991,7 +2020,8 @@
 "dvd-acad-x2.js"
 ],
 "Chỉ mở được file .dwg hoặc .dxf.": [
-"dvd-cloud.js"
+"dvd-cloud.js",
+"dvd-desktop.js"
 ],
 "Chỉ nét": [
 "dvd-acad-x8.js"
@@ -2475,6 +2505,9 @@
 "Chọn cả nhóm/khối": [
 "dvd-acad-core.js"
 ],
+"Chọn file": [
+"dvd-desktop.js"
+],
 "Chọn file .dwg / .dxf từ máy": [
 "index.html:html"
 ],
@@ -2617,6 +2650,9 @@
 ],
 "Chọn mảng": [
 "dvd-acad-x7.js"
+],
+"Chọn mẫu bản vẽ": [
+"dvd-acad-start.js:attr"
 ],
 "Chọn mặt cần làm dày": [
 "dvd-acad-x15.js"
@@ -3653,8 +3689,14 @@
 "DWG/DXF · bản màu · v5h": [
 "index.html:html"
 ],
+"DWG/DXF · bản màu · v5i": [
+"index.html:html"
+],
 "DYN (nhập động)": [
 "dvd-acad-core.js"
+],
+"Danh sách": [
+"dvd-acad-start.js:attr"
 ],
 "Danh sách ghi chú": [
 "index.html:html"
@@ -3667,6 +3709,9 @@
 ],
 "Danh sách lệnh (F1)": [
 "dvd-cmd.js"
+],
+"Danh sách lệnh và phím tắt (F1)": [
+"dvd-acad-start.js"
 ],
 "Danh sách phép đo": [
 "index.html:html"
@@ -3741,6 +3786,9 @@
 "Diện tích ≈": [
 "dvd-cmd.js"
 ],
+"Dung lượng": [
+"dvd-acad-start.js"
+],
 "Dung sai hình học": [
 "dvd-acad-ui.js",
 "dvd-acad-x6.js"
@@ -3798,6 +3846,9 @@
 "Dùng": [
 "dvd-acad-core.js",
 "dvd-acad-ui.js"
+],
+"Dùng Ctrl+S để lưu ra DXF.": [
+"dvd-acad-cmds.js"
 ],
 "DƯỚI": [
 "dvd-acad-3d.js"
@@ -4006,6 +4057,9 @@
 ],
 "Ghi đối tượng hoặc khối ra file DXF riêng (dùng lại ở bản vẽ khác)": [
 "dvd-acad-x6.js"
+],
+"Ghim lên đầu": [
+"dvd-acad-start.js"
 ],
 "Ghim: giữ & rê chọn vị trí, nhấc tay để ghim": [
 "index.html"
@@ -4323,6 +4377,9 @@
 ],
 "Gần nhất": [
 "dvd-acad-core.js"
+],
+"Gần đây": [
+"dvd-acad-start.js"
 ],
 "Gắn / bỏ liên kết hatch với đường biên": [
 "dvd-acad-x7.js"
@@ -4659,6 +4716,9 @@
 "Hướng dẫn API": [
 "dvd-addins.js"
 ],
+"Hướng dẫn dùng các lệnh": [
+"dvd-acad-start.js"
+],
 "Hướng dẫn viết add-in": [
 "dvd-addins.js"
 ],
@@ -4688,6 +4748,15 @@
 ],
 "Hậu tố": [
 "dvd-acad-x11.js"
+],
+"Hệ inch (acad)": [
+"dvd-acad-start.js"
+],
+"Hệ mét — milimét (acadiso)": [
+"dvd-acad-start.js"
+],
+"Hệ mét — mét": [
+"dvd-acad-start.js"
 ],
 "Hệ số": [
 "dvd-acad-x13.js",
@@ -5131,6 +5200,9 @@
 "Không có bản chèn nào của khối \"": [
 "dvd-acad-x10.js"
 ],
+"Không có bản vẽ nào khớp": [
+"dvd-acad-start.js"
+],
 "Không có bảng nào cần cập nhật": [
 "dvd-acad-x9.js"
 ],
@@ -5336,10 +5408,14 @@
 "dvd-acad-ext.js"
 ],
 "Không mở lại được file này.": [
+"dvd-acad-start.js",
 "index.html"
 ],
 "Không mở lại được:": [
 "dvd-acad-x15.js"
+],
+"Không mở được": [
+"dvd-desktop.js"
 ],
 "Không mở được bản vẽ mẫu. Kiểm tra file sample.dxf.": [
 "index.html"
@@ -5351,7 +5427,8 @@
 "dvd-acad-x12.js"
 ],
 "Không mở được file:": [
-"dvd-cloud.js"
+"dvd-cloud.js",
+"dvd-desktop.js"
 ],
 "Không mở được layout này — đã quay về Model.": [
 "index.html"
@@ -5400,8 +5477,14 @@
 "Không tìm thấy dữ liệu tham chiếu": [
 "dvd-acad-pro.js"
 ],
+"Không tìm thấy file": [
+"dvd-acad-start.js"
+],
 "Không tìm thấy file gốc của \"": [
 "dvd-acad-x15.js"
+],
+"Không tìm thấy file ở đường dẫn cũ:": [
+"dvd-acad-start.js"
 ],
 "Không tìm thấy lệnh \"": [
 "dvd-acad-ui.js"
@@ -6355,7 +6438,8 @@
 "dvd-acad-ext.js"
 ],
 "Lưu thành": [
-"dvd-acad-ui.js"
+"dvd-acad-ui.js",
+"dvd-desktop.js"
 ],
 "Lưu thành DXF": [
 "dvd-acad-ui.js"
@@ -6368,6 +6452,9 @@
 ],
 "Lưu thành add-in…": [
 "dvd-addins.js"
+],
+"Lưu trong app": [
+"dvd-acad-start.js"
 ],
 "Lưu trạng thái hiện tại": [
 "dvd-acad-x6.js"
@@ -6404,6 +6491,9 @@
 ],
 "Lưới nền: Bật / Tắt / khoảng lưới": [
 "dvd-acad-x9.js"
+],
+"Lưới ảnh thu nhỏ": [
+"dvd-acad-start.js:attr"
 ],
 "Lạnh": [
 "dvd-acad-x16.js"
@@ -6913,6 +7003,9 @@
 "Mảng đặc": [
 "index.html"
 ],
+"MẪU BẢN VẼ": [
+"dvd-acad-start.js"
+],
 "Mẫu": [
 "dvd-acad-cmds.js",
 "dvd-acad-x6.js",
@@ -7074,10 +7167,12 @@
 ],
 "Mở": [
 "dvd-acad-cmds.js",
+"dvd-acad-start.js",
 "dvd-acad-x15.js",
 "dvd-acad-x6.js",
 "dvd-acad-x7.js",
-"dvd-cmd.js"
+"dvd-cmd.js",
+"dvd-desktop.js"
 ],
 "Mở (Ctrl+O)": [
 "dvd-acad-ui.js"
@@ -7086,6 +7181,7 @@
 "index.html:html"
 ],
 "Mở bản vẽ (Ctrl+O)": [
+"dvd-acad-start.js:attr",
 "dvd-cmd.js"
 ],
 "Mở bản vẽ khác…": [
@@ -7123,6 +7219,9 @@
 "dvd-acad-pro.js:attr",
 "dvd-acad-ui.js"
 ],
+"Mở gần nhất": [
+"dvd-acad-start.js"
+],
 "Mở hoặc tạo bản vẽ trước.": [
 "dvd-acad-core.js"
 ],
@@ -7151,16 +7250,21 @@
 "Mở spline": [
 "dvd-acad-x6.js"
 ],
+"Mở thư mục chứa file": [
+"dvd-acad-start.js"
+],
 "Mở từ Drive": [
 "dvd-acad-ui.js"
 ],
 "Mở từ Google Drive": [
+"dvd-acad-start.js",
 "dvd-cloud.js"
 ],
 "Mở từ Google Drive…": [
 "dvd-acad-ui.js"
 ],
 "Mở…": [
+"dvd-acad-start.js",
 "dvd-acad-ui.js"
 ],
 "NET (lưới vuông)": [
@@ -7982,6 +8086,9 @@
 "Sắp thứ tự hiển thị theo màu (màu đứng đầu danh sách nằm trên cùng)": [
 "dvd-acad-x11.js"
 ],
+"Sắp xếp": [
+"dvd-acad-start.js:attr"
+],
 "Sắp xếp theo": [
 "dvd-acad-x6.js"
 ],
@@ -8727,6 +8834,7 @@
 "dvd-acad-x8.js"
 ],
 "Trang bắt đầu": [
+"dvd-acad-start.js",
 "dvd-acad-ui.js:attr"
 ],
 "Trang chủ": [
@@ -8942,6 +9050,7 @@
 "dvd-acad-x9.js"
 ],
 "Tuỳ chọn": [
+"dvd-acad-start.js:attr",
 "dvd-acad-ui.js",
 "dvd-acad-x10.js",
 "dvd-acad-x6.js",
@@ -8965,6 +9074,9 @@
 ],
 "TÊN BẢN VẼ": [
 "dvd-acad-pro.js"
+],
+"TÌM HIỂU": [
+"dvd-acad-start.js"
 ],
 "Tách khối 3D gồm nhiều phần rời nhau thành các khối riêng (SOLIDEDIT › Body › Separate)": [
 "dvd-acad-x16.js"
@@ -9018,6 +9130,7 @@
 ],
 "Tên": [
 "dvd-acad-pro.js",
+"dvd-acad-start.js",
 "dvd-acad-x4.js",
 "dvd-acad-x6.js",
 "dvd-acad-x7.js",
@@ -9144,6 +9257,9 @@
 "Tìm & thay": [
 "dvd-acad-ui.js"
 ],
+"Tìm bản vẽ gần đây": [
+"dvd-acad-start.js:attr"
+],
 "Tìm chữ": [
 "dvd-acad-ui.js"
 ],
@@ -9267,6 +9383,9 @@
 "Tạo bản song song cách đều (T = đi qua điểm)": [
 "dvd-acad-cmds.js"
 ],
+"Tạo bản vẽ mới, mở file có sẵn, hoặc kéo thả file .dwg / .dxf vào đây.": [
+"dvd-acad-start.js"
+],
 "Tạo hình chiếu khối 3D trên bản vẽ (VIEWBASE)": [
 "dvd-acad-x16.js"
 ],
@@ -9351,6 +9470,9 @@
 "dvd-acad-3dy.js",
 "dvd-acad-cmds.js",
 "dvd-acad-x16.js"
+],
+"Tất cả file (*.*)": [
+"dvd-desktop.js"
 ],
 "Tất cả layout → PDF nhiều trang": [
 "index.html:html"
@@ -9646,6 +9768,9 @@
 "Visual LISP (bảng gõ thử)": [
 "dvd-addins.js"
 ],
+"Viết add-in AutoLISP / JavaScript": [
+"dvd-acad-start.js"
+],
 "Viết chữ (điểm, cao, góc, nội dung)": [
 "dvd-acad-cmds.js"
 ],
@@ -9925,6 +10050,9 @@
 "WIPEOUT: vùng che ở trên cùng. Đưa chữ lên trên nó bằng DRAWORDER hoặc TEXTTOFRONT.": [
 "dvd-acad-x3.js"
 ],
+"Windows · phiên bản": [
+"dvd-acad-start.js"
+],
 "X và Y": [
 "dvd-acad-x5.js"
 ],
@@ -10083,6 +10211,9 @@
 ],
 "Xoá khung nhìn": [
 "dvd-acad-pro.js:attr"
+],
+"Xoá khỏi danh sách": [
+"dvd-acad-start.js"
 ],
 "Xoá khỏi thư viện": [
 "dvd-acad-ui.js:attr"

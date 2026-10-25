@@ -1,0 +1,101 @@
+{
+  "name": "dvdcad-desktop",
+  "productName": "DVDCAD",
+  "version": "5.9.0",
+  "description": "DVDCAD cho Windows — vẽ và sửa bản vẽ DWG/DXF kiểu AutoCAD, chạy offline",
+  "main": "main.js",
+  "author": "DVDCAD",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dangdvd/dvdcad.git"
+  },
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "icons": "python3 scripts/make-icons.py",
+    "dist": "electron-builder --win nsis portable --x64",
+    "dist:dir": "electron-builder --win dir --x64",
+    "test": "node test/smoke.js"
+  },
+  "devDependencies": {
+    "electron": "44.6.0",
+    "electron-builder": "26.17.0"
+  },
+  "build": {
+    "appId": "vn.dvdcad.desktop",
+    "productName": "DVDCAD",
+    "copyright": "DVDCAD — mã nguồn mở. LibreDWG: GPL-3.0",
+    "publish": null,
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "build/icon.ico",
+      "build/icon.png"
+    ],
+    "extraResources": [
+      {
+        "from": "..",
+        "to": "www",
+        "filter": [
+          "index.html",
+          "dvd-*.js",
+          "libredwg-web.js",
+          "libredwg-web.wasm",
+          "manifest.webmanifest",
+          "*.png",
+          "*.md",
+          "sample.dxf",
+          "addins/**",
+          "vendor/**"
+        ]
+      }
+    ],
+    "fileAssociations": [
+      {
+        "ext": "dwg",
+        "name": "DVDCAD.dwg",
+        "description": "Bản vẽ DWG",
+        "role": "Editor",
+        "icon": "file-dwg.ico"
+      },
+      {
+        "ext": "dxf",
+        "name": "DVDCAD.dxf",
+        "description": "Bản vẽ DXF",
+        "role": "Editor",
+        "icon": "file-dxf.ico"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.ico",
+      "executableName": "DVDCAD"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DVDCAD",
+      "multiLanguageInstaller": true,
+      "installerLanguages": [
+        "vi_VN",
+        "en_US"
+      ],
+      "artifactName": "DVDCAD-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "DVDCAD-${version}-portable.${ext}"
+    }
+  }
+}
