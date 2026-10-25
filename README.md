@@ -41,7 +41,7 @@ Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn 
     - `BPARAMETER`: V hiển thị, L kéo giãn, F lật, X bỏ.
     - Đổi trạng thái bằng `BDYN` hoặc mục "Khối động" trong bảng Thuộc tính. Bản chèn mới tự nhận định nghĩa.
 - Kiểm thử bộ cài thật: `desktop/test/installed.js` chạy trên `windows-latest` (cài lặng → kiểm tra file / gắn .dwg .dxf / lối tắt → chạy `smoke.js` trên `DVDCAD.exe` đã cài → gỡ cài).
-- Bản phát hành: đẩy thẻ `v*` (vd `v5.9.0`); ghi chú lấy từ `desktop/RELEASE-NOTES.md`.
+- Bản phát hành: đẩy thẻ `v*` (vd `v5.9.0`), hoặc **Actions → DVDCAD Windows → Run workflow** trên `main` với `release_tag` = `v5.9.0`; ghi chú lấy từ `desktop/RELEASE-NOTES.md`.
 - `sw.js`: nạp từng file riêng. Trước đây thiếu một file (404) làm hỏng cả bộ nhớ offline.
 - Kiểm thử: `desktop/test/smoke.js` (29 bước). Gồm: mở DWG từ dòng lệnh, OPEN / SAVEAS / QSAVE qua hộp thoại, lưu lỗi, trang Start, lần chạy thứ 2, an toàn file / link, lệnh phục hồi + SAVEDWG, lệnh tắt acad.pgp.
 
