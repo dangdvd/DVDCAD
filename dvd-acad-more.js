@@ -385,7 +385,7 @@
     if(n) say('Đã tạo ' + n + ' đường biên kín');
   });
   function mkE(type, props){ return A.newProps(Object.assign({ type }, props)); }
-  cmd(['DONUT', 'DOUGHNUT'], 'Vẽ vành khuyên / chấm tròn đặc', async () => {
+  cmd(['DONUT', 'DO', 'DOUGHNUT'], 'Vẽ vành khuyên / chấm tròn đặc', async () => {
     const MEM = A.MEM || {};
     const r1 = await A.getDist('Đường kính trong', { def: MEM.dnI != null ? MEM.dnI : 0 }); const di = r1.num != null ? r1.num : (MEM.dnI || 0);
     const r2 = await A.getDist('Đường kính ngoài', { def: MEM.dnO || 10 }); const dO = r2.num != null ? r2.num : (MEM.dnO || 10); if(!(dO > 0)) return;

@@ -29,6 +29,9 @@ Gỡ cài đặt: **Settings → Apps → DVDCAD → Uninstall**.
 | Phím chức năng | F1 trợ giúp, F2 lịch sử lệnh, F3 OSNAP, F7 GRID, F8 ORTHO, F9 SNAP, F10 POLAR, F11 OTRACK, F12 DYN |
 | In | `PLOT` / **Ctrl+P**: xuất PDF đúng khổ giấy và tỉ lệ, hoặc in ra máy in |
 
+**Lệnh tắt như AutoCAD:** bảng lệnh tắt mặc định giống `acad.pgp`, ví dụ `L`, `C`, `CO`/`CP`, `TR`, `EX`, `O`, `F`, `H`, `DLI`, `T` = MTEXT, `DT` = TEXT, `DO` = DONUT, `PA` = PASTESPEC, `RE` / `REA`.
+File `acad.pgp` riêng của bạn nhập được bằng lệnh `ALIASEDIT`. Khi gõ lệnh, danh sách gợi ý hiện kèm biểu tượng như AutoComplete của AutoCAD.
+
 Danh sách lệnh đầy đủ: [HUONG-DAN-LENH.md](HUONG-DAN-LENH.md), hoặc bấm **F1** trong chương trình.
 
 ## Dữ liệu nằm ở đâu
@@ -42,8 +45,8 @@ Danh sách lệnh đầy đủ: [HUONG-DAN-LENH.md](HUONG-DAN-LENH.md), hoặc b
 
 - **Lưu DWG**: bản vẽ được lưu ra **DXF 2018**; AutoCAD và các phần mềm CAD khác mở được file này.
   Muốn có file .dwg, dùng ODA File Converter (miễn phí) như hướng dẫn trong `server-dwg.js`.
-- Đây là phần mềm mã nguồn mở có cách dùng giống AutoCAD, **không phải** sản phẩm của Autodesk.
-  DVDCAD không dùng logo, biểu tượng hay mã nguồn của Autodesk.
+- Đây là phần mềm mã nguồn mở có **tên lệnh và cách dùng giống AutoCAD**, **không phải** sản phẩm của Autodesk.
+  Biểu tượng là hình DVDCAD tự vẽ theo quy ước quen thuộc của phần mềm CAD; DVDCAD không dùng logo, biểu tượng hay mã nguồn của Autodesk.
 
 ## Dành cho người phát triển
 
@@ -72,4 +75,4 @@ python3 scripts/make-icons.py   # tạo lại biểu tượng từ icon-512.png 
 - Nên dựng bộ cài trên Windows. Trên Linux cần cài `wine` (cả bản 32-bit) thì mới dựng được bộ cài NSIS.
 - GitHub Actions (`.github/workflows/desktop-windows.yml`) dựng sẵn trên `windows-latest` mỗi khi mã thay đổi.
 
-Bản Windows có chứa LibreDWG (GPL-3.0). Khi phân phát bản Windows, cần tuân thủ GPL-3.0: giữ thông báo giấy phép và cung cấp mã nguồn (chính repo này).
+DVDCAD là mã nguồn mở theo GPL-3.0 hoặc mới hơn ([LICENSE](LICENSE)). Bản Windows có chứa LibreDWG (GPL-3.0); khi phân phát lại, giữ thông báo giấy phép và cung cấp mã nguồn (chính repo này).

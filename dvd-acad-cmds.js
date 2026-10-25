@@ -277,8 +277,8 @@
     if(s == null || !s.trim()) return;
     A.commit({ add: [mk('TEXT', { x: p.x, y: p.y, text: s.replace(/\r/g, ''), h, rot, ha, va })] });
   }
-  cmd(['TEXT', 'DT', 'DTEXT', 'T'], 'Viết chữ (điểm, cao, góc, nội dung)', () => textCmd(false));
-  cmd(['MTEXT', 'MT'], 'Chữ nhiều dòng trong khung', () => textCmd(true));
+  cmd(['TEXT', 'DT', 'DTEXT'], 'Viết chữ (điểm, cao, góc, nội dung)', () => textCmd(false));
+  cmd(['MTEXT', 'MT', 'T'], 'Chữ nhiều dòng trong khung', () => textCmd(true));   // T = MTEXT như acad.pgp
   cmd(['DDEDIT', 'ED', 'TEXTEDIT'], 'Sửa nội dung chữ', async () => {
     for(;;){
       const r = await A.getEnt('Chọn chữ cần sửa', { filter: e => e.type === 'TEXT' }); if(!r.ent) return;

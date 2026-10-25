@@ -96,6 +96,17 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
   check(await win.evaluate(() => fetch('./libredwg-web.wasm').then(r => r.headers.get('content-type'))) === 'application/wasm', 'WASM có MIME application/wasm');
   check(await win.evaluate(() => fetch('../../etc/passwd').then(r => r.status)) !== 200, 'không thoát ra ngoài thư mục app');
 
+  console.log('7. Lệnh tắt giống AutoCAD (acad.pgp)');
+  const al = await win.evaluate(() => {
+    const by = new Map(); for(const c of DVDCmd.commands) for(const k of c.k) by.set(k, c);
+    const bad = []; let ok = 0;
+    for(const [a, t] of DVDAcad.ACAD_PGP){ const ct = by.get(t); if(!ct) continue; if(by.get(a) === ct) ok++; else bad.push(a + '→' + t); }
+    const is = (a, t) => by.get(a) && by.get(a) === by.get(t);
+    return { ok, bad, spot: is('DO', 'DONUT') && is('T', 'MTEXT') && is('DT', 'TEXT') && !!by.get('QM') && /^Đo nhanh/.test(by.get('QM').d) && is('PA', 'PASTESPEC') && is('REA', 'REGENALL') };
+  });
+  check(!al.bad.length && al.ok >= 200, al.ok + ' lệnh tắt trỏ đúng lệnh' + (al.bad.length ? '; sai: ' + al.bad.join(', ') : ''));
+  check(al.spot, 'DO = DONUT, T = MTEXT, DT = TEXT, QM = đo nhanh, PA = PASTESPEC, REA = REGENALL');
+
   check(!errors.length, 'không có lỗi JavaScript' + (errors.length ? ': ' + errors.join(' | ') : ''));
   await app.close();
   fs.rmSync(tmp, { recursive: true, force: true });

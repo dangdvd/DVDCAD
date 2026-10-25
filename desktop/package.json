@@ -50,6 +50,7 @@
           "manifest.webmanifest",
           "*.png",
           "*.md",
+          "LICENSE",
           "sample.dxf",
           "addins/**",
           "vendor/**"
@@ -84,6 +85,7 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
+      "license": "../LICENSE",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "DVDCAD",

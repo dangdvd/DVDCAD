@@ -134,7 +134,7 @@
       '<div class="st-new"><button class="st-btn" data-a="new" title="Bản vẽ mới theo mẫu mặc định (Ctrl+N)">' + ico('NEW') + '<span>Bản vẽ mới</span></button><button class="st-btn st-dd" data-a="newmenu" title="Chọn mẫu bản vẽ">▾</button></div>' +
       '<button class="st-btn" data-a="open" title="Mở bản vẽ (Ctrl+O)">' + ico('OPEN') + '<span>Mở…</span></button>' +
       '<button class="st-btn" data-a="drive" id="stDrive">' + ico('DRIVE') + '<span>Mở từ Google Drive</span></button>' +
-      '<button class="st-btn" data-a="sample">' + ico('INSERT') + '<span>Bản vẽ mẫu</span></button>' +
+      '<button class="st-btn" data-a="sample">' + ico('SAMPLE') + '<span>Bản vẽ mẫu</span></button>' +
       '<div class="st-sec">TÌM HIỂU</div>' +
       '<button class="st-link" data-a="help">Danh sách lệnh và phím tắt (F1)</button>' +
       '<button class="st-link" data-a="guide">Hướng dẫn dùng các lệnh</button>' +
