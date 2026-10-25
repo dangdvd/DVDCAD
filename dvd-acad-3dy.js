@@ -19,6 +19,7 @@
   function saveUCS(){ try{ localStorage.setItem(ucsKey(), JSON.stringify(UCS)); }catch(_){} label(); try{ if(A.view3D) A.view3D.buildUCS(); }catch(_){} }
   function loadUCS(){ let o = null; try{ o = JSON.parse(localStorage.getItem(ucsKey()) || 'null'); }catch(_){} Object.assign(UCS, { on: false, name: 'Thế giới', O: [0, 0, 0], U: [1, 0, 0], V: [0, 1, 0], N: [0, 0, 1], A2: { x: 0, y: 0 } }, o || {}); label(); }
   function setUCS(O, U, V, A2, name){ U = norm(U); V = norm(V); const N = norm(cross(U, V)); V = cross(N, U); Object.assign(UCS, { on: true, O, U, V, N, A2: A2 || { x: O[0], y: O[1] }, name: name || 'UCS' }); saveUCS(); }
+  A.ucsSet = (O, U, V, A2, name) => setUCS(O, U, V, A2, name); A.ucsSave = () => saveUCS();
   function label(){ try{ const vp = document.getElementById('acadVP'); if(vp){ let sp = vp.querySelector('[data-v="ucs"]'); if(!sp){ sp = document.createElement('span'); sp.dataset.v = 'ucs'; vp.appendChild(sp); } sp.textContent = UCS.on ? '[UCS: ' + UCS.name + ']' : '[WCS]'; sp.style.color = UCS.on ? '#7fb6ff' : ''; } }catch(_){} }
   // đổi khối vừa tạo (toạ độ mặt bằng, gốc = điểm neo) sang mặt phẳng UCS
   A.ucsApply = function(e){

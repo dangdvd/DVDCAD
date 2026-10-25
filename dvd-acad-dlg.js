@@ -794,36 +794,65 @@
     let pick = cur; const d = A.dialog({ title: 'Bảng mẫu hatch', help: 'HATCH', html, ok: () => cb(pick) });
     d.root.querySelectorAll('.hp-grid .bp-it').forEach(b => { patSwatch(b.querySelector('canvas'), b.dataset.k); b.onclick = () => { pick = b.dataset.k; d.root.querySelectorAll('.hp-grid .bp-it').forEach(x => x.classList.toggle('on', x === b)); }; b.ondblclick = () => { pick = b.dataset.k; d.close(); cb(pick); }; });
   }
+  // 9 kiểu chuyển màu của AutoCAD (Gradient)
+  const GRADS = [['LINEAR', 'Tuyến tính'], ['CYLINDER', 'Trụ'], ['INVCYLINDER', 'Trụ ngược'], ['SPHERICAL', 'Cầu'], ['HEMISPHERICAL', 'Bán cầu'], ['CURVED', 'Cong'], ['INVSPHERICAL', 'Cầu ngược'], ['INVHEMISPHERICAL', 'Bán cầu ngược'], ['INVCURVED', 'Cong ngược']];
+  const hx = c => { const m = /^#?([0-9a-f]{6})$/i.exec(String(c || '')); const n = m ? parseInt(m[1], 16) : 0x1f5fa8; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const toHex = a => '#' + a.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  // một màu: thanh Đậm — Nhạt (Shade — Tint) quyết định màu thứ hai
+  A.gradTint = (c, t) => { const a = hx(c); const k = +t; return toHex(k >= 0.5 ? a.map(v => v + (255 - v) * (k - 0.5) * 2) : a.map(v => v * k * 2)); };
+  function paintGrad(cnv, g){ if(!cnv) return; const w = +cnv.dataset.w || cnv.width, h = +cnv.dataset.h || cnv.height, d = Math.min(3, devicePixelRatio || 1); cnv.width = Math.round(w * d); cnv.height = Math.round(h * d); const x = cnv.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0);
+    if(A.gradFill) A.gradFill(x, g, w / 2, h / 2, Math.hypot(w, h) / 2, [[{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }]]); }
   function openHatch(o){
     o = o || {}; const HS = A.HS; if(!HS) return Promise.resolve(false);
     const keys = Object.keys(A.PATS || {}); const scs = ['0.25', '0.5', '0.75', '1', '1.25', '1.5', '2', '5', '10', '20', '50', '100'];
+    const ed = o.edit && o.edit.length ? o.edit : null, h0 = ed ? ed[0] : null;
+    // giá trị ban đầu: hatch đang sửa (HATCHEDIT) hoặc cài đặt hiện hành
+    const V = h0 ? { pat: h0.solid && !h0.grad ? 'SOLID' : (h0.pat || 'ANSI31'), scale: h0.psc || 1, ang: h0.pang || 0, col: h0.bl ? '' : (h0.col || ''), gmode: !!h0.grad, grad: Object.assign({ kind: 'LINEAR', c1: h0.col || '#1f5fa8', c2: '#bfe0ff', ang: 0, ctr: 1 }, h0.grad || {}) }
+      : { pat: HS.pat, scale: HS.scale || 0, ang: HS.ang || 0, col: HS.col || '', gmode: !!HS.gmode, grad: Object.assign({ kind: 'LINEAR', c1: '#1f5fa8', c2: '#bfe0ff', ang: 0, ctr: 1 }, HS.grad || {}) };
+    if(V.grad.kind === 'linear') V.grad.kind = 'LINEAR'; if(V.grad.kind === 'radial') V.grad.kind = 'INVSPHERICAL';
+    const tab0 = o.tab || (V.gmode ? 'g' : 'h');
     return new Promise(res => {
       const hatchT = '<div class="acw-cols"><div class="c1">' +
         K.grp('Kiểu và mẫu', K.row('Kiểu:', K.sel('hgT', [['pre', 'Có sẵn (Predefined)'], ['user', 'Tự định nghĩa (User defined)'], ['cust', 'Tuỳ biến (Custom)']], 'pre', { dis: 1 })) +
-          K.row('Mẫu:', '<span class="acw-w" style="display:flex;gap:4px">' + K.sel('hgP', keys.map(k => [k, k]), HS.pat) + '<button type="button" class="acw-btn" id="hgPB" style="min-width:26px;padding:0 6px">…</button></span>') +
-          K.row('Màu:', K.colorSel('hgC', HS.col || 'BYLAYER', { noBlock: 1 })) + K.row('Mẫu xem:', '<canvas id="hgS" data-w="150" data-h="34" width="150" height="34" style="width:150px;height:34px;border:1px solid #5a6578;cursor:pointer"></canvas>')) +
-        K.grp('Góc và tỉ lệ', '<div class="acw-cols"><div class="c1">' + K.vrow('Góc:', '<input id="hgA" list="hgAL" value="' + esc(HS.ang || 0) + '"><datalist id="hgAL">' + [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165].map(v => '<option value="' + v + '">').join('') + '</datalist>') + '</div><div class="c1">' +
-          K.vrow('Tỉ lệ:', '<input id="hgSc" list="hgSL" value="' + esc(HS.scale || 0) + '"><datalist id="hgSL">' + scs.map(v => '<option value="' + v + '">').join('') + '</datalist>') + '</div></div>' +
+          K.row('Mẫu:', '<span class="acw-w" style="display:flex;gap:4px">' + K.sel('hgP', keys.map(k => [k, k]), V.pat) + '<button type="button" class="acw-btn" id="hgPB" style="min-width:26px;padding:0 6px">…</button></span>') +
+          K.row('Màu:', K.colorSel('hgC', V.col || 'BYLAYER', { noBlock: 1 })) + K.row('Mẫu xem:', '<canvas id="hgS" data-w="150" data-h="34" width="150" height="34" style="width:150px;height:34px;border:1px solid #5a6578;cursor:pointer"></canvas>')) +
+        K.grp('Góc và tỉ lệ', '<div class="acw-cols"><div class="c1">' + K.vrow('Góc:', '<input id="hgA" list="hgAL" value="' + esc(V.ang) + '"><datalist id="hgAL">' + [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165].map(v => '<option value="' + v + '">').join('') + '</datalist>') + '</div><div class="c1">' +
+          K.vrow('Tỉ lệ:', '<input id="hgSc" list="hgSL" value="' + esc(V.scale) + '"><datalist id="hgSL">' + scs.map(v => '<option value="' + v + '">').join('') + '</datalist>') + '</div></div>' +
           '<div class="acw-note" style="margin-top:2px">Tỉ lệ 0 = tự chọn theo cỡ vùng.</div>' + K.chk('hgDbl', 'Hai chiều (Double)', 0, { dis: 1 }) + K.chk('hgPs', 'Theo không gian giấy', 0, { dis: 1 }) + K.row('Khoảng cách:', K.num('hgSp', 1, { dis: 1 }), { dis: 1 })) +
         K.grp('Gốc hatch', K.rad('hgO', 'cur', 'Dùng gốc hiện hành', 1) + '<br>' + K.rad('hgO', 'set', 'Gốc chỉ định', 0, { dis: 1 })) + '</div></div>';
-      const gradT = '<div class="acw-note" style="margin:0 0 8px">Tô chuyển màu dùng lệnh GRADIENT: chọn 2 màu, kiểu tuyến tính / toả tròn và góc, rồi chọn vùng.</div><canvas id="hgG" data-w="300" data-h="60" width="300" height="60" style="width:300px;height:60px;border:1px solid #5a6578"></canvas><div style="margin-top:8px">' + K.btn('hgGo', 'Mở GRADIENT…') + '</div>';
+      const G = V.grad;
+      const gradT = K.grp('Màu', '<div class="acw-row">' + K.rad('hgGm', '1', 'Một màu', !!G.one) + K.rad('hgGm', '2', 'Hai màu', !G.one) + '</div>' +
+          '<div class="acw-row"><span class="acw-w" style="display:flex;gap:4px;flex:1 1 50%"><input type="color" id="hgG1" value="' + esc(G.c1) + '" style="flex:1;height:24px;padding:0"><button type="button" class="acw-btn" id="hgG1B" style="min-width:26px;padding:0 6px" title="Chọn màu (ACI)">…</button></span>' +
+          '<span class="acw-w" id="hgG2W" style="display:flex;gap:4px;flex:1 1 50%"><input type="color" id="hgG2" value="' + esc(G.c2) + '" style="flex:1;height:24px;padding:0"><button type="button" class="acw-btn" id="hgG2B" style="min-width:26px;padding:0 6px" title="Chọn màu (ACI)">…</button></span>' +
+          '<span id="hgTW" style="display:flex;gap:4px;align-items:center;flex:1 1 50%"><span>Đậm</span><input type="range" id="hgTint" min="0" max="1" step="0.01" value="' + (G.tint != null ? G.tint : 0.75) + '" style="flex:1"><span>Nhạt</span></span></div>') +
+        '<div id="hgGK" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0">' + GRADS.map(([k, t]) => '<button type="button" class="bp-it' + (k === G.kind ? ' on' : '') + '" data-gk="' + k + '" title="' + esc(t) + '" style="padding:2px"><canvas data-w="120" data-h="54" width="120" height="54" style="width:120px;height:54px"></canvas></button>').join('') + '</div>' +
+        K.grp('Hướng', '<div class="acw-row">' + K.chk('hgGc', 'Căn giữa', G.ctr !== 0) + '<span class="l"></span><span>Góc:</span><input id="hgGa" list="hgAL" value="' + esc(G.ang || 0) + '" style="width:80px"></div>');
       const side = '<div class="c2" style="width:200px">' + K.grp('Biên', '<div class="acw-btncol">' + K.btn('hgPick', '⌖ Thêm: chọn điểm', { dis: !o.inCmd }) + K.btn('hgSel', '⬚ Thêm: chọn đối tượng', { dis: !o.inCmd }) + K.btn('hgRm', 'Bỏ biên', { dis: 1 }) + K.btn('hgRc', 'Dựng lại biên', { dis: 1 }) + '</div>') +
         K.grp('Tuỳ chọn', K.chk('hgAn', 'Chú thích theo tỉ lệ', 0, { dis: 1 }) + '<br>' + K.chk('hgAs', 'Liên kết biên', 1, { dis: 1, tip: 'Dùng HATCHASSOC' }) + '<br>' + K.chk('hgSep', 'Tạo hatch riêng từng vùng', 0, { dis: 1 }) +
           K.vrow('Thứ tự vẽ:', K.sel('hgDo', [['back', 'Đưa ra sau biên']], 'back', { dis: 1 }))) + '</div>';
-      const html = '<div class="acw" style="width:640px">' + '<div class="acw-cols"><div class="c1">' + K.tabs('hg', [['h', 'Hatch'], ['g', 'Gradient']], 'h') + '<div class="acw-panes" style="min-height:400px">' + K.pane('hg', 'h', 'h', hatchT) + K.pane('hg', 'g', 'h', gradT) + '</div></div>' + side + '</div></div>';
-      let done = false; const fin = v => { if(!done){ done = true; res(v); } };
-      const save = r => { HS.pat = K.val(r, 'hgP') || HS.pat; const sc = num(K.val(r, 'hgSc')); HS.scale = sc > 0 ? sc : 0; const an = num(K.val(r, 'hgA')); HS.ang = an != null ? an : 0; const c = K.val(r, 'hgC'); HS.col = c === 'BYLAYER' ? '' : c; if(A.hsSave) A.hsSave(); };
-      const d = A.dialog({ title: 'Hatch và Gradient', cls: 'acw-free', help: 'HATCH', html, left: K.btn('hgInh', 'Lấy theo hatch có sẵn', { dis: !o.inCmd }),
-        ok: r => { save(r); fin(true); }, cancel: () => fin(false) });
+      const html = '<div class="acw" style="width:640px">' + '<div class="acw-cols"><div class="c1">' + K.tabs('hg', [['h', 'Hatch'], ['g', 'Gradient']], tab0) + '<div class="acw-panes" style="min-height:400px">' + K.pane('hg', 'h', tab0, hatchT) + K.pane('hg', 'g', tab0, gradT) + '</div></div>' + side + '</div></div>';
+      let done = false, tab = tab0; const fin = v => { if(!done){ done = true; res(v); } };
+      const readG = r => { const one = K.radio(r, 'hgGm') === '1', c1 = r.querySelector('#hgG1').value, tint = +r.querySelector('#hgTint').value; const an = num(r.querySelector('#hgGa').value);
+        return { kind: (r.querySelector('#hgGK .on') || { dataset: { gk: 'LINEAR' } }).dataset.gk, c1, c2: one ? A.gradTint(c1, tint) : r.querySelector('#hgG2').value, one: one ? 1 : 0, tint, ctr: K.on(r, 'hgGc') ? 1 : 0, ang: an != null ? an : 0 }; };
+      const read = r => { const sc = num(K.val(r, 'hgSc')), an = num(K.val(r, 'hgA')), c = K.val(r, 'hgC'); return { pat: K.val(r, 'hgP') || V.pat, scale: sc > 0 ? sc : 0, ang: an != null ? an : 0, col: c === 'BYLAYER' ? '' : c, gmode: tab === 'g', grad: readG(r) }; };
+      const save = r => { const R = read(r); if(ed) return R; HS.pat = R.pat; HS.scale = R.scale; HS.ang = R.ang; HS.col = R.col; HS.gmode = R.gmode ? 1 : 0; HS.grad = R.grad; if(A.hsSave) A.hsSave(); return R; };
+      const d = A.dialog({ title: ed ? 'Sửa hatch' : 'Hatch và Gradient', cls: 'acw-free', help: ed ? 'HATCHEDIT' : 'HATCH', html, left: K.btn('hgInh', 'Lấy theo hatch có sẵn', { dis: !o.inCmd && !ed }),
+        ok: r => { const R = save(r); if(ed && A.applyHatchEdit) A.applyHatchEdit(ed, R); fin(ed ? R : true); }, cancel: () => fin(false) });
       const r = d.root; const sw = () => patSwatch(r.querySelector('#hgS'), K.val(r, 'hgP'), 2.2);
-      K.bindTabs(r); K.bindColors(r); r.querySelector('#hgP').onchange = sw; sw();
+      K.bindTabs(r, t => { tab = t; }); K.bindColors(r); r.querySelector('#hgP').onchange = sw; sw();
       const pal = () => patternPalette(K.val(r, 'hgP'), k => { r.querySelector('#hgP').value = k; sw(); });
       r.querySelector('#hgPB').onclick = pal; r.querySelector('#hgS').onclick = pal;
-      { const c = r.querySelector('#hgG'), g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 300, 0); gr.addColorStop(0, '#2f6db0'); gr.addColorStop(1, '#ffffff'); g.fillStyle = gr; g.fillRect(0, 0, 300, 60); }
-      r.querySelector('#hgGo').onclick = () => { save(r); d.close(); fin(false); setTimeout(() => DVDCmd.run('GRADIENT'), 0); };
+      const gpaint = () => { const g = readG(r); const one = g.one; r.querySelector('#hgG2W').style.display = one ? 'none' : 'flex'; r.querySelector('#hgTW').style.display = one ? 'flex' : 'none';
+        r.querySelectorAll('#hgGK [data-gk]').forEach(b => paintGrad(b.querySelector('canvas'), Object.assign({}, g, { kind: b.dataset.gk }))); };
+      r.querySelector('#hgGK').addEventListener('click', e => { const b = e.target.closest('[data-gk]'); if(!b) return; r.querySelectorAll('#hgGK [data-gk]').forEach(x => x.classList.toggle('on', x === b)); });
+      ['hgG1', 'hgG2', 'hgTint', 'hgGa'].forEach(id => r.querySelector('#' + id).addEventListener('input', gpaint)); r.addEventListener('change', e => { if(e.target.name === 'hgGm' || e.target.id === 'hgGc') gpaint(); });
+      const aci = (id, b) => () => { if(!A.aciPicker) return; A.aciPicker(r.querySelector('#' + b).getBoundingClientRect(), c => { if(!c || !/^#/.test(c)) return; r.querySelector('#' + id).value = c; gpaint(); }); };
+      r.querySelector('#hgG1B').onclick = aci('hgG1', 'hgG1B'); r.querySelector('#hgG2B').onclick = aci('hgG2', 'hgG2B'); gpaint();
       r.querySelector('#hgPick').onclick = () => { save(r); d.close(); fin('pick'); };
       r.querySelector('#hgSel').onclick = () => { save(r); d.close(); fin('sel'); };
-      r.querySelector('#hgInh').onclick = () => { save(r); d.close(); fin('pick'); setTimeout(() => { try{ DVDCmd.run('MATCHPROP'); }catch(_){} }, 0); };
+      r.querySelector('#hgInh').onclick = async () => { if(ed){ const e = await (A.pickEntDlg ? A.pickEntDlg(r, 'Chọn hatch mẫu (Esc = huỷ)', x => x.type === 'HATCH') : null); if(!e) return;
+          r.querySelector('#hgP').value = e.solid && !e.grad ? 'SOLID' : (e.pat || 'ANSI31'); r.querySelector('#hgSc').value = e.psc || 1; r.querySelector('#hgA').value = e.pang || 0; sw(); if(e.grad){ r.querySelector('#hgG1').value = e.grad.c1; r.querySelector('#hgG2').value = e.grad.c2; r.querySelector('[data-tab="g"]').click(); gpaint(); } return; }
+        save(r); d.close(); fin('pick'); setTimeout(() => { try{ DVDCmd.run('MATCHPROP'); }catch(_){} }, 0); };
     });
   }
   A.openHatchDialog = openHatch;
@@ -835,7 +864,7 @@
     A.ribbonAct('HCX_PICK', () => {}); A.ribbonAct('HCX_SEL', () => inp('S')); A.ribbonAct('HCX_SET', () => inp('T')); A.ribbonAct('HCX_UNDO', () => inp('U')); A.ribbonAct('HCX_CLOSE', () => inp(''));
     const big = (cmd, en, vi, icon) => ({ t: 'big', cmd, en, vi, icon }), sm = (cmd, en, vi, icon) => ({ t: 'sm', cmd, en, vi, icon });
     const gallery = { t: 'html', html: () => '<div class="hc-gal">' + Object.keys(A.PATS || {}).map(k => '<button type="button" data-k="' + k + '" class="' + (A.HS && A.HS.pat === k ? 'on' : '') + '" title="' + esc(A.PATS[k].name) + '"><canvas data-w="46" data-h="34" width="46" height="34" style="width:46px;height:34px"></canvas></button>').join('') + '</div>',
-      bind: el => { el.querySelectorAll('button[data-k]').forEach(b => { patSwatch(b.querySelector('canvas'), b.dataset.k, 2); b.onclick = () => { A.HS.pat = b.dataset.k; if(A.hsSave) A.hsSave(); el.querySelectorAll('button[data-k]').forEach(x => x.classList.toggle('on', x === b)); log('Mẫu hatch: ' + A.HS.pat); }; }); } };
+      bind: el => { el.querySelectorAll('button[data-k]').forEach(b => { patSwatch(b.querySelector('canvas'), b.dataset.k, 2); b.onclick = () => { A.HS.pat = b.dataset.k; A.HS.gmode = 0; if(A.hsSave) A.hsSave(); el.querySelectorAll('button[data-k]').forEach(x => x.classList.toggle('on', x === b)); log('Mẫu hatch: ' + A.HS.pat); }; }); } };
     const props = { t: 'html', html: () => { const H = A.HS || {}; return '<div class="hc-props">' + '<label>Kiểu<select data-p="type"><option value="pat"' + (H.pat !== 'SOLID' ? ' selected' : '') + '>Mẫu (Pattern)</option><option value="solid"' + (H.pat === 'SOLID' ? ' selected' : '') + '>Tô đặc (Solid)</option></select></label>' +
         '<label>Màu' + K.colorSel('hcC', H.col || 'BYLAYER', { noBlock: 1 }) + '</label><label>Góc<input data-p="ang" type="number" step="any" value="' + esc(H.ang || 0) + '"></label><label>Tỉ lệ<input data-p="scale" type="number" step="any" min="0" value="' + esc(H.scale || 0) + '" title="0 = tự động"></label></div>'; },
       bind: el => { const H = A.HS; const sv = () => { if(A.hsSave) A.hsSave(); };

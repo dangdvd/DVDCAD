@@ -575,7 +575,7 @@
     const P = w.x + ',' + w.y;
     if(b.dataset.s){ const s = (A.symbols || [])[+b.dataset.s]; if(s) A.run('SYMBOL', () => symbolAt(s, w)); return; }
     if(b.dataset.b){ const nm = b.dataset.b; const ents = A.instBlock(nm, 'lib', w, 1, 0); if(ents.length) A.commit({ add: ents }, 'Đã chèn khối ' + nm); return; }
-    if(b.dataset.h){ if(b.dataset.h === '__grad'){ feed('GRADIENT', [P, '']); return; } if(A.HS){ A.HS.pat = b.dataset.h; try{ localStorage.setItem('dvd:hatch', JSON.stringify(A.HS)); }catch(_){} } feed('HATCH', [P, '']); return; }
+    if(b.dataset.h){ if(b.dataset.h === '__grad'){ feed('GRADIENT', [P, '']); return; } if(A.HS){ A.HS.pat = b.dataset.h; A.HS.gmode = 0; try{ localStorage.setItem('dvd:hatch', JSON.stringify(A.HS)); }catch(_){} } feed('HATCH', [P, '']); return; }
     if(b.dataset.c){ DVDCmd.run(b.dataset.c); }
   }
   A.tpDrop = tpDrop;

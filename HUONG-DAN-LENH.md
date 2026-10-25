@@ -1,4 +1,4 @@
-# DVDCAD v5n — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5o — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,44 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Lệnh mới và hộp thoại như AutoCAD 2027 (v5o)
+- **TABLESTYLE** (hộp Table Style): danh sách kiểu, xem trước, Đặt hiện hành / Mới… / Sửa… / Xoá (không xoá được kiểu đang dùng).
+  - Hộp New / Modify Table Style: bảng bắt đầu (lấy định dạng từ bảng có sẵn), hướng bảng Xuống / Lên, xem trước.
+  - Kiểu ô **Tiêu đề / Tên cột / Dữ liệu** và kiểu ô riêng (Tạo kiểu ô mới, Quản lý kiểu ô). Mỗi kiểu ô có 3 tab:
+    - Chung: màu nền, căn lề (9 vị trí), định dạng (Chung, Số thập phân, Phần trăm, Tiền tệ, Số nguyên, Văn bản), loại, lề ngang / dọc, gộp ô.
+    - Chữ: kiểu chữ, cao chữ, màu chữ, góc chữ.
+    - Đường viền: bề rộng nét, kiểu nét, màu và 8 nút Mọi / Ngoài / Trong / Dưới / Trái / Trên / Phải / Không.
+  - Sửa kiểu thì mọi bảng dùng kiểu đó cập nhật theo. SCALE bảng thì chữ và lề đổi cỡ theo.
+- **TABLE** (hộp Insert Table): chọn kiểu bảng (nút … mở TABLESTYLE), bảng rỗng / dán từ Excel / liên kết dữ liệu / Data Extraction, xem trước, chèn theo điểm hoặc theo khung, cột × rộng cột, hàng dữ liệu × cao hàng (số dòng), kiểu ô hàng 1 / hàng 2 / các hàng còn lại. Hộp sửa bảng chọn được kiểu ô cho từng hàng. **MATCHCELL** chép kiểu ô sang ô khác.
+- **COUNT**: chọn một khối → thanh đếm trên bản vẽ (số bản chèn, ◀ ▶ duyệt từng bản chèn, Chèn trường, Tạo bảng, ✕). Tuỳ chọn Vùng / Model / Danh sách / Bảng.
+  - **COUNTLIST** mở bảng Count (ảnh khối, tên, số lượng; bấm để đếm, kích đúp để phóng tới). **COUNTFIELD** chèn trường đếm tự cập nhật khi thêm / xoá khối. **COUNTCLOSE** đóng.
+- **BREPLACE** (Express Tools): thay mọi bản chèn khối A bằng khối B, giữ điểm chèn, tỉ lệ, góc, lớp; có xem trước và tuỳ chọn dọn định nghĩa khối cũ.
+- **ADDSELECTED**: chọn một đối tượng → vẽ đối tượng mới cùng loại và cùng lớp, màu, kiểu nét, bề rộng nét, kiểu chữ, mẫu hatch, kiểu bảng (khối thì chèn đúng khối đó).
+- **SYSVDLG** (System Variables): nhóm biến, tìm, sửa giá trị tại chỗ, mô tả, khôi phục giá trị đầu phiên. **SETVAR** hỏi theo dòng lệnh như AutoCAD (`?` = mở SYSVDLG).
+- **SCALELISTEDIT** (Edit Drawing Scales): thêm / sửa / lên / xuống / xoá / đặt lại danh sách tỉ lệ; ô ▲ tỉ lệ chú thích trên thanh trạng thái dùng danh sách này.
+  - **OBJECTSCALE**: thêm / xoá tỉ lệ hỗ trợ cho đối tượng chú thích. **ANNOALLVISIBLE** = 0 chỉ hiện đối tượng hỗ trợ tỉ lệ hiện hành. **ANNORESET**, **ANNOUPDATE**.
+- **UCSMAN** (hộp UCS): UCS đặt tên (Đặt hiện hành, Lưu UCS hiện hành, Đổi tên, Xoá, Chi tiết), UCS trực giao (Trên / Dưới / Trước / Sau / Trái / Phải, độ sâu), Cài đặt.
+- **HYPERLINK** (Insert / Edit Hyperlink): liên kết tới tệp hoặc trang web (tệp gần đây, trang đã duyệt, liên kết đã chèn), góc nhìn của bản vẽ, e-mail; chữ hiển thị; đích trong bản vẽ; Bỏ liên kết.
+  - Rê chuột lên đối tượng có liên kết hiện gợi ý; **Ctrl + bấm** để mở. **ATTACHURL** (đối tượng / vùng), **DETACHURL**, **PASTEASHYPERLINK**, **HYPERLINKOPTIONS**, **-HYPERLINK**, **OPENLINK** / **GOTOURL**.
+- **Action Recorder** (ribbon Manage → Ghi thao tác): **ACTRECORD** ghi lệnh và điểm / số / chữ / từ khoá đã nhập; khi ghi có thanh nổi (Thông báo, Yêu cầu nhập, Điểm gốc, Dừng).
+  - **ACTSTOP** lưu macro (tên lệnh, mô tả, khôi phục góc nhìn, danh sách bước, đánh dấu bước "Hỏi" người dùng). Gõ tên macro để chạy lại.
+  - **ACTMANAGER**: Chạy, Sao chép, Đổi tên, Sửa, Xoá, Xuất / Nhập .actm. **ACTUSERMESSAGE**, **ACTUSERINPUT**, **ACTBASEPOINT**.
+- Script: **RSCRIPT** lặp lại script, **Esc / Backspace** ngắt script, **RESUME** chạy tiếp, **SCRIPTCALL** chạy script lồng.
+- Lệnh nhỏ: **GOTOSTART**, **FILETAB / FILETABCLOSE**, **QVDRAWING / QVLAYOUT** (+ CLOSE), **BROWSER**, **VIEWGO**, **VIEWPLAY**, **GRAPHICSCONFIG**, **WSSAVE / WSSETTINGS / WORKSPACE** (Đặt hiện hành / Lưu thành / Đổi tên / Xoá / Cài đặt), **CLASSICXREF**, **CLASSICIMAGE**, **CLASSICGROUP** (hộp Object Grouping: tạo nhóm tên / không tên, chọn được, thêm / bớt, đổi tên, mô tả, rã nhóm), **RESETBLOCK**, **BSAVE**, **ADJUST**, **EXTERNALREFERENCESCLOSE**, **VISUALSTYLESCLOSE**, **PARAMETERSCLOSE**, **ADCCLOSE**, **DRAWINGRECOVERYHIDE**.
+- Hộp thoại làm lại theo bố cục AutoCAD:
+  - **FILTER** (Object Selection Filters): danh sách điều kiện, chọn điều kiện + toán tử (= != < <= > >= *), X / Y cho điểm, nhóm `** Begin/End AND / OR / XOR / NOT`, Thêm đối tượng đã chọn, bộ lọc đặt tên. Apply rồi chọn vùng cần lọc.
+  - **ALIASEDIT** (acad.pgp – Alias Editor): mọi lệnh tắt acad.pgp + lệnh tắt riêng, Thêm / Xoá / Sửa, nhập / xuất acad.pgp.
+  - **SPELL** (Check Spelling): nơi kiểm tra, từ không có trong từ điển, gợi ý, ngữ cảnh (phóng tới chữ), Bỏ qua / Bỏ qua tất cả / Thay / Thay tất cả / Thêm vào từ điển, Hoàn tác, Cài đặt, Từ điển riêng.
+  - **APPLOAD** (Load / Unload Applications): nạp tệp, Ứng dụng đã nạp / Lịch sử, Gỡ nạp, Startup Suite.
+  - **LAYTRANS** (Layer Translator): Chuyển từ / Chuyển sang, Ánh xạ / Ánh xạ cùng tên, nạp lớp chuẩn từ DXF, lớp mới, bảng ánh xạ, Cài đặt (đổi màu / kiểu nét về BYLAYER).
+  - **LAYWALK** (LayerWalk): bảng nổi, chọn lớp (Ctrl / Shift) chỉ hiện lớp đó, kích đúp để giữ lớp (*), lọc, Chọn đối tượng, Dọn lớp, chuột phải (Giữ / Bỏ giữ / Chọn tất cả / Đảo chọn / Lớp không dùng / Lưu trạng thái lớp), Khôi phục khi thoát.
+  - **PUBLISH**: danh sách trang (thêm / bỏ / lên / xuống, lưu / nạp danh sách), xem trước, dấu in, mở PDF khi xong.
+  - **DDVPOINT** (Viewpoint Presets): 2 vòng chọn góc (từ trục X, so với mặt XY), Đặt về mặt bằng.
+  - **VPORTS** (Viewports): khung nhìn chuẩn có xem trước, lưu / gọi khung nhìn đặt tên (bản dòng lệnh: **-VPORTS**).
+  - **PARAMETERS** (Parameters Manager): bảng nổi gồm tham số ràng buộc kích thước và **tham số người dùng** (dùng được trong biểu thức), sửa tên / biểu thức tại chỗ, đổi tên thì biểu thức đổi theo.
+  - **INPUTSEARCHOPTIONS** (Input Search Options), **Load or Reload Linetypes** (đọc thêm tệp **.lin** riêng).
+  - **Hatch và Gradient**: tab Gradient đủ 9 kiểu chuyển màu (Linear, Cylinder, Spherical, Hemispherical, Curved và kiểu ngược), một màu (Đậm — Nhạt) / hai màu, căn giữa, góc. **GRADIENT** tô chuyển màu như HATCH; **HATCHEDIT** mở chính hộp này để sửa hatch đã chọn.
 
 ## Chữ định dạng, trường, cột, MLSTYLE và BATTMAN như AutoCAD 2027 (v5n)
 - **MTEXT có định dạng như AutoCAD:** bôi đen rồi bấm **B / I / U / Ō** (hoặc **Ctrl+B / Ctrl+I / Ctrl+U**) để đậm, nghiêng, gạch chân, gạch trên đúng phần chữ đã chọn.

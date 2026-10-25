@@ -6,6 +6,20 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5o: lệnh mới và hộp thoại như AutoCAD 2027 (TABLESTYLE, COUNT, Action Recorder, hyperlink…)
+- Tệp mới `dvd-acad-dlg2.js` (nạp sau `dvd-acad-dlg.js`), dùng bộ dựng hộp thoại `A.acw`.
+- Kiểu bảng: thư viện `A.TBS` (localStorage `dvd:tblstyle`). Bảng mang ảnh chụp kiểu `tbld.tss` (+ `ts` tên kiểu, `rs` kiểu ô từng hàng, `cs` kiểu ô từng ô, `tsf` hệ số SCALE).
+  - `A.tblBuild` dựng bảng theo kiểu: nền ô gộp vùng cùng màu, viền trong / ngoài theo kiểu ô, căn lề 9 vị trí, định dạng số (`A.tblFmt`). `A.tblCellAt` tìm ô theo điểm.
+- COUNT: thanh đếm, bảng Count (`A.countBlocks`), trường đếm `fld = { k: 'count', blk }` tự cập nhật sau mỗi `A.commit`.
+- Tỉ lệ chú thích: `A.scaleList` / `A.scaleName` (SCALELISTEDIT), `e.ascl` (OBJECTSCALE), cờ vẽ `e.avh` khi ANNOALLVISIBLE = 0. Biến mới ANNOALLVISIBLE, CTABLESTYLE.
+- Siêu liên kết thống nhất ở `e.url` (+ `urld` chữ hiển thị, `urlsub` góc nhìn đích); XDATA lưu thêm `urld`, `urlsub`, `ascl`, `gns`, `gdsc`.
+- Action Recorder: lõi gọi `A.onReqRes(req, v)` mỗi khi một lời nhắc nhận giá trị; macro lưu ở `dvd:actm`, đăng ký thành lệnh theo tên. Script ngắt được (Esc / Backspace) và chạy tiếp (`A.runScriptToks`).
+- Nhóm: `e.gns` = nhóm không chọn cả nhóm (`A.expandGroups` bỏ qua), `e.gdsc` mô tả; nhóm đặt tên dùng `blk = '*G:<tên>'` (CLASSICGROUP).
+- Gradient: `A.gradFill` vẽ 9 kiểu chuyển màu của AutoCAD; `HS.gmode` / `HS.grad` cho HATCH / GRADIENT; `A.applyHatchEdit` cho HATCHEDIT.
+- Tham số người dùng của Parameters Manager lưu ở `dvd:userpar::<bản vẽ>` và tham gia giải biểu thức ràng buộc.
+- Hộp thoại kiểu cũ đã làm lại: FILTER, ALIASEDIT, SPELL, APPLOAD, LAYTRANS, LAYWALK, PUBLISH, DDVPOINT, VPORTS, PARAMETERS, INPUTSEARCHOPTIONS, Load or Reload Linetypes (`A.parseLin`, `A.defineLT`), Hatch Edit.
+- Ribbon: Manage → Action Recorder, Applications (APPLOAD, Graphics Performance), System Variables = SYSVDLG; Annotate → Tables (Table Style, Match Cell), Annotation Scaling (Add/Delete Scales, Scale List); View → Palettes (Count, Quick View); Express Tools → Blocks (Replace Block, Reset Block); Insert → Hyperlink.
+
 ## v5n: chữ định dạng, trường, cột, MLSTYLE đủ mục, BATTMAN như AutoCAD 2027
 - Chữ có định dạng (`dvd-acad-dlg.js`):
   - Lưu theo từng đoạn: `e.rt` = `[{ t, b, i, u, o, f }]`; `e.rtx` = chữ lúc gán (chữ bị sửa ở nơi khác thì bỏ định dạng).

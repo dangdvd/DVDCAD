@@ -360,7 +360,7 @@
   A.expandGroups = function(set){
     if(SET.pickGroup === false) return set;
     let has = false; for(const e of set) if(e && e.grp){ has = true; break; } if(!has) return set;
-    const m = groupMap(); for(const e of [...set]){ if(e && e.grp){ const a = m.get(e.grp); if(a) for(const x of a) if(!isHiddenB(x)) set.add(x); } }   // phần khối bị XCLIP ẩn vẫn đi theo khối (dời, xoá, phá khối)
+    const m = groupMap(); for(const e of [...set]){ if(e && e.grp && !e.gns){ const a = m.get(e.grp); if(a) for(const x of a) if(!isHiddenB(x)) set.add(x); } }   // phần khối bị XCLIP ẩn vẫn đi theo khối (dời, xoá, phá khối)
     return set;
   };
   A.filterSel = function(arr){ return arr.filter(e => e && !isLockedE(e) && !isHiddenB(e)); };
@@ -699,7 +699,7 @@
     if(!r && mouseIn && mouse && !win){ const gh = gripHit(mouse); if(gh){ const P = toScreen(gh.x, gh.y); cC.fillStyle = '#ff5fd2'; cC.fillRect(Math.round(P.x) - 5, Math.round(P.y) - 5, 10, 10); } }
     // làm nổi đối tượng dưới con trỏ (xem trước lựa chọn)
     if(hoverEnt && mouseIn && (!r || r.type === 'sel') && !win){
-      if(hoverEnt !== _hovFor){ _hovFor = hoverEnt; _hovSet = hoverEnt.grp && SET.pickGroup !== false ? A.groupMembers(hoverEnt.grp) : [hoverEnt]; }
+      if(hoverEnt !== _hovFor){ _hovFor = hoverEnt; _hovSet = hoverEnt.grp && !hoverEnt.gns && SET.pickGroup !== false ? A.groupMembers(hoverEnt.grp) : [hoverEnt]; }
       let n = 0; for(const e of _hovSet){ if(n++ > 1500) break; drawEntOn(cC, e, '#9fd0ff', 2.6, []); }
     }
     if(r && r.type === 'sel' && cur.poly && cur.poly.pts.length){ const P = cur.poly, pts = P.pts.map(q => toScreen(q.x, q.y)); if(mouse) pts.push(mouse);
@@ -887,7 +887,8 @@
     const c = cur;
     ttPts.length = 0;
     return new Promise((res, rej) => {
-      req.res = v => { if(c.req === req) c.req = null; try{ echoReq(req); }catch(_){} if(v && v.pt && (req.type === 'pt' || req.type === 'dist' || req.type === 'ang')) A.lastPoint = { x: v.pt.x, y: v.pt.y }; res(v); };
+      req.res = v => { if(c.req === req) c.req = null; try{ echoReq(req); }catch(_){} try{ if(A.onReqRes) A.onReqRes(req, v, c); }catch(_){}   // ghi macro hành động (ACTRECORD)
+        if(v && v.pt && (req.type === 'pt' || req.type === 'dist' || req.type === 'ang')) A.lastPoint = { x: v.pt.x, y: v.pt.y }; res(v); };
       req.rej = rej; c.req = req; A.reqSeq = (A.reqSeq || 0) + 1;   // số thứ tự lời nhắc (LISP (command …) chờ lời nhắc kế tiếp)
       if(req.type === 'sel'){ c.sel = new Set(); c.poly = null; }
       lastPt = mouse ? computePoint(mouse, req, lastTouch) : null;
@@ -1577,7 +1578,7 @@
   window.scaleEnt = function(e, f, c){
     if(e.dimd) xfDim(e.dimd, p => _sclPt(p, c, f), null, f);
     if(e.bip) e.bip = _sclPt(e.bip, c, f);
-    if(e.tbld){ const T = e.tbld; T.o = _sclPt(T.o, c, f); T.cw = T.cw.map(v => v * f); T.rh = T.rh.map(v => v * f); T.th *= f; }
+    if(e.tbld){ const T = e.tbld; T.o = _sclPt(T.o, c, f); T.cw = T.cw.map(v => v * f); T.rh = T.rh.map(v => v * f); T.th *= f; if(T.tss) T.tsf = (T.tsf || 1) * f; }
     if(e.bm){ const m = e.bm, q = _sclPt({ x: m.e, y: m.f }, c, f); e.bm = Object.assign({}, m, { a: m.a * f, b: m.b * f, c: m.c * f, d: m.d * f, e: q.x, f: q.y }); }
     if(e.type === 'ELLIPSE'){ const q = _sclPt({ x: e.cx, y: e.cy }, c, f); e.cx = q.x; e.cy = q.y; e.mx *= f; e.my *= f; return; }
     if(e.type === 'HATCH'){ for(const lp of (e.loops || [])) for(let i = 0; i < lp.length; i++) lp[i] = _sclPt(lp[i], c, f); if(e.psc) e.psc *= f; return; }

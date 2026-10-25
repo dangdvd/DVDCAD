@@ -93,11 +93,17 @@
     return v;
   }
   // giá trị mọi ràng buộc kích thước (theo tên), phát hiện vòng lặp
+  // tham số người dùng (User Parameters của Parameters Manager): { name, expr } — dùng được trong biểu thức ràng buộc
+  const usrKey = () => 'dvd:userpar::' + docName();
+  const userPars = () => { try{ return JSON.parse(localStorage.getItem(usrKey()) || '[]') || []; }catch(_){ return []; } };
+  const saveUser = L => { try{ if(L.length) localStorage.setItem(usrKey(), JSON.stringify(L)); else localStorage.removeItem(usrKey()); }catch(_){} };
   function values(list){
     const by = new Map(list.filter(isDim).map(c => [String(c.name).toLowerCase(), c])), out = new Map(), busy = new Set();
+    for(const u of userPars()){ const k = String(u.name).toLowerCase(); if(!by.has(k)) by.set(k, { name: u.name, expr: u.expr, user: 1 }); }
     const look = n => { const k = n.toLowerCase(); if(out.has(k)) return out.get(k); const c = by.get(k); if(!c) throw new Error('Không có tham số ' + n);
       if(busy.has(k)) throw new Error('Tham số tham chiếu vòng: ' + n); busy.add(k); const v = evalExpr(c.expr, look); busy.delete(k); out.set(k, v); return v; };
     for(const c of list) if(isDim(c)) look(c.name);
+    for(const u of userPars()){ try{ look(u.name); }catch(_){} }
     return out;
   }
   const valOf = (c, V) => V.get(String(c.name).toLowerCase());
@@ -347,28 +353,50 @@
   });
   plain(['CONSTRAINTBAR', 'CBAR'], 'Hiện / ẩn ký hiệu ràng buộc', () => { BAR = !BAR; try{ localStorage.setItem('dvd:consbar', BAR ? '1' : '0'); }catch(_){} log('Ký hiệu ràng buộc: ' + (BAR ? 'hiện' : 'ẩn')); try{ draw(); }catch(_){} });
 
-  // ---- PARAMETERS: bảng tham số ----
-  plain(['PARAMETERS', 'PAR'], 'Bảng tham số: sửa giá trị / biểu thức của ràng buộc kích thước', () => {
+  // ---- PARAMETERS — Parameters Manager (như AutoCAD 2027): tham số ràng buộc kích thước + tham số người dùng, sửa tên / biểu thức tại chỗ ----
+  let parD = null;
+  function paramsMgr(){
     if(!A.hasDoc()){ say('Mở hoặc tạo bản vẽ trước.'); return; }
-    const L = liveCons().filter(isDim); let V = new Map(); try{ V = values(L); }catch(_){}
-    const rows = L.map(c => '<tr data-id="' + esc(c.id) + '"><td><input class="pn" value="' + esc(c.name) + '" style="width:80px"></td><td><input class="pe" value="' + esc(c.expr) + '" style="width:160px"></td><td class="pv">' + (V.has(String(c.name).toLowerCase()) ? fmtV(valOf(c, V)) + (c.t === 'ang' ? '°' : '') : '—') + '</td><td>' + esc(KIND[c.t]) + '</td><td><button type="button" data-x="' + esc(c.id) + '" title="Xoá ràng buộc">✕</button></td></tr>').join('');
-    A.dialog({ title: 'Bảng tham số (PARAMETERS)', wide: true, okText: 'Áp dụng',
-      html: L.length ? '<div class="lm-tbl"><table><thead><tr><th>Tên</th><th>Biểu thức</th><th>Giá trị</th><th>Loại</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div><p class="dvd-note">Biểu thức dùng tên tham số khác, vd <b>d1*2</b>, <b>d1+300</b>, <b>sqrt(d1^2+d2^2)</b>.</p><p class="dvd-note" id="parErr" style="color:#ff8a80"></p>'
-        : '<p class="dvd-note">Bản vẽ chưa có ràng buộc kích thước. Dùng DCALIGNED, DCHORIZONTAL, DCVERTICAL, DCRADIUS, DCDIAMETER, DCANGULAR để thêm.</p>',
-      onOpen: root => { root.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => e.stopPropagation()));
-        root.addEventListener('click', e => { const x = e.target.closest('[data-x]'); if(!x) return; const tr = x.closest('tr'); tr.dataset.del = '1'; tr.style.opacity = '.35'; }); },
-      ok: root => {
-        const edits = new Map(), dels = new Set();
-        root.querySelectorAll('tr[data-id]').forEach(tr => { const id = tr.dataset.id; if(tr.dataset.del){ dels.add(id); return; } edits.set(id, { name: tr.querySelector('.pn').value.trim(), expr: tr.querySelector('.pe').value.trim() }); });
-        const next = deep(CONS).filter(c => !dels.has(c.id)); for(const c of next){ const e = edits.get(c.id); if(e){ c.name = e.name; c.expr = e.expr; } }
-        const names = next.filter(isDim).map(c => String(c.name).toLowerCase()); const er = root.querySelector('#parErr');
-        if(names.some(n => !/^[a-z_][a-z0-9_]*$/.test(n))){ if(er) er.textContent = 'Tên chỉ gồm chữ, số, dấu _ và bắt đầu bằng chữ.'; return false; }
-        if(new Set(names).size !== names.length){ if(er) er.textContent = 'Tên tham số bị trùng.'; return false; }
-        try{ const M = liveMap(); const v = values(next.filter(c => cidsOf(c).every(id => M.has(id)))); for(const x of v.values()) if(!(x >= 0)) throw new Error('Giá trị phải ≥ 0'); }catch(err){ if(er) er.textContent = err.message; return false; }
-        const changed = next.filter(c => { const o = CONS.find(x => x.id === c.id); return o && (o.expr !== c.expr || o.name !== c.name); });
-        change(Lc => { Lc.length = 0; Lc.push(...next); }, changed.flatMap(cidsOf), 'Đã áp dụng bảng tham số');
-      } });
-  });
+    if(parD && document.body.contains(parD.root)){ parD.render(); return; }
+    const K = A.acw; let sel = null, q = '', openG = { d: 1, u: 1 };
+    const html = '<div class="acw" style="width:520px"><div class="lm-tb"><button type="button" id="pmNew" title="Tạo tham số người dùng mới">ƒx＋</button><button type="button" id="pmDel" title="Xoá tham số">✕</button><span class="sp"></span><input id="pmQ" placeholder="Tìm tham số…" style="flex:1"></div>' +
+      '<div class="lm-grid" style="height:300px"><table><thead><tr><th style="width:120px">Tên</th><th>Biểu thức</th><th style="width:100px">Giá trị</th></tr></thead><tbody id="pmB"></tbody></table></div><div class="acw-note" id="pmE" style="color:#ff8a80;min-height:16px"></div>' +
+      '<div class="acw-note">Biểu thức dùng tên tham số khác, vd <b>d1*2</b>, <b>d1+300</b>, <b>sqrt(d1^2+d2^2)</b>, <b>rong/2</b>.</div></div>';
+    const d = A.dialog({ title: 'Quản lý tham số', cls: 'acw-free', help: 'PARAMETERS', html, modeless: true, noOk: true, cancelText: 'Đóng', cancel: () => { parD = null; } });
+    const root = d.root, $ = id => root.querySelector('#' + id), err = m => { $('pmE').textContent = m || ''; };
+    const okName = n => /^[a-z_][a-z0-9_]*$/i.test(n);
+    function render(){ const L = liveCons().filter(isDim), U = userPars(); let V = new Map(); try{ V = values(liveCons()); }catch(e){ err(e.message); }
+      const qq = q.trim().toLowerCase(), m = x => !qq || String(x.name).toLowerCase().includes(qq) || String(x.expr).toLowerCase().includes(qq);
+      const row = (id, x, kind, unit) => '<tr data-id="' + esc(id) + '" data-kind="' + kind + '"' + (id === sel ? ' class="sel"' : '') + '><td><input class="pn" value="' + esc(x.name) + '" style="width:110px;height:20px;box-sizing:border-box"></td><td><input class="pe" value="' + esc(x.expr) + '" style="width:100%;height:20px;box-sizing:border-box"></td><td translate="no">' + (V.has(String(x.name).toLowerCase()) ? fmtV(V.get(String(x.name).toLowerCase())) + (unit || '') : '—') + '</td></tr>';
+      const head = (k, t, n) => '<tr data-g="' + k + '"><td colspan="3" style="background:#343c4a;cursor:pointer"><b>' + (openG[k] ? '▾ ' : '▸ ') + t + '</b> <span style="color:#9aa6ba">(' + n + ')</span></td></tr>';
+      $('pmB').innerHTML = head('d', 'Tham số ràng buộc kích thước', L.length) + (openG.d ? L.filter(m).map(c => row(c.id, c, 'd', c.t === 'ang' ? '°' : '')).join('') : '') + head('u', 'Tham số người dùng', U.length) + (openG.u ? U.filter(m).map((u, i) => row('u' + i, u, 'u')).join('') : '');
+      $('pmDel').disabled = !sel; }
+    d.render = render; parD = d;
+    function applyEdit(tr){ const id = tr.dataset.id, kind = tr.dataset.kind, nm = tr.querySelector('.pn').value.trim(), ex = tr.querySelector('.pe').value.trim(); err('');
+      if(!okName(nm)){ err('Tên chỉ gồm chữ, số, dấu _ và bắt đầu bằng chữ.'); return; } if(!ex){ err('Biểu thức không được trống.'); return; }
+      const dims = liveCons().filter(isDim), U = userPars(); const names = dims.map(c => c.id === id ? nm : c.name).concat(U.map((u, i) => 'u' + i === id ? nm : u.name)).map(x => String(x).toLowerCase());
+      if(new Set(names).size !== names.length){ err('Tên tham số bị trùng.'); return; }
+      if(kind === 'u'){ const i = +id.slice(1), old = U[i]; if(!old) return; const U2 = U.slice(); U2[i] = { name: nm, expr: ex };
+        const prev = JSON.stringify(U); saveUser(U2); try{ const M = liveMap(); const v = values(CONS.filter(c => cidsOf(c).every(x => M.has(x)))); for(const x of v.values()) if(!(x >= 0) && !(x < 0)) throw new Error('Giá trị không hợp lệ'); }catch(e){ saveUser(JSON.parse(prev)); err(e.message); render(); return; }
+        // đổi tên tham số người dùng → đổi theo trong biểu thức các ràng buộc
+        const ren = old.name !== nm, src = '\\b' + old.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', re = new RegExp(src, 'gi'), reT = new RegExp(src, 'i');
+        const seeds = CONS.filter(c => isDim(c) && reT.test(String(c.expr))).flatMap(cidsOf);
+        change(Lc => { if(ren) for(const c of Lc) if(isDim(c)) c.expr = String(c.expr).replace(re, nm); }, seeds, 'Tham số người dùng ' + nm + ' = ' + ex); render(); return; }
+      const next = deep(CONS); const c = next.find(x => x.id === id); if(!c) return; const oldName = c.name; c.name = nm; c.expr = ex;
+      if(oldName !== nm){ const re = new RegExp('\\b' + String(oldName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'); for(const x of next) if(isDim(x) && x !== c) x.expr = String(x.expr).replace(re, nm); }
+      try{ const M = liveMap(); const v = values(next.filter(x => cidsOf(x).every(k => M.has(k)))); for(const x of v.values()) if(!(x >= 0)) throw new Error('Giá trị phải ≥ 0'); }catch(e){ err(e.message); render(); return; }
+      change(Lc => { Lc.length = 0; Lc.push(...next); }, cidsOf(c), 'Đã đổi tham số ' + nm + ' = ' + ex); render(); }
+    $('pmB').addEventListener('change', e => { const tr = e.target.closest('tr[data-id]'); if(tr) applyEdit(tr); });
+    $('pmB').addEventListener('keydown', e => { e.stopPropagation(); if(e.key === 'Enter'){ const tr = e.target.closest('tr[data-id]'); if(tr){ e.preventDefault(); e.target.blur(); } } }, true);
+    $('pmB').addEventListener('click', e => { const g = e.target.closest('tr[data-g]'); if(g){ openG[g.dataset.g] = !openG[g.dataset.g]; render(); return; } const tr = e.target.closest('tr[data-id]'); if(tr && sel !== tr.dataset.id){ sel = tr.dataset.id; root.querySelectorAll('#pmB tr.sel').forEach(x => x.classList.remove('sel')); tr.classList.add('sel'); $('pmDel').disabled = false; } });
+    $('pmQ').addEventListener('input', () => { q = $('pmQ').value; render(); }); $('pmQ').addEventListener('keydown', e => e.stopPropagation());
+    $('pmNew').onclick = () => { const U = userPars(); const used = new Set(liveCons().filter(isDim).map(c => String(c.name).toLowerCase()).concat(U.map(u => String(u.name).toLowerCase()))); let i = 1; while(used.has('user' + i)) i++; U.push({ name: 'user' + i, expr: '1' }); saveUser(U); openG.u = 1; sel = 'u' + (U.length - 1); render(); };
+    $('pmDel').onclick = () => { if(!sel) return; if(sel[0] === 'u' && !CONS.some(c => c.id === sel)){ const U = userPars(), i = +sel.slice(1), u = U[i]; if(!u) return; const re = new RegExp('\\b' + u.name + '\\b', 'i'); if(CONS.some(c => isDim(c) && re.test(String(c.expr)))){ err('Tham số "' + u.name + '" đang được dùng trong biểu thức.'); return; } U.splice(i, 1); saveUser(U); sel = null; render(); return; }
+      const c = CONS.find(x => x.id === sel); if(!c) return; change(L => { const k = L.findIndex(x => x.id === sel); if(k >= 0) L.splice(k, 1); }, [], 'Đã xoá ràng buộc ' + c.name); sel = null; render(); };
+    render();
+  }
+  plain(['PARAMETERS', 'PAR'], 'Quản lý tham số (Parameters Manager): tham số ràng buộc kích thước và tham số người dùng, sửa tên / biểu thức', () => paramsMgr());
+  { const _c = A.commit; A.commit = function(){ const r = _c.apply(this, arguments); if(parD && !solving) setTimeout(() => { try{ if(parD) parD.render(); }catch(_){} }, 30); return r; }; }
 
   /* =====================================================================
      7) KÝ HIỆU RÀNG BUỘC (CONSTRAINTBAR) + nhãn ràng buộc kích thước

@@ -294,7 +294,7 @@
     tp.querySelector('.tp-b').onclick = e => { const b = e.target.closest('button'); if(!b) return; if(A.busy()) A.cancel(true);
       if(b.dataset.c) DVDCmd.run(b.dataset.c);
       else if(b.dataset.s) A.run('SYMBOL', () => placeSymbol(SYMS[+b.dataset.s]));
-      else if(b.dataset.h){ if(b.dataset.h === '__grad') DVDCmd.run('GRADIENT'); else { if(A.HS){ A.HS.pat = b.dataset.h; try{ localStorage.setItem('dvd:hatch', JSON.stringify(A.HS)); }catch(_){} } DVDCmd.run('HATCH'); log('Mẫu hatch: ' + b.dataset.h); } }
+      else if(b.dataset.h){ if(b.dataset.h === '__grad') DVDCmd.run('GRADIENT'); else { if(A.HS){ A.HS.pat = b.dataset.h; A.HS.gmode = 0; try{ localStorage.setItem('dvd:hatch', JSON.stringify(A.HS)); }catch(_){} } DVDCmd.run('HATCH'); log('Mẫu hatch: ' + b.dataset.h); } }
       else if(b.dataset.b){ const nm = b.dataset.b; A.run('INSERT', async () => { const r = await A.getPoint('Điểm chèn khối "' + nm + '"', { rubber: false, preview: (g, p) => g.ents(A.instBlock(nm, 'lib', p, 1, 0).slice(0, 1500), '#cfe3ff') }); if(!r.pt) return; const ents = A.instBlock(nm, 'lib', r.pt, 1, 0); if(ents.length) A.commit({ add: ents }, 'Đã chèn khối ' + nm); }); } };
     // kéo để dời bảng
     const h = tp.querySelector('.tp-h'); let drag = null; h.addEventListener('pointerdown', e => { if(e.target.closest('button')) return; drag = { x: e.clientX - tp.offsetLeft, y: e.clientY - tp.offsetTop }; h.setPointerCapture(e.pointerId); });

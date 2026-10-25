@@ -144,13 +144,15 @@
   // ô ▲ 1:N trên thanh trạng thái (như Annotation Scale của AutoCAD)
   const SCALES = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000];
   let annoBtn = null;
-  function syncAnnoBtn(){ if(annoBtn){ annoBtn.innerHTML = '▲ 1:' + (+ANNO.N.toFixed(4)); annoBtn.classList.toggle('on', ANNO.auto); } }
+  function syncAnnoBtn(){ if(annoBtn){ const nm = A.scaleName ? A.scaleName(ANNO.N) : '1:' + (+ANNO.N.toFixed(4)); annoBtn.innerHTML = '▲ ' + nm; annoBtn.classList.toggle('on', ANNO.auto); } try{ if(A.annoVis) A.annoVis(); }catch(_){} }
+  A.syncAnnoBtn = () => syncAnnoBtn();
   function buildAnnoBtn(){
     const sb = document.querySelector('#acadStatus .ac-sb'); if(!sb || annoBtn) return;
     annoBtn = document.createElement('button'); annoBtn.dataset.x = 'anno'; annoBtn.title = 'Tỉ lệ chú thích (CANNOSCALE) — bấm để chọn';
     const lwt = sb.querySelector('[data-x="lwt"]'); sb.insertBefore(annoBtn, lwt ? lwt.previousSibling : null);
     annoBtn.addEventListener('click', e => { e.stopPropagation(); const r = annoBtn.getBoundingClientRect();
-      A.menu(r.left - 60, r.top - 420, [{ hd: 'TỈ LỆ CHÚ THÍCH' }].concat(SCALES.map(N => ({ t: '1:' + N + (N === ANNO.N ? '  ✓' : ''), fn: () => setScale(N) })),
+      const SL = A.scaleList ? A.scaleList().map(s => [s.d / s.p, s.name]) : SCALES.map(N => [N, '1:' + N]);   // danh sách tỉ lệ (SCALELISTEDIT)
+      A.menu(r.left - 60, Math.max(4, r.top - 24 - SL.length * 26), [{ hd: 'TỈ LỆ CHÚ THÍCH' }].concat(SL.map(([N, t]) => ({ t: t + (Math.abs(N - ANNO.N) < 1e-9 ? '  ✓' : ''), fn: () => setScale(N) })),
         [{ sep: 1 }, { t: 'Tuỳ chỉnh…', fn: () => DVDCmd.run('CANNOSCALE') }, { t: (ANNO.auto ? '✓ ' : '') + 'Tự gán chú thích cho đối tượng mới', fn: () => { ANNO.auto = !ANNO.auto; annoSave(); } }])); }, true);
     syncAnnoBtn();
   }

@@ -65,7 +65,33 @@
     if(i >= 0 && i !== VP.active){ activateTile(i); e.preventDefault(); e.stopImmediatePropagation(); }
   }, true);
   A.onLoad = (function(prev){ return function(){ VP.tiles = null; VP.active = 0; if(prev) prev(); }; })(A.onLoad);
-  cmd(['VPORTS', 'VIEWPORTS'], 'Chia màn hình Model thành nhiều khung nhìn (1, 2, 3, 4) — bấm vào khung để làm hiện hành', async () => {
+  // VPORTS — hộp Viewports như AutoCAD: Khung nhìn mới (cấu hình chuẩn, xem trước, đặt tên) · Khung nhìn đặt tên
+  const VPN = [['*ACTIVE*', 'Cấu hình Model hiện hành'], ['1', 'Một khung'], ['2V', 'Hai: Dọc'], ['2H', 'Hai: Ngang'], ['3R', 'Ba: Phải'], ['3L', 'Ba: Trái'], ['3V', 'Ba: Dọc'], ['4', 'Bốn: Bằng nhau']];
+  const vpKey = () => 'dvd:vpnamed::' + ((typeof currentName === 'string' && currentName) || '');
+  const vpNamed = () => { try{ return JSON.parse(localStorage.getItem(vpKey()) || '{}') || {}; }catch(_){ return {}; } };
+  const curKind = () => { if(!VP.tiles) return '1'; const sig = JSON.stringify(VP.tiles.map(t => [t.fx, t.fy, t.fw, t.fh])); for(const [k, L] of Object.entries(LAYOUTS)) if(JSON.stringify(L) === sig) return k; return '1'; };
+  function vpPreview(cnv, kind){ if(!cnv) return; const d = Math.min(3, devicePixelRatio || 1), w = 220, h = 160; cnv.width = w * d; cnv.height = h * d; const g = cnv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0); g.fillStyle = '#1b2230'; g.fillRect(0, 0, w, h);
+    const L = LAYOUTS[kind === '*ACTIVE*' ? curKind() : kind] || LAYOUTS['1']; g.strokeStyle = '#cfd6e0'; g.lineWidth = 1; g.fillStyle = '#9aa6ba'; g.font = '10px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    L.forEach(([fx, fy, fw, fh], i) => { const x = 6 + fx * (w - 12), y = 6 + fy * (h - 12), ww = fw * (w - 12), hh = fh * (h - 12); g.strokeRect(x + .5, y + .5, ww - 1, hh - 1); g.fillText(i === 0 ? '*Hiện hành*' : 'Hiện tại', x + ww / 2, y + hh / 2); }); }
+  function vportsDlg(){
+    try{ if(!isModelView()){ log('VPORTS trong layout: dùng MVIEW.'); return; } }catch(_){}
+    const K = A.acw; let kind = '*ACTIVE*', tab = 'new', nsel = null;
+    const html = '<div class="acw" style="width:560px">' + K.tabs('vp', [['new', 'Khung nhìn mới'], ['named', 'Khung nhìn đặt tên']], tab) + '<div class="acw-panes" style="min-height:320px">' +
+      K.pane('vp', 'new', tab, K.row('Tên mới:', K.txt('vpN', '')) + '<div class="acw-cols"><div class="c1"><div class="acw-lab">Khung nhìn chuẩn:</div>' + K.list('vpL', VPN.map(([v, t]) => ({ v, t })), kind, 'height:200px') + '</div><div class="c2"><div class="acw-lab">Xem trước</div>' + K.canvas('vpP', 220, 160) + '</div></div>' +
+        '<div class="acw-cols"><div class="c1">' + K.row('Áp dụng cho:', K.sel('vpA', [['disp', 'Màn hình']], 'disp')) + K.row('Thiết lập:', K.sel('vpS', [['2d', '2D']], '2d')) + '</div><div class="c1">' + K.row('Đổi góc nhìn thành:', K.sel('vpV', [['cur', '*Hiện tại*']], 'cur')) + K.row('Kiểu hiển thị:', K.sel('vpVs', [['cur', 'Hiện tại']], 'cur')) + '</div></div>') +
+      K.pane('vp', 'named', tab, '<div class="acw-lab">Tên hiện tại: <b id="vpCur">*Active*</b></div><div class="acw-cols"><div class="c1"><div class="acw-lab">Khung nhìn đặt tên:</div><div id="vpNL"></div>' + K.btn('vpDel', 'Xoá') + '</div><div class="c2"><div class="acw-lab">Xem trước</div>' + K.canvas('vpP2', 220, 160) + '</div></div>') + '</div></div>';
+    const d = A.dialog({ title: 'Khung nhìn', cls: 'acw-free', help: 'VPORTS', html, ok: r => {
+      if(tab === 'named'){ const n = vpNamed()[nsel]; if(n){ setVports(n); log('VPORTS: khung nhìn "' + nsel + '".'); } return; }
+      const k = kind === '*ACTIVE*' ? curKind() : kind; const nm = K.val(r, 'vpN').trim(); if(nm){ const o = vpNamed(); o[nm] = k; try{ localStorage.setItem(vpKey(), JSON.stringify(o)); }catch(_){} }
+      if(kind !== '*ACTIVE*') setVports(k); log(k === '1' ? 'VPORTS: một khung nhìn.' : 'VPORTS: ' + (VP.tiles ? VP.tiles.length : 1) + ' khung nhìn. Bấm vào khung để làm hiện hành; mỗi khung phóng/kéo riêng.'); } });
+    const root = d.root, $ = id => root.querySelector('#' + id); K.bindTabs(root, t => { tab = t; rn(); });
+    K.bindList($('vpL'), v => { kind = v; vpPreview($('vpP'), kind); }, v => { kind = v; root.querySelector('.dvd-ok').click(); });
+    const rn = () => { const o = vpNamed(), N = Object.keys(o); if(!o[nsel]) nsel = N[0] || null; $('vpNL').innerHTML = K.list('vpNLL', N.map(n => ({ v: n, h: '<span translate="no">' + n.replace(/[&<>"]/g, '') + '</span>' })), nsel, 'height:200px'); K.bindList($('vpNLL'), v => { nsel = v; vpPreview($('vpP2'), o[v]); }); vpPreview($('vpP2'), nsel ? o[nsel] : '1'); $('vpDel').disabled = !nsel; };
+    $('vpDel').onclick = () => { const o = vpNamed(); delete o[nsel]; try{ localStorage.setItem(vpKey(), JSON.stringify(o)); }catch(_){} nsel = null; rn(); };
+    vpPreview($('vpP'), kind); rn();
+  }
+  plain(['VPORTS', 'VIEWPORTS'], 'Khung nhìn (Viewports): chia màn hình Model theo cấu hình chuẩn, xem trước, lưu khung nhìn đặt tên', () => { if(A.busy && A.busy()) A.cancel(true); vportsDlg(); });
+  cmd(['-VPORTS'], 'Chia màn hình Model thành nhiều khung nhìn (1, 2, 3, 4) theo dòng lệnh — bấm vào khung để làm hiện hành', async () => {
     try{ if(!isModelView()){ log('VPORTS trong layout: dùng MVIEW.'); return; } }catch(_){}
     const k = await A.getKw('Cấu hình khung nhìn', { kw: [{ k: '1', t: 'Một' }, { k: '2', t: 'Hai dọc' }, { k: '2N', t: 'Hai ngang' }, { k: '3', t: 'Ba (lớn bên phải)' }, { k: '3T', t: 'Ba (lớn bên trái)' }, { k: '3D', t: 'Ba cột' }, { k: '4', t: 'Bốn' }, { k: 'J', t: 'Gộp (về một)' }], def: 'Bốn' });
     const m = { '1': '1', '2': '2V', '2N': '2H', '3': '3R', '3T': '3L', '3D': '3V', '4': '4', 'J': '1' }[k.kw || '4']; setVports(m);

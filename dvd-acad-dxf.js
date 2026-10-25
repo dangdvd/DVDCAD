@@ -17,7 +17,7 @@
   const hexRGB = h => { let s = String(h || '').replace('#', ''); if(s.length === 3) s = s.split('').map(c => c + c).join(''); const n = parseInt(s, 16); return /^[0-9a-f]{6}$/i.test(s) ? n : null; };
   const isAciColor = h => { const n = hexRGB(h); if(n == null) return true; const a = A.aciNear(h); return (ACI_RGB[a] >>> 0) === n; };
   // thuộc tính riêng của DVDCAD ghi kèm (XDATA) để mở lại trong DVDCAD còn nguyên
-  const XKEYS = ['cid', 'dord', 'anno', 'fld', 'url', 'dyn', 'dvs', 'mt', 'rt', 'rtx', 'cols', 'mtp', 'mtwk'];   // rt / cols: chữ có định dạng, cột (đọc lại đúng trong DVDCAD)
+  const XKEYS = ['cid', 'dord', 'anno', 'fld', 'url', 'urld', 'urlsub', 'ascl', 'gns', 'gdsc', 'dyn', 'dvs', 'mt', 'rt', 'rtx', 'cols', 'mtp', 'mtwk'];   // rt / cols: chữ có định dạng, cột (đọc lại đúng trong DVDCAD)
 
   let UTF8 = false;   // DXF R2007+: chữ ghi thẳng UTF-8 (không cần mã \U+)
   function dxfStr(s){ if(UTF8) return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[\x00-\x1f]/g, ' '); return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }

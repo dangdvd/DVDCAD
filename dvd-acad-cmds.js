@@ -1616,7 +1616,7 @@
   };
   const HS = A.HS = Object.assign({ pat: 'ANSI31', scale: 0, ang: 0, col: '' }, (() => { try{ return JSON.parse(localStorage.getItem('dvd:hatch') || '{}'); }catch(_){ return {}; } })());
   const hsSave = () => { try{ localStorage.setItem('dvd:hatch', JSON.stringify(HS)); }catch(_){} };
-  A.setHatchPattern = p => { if(!PATS[p]) return false; HS.pat = p; hsSave(); return true; };
+  A.setHatchPattern = p => { if(!PATS[p]) return false; HS.pat = p; HS.gmode = 0; hsSave(); return true; };
   function hash01(i, j, k){ let h = (i * 374761393 + j * 668265263 + k * 1274126177) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
   // đoạn thẳng mẫu (toạ độ thế giới) trong hộp bb — dùng cả để vẽ lẫn xuất DXF
   function patternSegs(e, bb, maxN){
@@ -1783,6 +1783,7 @@
     const sc = niceScale(loops); if(!(HS.scale > 0)){ HS.scale = sc; hsSave(); log('Tỉ lệ mẫu tự chọn = ' + sc + ' (đổi bằng tuỳ chọn Tỉ lệ)'); }
     const e = A.newProps({ type: 'HATCH', loops: loops.map(l => l.map(p => ({ x: p.x, y: p.y }))), solid: HS.pat === 'SOLID', pat: HS.pat, psc: HS.scale, pang: HS.ang || 0 });
     if(HS.col){ e.col = HS.col; delete e.bl; }
+    if(HS.gmode && HS.grad){ e.solid = true; e.grad = Object.assign({}, HS.grad); e.col = HS.grad.c1; delete e.bl; }   // Gradient (GRADIENT / tab Gradient)
     return e;
   }
   function hatchClosedLoop(e){
@@ -1830,7 +1831,7 @@
             g.restore();
             b.addEventListener('click', () => { root.querySelectorAll('.dvd-pat').forEach(x => x.classList.toggle('on', x === b)); }); });
         },
-        ok: root => { const on = root.querySelector('.dvd-pat.on'); if(on) HS.pat = on.dataset.p; const sc = parseFloat(root.querySelector('#hsScale').value); HS.scale = sc > 0 ? sc : 0; const an = parseFloat(root.querySelector('#hsAng').value); HS.ang = isFinite(an) ? an : 0; HS.col = root.querySelector('#hsCol').value; hsSave(); res(true); },
+        ok: root => { const on = root.querySelector('.dvd-pat.on'); if(on){ HS.pat = on.dataset.p; HS.gmode = 0; } const sc = parseFloat(root.querySelector('#hsScale').value); HS.scale = sc > 0 ? sc : 0; const an = parseFloat(root.querySelector('#hsAng').value); HS.ang = isFinite(an) ? an : 0; HS.col = root.querySelector('#hsCol').value; hsSave(); res(true); },
         cancel: () => res(false) });
     });
   }

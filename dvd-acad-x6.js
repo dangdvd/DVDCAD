@@ -404,7 +404,7 @@
     else if(f.k === 'file'){ const n = String(docName()); v = f.fx === 'ext' ? n : n.replace(/\.[^.]+$/, ''); }
     else if(/^(author|title|subject|keywords|comments|checker|hyperlink)$/.test(f.k)) v = P[f.k] || '';
     else if(f.k === 'custom') v = (P.custom || {})[f.name] || '';
-    else if(f.k === 'count') v = String(modelEntities.length);
+    else if(f.k === 'count'){ if(f.blk){ const g = new Set(); for(const e of modelEntities) if(e.grp && e.blk === f.blk) g.add(e.grp); v = String(g.size); } else v = String(modelEntities.length); }   // COUNTFIELD: số bản chèn của khối
     else if(f.k === 'area' || f.k === 'len'){ const o = f.ref && modelEntities.find(e => e.cid === f.ref); if(!o) return '####'; let x = f.k === 'area' ? areaOf(o) : lenOf(o); const div = f.fmt === 'm2' ? 1e6 : f.fmt === 'm' ? 1e3 : f.fmt === 'cm2' ? 100 : f.fmt === 'cm' ? 10 : 1; x /= div; const dd = f.dec != null ? f.dec : 2; v = x.toFixed(dd) + (f.fmt === 'm2' ? ' m²' : f.fmt === 'm' ? ' m' : f.fmt === 'cm2' ? ' cm²' : f.fmt === 'cm' ? ' cm' : ''); }
     return caseOf(v, f.cs);
   }
@@ -458,7 +458,7 @@
   }
   A.evalTable = evalTable;
   const hasF = T => T && T.cells && T.cells.some(r => r.some(c => typeof c === 'string' && c.trim().startsWith('=')));
-  if(A.tblRegenFrom){ const _tr = A.tblRegenFrom; A.tblRegenFrom = function(w){ const T = w.tbld; if(!hasF(T)) return _tr.call(this, w); const w2 = Object.assign({}, w, { tbld: Object.assign({}, T, { cells: evalTable(T.cells) }) }); const out = _tr.call(this, w2); if(out && out[0]) out[0].tbld = JSON.parse(JSON.stringify(T)); return out; }; }
+  if(A.tblRegenFrom){ const _tr = A.tblRegenFrom; A.tblRegenFrom = function(w){ const T = w.tbld; if(!hasF(T)) return _tr.call(this, w); const w2 = Object.assign({}, w, { tbld: Object.assign({}, T, { cells: evalTable(T.cells) }) }); const out = _tr.call(this, w2); const hd = out && (out.find(e => e.tbld) || out[0]); if(hd) hd.tbld = JSON.parse(JSON.stringify(T)); return out; }; }
   // bảng mới có công thức → dựng lại để hiện kết quả
   const _c0 = A.commit;
   A.commit = function(ch, msg){
@@ -677,20 +677,32 @@
   });
   setTimeout(applyAll, 0); setTimeout(applyAll, 1500);
   // ---- SCRIPT (.scr) ----
-  const SCR_CL = new Set(['COLOR', 'COL', 'INSERT', 'I', 'BLOCK', 'B', 'PURGE', 'PU']);
+  const SCR_CL = new Set(['COLOR', 'COL', 'INSERT', 'I', 'BLOCK', 'B', 'PURGE', 'PU', 'VPORTS', 'HYPERLINK']);
   async function runScript(text, label){
     const lines = String(text).replace(/\r/g, '').split('\n'); const toks = [];
     for(const ln of lines){ if(/^\s*;/.test(ln)) continue; const parts = ln.split(' '); for(const p of parts) toks.push(p); }
     while(toks.length && toks[toks.length - 1] === '') toks.pop();
-    const wait = ms => new Promise(r => setTimeout(r, ms)); let n = 0;
-    for(const t of toks){
-      if(!A.busy()){ if(t === '') continue; const u = t.toUpperCase().replace(/^[_.]+/, ''); DVDCmd.run(SCR_CL.has(u) ? '-' + u : t); n++; }   // lệnh nay mở hộp thoại: script chạy bản dòng lệnh như trước
-      else A.input(t);
-      await wait(25);
-    }
-    if(A.busy()) A.input(''); log('SCRIPT' + (label ? ' ' + label : '') + ': đã chạy ' + n + ' lệnh.');
+    return runToks(toks, label, text);
+  }
+  // chạy chuỗi token script — Esc / Backspace ngắt (RESUME chạy tiếp), RSCRIPT lặp lại script
+  async function runToks(toks, label, text, from){
+    const wait = ms => new Promise(r => setTimeout(r, ms)); let n = 0, stop = false;
+    const S = { toks, label, text, i: from || 0 }; A._script = S; A.lastScript = { text, label };
+    const kd = e => { if(e.key === 'Escape' || e.key === 'Backspace'){ stop = true; } }; window.addEventListener('keydown', kd, true);
+    try{
+      for(let i = from || 0; i < toks.length; i++){ const t = toks[i]; S.i = i;
+        if(stop){ A._scriptPaused = S; log('SCRIPT: đã ngắt — gõ RESUME để chạy tiếp.'); return n; }
+        const u = t.toUpperCase().replace(/^[_.]+/, '');
+        if(!A.busy() && u === 'RSCRIPT'){ S.i = toks.length; if(A.busy()) A.input(''); log('RSCRIPT: lặp lại script (Esc để dừng).'); await wait(30); return n + await runToks(toks, label, text, 0); }
+        if(!A.busy()){ if(t === '') continue; DVDCmd.run(SCR_CL.has(u) ? '-' + u : t); n++; }   // lệnh nay mở hộp thoại: script chạy bản dòng lệnh như trước
+        else A.input(t);
+        await wait(25);
+      }
+    } finally { window.removeEventListener('keydown', kd, true); if(A._script === S) A._script = null; }
+    A._scriptPaused = null; if(A.busy()) A.input(''); log('SCRIPT' + (label ? ' ' + label : '') + ': đã chạy ' + n + ' lệnh.');
     return n;
   }
+  A.runScriptToks = runToks;
   A.runScript = runScript;
   plain(['SCRIPT', 'SCR'], 'Chạy file script AutoCAD (.scr): chuỗi lệnh tự động', () => {
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.scr,.txt';
