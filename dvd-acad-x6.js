@@ -615,6 +615,7 @@
       ok: root => { const k = root.querySelector('#rnK').value, o = root.querySelector('#rnO').value, n = root.querySelector('#rnN').value.trim().replace(/[<>\/\\":;?*|=`]/g, '_'); if(!o || !n || o === n){ say('Nhập tên mới khác tên cũ.'); return false; }
         if(k === 'L' ? !renameLayer(o, n) : !renameBlock(o, n)) return false; } });
   });
+  A.renameLayer = (o, n) => renameLayer(o, n);
   function renameLayer(o, n){
     if(o === '0'){ say('Không đổi tên được lớp 0.'); return false; } if(A.layerNames().includes(n)){ say('Đã có lớp "' + n + '".'); return false; }
     const rep = []; for(const e of modelEntities) if((e.layer || '0') === o) rep.push([e, Object.assign(copy(e), { layer: n })]);

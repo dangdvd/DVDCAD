@@ -393,10 +393,11 @@
       }
       p = r.pt;
     }
-    const dh = MEM.th || defaultTextH();
+    const stH = (A.TS && A.TS.list[A.TS.cur] && +A.TS.list[A.TS.cur].h) || 0;   // kiểu chữ có cao cố định: không hỏi cao chữ (như AutoCAD)
+    const dh = stH > 0 ? stH : (MEM.th || defaultTextH());
     let h = dh;
-    if(!multi){ const rh = await A.getDist('Chỉ định chiều cao chữ', { base: p, def: dh }); h = rh.num != null ? Math.abs(rh.num) : dh; }
-    if(!(h > 0)) return; MEM.th = h; lastTextH = h;
+    if(!multi && !(stH > 0)){ const rh = await A.getDist('Chỉ định chiều cao chữ', { base: p, def: dh }); h = rh.num != null ? Math.abs(rh.num) : dh; }
+    if(!(h > 0)) return; if(!(stH > 0)) MEM.th = h; lastTextH = h;
     let rot = multi && mRot != null ? mRot : 0;
     if(!multi){ const ra = await A.getAngle('Chỉ định góc xoay chữ', { base: p, def: MEM.trot || 0 }); rot = ra.num != null ? ra.num : (MEM.trot || 0); MEM.trot = rot; }
     remember();
@@ -1169,27 +1170,143 @@
      KÍCH THƯỚC (DIM) — nhóm nét thật trong bản vẽ, xuất DXF được
      =================================================================== */
   const DSK = () => { try{ return 'dim::' + (baseKey || ''); }catch(_){ return 'dim::'; } };
-  const DS = A.DS = { txt: 0, arrow: 'tick', dec: 0, lfac: 1, exo: 0.6, exe: 0.8, gap: 0.5, asz: 1, dli: 1.8, suffix: '', prefix: '', layer: '' };
-  function dsLoad(){ Object.assign(DS, { txt: 0, arrow: 'tick', dec: 0, lfac: 1, exo: 0.6, exe: 0.8, gap: 0.5, asz: 1, dli: 1.8, suffix: '', prefix: '', layer: '' }); try{ const g = JSON.parse(localStorage.getItem('dvd:dimstyle') || '{}'); Object.assign(DS, g); const o = JSON.parse(localStorage.getItem(DSK()) || '{}'); if(o.txt) DS.txt = o.txt; }catch(_){} }
+  // Kiểu kích thước hiện hành (DIMSTYLE). Khoảng cách tính theo bội số cao chữ txt, nhân thêm tỉ lệ toàn cục scl (DIMSCALE).
+  // Màu '' = ByBlock (theo đối tượng kích thước), 'BYLAYER' hoặc '#rrggbb'; bề rộng nét null = ByBlock; kiểu nét '' = ByBlock.
+  const DS_DEF = A.DS_DEF = {
+    name: 'Standard', txt: 0, scl: 1, layer: '',
+    clrd: '', lwd: null, ltd: '', dle: null, dli: 1.8, sd1: 0, sd2: 0, clre: '', lwe: null, lte1: '', lte2: '', se1: 0, se2: 0, exe: 0.8, exo: 0.6, fxl: 0, fxlen: 1,
+    arrow: 'tick', arrow2: '', arrowL: 'arrow', asz: 1, cen: 'mark', cens: 0.5, arcsym: 'pre',
+    tstyle: '', clrt: '', tframe: 0, tvp: 'above', thp: 'center', gap: 0.5, tal: 'aligned',
+    fit: 'best', fitsup: 0,
+    lunit: 'dec', dec: 0, dsep: '.', rnd: 0, prefix: '', suffix: '', lfac: 1, lz: 0, tz: 0, aunit: 'deg', adec: 0, az: 0, atz: 0,
+    alt: 0, altu: 'dec', altd: 2, altf: 25.4, altr: 0, altp: '', alts: '', altpos: 'after', altlz: 0, alttz: 0,
+    tolm: 'none', tdec: 2, tp: 0, tm: 0, tfac: 1, tvpos: 'middle', tlz: 0, ttz: 0
+  };
+  const DS = A.DS = Object.assign({}, DS_DEF);
+  function dsLoad(){ Object.assign(DS, DS_DEF); try{ const g = JSON.parse(localStorage.getItem('dvd:dimstyle') || '{}'); Object.assign(DS, g); const o = JSON.parse(localStorage.getItem(DSK()) || '{}'); if(o.txt) DS.txt = o.txt; }catch(_){} }
   function dsSave(){ try{ const g = Object.assign({}, DS); delete g.txt; localStorage.setItem('dvd:dimstyle', JSON.stringify(g)); localStorage.setItem(DSK(), JSON.stringify({ txt: DS.txt })); }catch(_){} }
   A.dsSave = dsSave; A.dsLoad = dsLoad;
   dsLoad();
-  function dimTxt(){ if(!(DS.txt > 0)){ DS.txt = +defaultTextH().toPrecision(3); dsSave(); } return DS.txt; }
-  function dimFmt(v){ const x = v * (DS.lfac || 1); return (DS.prefix || '') + x.toFixed(Math.max(0, Math.min(6, DS.dec | 0))) + (DS.suffix || ''); }
+  function dimTxt(){ if(!(DS.txt > 0)){ DS.txt = +defaultTextH().toPrecision(3); dsSave(); } return DS.txt * (DS.scl > 0 ? DS.scl : 1); }
+  // số theo đơn vị của kiểu: thập phân, khoa học, kỹ thuật / kiến trúc (feet-inch), phân số; làm tròn, bỏ số 0 đầu / cuối, dấu thập phân
+  function trimZ(s, lz, tz, sep){ if(tz && s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, ''); if(lz) s = s.replace(/^(-?)0\./, '$1.'); return sep && sep !== '.' ? s.replace('.', sep) : s; }
+  function fracOf(v, prec){ const den = Math.pow(2, Math.max(0, Math.min(8, prec | 0))); let w = Math.floor(v + 1e-9), n = Math.round((v - w) * den); if(n >= den){ w++; n = 0; } let d = den; while(n && n % 2 === 0){ n /= 2; d /= 2; } return { w, n, d }; }
+  function fmtNum(v, dec, o){
+    o = o || {}; if(o.rnd > 0) v = Math.round(v / o.rnd) * o.rnd; dec = Math.max(0, Math.min(8, dec | 0)); const neg = v < -1e-12; v = Math.abs(v); let s;
+    switch(o.unit){
+      case 'sci': { const m = v.toExponential(dec).split('e'); const ex = +m[1]; s = trimZ(m[0], o.lz, o.tz, o.dsep) + 'E' + (ex < 0 ? '-' : '+') + String(Math.abs(ex)).padStart(2, '0'); break; }
+      case 'eng': { const ft = Math.floor(v / 12 + 1e-9), inch = v - ft * 12; s = (ft || !o.lz ? ft + "'-" : '') + trimZ(inch.toFixed(dec), 0, o.tz, o.dsep) + '"'; break; }
+      case 'arch': { const ft = Math.floor(v / 12 + 1e-9), f = fracOf(v - ft * 12, dec); s = (ft || !o.lz ? ft + "'-" : '') + f.w + (f.n ? ' ' + f.n + '/' + f.d : '') + '"'; break; }
+      case 'frac': { const f = fracOf(v, dec); s = (f.w || !f.n ? String(f.w) : '') + (f.n ? (f.w ? ' ' : '') + f.n + '/' + f.d : ''); break; }
+      default: s = trimZ(v.toFixed(dec), o.lz, o.tz, o.dsep);
+    }
+    return (neg && s.replace(/[^1-9]/g, '') ? '-' : '') + s;
+  }
+  A.fmtDimNum = fmtNum;
+  const numP = v => fmtNum(v, DS.dec, { unit: DS.lunit, rnd: DS.rnd, lz: DS.lz, tz: DS.tz, dsep: DS.dsep });
+  const numA = v => (DS.altp || '') + fmtNum(v * (DS.altf || 25.4), DS.altd, { unit: DS.altu, rnd: DS.altr, lz: DS.altlz, tz: DS.alttz, dsep: DS.dsep }) + (DS.alts || '');
+  const numT = v => fmtNum(v, DS.tdec, { unit: DS.lunit === 'sci' ? 'dec' : DS.lunit, lz: DS.tlz, tz: DS.ttz, dsep: DS.dsep });
+  // chữ kích thước thẳng: tiền tố + số + hậu tố (+ ± dung sai, + [đơn vị thay thế])
+  function dimFmt(v){
+    const x = v * (DS.lfac || 1); const base = DS.tolm === 'lim' ? x + (+DS.tp || 0) : x;
+    let s = (DS.prefix || '') + numP(base) + (DS.suffix || '');
+    if(DS.tolm === 'sym') s += '±' + numT(+DS.tp || 0);
+    if(DS.alt && DS.altpos !== 'below') s += ' [' + numA(x) + ']';
+    return s;
+  }
+  function fmtAng(deg){
+    const d = Math.max(0, Math.min(8, DS.adec | 0)), T = s => trimZ(s, DS.az, DS.atz, DS.dsep);
+    if(DS.aunit === 'rad') return T((deg * D2R).toFixed(d)) + 'r';
+    if(DS.aunit === 'grad') return T((deg / 0.9).toFixed(d)) + 'g';
+    if(DS.aunit === 'dms'){ let D = Math.floor(deg + 1e-9), mf = (deg - D) * 60;
+      if(d === 0) return Math.round(deg) + '°';
+      if(d <= 2){ let m = Math.round(mf); if(m >= 60){ D++; m = 0; } return D + '°' + String(m).padStart(d, '0') + "'"; }
+      let m = Math.floor(mf + 1e-9), sec = (mf - m) * 60; const sd = Math.max(0, d - 4); let ss = sec.toFixed(sd); if(+ss >= 60){ ss = (0).toFixed(sd); m++; } if(m >= 60){ m = 0; D++; }
+      return D + '°' + String(m).padStart(2, '0') + "'" + T(ss.padStart(sd ? 3 + sd : 2, '0')) + '"'; }
+    return T(deg.toFixed(d)) + '°';
+  }
+  A.fmtDimAng = d => fmtAng(d);
   function dimFmtOf(w){ try{ return withStyle(w.dimd && w.dimd.s, () => dimFmt(w.dimv)); }catch(_){ return ''; } }
   const readable = deg => { deg = ((deg % 360) + 360) % 360; if(deg > 90 && deg <= 270) deg -= 180; return deg; };
-  function arrowAt(tip, dirx, diry, t, out){   // dir = hướng từ trong ra đầu mũi tên
-    const s = t * DS.asz;
-    if(DS.arrow === 'tick'){ const a = Math.atan2(diry, dirx) + Math.PI / 4; out.push({ type: 'LINE', x1: tip.x - Math.cos(a) * s / 2, y1: tip.y - Math.sin(a) * s / 2, x2: tip.x + Math.cos(a) * s / 2, y2: tip.y + Math.sin(a) * s / 2, lw: 35 }); }
-    else if(DS.arrow === 'dot'){ out.push({ type: 'CIRCLE', cx: tip.x, cy: tip.y, r: s / 5 }); }
-    else { const bx = tip.x - dirx * s, by = tip.y - diry * s, nx = -diry * s / 6, ny = dirx * s / 6; out.push({ type: 'SOLID', pts: [{ x: tip.x, y: tip.y }, { x: bx + nx, y: by + ny }, { x: bx - nx, y: by - ny }, { x: bx - nx, y: by - ny }] }); }
+  // vai trò từng nét trong kích thước: màu / bề rộng / kiểu nét riêng theo kiểu (gán thật khi tạo, xem dimRole)
+  const roleD = e => { if(DS.clrd) e._c = DS.clrd; if(DS.lwd != null && DS.lwd !== '') e._lw = DS.lwd; if(DS.ltd) e._lt = DS.ltd; return e; };
+  const roleE = (e, k) => { if(DS.clre) e._c = DS.clre; if(DS.lwe != null && DS.lwe !== '') e._lw = DS.lwe; const lt = k === 2 ? DS.lte2 : DS.lte1; if(lt) e._lt = lt; return e; };
+  const roleT = e => { if(DS.clrt) e._c = DS.clrt; const n = DS.tstyle; if(n && A.TS && A.TS.list && A.TS.list[n] && A.tsApply) A.tsApply(e, n); return e; };
+  function dimRole(e){
+    if(e._c){ if(e._c === 'BYLAYER'){ e.bl = 1; e.col = A.layerHex(e.layer || '0'); } else { delete e.bl; e.col = e._c; } }
+    if(e._lw != null){ if(+e._lw >= 0) e.lw = +e._lw; else delete e.lw; } if(e._lt) e.lt = e._lt;
+    delete e._c; delete e._lw; delete e._lt; return e;
   }
-  const DS_KEYS = ['txt', 'arrow', 'dec', 'lfac', 'exo', 'exe', 'gap', 'asz', 'dli', 'suffix', 'prefix'];
-  function styleSnap(){ const o = {}; for(const k of DS_KEYS) o[k] = DS[k]; o.txt = dimTxt(); return o; }
-  function withStyle(sn, fn){ if(!sn) return fn(); const sv = {}; for(const k of DS_KEYS) sv[k] = DS[k]; try{ Object.assign(DS, sn); return fn(); } finally { Object.assign(DS, sv); } }
+  A.dimRole = dimRole;
+  // mũi tên (như danh sách Arrowheads của AutoCAD). dir = hướng từ trong ra đầu mũi tên; which: 1 = mũi thứ nhất, 2 = thứ hai, 'L' = ghi chú dẫn
+  const ARROWS = A.DIM_ARROWS = [['arrow', 'Mũi tên đặc (Closed filled)'], ['closedblank', 'Mũi tên rỗng (Closed blank)'], ['closed', 'Mũi tên kín (Closed)'], ['dot', 'Chấm (Dot)'], ['tick', 'Gạch chéo kiến trúc (Architectural tick)'], ['oblique', 'Gạch xiên (Oblique)'], ['open', 'Mũi tên mở (Open)'], ['origin', 'Dấu gốc (Origin indicator)'], ['origin2', 'Dấu gốc 2 (Origin indicator 2)'], ['right', 'Góc vuông (Right angle)'], ['open30', 'Mở 30° (Open 30)'], ['dotsmall', 'Chấm nhỏ (Dot small)'], ['dotblank', 'Chấm rỗng (Dot blank)'], ['small', 'Mũi tên nhỏ (Dot small arrow)'], ['boxblank', 'Ô vuông rỗng (Box)'], ['boxfilled', 'Ô vuông đặc (Box filled)'], ['datumblank', 'Tam giác chuẩn (Datum triangle)'], ['datumfilled', 'Tam giác chuẩn đặc (Datum triangle filled)'], ['integral', 'Tích phân (Integral)'], ['none', 'Không có (None)']];
+  const isTick = k => k === 'tick' || k === 'oblique' || k === 'integral';
+  function arrowAt(tip, dirx, diry, t, out, which){
+    const k = which === 'L' ? (DS.arrowL || 'arrow') : which === 2 ? (DS.arrow2 || DS.arrow) : DS.arrow; const s = t * DS.asz, nx = -diry, ny = dirx;
+    const P = (u, v) => ({ x: tip.x + dirx * u + nx * v, y: tip.y + diry * u + ny * v });
+    const L = (p, q, lw) => out.push(roleD(Object.assign({ type: 'LINE', x1: p.x, y1: p.y, x2: q.x, y2: q.y }, lw ? { lw } : {})));
+    const PL = (pts, fill) => out.push(roleD(fill ? { type: 'SOLID', pts: pts.length === 3 ? pts.concat([pts[2]]) : pts } : { type: 'POLYLINE', closed: true, vertices: pts }));
+    const C = r => out.push(roleD({ type: 'CIRCLE', cx: tip.x, cy: tip.y, r }));
+    switch(k){
+      case 'none': return;
+      case 'tick': { const a = Math.atan2(diry, dirx) + Math.PI / 4; L({ x: tip.x - Math.cos(a) * s / 2, y: tip.y - Math.sin(a) * s / 2 }, { x: tip.x + Math.cos(a) * s / 2, y: tip.y + Math.sin(a) * s / 2 }, 35); return; }
+      case 'oblique': { const a = Math.atan2(diry, dirx) + Math.PI / 4; L({ x: tip.x - Math.cos(a) * s / 2, y: tip.y - Math.sin(a) * s / 2 }, { x: tip.x + Math.cos(a) * s / 2, y: tip.y + Math.sin(a) * s / 2 }); return; }
+      case 'integral': { const pts = []; for(let i = 0; i <= 10; i++){ const f = i / 10 - 0.5; pts.push(P(-s * 0.18 * Math.sin(f * Math.PI * 2), s * f)); } out.push(roleD({ type: 'POLYLINE', closed: false, vertices: pts })); return; }
+      case 'dot': C(s / 5); return;
+      case 'dotsmall': C(s / 10); return;
+      case 'dotblank': C(s / 5); return;
+      case 'origin': C(s / 2); return;
+      case 'origin2': C(s / 2); C(s / 4); return;
+      case 'open': L(tip, P(-s, s / 6)); L(tip, P(-s, -s / 6)); return;
+      case 'open30': L(tip, P(-s, s * 0.268)); L(tip, P(-s, -s * 0.268)); return;
+      case 'right': L(tip, P(-s * 0.7, s * 0.7)); L(tip, P(-s * 0.7, -s * 0.7)); return;
+      case 'closedblank': case 'closed': PL([P(0, 0), P(-s, s / 6), P(-s, -s / 6)], 0); return;
+      case 'small': PL([P(0, 0), P(-s / 2, s / 12), P(-s / 2, -s / 12)], 1); return;
+      case 'boxblank': PL([P(-s / 4, -s / 4), P(s / 4, -s / 4), P(s / 4, s / 4), P(-s / 4, s / 4)], 0); return;
+      case 'boxfilled': PL([P(-s / 4, -s / 4), P(s / 4, -s / 4), P(s / 4, s / 4), P(-s / 4, s / 4)], 1); return;
+      case 'datumblank': PL([P(0, s / 2), P(0, -s / 2), P(-s * 0.866, 0)], 0); return;
+      case 'datumfilled': PL([P(0, s / 2), P(0, -s / 2), P(-s * 0.866, 0)], 1); return;
+      default: PL([P(0, 0), P(-s, s / 6), P(-s, -s / 6)], 1);   // 'arrow' = Closed filled
+    }
+  }
+  // đặt chữ kích thước + trang trí theo kiểu: khung (DIMGAP âm / Basic), dung sai Deviation / Limits, đơn vị thay thế bên dưới
+  const textW = (s, h) => [...String(s || '')].length * h * 0.62;
+  function dimTextOut(out, txt, c, rot, t, up, opt){
+    const r = rot * D2R, ux = Math.cos(r), uy = Math.sin(r), vx = -uy, vy = ux; const va = opt.va || 'alphabetic';
+    const T = roleT({ type: 'TEXT', x: c.x, y: c.y, h: t, rot, text: txt, ha: 'center', va }); out.push(T);
+    const w = textW(txt, t), base = va === 'middle' ? -t * 0.5 : 0;    // toạ độ đáy chữ theo pháp tuyến
+    const at = (lx, ly) => ({ x: c.x + ux * lx + vx * ly, y: c.y + uy * lx + vy * ly });
+    const extra = (s, lx, ly, h, ha) => { const p = at(lx, ly); out.push(roleT({ type: 'TEXT', x: p.x, y: p.y, h, rot, text: s, ha: ha || 'center', va: 'alphabetic', dimx: 1 })); };
+    const v = opt.v;
+    if(v != null && DS.tolm === 'dev'){ const h2 = t * (DS.tfac || 1); const x0 = w / 2 + t * 0.25; const mid = base + t * (DS.tvpos === 'bottom' ? 0 : DS.tvpos === 'top' ? 1 : 0.5);
+      extra('+' + numT(+DS.tp || 0), x0, mid + t * 0.08, h2, 'left'); extra((+DS.tm ? '-' : '') + numT(+DS.tm || 0), x0, mid - h2 - t * 0.08, h2, 'left'); }
+    if(v != null && DS.tolm === 'lim'){   // Limits: giới hạn trên / dưới xếp chồng (chữ chính = giới hạn trên)
+      const h2 = t * (DS.tfac || 1), lo = (DS.prefix || '') + numP(v * (DS.lfac || 1) - (+DS.tm || 0)) + (DS.suffix || ''); T.h = h2;
+      const upY = va === 'middle' ? h2 * 0.65 : h2 * 1.3, loY = va === 'middle' ? -h2 * 0.65 : 0; const pu = at(0, upY), pl = at(0, loY); T.x = pu.x; T.y = pu.y;
+      out.push(roleT({ type: 'TEXT', x: pl.x, y: pl.y, h: h2, rot, text: lo, ha: 'center', va, dimx: 1 })); }
+    if(v != null && DS.alt && DS.altpos === 'below'){ const s = '[' + numA(v * (DS.lfac || 1)) + ']'; const dy = up ? -(t * (2 * (DS.gap || 0.5)) + t) : -(t * 1.2); extra(s, 0, base + dy, t); }
+    if(DS.tframe || (v != null && DS.tolm === 'basic')){ const g = t * 0.3, b0 = base - t * 0.32, b1 = base + t * 1.18, x0 = -w / 2 - g, x1 = w / 2 + g;
+      out.push(roleT({ type: 'POLYLINE', closed: true, vertices: [at(x0, b0), at(x1, b0), at(x1, b1), at(x0, b1)] })); }
+    return T;
+  }
+  const DS_KEYS = Object.keys(DS_DEF).filter(k => k !== 'layer');
+  function styleSnap(){ dimTxt(); const o = {}; for(const k of DS_KEYS) o[k] = DS[k]; return o; }
+  // dựng theo kiểu đã lưu trong kích thước; khoá kiểu mới mà bản lưu cũ không có lấy giá trị mặc định (không ăn theo kiểu hiện hành)
+  function withStyle(sn, fn){ if(!sn) return fn(); const sv = {}; for(const k of DS_KEYS) sv[k] = DS[k]; try{ for(const k of DS_KEYS) if(k !== 'txt') DS[k] = DS_DEF[k]; Object.assign(DS, sn); if(sn.scl == null) DS.scl = 1; if(sn.adec == null && sn.dec != null) DS.adec = sn.dec; return fn(); } finally { Object.assign(DS, sv); } }
+  // thư viện kiểu kích thước có tên (Dimension Style Manager). Kiểu hiện hành = DS; txt = 0 nghĩa là cao chữ tự chọn theo bản vẽ
+  const DSTY_KEY = 'dvd:dimstyles';
+  const styleVals = () => { const o = {}; for(const k of DS_KEYS) if(k !== 'name') o[k] = DS[k]; return o; };
+  function dsLib(){ let o = null; try{ o = JSON.parse(localStorage.getItem(DSTY_KEY) || 'null'); }catch(_){} if(!o || typeof o !== 'object' || Array.isArray(o)) o = {}; const cur = DS.name || 'Standard'; if(!o[cur]) o[cur] = styleVals(); return o; }
+  A.dimStyles = {
+    def: DS_DEF, keys: DS_KEYS, arrows: ARROWS,
+    lib: dsLib, saveLib: lib => { try{ localStorage.setItem(DSTY_KEY, JSON.stringify(lib)); }catch(_){} },
+    values: styleVals,
+    setCurrent(name, lib){ lib = lib || dsLib(); const v = lib[name]; if(!v) return false; const txt = DS.txt, lay = DS.layer; for(const k of DS_KEYS) DS[k] = DS_DEF[k]; Object.assign(DS, v, { name, layer: lay }); if(!(v.txt > 0)) DS.txt = txt; dsSave(); return true; },
+    snap: styleSnap, with: withStyle, fmt: v => dimFmt(v), ang: d => fmtAng(d)
+  };
   function finishDim(ents, value, kindName, def){
     const gid = A.newGroupId('D'); const lay = DS.layer && A.layerNames().includes(DS.layer) ? DS.layer : null;
-    return ents.map(e => { A.newProps(e); delete e.lt; delete e.lts; if(lay){ e.layer = lay; if(e.bl) e.col = A.layerHex(lay); } e.grp = gid; e.blk = '*DIM ' + kindName; if(e.type === 'TEXT'){ e.dimv = value; if(def) e.dimd = Object.assign({}, def, { s: styleSnap() }); } return e; });
+    return ents.map(e => { A.newProps(e); delete e.lt; delete e.lts; if(lay){ e.layer = lay; if(e.bl) e.col = A.layerHex(lay); } dimRole(e); e.grp = gid; e.blk = '*DIM ' + kindName; if(e.type === 'TEXT' && !e.dimx){ e.dimv = value; if(def) e.dimd = Object.assign({}, def, { s: styleSnap() }); } return e; });
   }
   // dựng lại hình của 1 kích thước từ định nghĩa (giữ kiểu dim lúc tạo) — dùng khi kéo grip / di chuyển / kéo giãn
   function dimBuild(d){
@@ -1224,7 +1341,7 @@
   // tạo các đối tượng mới thay cho nhóm kích thước, giữ lớp/màu/nhóm của chữ kích thước w
   A.dimRegenFrom = function(w){
     const r = dimBuild(w.dimd); if(!r) return null;
-    return r.ents.map(e => { e.layer = w.layer || '0'; if(w.bl){ e.bl = 1; e.col = A.layerHex(e.layer); } else e.col = w.col; if(w.lw > 0 && e.lw == null) e.lw = w.lw; e.grp = w.grp; e.blk = w.blk || ('*DIM ' + r.kind); if(e.type === 'TEXT' && !e.dimx){ e.dimv = r.val; e.dimd = JSON.parse(JSON.stringify(w.dimd)); } return e; });
+    return r.ents.map(e => { e.layer = w.layer || '0'; if(w.bl){ e.bl = 1; e.col = A.layerHex(e.layer); } else e.col = w.col; if(w.lw > 0 && e.lw == null) e.lw = w.lw; dimRole(e); e.grp = w.grp; e.blk = w.blk || ('*DIM ' + r.kind); if(e.type === 'TEXT' && !e.dimx){ e.dimv = r.val; e.dimd = JSON.parse(JSON.stringify(w.dimd)); } return e; });
   };
   // các điểm nắm của kích thước (như AutoCAD: gốc đường gióng, đường kích thước, chữ)
   A.dimGrips = function(t){
@@ -1255,21 +1372,47 @@
     const a = { x: p1.x + nx * d1, y: p1.y + ny * d1 }, b = { x: p2.x + nx * d2, y: p2.y + ny * d2 };
     const meas = Math.abs((p2.x - p1.x) * ux + (p2.y - p1.y) * uy); if(meas < 1e-12) return null;
     const out = [];
-    const ext = (p, d) => { if(Math.abs(d) < t * DS.exo * 1.01) return; const s = Math.sign(d); out.push({ type: 'LINE', x1: p.x + nx * s * t * DS.exo, y1: p.y + ny * s * t * DS.exo, x2: p.x + nx * (d + s * t * DS.exe), y2: p.y + ny * (d + s * t * DS.exe) }); };
-    ext(p1, d1); ext(p2, d2);
-    const dl = dist(a, b), dux = (b.x - a.x) / dl, duy = (b.y - a.y) / dl;
-    const ov = t * DS.asz * (DS.arrow === 'tick' ? 0.6 : 0);   // nét kích thước vượt qua đường gióng (kiểu tick)
-    out.push({ type: 'LINE', x1: a.x - dux * ov, y1: a.y - duy * ov, x2: b.x + dux * ov, y2: b.y + duy * ov });
-    arrowAt(a, -dux, -duy, t, out); arrowAt(b, dux, duy, t, out);
-    const rot = readable(Math.atan2(duy, dux) * R2D), r = rot * D2R, upx = -Math.sin(r), upy = Math.cos(r);
-    const txt = overrideText || dimFmt(meas);
-    const sh = tx || 0, cx = (a.x + b.x) / 2 + ux * sh, cy = (a.y + b.y) / 2 + uy * sh;
-    const mid = { x: cx + upx * t * DS.gap, y: cy + upy * t * DS.gap };
+    // đường gióng: hở gốc (DIMEXO), vượt đường kích thước (DIMEXE), dài cố định (DIMFXL), ẩn 1 / 2 (DIMSE1/2)
+    const ext = (p, d, k) => { if(k === 1 ? DS.se1 : DS.se2) return; if(Math.abs(d) < t * DS.exo * 1.01) return; const sg = Math.sign(d);
+      const st = sg * (DS.fxl && DS.fxlen > 0 ? Math.max(t * DS.exo, Math.abs(d) - DS.fxlen * t) : t * DS.exo);
+      out.push(roleE({ type: 'LINE', x1: p.x + nx * st, y1: p.y + ny * st, x2: p.x + nx * (d + sg * t * DS.exe), y2: p.y + ny * (d + sg * t * DS.exe) }, k)); };
+    ext(p1, d1, 1); ext(p2, d2, 2);
+    const dl = dist(a, b), dux = (b.x - a.x) / dl, duy = (b.y - a.y) / dl, as = t * DS.asz;
+    const k1 = DS.arrow, k2 = DS.arrow2 || DS.arrow;
+    const ovr = DS.dle != null ? t * DS.dle : as * (isTick(k1) ? 0.6 : 0);      // nét kích thước vượt qua đường gióng (DIMDLE, chỉ khi dùng gạch chéo)
+    const oa = isTick(k1) ? ovr : 0, ob = isTick(k2) ? ovr : 0;
+    const txt = overrideText || dimFmt(meas), tw = textW(txt, t);
+    // mũi tên không lọt giữa 2 đường gióng → đặt ra ngoài (như Fit của AutoCAD)
+    const outA = DS.fit !== 'keep' && !isTick(k1) && k1 !== 'none' && dl < 2 * as * 1.15;
+    // vị trí chữ dọc đường kích thước (DIMJUST) và phương chữ (DIMTIH/DIMTOH — ngang / theo đường / ISO)
+    const sh = tx || 0; let cx, cy;
+    if(DS.thp === 'ext1' && !sh){ cx = a.x + dux * (as * 1.5 + tw / 2); cy = a.y + duy * (as * 1.5 + tw / 2); }
+    else if(DS.thp === 'ext2' && !sh){ cx = b.x - dux * (as * 1.5 + tw / 2); cy = b.y - duy * (as * 1.5 + tw / 2); }
+    else { cx = (a.x + b.x) / 2 + ux * sh; cy = (a.y + b.y) / 2 + uy * sh; }
+    const along = readable(Math.atan2(duy, dux) * R2D), fits = dl > tw + 2 * as;
+    const horiz = DS.tal === 'horizontal' || (DS.tal === 'iso' && (!fits || Math.abs(sh) > dl / 2));
+    const rot = horiz ? 0 : along, r = along * D2R, upx = -Math.sin(r), upy = Math.cos(r);
+    let tc, va = 'alphabetic', brk = 0;
+    if(DS.tvp === 'centered'){ tc = { x: cx, y: cy }; va = 'middle'; brk = (horiz ? Math.abs(dux) * tw / 2 + Math.abs(duy) * t / 2 : tw / 2) + t * DS.gap; }
+    else if(horiz && Math.abs(Math.sin(r)) > 0.02){ const sg = DS.tvp === 'below' ? -1 : 1; const hn = Math.abs(upx) * tw / 2 + Math.abs(upy) * t / 2; tc = { x: cx + upx * sg * (t * DS.gap + hn), y: cy + upy * sg * (t * DS.gap + hn) }; va = 'middle'; }
+    else if(DS.tvp === 'below'){ tc = { x: cx - upx * t * (DS.gap + 1), y: cy - upy * t * (DS.gap + 1) }; }
+    else tc = { x: cx + upx * t * DS.gap, y: cy + upy * t * DS.gap };
+    // đường kích thước (ẩn nửa 1 / 2 = DIMSD1/2), cắt chỗ chữ khi chữ nằm giữa đường
+    const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const seg = (x1, y1, x2, y2) => { if(Math.hypot(x2 - x1, y2 - y1) > 1e-9) out.push(roleD({ type: 'LINE', x1, y1, x2, y2 })); };
+    const half = (from, to, sup) => { if(sup) return; if(brk && !(Math.abs(sh) > dl / 2)){ const cpos = (cx - from.x) * dux + (cy - from.y) * duy, tpos = (to.x - from.x) * dux + (to.y - from.y) * duy; const lo = Math.min(0, tpos), hi = Math.max(0, tpos);
+        const g0 = cpos - brk, g1 = cpos + brk; const pts = []; if(g0 > lo) pts.push([lo, Math.min(hi, g0)]); if(g1 < hi) pts.push([Math.max(lo, g1), hi]); if(g1 <= lo || g0 >= hi) pts.length = 0, pts.push([lo, hi]);
+        for(const [u0, u1] of pts) seg(from.x + dux * u0, from.y + duy * u0, from.x + dux * u1, from.y + duy * u1); return; }
+      seg(from.x, from.y, to.x, to.y); };
+    const A0 = { x: a.x - dux * oa, y: a.y - duy * oa }, B0 = { x: b.x + dux * ob, y: b.y + duy * ob };
+    if(!DS.sd1 && !DS.sd2 && !(brk && !(Math.abs(sh) > dl / 2))) seg(A0.x, A0.y, B0.x, B0.y); else { half(A0, m, DS.sd1); half(m, B0, DS.sd2); }   // 1 nét liền như trước khi không ẩn / không cắt
+    if(outA){ if(!DS.sd1) seg(a.x - dux * as * 2, a.y - duy * as * 2, a.x, a.y); if(!DS.sd2) seg(b.x, b.y, b.x + dux * as * 2, b.y + duy * as * 2); }
+    if(!(DS.fitsup && outA)){ if(!DS.sd1) arrowAt(a, outA ? dux : -dux, outA ? duy : -duy, t, out, 1); if(!DS.sd2) arrowAt(b, outA ? -dux : dux, outA ? -duy : duy, t, out, 2); }
     if(sh && Math.abs(sh) > dl / 2){   // chữ dời ra ngoài: kéo dài đường kích thước tới dưới chữ
-      const sg = Math.sign(sh); const end = ((b.x - a.x) * ux + (b.y - a.y) * uy) * sg > 0 ? b : a; const tw = t * 0.62 * String(txt).length / 2 + t * 0.4;
-      out.push({ type: 'LINE', x1: end.x, y1: end.y, x2: cx + ux * sg * tw, y2: cy + uy * sg * tw });
+      const sg = Math.sign(sh); const end = ((b.x - a.x) * ux + (b.y - a.y) * uy) * sg > 0 ? b : a; const tw2 = tw / 2 + t * 0.4;
+      out.push(roleD({ type: 'LINE', x1: end.x, y1: end.y, x2: cx + ux * sg * tw2, y2: cy + uy * sg * tw2 }));
     }
-    out.push({ type: 'TEXT', x: mid.x, y: mid.y, h: t, rot, text: txt, ha: 'center', va: 'alphabetic' });
+    dimTextOut(out, txt, tc, rot, t, DS.tvp !== 'below', { va, v: overrideText ? null : meas });
     return { ents: out, meas, txt, a, b };
   }
   function autoPhi(p1, p2, L){
@@ -1335,13 +1478,20 @@
   function dimRadEnts(e, L, dia, ov){
     const t = dimTxt(); let ux = L.x - e.cx, uy = L.y - e.cy; const dl = Math.hypot(ux, uy) || 1; ux /= dl; uy /= dl;
     const edge = { x: e.cx + ux * e.r, y: e.cy + uy * e.r }, out = [];
-    if(dia){ const o = { x: e.cx - ux * e.r, y: e.cy - uy * e.r }; out.push({ type: 'LINE', x1: o.x, y1: o.y, x2: edge.x, y2: edge.y }); const sv = DS.arrow; if(DS.arrow === 'tick') DS.arrow = 'arrow'; arrowAt(edge, ux, uy, t, out); arrowAt(o, -ux, -uy, t, out); DS.arrow = sv; }
-    else { out.push({ type: 'LINE', x1: e.cx, y1: e.cy, x2: edge.x, y2: edge.y }); const sv = DS.arrow; if(DS.arrow === 'tick') DS.arrow = 'arrow'; arrowAt(edge, ux, uy, t, out); DS.arrow = sv; }
-    if(dl > e.r) out.push({ type: 'LINE', x1: edge.x, y1: edge.y, x2: L.x, y2: L.y });
-    const rot = readable(Math.atan2(uy, ux) * R2D), r = rot * D2R, upx = -Math.sin(r), upy = Math.cos(r);
+    const sv = DS.arrow, sv2 = DS.arrow2; if(isTick(DS.arrow)) DS.arrow = 'arrow'; if(isTick(DS.arrow2)) DS.arrow2 = '';
+    try{
+      if(dia){ const o = { x: e.cx - ux * e.r, y: e.cy - uy * e.r }; out.push(roleD({ type: 'LINE', x1: o.x, y1: o.y, x2: edge.x, y2: edge.y })); arrowAt(edge, ux, uy, t, out, 2); arrowAt(o, -ux, -uy, t, out, 1); }
+      else { out.push(roleD({ type: 'LINE', x1: e.cx, y1: e.cy, x2: edge.x, y2: edge.y })); arrowAt(edge, ux, uy, t, out, 2); }
+    } finally { DS.arrow = sv; DS.arrow2 = sv2; }
+    if(dl > e.r) out.push(roleD({ type: 'LINE', x1: edge.x, y1: edge.y, x2: L.x, y2: L.y }));
+    // dấu tâm (DIMCEN): Mark = dấu cộng ở tâm; Line = thêm đường tâm vượt ra ngoài đường tròn
+    if(DS.cen !== 'none' && DS.cens > 0 && !dia){ const c = t * DS.cens; for(const [dx, dy] of [[1, 0], [0, 1]]){ out.push(roleD({ type: 'LINE', x1: e.cx - dx * c, y1: e.cy - dy * c, x2: e.cx + dx * c, y2: e.cy + dy * c }));
+      if(DS.cen === 'line') for(const sg of [-1, 1]) out.push(roleD({ type: 'LINE', x1: e.cx + sg * dx * (c * 2), y1: e.cy + sg * dy * (c * 2), x2: e.cx + sg * dx * (e.r + c), y2: e.cy + sg * dy * (e.r + c) })); } }
+    const along = readable(Math.atan2(uy, ux) * R2D), rot = DS.tal === 'horizontal' ? 0 : along, r = along * D2R, upx = -Math.sin(r), upy = Math.cos(r);
     const at = dl > e.r ? { x: (edge.x + L.x) / 2, y: (edge.y + L.y) / 2 } : { x: (e.cx + edge.x) / 2, y: (e.cy + edge.y) / 2 };
     const val = dia ? 2 * e.r : e.r; const txt = ov || ((dia ? 'Ø' : 'R') + dimFmt(val));
-    out.push({ type: 'TEXT', x: at.x + upx * t * DS.gap, y: at.y + upy * t * DS.gap, h: t, rot, text: txt, ha: 'center', va: 'alphabetic' });
+    const hz = rot === 0 && Math.abs(Math.sin(r)) > 0.02; const tw = textW(txt, t), hn = hz ? Math.abs(upx) * tw / 2 + Math.abs(upy) * t / 2 : 0;
+    dimTextOut(out, txt, hz ? { x: at.x + upx * (t * DS.gap + hn), y: at.y + upy * (t * DS.gap + hn) } : { x: at.x + upx * t * DS.gap, y: at.y + upy * t * DS.gap }, rot, t, true, { va: hz ? 'middle' : 'alphabetic', v: ov ? null : val });
     return { ents: out, val, txt };
   }
   async function dimRadCmd(dia){
@@ -1358,13 +1508,13 @@
     const aL = ang(V, L); const cand = [];
     for(const [u, v] of [[d1, d2], [d2, d1]]) for(const r1 of [u, u + Math.PI]) for(const r2 of [v, v + Math.PI]){ const sw = G.norm(r2 - r1); if(sw < 1e-9 || sw > Math.PI) continue; if(G.norm(aL - r1) <= sw) cand.push({ a1: r1, sw }); }   // cả 2 chiều (chọn đường nào trước cũng được)
     if(!cand.length) return null; const c = cand[0];
-    const out = [{ type: 'ARC', cx: V.x, cy: V.y, r: R, a1: c.a1 * R2D, a2: (c.a1 + c.sw) * R2D }];
+    const out = [roleD({ type: 'ARC', cx: V.x, cy: V.y, r: R, a1: c.a1 * R2D, a2: (c.a1 + c.sw) * R2D })];
     const p1 = { x: V.x + R * Math.cos(c.a1), y: V.y + R * Math.sin(c.a1) }, p2 = { x: V.x + R * Math.cos(c.a1 + c.sw), y: V.y + R * Math.sin(c.a1 + c.sw) };
-    const sv = DS.arrow; if(DS.arrow === 'tick') DS.arrow = 'arrow';
-    arrowAt(p1, Math.sin(c.a1), -Math.cos(c.a1), t, out); arrowAt(p2, -Math.sin(c.a1 + c.sw), Math.cos(c.a1 + c.sw), t, out); DS.arrow = sv;
+    const sv = DS.arrow, sv2 = DS.arrow2; if(isTick(DS.arrow)) DS.arrow = 'arrow'; if(isTick(DS.arrow2)) DS.arrow2 = '';
+    try{ arrowAt(p1, Math.sin(c.a1), -Math.cos(c.a1), t, out, 1); arrowAt(p2, -Math.sin(c.a1 + c.sw), Math.cos(c.a1 + c.sw), t, out, 2); } finally { DS.arrow = sv; DS.arrow2 = sv2; }
     const am = c.a1 + c.sw / 2, mid = { x: V.x + (R + t * DS.gap) * Math.cos(am), y: V.y + (R + t * DS.gap) * Math.sin(am) };
-    const deg = c.sw * R2D; const txt = ov || (deg.toFixed(Math.max(0, DS.dec | 0)) + '°');
-    out.push({ type: 'TEXT', x: mid.x, y: mid.y, h: t, rot: readable(am * R2D - 90), text: txt, ha: 'center', va: 'alphabetic' });
+    const deg = c.sw * R2D; const txt = ov || fmtAng(deg);
+    dimTextOut(out, txt, mid, DS.tal === 'horizontal' ? 0 : readable(am * R2D - 90), t, true, { v: null });
     return { ents: out, val: deg, txt };
   }
   cmd(['DIMANGULAR', 'DAN', 'DIMANG'], 'Kích thước góc giữa 2 đường', async () => {
@@ -1596,11 +1746,16 @@
     const pts = c.pieces.map(p => ({ x: p.ax, y: p.ay })); return pts.length >= 3 ? pts : null;
   }
   cmd(['HATCH', 'H', 'BH', 'BHATCH'], 'Tô vật liệu: bấm điểm trong vùng kín (S = chọn đối tượng, T = cài đặt)', async () => {
+    // như AutoCAD 2027: trong lúc chọn vùng, ribbon hiện tab ngữ cảnh "Hatch Creation"
+    try{ if(A.ribbonCtx) A.ribbonCtx('hatchctx'); }catch(_){}
+    try{ await hatchLoop(); } finally { try{ if(A.ribbonCtx) A.ribbonCtx(null); }catch(_){} }
+  });
+  async function hatchLoop(){
     log('Mẫu: ' + (PATS[HS.pat] ? PATS[HS.pat].name : HS.pat) + ' · tỉ lệ ' + (HS.scale || 'tự động') + ' · góc ' + (HS.ang || 0) + '°');
     for(;;){
-      const r = await A.getPoint('Bấm điểm bên trong vùng cần tô', { noSnap: true, rubber: false, kw: [{ k: 'S', t: 'Chọn đối tượng' }, { k: 'T', t: 'Cài đặt' }, { k: 'P', t: 'Mẫu' }, { k: 'SC', t: 'Tỉ lệ' }, { k: 'A', t: 'Góc' }, { k: 'U', t: 'Hoàn tác' }] });
+      let r = await A.getPoint('Bấm điểm bên trong vùng cần tô', { noSnap: true, rubber: false, kw: [{ k: 'S', t: 'Chọn đối tượng' }, { k: 'T', t: 'Cài đặt' }, { k: 'P', t: 'Mẫu' }, { k: 'SC', t: 'Tỉ lệ' }, { k: 'A', t: 'Góc' }, { k: 'U', t: 'Hoàn tác' }] });
       if(r.none) return;
-      if(r.kw === 'T' || r.kw === 'P'){ await openHatchDialog(); continue; }
+      if(r.kw === 'T' || r.kw === 'P'){ const a = await (A.openHatchDialog || openHatchDialog)({ inCmd: true }); if(a === 'sel') r = { kw: 'S' }; else continue; }
       if(r.kw === 'SC'){ const v = await A.getNum('Tỉ lệ mẫu', { def: HS.scale || undefined }); if(v.num > 0){ HS.scale = v.num; hsSave(); } continue; }
       if(r.kw === 'A'){ const v = await A.getNum('Góc mẫu (độ)', { def: HS.ang || 0 }); if(v.num != null){ HS.ang = v.num; hsSave(); } continue; }
       if(r.kw === 'U'){ undoEdit(); continue; }
@@ -1615,7 +1770,7 @@
       if(res.err){ log(res.err); say(res.err); continue; }
       A.commit({ add: [makeHatch(res.loops)] }, 'Đã tô vùng (' + res.loops[0].length + ' đỉnh' + (res.loops.length > 1 ? ', ' + (res.loops.length - 1) + ' đảo' : '') + ')');
     }
-  });
+  }
   function openHatchDialog(){
     return new Promise(res => {
       const keys = Object.keys(PATS);
@@ -1634,7 +1789,7 @@
         cancel: () => res(false) });
     });
   }
-  A.openHatchDialog = openHatchDialog;
+  A.openHatchDialog = openHatchDialog; A.hsSave = () => hsSave();
   DVDCmd.register(['HATCHSET', 'HS'], 'Cài đặt mẫu hatch', () => openHatchDialog());
 
   /* ===================================================================
@@ -1648,6 +1803,7 @@
   A.insertBlock = (name, src) => { A._insPick = { name, src: src || (fileBlockNames().includes(name) ? 'file' : 'lib') }; DVDCmd.run('INSERT'); };
   function fileBlockNames(){ const b = window._dvdBlocks || {}; return Object.keys(b).filter(n => n && !n.startsWith('*') && !/^_/.test(n)).sort((a, b2) => a.localeCompare(b2, undefined, { numeric: true })); }
   const blkCache = new Map();
+  A.makeBlock = (sel, b, nm, mode, desc) => makeBlock(sel, b, nm, mode, desc);
   A.blockLib = lib; A.saveBlockLib = o => { const r = saveLib(o); blkCache.clear(); return r; }; A.fileBlockNames = () => fileBlockNames(); A.chooseBlock = () => chooseBlock(); A.blockPrims = (n, s) => blockPrims(n, s);
   function blockPrims(name, src){
     const ck = src + '|' + name; if(blkCache.has(ck)) return blkCache.get(ck);
@@ -1679,17 +1835,55 @@
     try{ let n = 0; for(const e of B.prims){ if(n++ > 1500) break; A.drawEntOn(g, e, e.col || '#cfd8e6', 1, []); } }
     finally { Object.assign(view, sv); _RTW = svW; _RTH = svH; }
   }
+  // vẽ danh sách đối tượng vào 1 canvas nhỏ (ô xem trước trong hộp thoại). o: { bg, col, pad, max }
+  A.previewEnts = function(cnv, ents, o){
+    o = o || {}; const g = cnv.getContext('2d'); g.fillStyle = o.bg || '#1b2230'; g.fillRect(0, 0, cnv.width, cnv.height); if(!ents || !ents.length) return;
+    const bb = o.bb || bboxOf(ents); if(!bb) return; const pad = o.pad == null ? 10 : o.pad;
+    const s = Math.min((cnv.width - 2 * pad) / Math.max(bb.x1 - bb.x0, 1e-9), (cnv.height - 2 * pad) / Math.max(bb.y1 - bb.y0, 1e-9));
+    const sv = { scale: view.scale, offsetX: view.offsetX, offsetY: view.offsetY, rot: view.rot }; const svW = _RTW, svH = _RTH;
+    view.scale = s; view.rot = 0; view.offsetX = cnv.width / 2 - (bb.x0 + bb.x1) / 2 * s; view.offsetY = cnv.height / 2 + (bb.y0 + bb.y1) / 2 * s; _RTW = cnv.width; _RTH = cnv.height;
+    try{ let n = 0; for(const e of ents){ if(n++ > (o.max || 3000)) break; const c = e._c && e._c !== 'BYLAYER' ? e._c : (e.col || o.col || '#cfd8e6'); A.drawEntOn(g, e, c, e.lw >= 30 ? 2 : 1, []); } }
+    finally { Object.assign(view, sv); _RTW = svW; _RTH = svH; }
+  };
+  // hình mẫu cho ô xem trước của Dimension Style Manager (như AutoCAD): kích thước ngang, dọc, bán kính, góc theo kiểu sn
+  A.dimSample = function(sn){
+    const st = Object.assign({}, sn || styleSnap(), { txt: 1, scl: 1 });
+    return withStyle(st, () => {
+      const G0 = '#ffffff', out = [{ type: 'LINE', x1: 0, y1: 0, x2: 14, y2: 0 }, { type: 'LINE', x1: 14, y1: 0, x2: 14, y2: 6 }, { type: 'ARC', cx: 10, cy: 6, r: 4, a1: 0, a2: 90 }, { type: 'LINE', x1: 10, y1: 10, x2: 3, y2: 10 }, { type: 'LINE', x1: 3, y1: 10, x2: 0, y2: 0 }].map(e => Object.assign(e, { col: G0 }));
+      const add = r => { if(r) for(const e of r.ents) out.push(e); };
+      add(dimLinearEnts({ x: 0, y: 0 }, { x: 14, y: 0 }, { x: 7, y: -3.6 }, 0));
+      add(dimLinearEnts({ x: 14, y: 0 }, { x: 14, y: 6 }, { x: 17.6, y: 3 }, 90));
+      add(dimLinearEnts({ x: 3, y: 10 }, { x: 10, y: 10 }, { x: 6.5, y: 12.6 }, 0));
+      const q = Math.PI / 4; add(dimRadEnts({ cx: 10, cy: 6, r: 4 }, { x: 10 + 6.6 * Math.cos(q), y: 6 + 6.6 * Math.sin(q) }, false));
+      add(dimAngEnts({ x: 0, y: 0 }, 0, Math.atan2(10, 3), { x: 5.2 * Math.cos(0.62), y: 5.2 * Math.sin(0.62) }));
+      return out;
+    });
+  };
+  // chèn khối. A._insOpt (từ bảng Blocks / hộp Insert): { pt: điểm cố định, sc, rot, askScale, askRot, repeat, explode }
+  const RECK = 'dvd:blkrecent';
+  A.blockRecent = () => { try{ return JSON.parse(localStorage.getItem(RECK) || '[]') || []; }catch(_){ return []; } };
+  const addRecent = pick => { try{ const L = A.blockRecent().filter(x => !(x.name === pick.name && x.src === pick.src)); L.unshift({ name: pick.name, src: pick.src, t: Date.now() }); localStorage.setItem(RECK, JSON.stringify(L.slice(0, 30))); }catch(_){} };
+  const explodeIns = ents => ents.map(w => { delete w.grp; delete w.blk; delete w.bm; delete w.bip; delete w.l0; if(w.att){ delete w.att; delete w.attp; } return w; });
   cmd(['INSERT', 'I', 'DDINSERT'], 'Chèn khối (của bản vẽ hoặc thư viện của tôi)', async () => {
-    const pre = A._insPick; A._insPick = null; const pick = pre || await chooseBlock(); if(!pick) return;
-    let sc = MEM.isc || 1, rot = MEM.irot || 0;
+    const pre = A._insPick; A._insPick = null; const O = A._insOpt || {}; A._insOpt = null;
+    if(!pre && A.openBlocksPalette){ A.openBlocksPalette(); return; }   // như AutoCAD 2027: INSERT mở bảng Blocks
+    const pick = pre || await chooseBlock(); if(!pick) return;
+    let sc = O.sc > 0 ? O.sc : (MEM.isc || 1), rot = O.rot != null && isFinite(O.rot) ? +O.rot : (MEM.irot || 0);
     for(;;){
-      const r = await A.getPoint('Chỉ định điểm chèn "' + pick.name + '"', { kw: [{ k: 'S', t: 'Tỉ lệ (' + fmt(sc) + ')' }, { k: 'R', t: 'Xoay (' + rot + '°)' }], rubber: false, preview: (g, p) => g.ents(instBlock(pick.name, pick.src, p, sc, rot).slice(0, 1500), '#cfe3ff') });
-      if(r.none) return;
-      if(r.kw === 'S'){ const v = await A.getNum('Hệ số tỉ lệ', { def: sc }); if(v.num > 0){ sc = v.num; MEM.isc = sc; remember(); } continue; }
-      if(r.kw === 'R'){ const v = await A.getNum('Góc xoay (độ)', { def: rot }); if(v.num != null){ rot = v.num; MEM.irot = rot; remember(); } continue; }
-      if(!r.pt) return;
-      const ents = instBlock(pick.name, pick.src, r.pt, sc, rot); if(!ents.length){ log('Khối rỗng.'); return; }
-      A.commit({ add: ents }, 'Đã chèn khối ' + pick.name); return;
+      let pt = O.pt || null;
+      if(!pt){
+        const r = await A.getPoint('Chỉ định điểm chèn "' + pick.name + '"', { kw: [{ k: 'S', t: 'Tỉ lệ (' + fmt(sc) + ')' }, { k: 'R', t: 'Xoay (' + rot + '°)' }], rubber: false, preview: (g, p) => g.ents(instBlock(pick.name, pick.src, p, sc, rot)) });
+        if(r.none) return;
+        if(r.kw === 'S'){ const v = await A.getNum('Hệ số tỉ lệ', { def: sc }); if(v.num > 0){ sc = v.num; MEM.isc = sc; remember(); } continue; }
+        if(r.kw === 'R'){ const v = await A.getNum('Góc xoay (độ)', { def: rot }); if(v.num != null){ rot = v.num; MEM.irot = rot; remember(); } continue; }
+        if(!r.pt) return; pt = r.pt;
+      }
+      if(O.askScale){ const v = await A.getNum('Nhập hệ số tỉ lệ X', { def: sc }); if(v.none) return; if(v.num > 0) sc = v.num; }
+      if(O.askRot){ const v = await A.getAngle ? await A.getAngle('Chỉ định góc xoay', { base: pt, def: rot }) : await A.getNum('Góc xoay (độ)', { def: rot }); if(v.none) return; if(v.num != null) rot = v.num; }
+      let ents = instBlock(pick.name, pick.src, pt, sc, rot); if(!ents.length){ log('Khối rỗng.'); return; }
+      if(O.explode) ents = explodeIns(ents);
+      A.commit({ add: ents }, (O.explode ? 'Đã chèn (phá khối) ' : 'Đã chèn khối ') + pick.name); addRecent(pick);
+      if(!O.repeat || O.pt) return;
     }
   });
   function chooseBlock(){
@@ -1715,10 +1909,12 @@
     });
   }
   // tạo khối (thư viện của tôi) từ các đối tượng đã chọn rồi thay chúng bằng bản chèn của khối
-  function makeBlock(sel, b, nm){
+  function makeBlock(sel, b, nm, mode, desc){
     const L = lib();
     L[nm] = { base: b, ents: sel.map(e => { const o = serializeEnt(e); delete o.grp; delete o.blk; return o; }), t: Date.now() };
-    if(!saveLib(L)) return; blkCache.delete('lib|' + nm);
+    if(desc) L[nm].desc = String(desc); if(!saveLib(L)) return; blkCache.delete('lib|' + nm);
+    if(mode === 'retain'){ log('Đã tạo khối "' + nm + '" (' + sel.length + ' nét), giữ nguyên đối tượng gốc.'); return; }
+    if(mode === 'delete'){ A.commit({ del: sel }, 'Đã tạo khối "' + nm + '" và xoá đối tượng gốc'); return; }
     const gid = A.newGroupId('B');
     const bm = { name: nm, src: 'lib', lay: A.LS.cur || '0', a: 1, b: 0, c: 0, d: 1, e: b.x, f: b.y };
     A.commit({ rep: transformAll(sel, w => { w.grp = gid; w.blk = nm; w.bm = bm; w.bip = { x: b.x, y: b.y }; if(w.attdef){ w.att = w.attdef.tag; w.attp = w.attdef.prompt; w.text = w.attdef.def || ''; delete w.attdef; } }) }, 'Đã tạo khối "' + nm + '" (' + sel.length + ' nét) — dùng INSERT để chèn ở bản vẽ khác');
@@ -1956,17 +2152,37 @@
   /* ===================================================================
      HỘP THOẠI ĐƠN GIẢN (dùng chung)
      =================================================================== */
+  // Khung như hộp thoại AutoCAD: thanh tiêu đề (kéo để dời, nút ? và ×), nút OK · Huỷ · Trợ giúp ở góc dưới phải.
+  // o: { title, html, wide, cls, ok(root) → false = giữ hộp, cancel, okText, cancelText, noOk, noCancel, help (false = ẩn | tên lệnh), left (HTML nút góc dưới trái), modeless, onOpen }
   A.dialog = function(o){
-    const ov = document.createElement('div'); ov.className = 'overlay dvd-dlg show';
-    ov.innerHTML = '<div class="modal' + (o.wide ? ' wide' : '') + '"><h3>' + escapeHtml(o.title || '') + '</h3><div class="dvd-body">' + (o.html || '') + '</div><div class="modal-actions">' + (o.noCancel ? '' : '<button class="btn-ghost dvd-cancel" type="button">' + (o.cancelText || 'Huỷ') + '</button>') + (o.noOk ? '' : '<button class="btn-ok dvd-ok" type="button">' + (o.okText || 'OK') + '</button>') + '</div></div>';
+    const ov = document.createElement('div'); ov.className = 'overlay dvd-dlg show' + (o.modeless ? ' dvd-modeless' : '');   // modeless: bảng nổi (palette), vẫn vẽ được phía sau
+    const title = o.title || '', helpCmd = o.help === false ? null : (typeof o.help === 'string' ? o.help : ((/\(([A-Z][A-Z0-9_\-]*)\b/.exec(title) || [])[1] || (A.busy && A.busy() && A.cmdName ? A.cmdName() : '') || ''));
+    ov.innerHTML = '<div class="modal' + (o.wide ? ' wide' : '') + (o.cls ? ' ' + o.cls : '') + '" role="dialog" aria-label="' + escapeHtml(title) + '">' +
+      '<div class="dvd-tb"><h3>' + escapeHtml(title) + '</h3>' + (helpCmd !== null ? '<button class="dvd-tbh" type="button" title="Trợ giúp (F1)">?</button>' : '') + '<button class="dvd-tbx" type="button" title="Đóng">×</button></div>' +
+      '<div class="dvd-body">' + (o.html || '') + '</div><div class="modal-actions">' + (o.left ? '<span class="dvd-fl">' + o.left + '</span>' : '') +
+      (o.noOk ? '' : '<button class="btn-ok dvd-ok" type="button">' + (o.okText || 'OK') + '</button>') + (o.noCancel ? '' : '<button class="btn-ghost dvd-cancel" type="button">' + (o.cancelText || 'Huỷ') + '</button>') +
+      (helpCmd !== null ? '<button class="btn-ghost dvd-help" type="button">Trợ giúp</button>' : '') + '</div></div>';
     document.body.appendChild(ov);
+    const md = ov.querySelector('.modal');
     const close = () => { ov.remove(); };
     const cancel = () => { close(); if(o.cancel) o.cancel(); };
-    ov.addEventListener('click', e => { if(e.target === ov) cancel(); });
+    const acad = () => document.documentElement.classList.contains('acad');
+    // bấm ra ngoài: bản máy tính giữ hộp thoại (nhấp nháy như AutoCAD), bản điện thoại đóng
+    ov.addEventListener('click', e => { if(e.target !== ov) return; if(acad()){ md.classList.remove('dvd-flash'); void md.offsetWidth; md.classList.add('dvd-flash'); } else cancel(); });
     const cb = ov.querySelector('.dvd-cancel'); if(cb) cb.onclick = cancel;
+    ov.querySelector('.dvd-tbx').onclick = cancel;
+    const help = () => { try{ if(window.DVDCmd && DVDCmd.showHelp) DVDCmd.showHelp(helpCmd || ''); }catch(_){} };
+    ov.querySelectorAll('.dvd-tbh,.dvd-help').forEach(b => b.onclick = help);
     const okb = ov.querySelector('.dvd-ok'); if(okb) okb.onclick = () => { if(o.ok && o.ok(ov) === false) return; close(); };
-    ov.addEventListener('keydown', e => { e.stopPropagation(); if(e.key === 'Escape'){ e.preventDefault(); cancel(); } if(e.key === 'Enter' && e.target.tagName === 'INPUT' && okb){ e.preventDefault(); okb.click(); } });
+    ov.addEventListener('keydown', e => { e.stopPropagation(); if(e.key === 'Escape'){ e.preventDefault(); cancel(); } if(e.key === 'F1'){ e.preventDefault(); help(); } if(e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'button' && okb){ e.preventDefault(); okb.click(); } });
+    // kéo thanh tiêu đề để dời hộp thoại
+    const tb = ov.querySelector('.dvd-tb'); let drag = null, dx = 0, dy = 0;
+    tb.addEventListener('pointerdown', e => { if(e.button !== 0 || e.target.closest('button') || !acad()) return; drag = { x: e.clientX - dx, y: e.clientY - dy }; tb.setPointerCapture(e.pointerId); e.preventDefault(); });
+    tb.addEventListener('pointermove', e => { if(!drag) return; const r = md.getBoundingClientRect(); dx = e.clientX - drag.x; dy = e.clientY - drag.y;
+      dx = Math.max(-(r.left - dx) - r.width + 80, Math.min(innerWidth - (r.left - dx) - 80, dx)); dy = Math.max(-(r.top - dy), Math.min(innerHeight - (r.top - dy) - 30, dy)); md.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; });
+    const end = () => { drag = null; }; tb.addEventListener('pointerup', end); tb.addEventListener('pointercancel', end);
     if(o.onOpen) o.onOpen(ov);
+    if(acad()) setTimeout(() => { if(!document.body.contains(ov) || ov.contains(document.activeElement)) return; const f = ov.querySelector('.dvd-body input:not([type=checkbox]):not([type=radio]):not([disabled]),.dvd-body select,.dvd-body textarea'); if(f){ try{ f.focus({ preventScroll: true }); }catch(_){} } else if(okb) okb.focus({ preventScroll: true }); }, 0);
     return { root: ov, close };
   };
   A.onLoad = (function(prev){ return function(){ if(prev) prev(); dsLoad(); lastDim = null; blkCache.clear(); }; })(A.onLoad);

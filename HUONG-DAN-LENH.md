@@ -1,4 +1,4 @@
-# DVDCAD v5k — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5l — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,74 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Hộp thoại và ribbon như AutoCAD 2027 (v5l)
+- **Mọi hộp thoại** có khung như AutoCAD:
+  - thanh tiêu đề kéo được, nút **?** (trợ giúp, cũng mở bằng **F1**) và **×**;
+  - nút **OK · Cancel · Help** ở góc dưới phải; ô nhập, hộp chọn gọn kiểu Windows.
+  - Bấm ra ngoài hộp thoại không đóng hộp (khung nháy lên như AutoCAD).
+  - Mục nào DVDCAD chưa làm được thì hiện mờ, để biết trước là chưa dùng được.
+- **Ribbon không còn thanh cuộn ngang.**
+  - Màn hình hẹp hoặc Windows phóng to 125–150%: các bảng tự thu gọn từ phải sang trái (Clipboard, Utilities, Groups, Block, Annotation…) rồi mới bỏ chữ ở nút nhỏ.
+  - Bấm bảng đã thu gọn → bảng bật ra ngay bên dưới, đủ các nút như khi ribbon rộng.
+  - Ribbon tự đo lại khi đổi cỡ cửa sổ, đổi tỉ lệ màn hình hay khi tên lớp dài.
+  - Tab **Home** xếp lại như AutoCAD 2027:
+    - Annotation: Text, Dimension, Leader, Table (Dimension Style, Multileader Style nằm trong phần mở rộng ▾).
+    - Clipboard: Paste kèm 3 nút biểu tượng.
+- **DIMSTYLE** (`D`) — *Dimension Style Manager*:
+  - Danh sách kiểu, ô xem trước, mô tả; các nút **Set Current · New… · Modify… · Override… · Compare…**.
+  - Chuột phải trên tên kiểu: đổi tên, xoá. Lọc *All styles / Styles in use*.
+  - Hộp **New / Modify / Override** có 7 tab như AutoCAD, xem trước cập nhật ngay khi sửa:
+    - **Lines**: màu, kiểu nét, bề rộng nét đường kích thước / đường gióng; vượt quá gạch chéo; khoảng bậc; ẩn đường 1 / 2; gióng dài cố định.
+    - **Symbols and Arrows**: 20 kiểu mũi tên (riêng mũi thứ nhất / thứ hai / ghi chú dẫn), cỡ mũi tên, dấu tâm Mark / Line.
+    - **Text**: kiểu chữ, màu chữ, cao chữ, khung quanh chữ; chữ phía trên / giữa / dưới đường kích thước; sát gióng 1 / 2; nằm ngang / theo đường / ISO.
+    - **Fit**: đưa mũi tên ra ngoài khi không lọt, tỉ lệ toàn cục (`DIMSCALE`).
+    - **Primary Units**: Decimal, Scientific, Engineering, Architectural, Fractional; độ chính xác, dấu thập phân, làm tròn, tiền tố / hậu tố, hệ số đo, bỏ số 0; đơn vị góc (độ, độ-phút-giây, grad, radian).
+    - **Alternate Units**: hiện đơn vị thay thế (×25.4…) sau hoặc dưới giá trị chính.
+    - **Tolerances**: Symmetrical, Deviation, Limits, Basic.
+  - Sửa một kiểu thì **mọi kích thước đang dùng kiểu đó trong bản vẽ đổi theo**, như AutoCAD.
+  - Kích thước vẽ từ bản cũ vẫn giữ nguyên hình (không ăn theo các mục mới).
+- **LAYER** (`LA`) — *Layer Properties Manager* dạng bảng nổi: vẽ tiếp được khi bảng đang mở.
+  - Thanh công cụ: New Layer (**Alt+N**), Delete (**Alt+D**), Set Current (**Alt+C**), Layer States, Refresh.
+  - Bộ lọc *All / All Used Layers*, đảo bộ lọc, ô tìm lớp (`*`, `?`).
+  - Cột Status · Name · On · Freeze · Lock · Color · Linetype · Lineweight, bấm tiêu đề cột để sắp xếp.
+  - Chọn nhiều lớp (Ctrl / Shift, **Ctrl+A**) rồi bấm biểu tượng bóng đèn / tuyết / khoá là đổi cả nhóm.
+  - Bấm đúp tên = đặt hiện hành; **F2** hoặc bấm lại tên = đổi tên tại chỗ.
+  - Chuột phải: đặt hiện hành, lớp mới, đổi tên, xoá, chọn tất cả / đảo vùng chọn, bật / rã băng / mở khoá tất cả, chọn đối tượng trên lớp.
+  - Bấm ô Linetype mở *Select Linetype* (có **Load…**); bấm ô Lineweight mở *Lineweight*.
+- **INSERT** (`I`) mở **bảng Blocks** như AutoCAD 2027 (bảng nổi):
+  - Tab *Current Drawing · Recent · Libraries* (thư viện khối của tôi), lọc theo tên, ảnh xem trước từng khối.
+  - Tuỳ chọn: điểm chèn (chỉ định trên màn hình hoặc nhập X, Y), tỉ lệ, góc xoay, **Repeat Placement**, **Explode**.
+  - Bấm khối để chèn. `CLASSICINSERT` mở hộp *Insert* cổ điển.
+- **BLOCK** (`B`) — *Block Definition*:
+  - Tên, Base point (**Pick point** hoặc X / Y), Objects (**Select objects**, Retain / Convert to block / Delete), mô tả.
+  - Hộp thoại ẩn đi khi chọn điểm / đối tượng rồi hiện lại. Đối tượng chọn sẵn trước khi gọi lệnh được dùng luôn.
+- **ATTDEF** — *Attribute Definition*: Tag, Prompt, Default, canh lề (13 kiểu), kiểu chữ, cao chữ, góc xoay, điểm chèn trên màn hình hoặc nhập toạ độ, *Align below previous attribute definition*.
+- **HATCH** (`H`): trong lúc chọn vùng, ribbon hiện **tab ngữ cảnh "Hatch Creation"** như AutoCAD 2027:
+  - Boundaries: Pick Points, Select, Undo, Boundary.
+  - Pattern: bảng mẫu.
+  - Properties: Pattern / Solid, màu, góc, tỉ lệ.
+  - Options: Hatch Settings, Associative, Send to Back.
+  - Close Hatch Creation.
+  - Tuỳ chọn `T` hoặc `HATCHSET` mở hộp *Hatch and Gradient*: mẫu kèm bảng mẫu **…**, màu, góc, tỉ lệ, nút Add: Pick points / Select objects.
+- **DSETTINGS** (`DS`, `OS`, `SE`) — *Drafting Settings*:
+  - Tab *Snap and Grid · Polar Tracking · Object Snap · Dynamic Input*.
+  - Object Snap có biểu tượng AutoSnap từng kiểu, Select All / Clear All.
+  - Dynamic Input có *Pointer Input Settings* (toạ độ tương đối / tuyệt đối).
+  - Nút **Options…** mở OPTIONS.
+- **OPTIONS** (`OP`) — *Options*:
+  - Tab *Display · Open and Save · Plot and Publish · System · User Preferences · Drafting · Selection*.
+  - Đổi được: cỡ chữ thập, cỡ ô bắt điểm, cỡ ô chọn, chọn trước rồi gọi lệnh, chọn cả nhóm, xem trước khi rê chuột, thanh tỉ lệ, hiện bề rộng nét, định dạng DXF khi lưu, thiết bị in mặc định, thời gian giữ chuột phải.
+- **Các hộp thoại khác theo bố cục AutoCAD:**
+  - **STYLE** (*Text Style*): Styles, Font, Size (cao chữ cố định — TEXT không hỏi cao chữ nữa), Effects (Width Factor, Backwards), Set Current / New / Delete / Apply. Sửa kiểu thì chữ đang dùng kiểu đó đổi theo.
+  - **UNITS** (*Drawing Units*): độ chính xác, đơn vị chèn (`INSUNITS`), ví dụ hiển thị; nút **Tỉ lệ đo…** mở cân chỉnh tỉ lệ của DVDCAD.
+  - **PLOT** (*Plot - Model*): Printer/plotter (DWG To PDF, máy in Windows, PNG), Paper size, Plot area, Plot scale, Plot offset, Plot style table, Plot options, Drawing orientation, **Preview…**.
+  - **TABLE** (*Insert Table*): bảng rỗng hoặc dán từ Excel, xem trước, số cột / hàng dữ liệu, kiểu ô hàng 1 / hàng 2.
+  - **QSELECT** (*Quick Select*): danh sách thuộc tính, *Include / Exclude from new selection set*.
+  - **LINETYPE** (*Linetype Manager*): lọc, Load / Delete / Current / Show details, khung Details (LTSCALE, CELTSCALE).
+  - **LWEIGHT** (*Lineweight Settings*): danh sách bề rộng, đơn vị mm / in, Display Lineweight.
+  - **PTYPE** (*Point Style*).
+- Mã `$INSUNITS` sửa đúng theo AutoCAD: 7 = km, 15 = decameter (trước đây 15 bị hiểu nhầm là km).
 
 ## Lưu DWG gốc (v5k)
 - `SAVEDWG` ghi thẳng file **DWG 2000 (AC1015)** bằng bộ ghi có sẵn của DVDCAD — không cần ODA File Converter, chạy cả trên trình duyệt và điện thoại.

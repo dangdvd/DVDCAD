@@ -1,4 +1,4 @@
-## DVDCAD 5.10.0 — tự lưu DWG, dòng lệnh như AutoCAD 2027
+## DVDCAD 5.10.0 — hộp thoại như AutoCAD 2027, tự lưu DWG, dòng lệnh như AutoCAD 2027
 
 Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Windows. Tên lệnh, lệnh tắt và cách dùng giống AutoCAD để người dùng chuyển sang không bỡ ngỡ.
 
@@ -12,6 +12,15 @@ Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Win
 Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More info → Run anyway**.
 
 ### Có gì mới
+- **Hộp thoại lệnh bố cục như AutoCAD 2027.**
+  - Khung chung: thanh tiêu đề kéo được, nút ? và ×, OK · Cancel · Help ở góc dưới phải.
+  - Dimension Style Manager có đủ 7 tab và ô xem trước; sửa kiểu thì kích thước trong bản vẽ đổi theo.
+  - Layer Properties Manager và bảng Blocks là bảng nổi, vẫn vẽ được khi đang mở.
+  - Block Definition, Attribute Definition, Text Style, Drafting Settings, Drawing Units, Options, Plot, Insert Table, Quick Select, Linetype Manager, Lineweight Settings, Point Style.
+  - HATCH hiện tab ngữ cảnh **Hatch Creation** trên ribbon; `HATCHSET` mở Hatch and Gradient.
+- **Ribbon không còn thanh cuộn ngang che tên bảng.**
+  - Bảng tự thu gọn theo bề ngang màn hình (kể cả khi Windows đặt tỉ lệ 125–150%).
+  - Bấm bảng đã thu gọn để mở đủ nút.
 - **Tự lưu DWG, không cần ODA File Converter.**
   - `SAVEDWG` ghi thẳng file **DWG 2000 (AC1015)** — định dạng AutoCAD từ bản 2000 trở đi đều mở được.
   - `SAVEAS` / **Ctrl+Shift+S** chọn được *Bản vẽ AutoCAD (\*.dwg)*; **Ctrl+S** sau đó ghi đè đúng file DWG đó.

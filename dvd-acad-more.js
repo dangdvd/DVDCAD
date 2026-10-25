@@ -46,14 +46,16 @@
     const src = () => { const pre = selEnts.size ? [...selEnts] : null; return pre; };
     const types = {}; for(const e of modelEntities) types[e.type] = (types[e.type] || 0) + 1;
     const opt = (v, t, s) => '<option value="' + esc(v) + '"' + (s ? ' selected' : '') + '>' + esc(t) + '</option>';
-    const html = '<label class="dvd-frow"><span>Áp dụng cho</span><span class="v"><select id="qsScope">' + opt('all', 'Toàn bản vẽ', !selEnts.size) + (selEnts.size ? opt('sel', 'Tập đang chọn (' + selEnts.size + ')', true) : '') + '</select></span></label>' +
-      '<label class="dvd-frow"><span>Loại đối tượng</span><span class="v"><select id="qsType">' + opt('*', 'Mọi loại (' + modelEntities.length + ')') + Object.entries(types).sort((a, b) => b[1] - a[1]).map(([t, n]) => opt(t, (TYPE_VN[t] || t) + ' (' + n + ')')).join('') + '</select></span></label>' +
-      '<label class="dvd-frow"><span>Thuộc tính</span><span class="v"><select id="qsProp">' + PROPS.map(p => opt(p[0], p[1])).join('') + '</select></span></label>' +
-      '<label class="dvd-frow"><span>Toán tử</span><span class="v"><select id="qsOp">' + opt('=', '= Bằng') + opt('!=', '≠ Khác') + opt('>', '> Lớn hơn') + opt('<', '< Nhỏ hơn') + opt('~', 'Chứa') + opt('*', 'Chọn tất cả') + '</select></span></label>' +
-      '<label class="dvd-frow"><span>Giá trị</span><span class="v"><input id="qsVal" list="qsList" style="width:190px"><datalist id="qsList"></datalist></span></label>' +
-      '<label class="dvd-frow"><span>Cách áp dụng</span><span class="v"><select id="qsHow">' + opt('in', 'Chọn các đối tượng khớp') + opt('out', 'Chọn các đối tượng KHÔNG khớp') + '</select></span></label>' +
-      '<label class="dvd-frow"><span>Gộp vào tập đang chọn</span><span class="v"><input type="checkbox" id="qsAppend"></span></label>';
-    A.dialog({ title: 'Chọn nhanh (Quick Select)', wide: true, html, okText: 'Chọn',
+    // bố cục như Quick Select của AutoCAD: danh sách thuộc tính dạng listbox, cách áp dụng bằng nút chọn
+    const R = (l, c) => '<label class="dvd-frow"><span>' + l + '</span><span class="v">' + c + '</span></label>';
+    const html = '<div style="width:400px">' + R('Áp dụng cho:', '<select id="qsScope">' + opt('all', 'Toàn bản vẽ', !selEnts.size) + (selEnts.size ? opt('sel', 'Tập đang chọn (' + selEnts.size + ')', true) : '') + '</select>') +
+      R('Loại đối tượng:', '<select id="qsType">' + opt('*', 'Nhiều loại (' + modelEntities.length + ')') + Object.entries(types).sort((a, b) => b[1] - a[1]).map(([t, n]) => opt(t, (TYPE_VN[t] || t) + ' (' + n + ')')).join('') + '</select>') +
+      '<label class="dvd-frow" style="align-items:flex-start"><span>Thuộc tính:</span><span class="v"><select id="qsProp" size="7" style="height:auto">' + PROPS.map((p, i) => opt(p[0], p[1], i === 0)).join('') + '</select></span></label>' +
+      R('Toán tử:', '<select id="qsOp">' + opt('=', '= Bằng') + opt('!=', '<> Khác') + opt('>', '> Lớn hơn') + opt('<', '< Nhỏ hơn') + opt('~', '* Chứa') + opt('*', 'Chọn tất cả') + '</select>') +
+      R('Giá trị:', '<input id="qsVal" list="qsList"><datalist id="qsList"></datalist>') +
+      '<fieldset class="acw-grp" style="margin-top:8px"><legend>Cách áp dụng</legend><label class="acw-ck"><input type="radio" name="qsHow" value="in" checked><span>Đưa vào tập chọn mới</span></label><br><label class="acw-ck"><input type="radio" name="qsHow" value="out"><span>Loại khỏi tập chọn mới</span></label></fieldset>' +
+      '<label class="acw-ck" style="margin-top:4px"><input type="checkbox" id="qsAppend"><span>Gộp vào tập đang chọn</span></label></div>';
+    A.dialog({ title: 'Chọn nhanh', help: 'QSELECT', html,
       onOpen: root => {
         const fill = () => { const pk = root.querySelector('#qsProp').value, ty = root.querySelector('#qsType').value; const P = PROPS.find(p => p[0] === pk); const vals = new Map();
           const base = root.querySelector('#qsScope').value === 'sel' ? [...selEnts] : modelEntities;
@@ -64,7 +66,7 @@
         ['#qsProp', '#qsType', '#qsScope'].forEach(id => root.querySelector(id).addEventListener('change', () => { root.querySelector('#qsVal').value = ''; fill(); }));
         fill(); },
       ok: root => {
-        const g = id => root.querySelector(id).value; const P = PROPS.find(p => p[0] === g('#qsProp')); const ty = g('#qsType'), op = g('#qsOp'), how = g('#qsHow'); const raw = g('#qsVal').trim(); const vn = parseFloat(raw.replace(',', '.'));
+        const g = id => root.querySelector(id).value; const P = PROPS.find(p => p[0] === g('#qsProp')); const ty = g('#qsType'), op = g('#qsOp'), how = (root.querySelector('input[name=qsHow]:checked') || { value: 'in' }).value; const raw = g('#qsVal').trim(); const vn = parseFloat(raw.replace(',', '.'));
         const base = (g('#qsScope') === 'sel' ? [...selEnts] : A.selectable ? A.selectable() : modelEntities).filter(e => !A.isLocked(e));
         const test = e => { if(ty !== '*' && e.type !== ty) return false; if(op === '*') return true; const v = P[2](e);
           if(typeof v === 'number'){ if(!isFinite(v)) return false; if(op === '=') return Math.abs(v - vn) <= Math.max(1e-6, Math.abs(vn) * 1e-6); if(op === '!=') return Math.abs(v - vn) > Math.max(1e-6, Math.abs(vn) * 1e-6); if(op === '>') return v > vn; if(op === '<') return v < vn; return String(v).includes(raw); }
@@ -277,23 +279,32 @@
   function openPlot(){
     if(!hasDoc()){ say('Mở bản vẽ trước.'); return; }
     const opt = (v, t, s) => '<option value="' + esc(v) + '"' + (s ? ' selected' : '') + '>' + esc(t) + '</option>';
+    // bố cục như hộp "Plot - Model" của AutoCAD: Page setup, Printer/plotter, Paper size, Plot area / offset / scale, Plot style table, Plot options, Drawing orientation
+    const F = (t, h, st) => '<fieldset class="acw-grp"' + (st ? ' style="' + st + '"' : '') + '><legend>' + t + '</legend>' + h + '</fieldset>', R = (l, c) => '<label class="dvd-frow"><span>' + l + '</span><span class="v">' + c + '</span></label>';
+    const dev = PS.dev || 'pdf';
     const html = '<div class="pl-wrap"><div class="pl-left">' +
-      '<div class="pl-sec">Khổ giấy</div><label class="dvd-frow"><span>Khổ</span><span class="v"><select id="plPaper">' + Object.keys(PAPERS).map(k => opt(k, k + ' (' + PAPERS[k][0] + '×' + PAPERS[k][1] + ' mm)', k === PS.paper)).join('') + '</select></span></label>' +
-      '<label class="dvd-frow"><span>Hướng giấy</span><span class="v"><select id="plLand">' + opt('1', 'Ngang (Landscape)', PS.land) + opt('0', 'Dọc (Portrait)', !PS.land) + '</select></span></label>' +
-      '<div class="pl-sec">Vùng in</div><label class="dvd-frow"><span>In gì</span><span class="v"><select id="plArea">' + opt('extents', 'Toàn bản vẽ (Extents)', PS.area === 'extents') + opt('display', 'Đang hiện trên màn hình (Display)', PS.area === 'display') + opt('window', 'Khung chọn (Window)', PS.area === 'window') + '</select></span></label>' +
-      '<div class="dvd-frow"><span></span><span class="v"><button type="button" class="btn-ghost" id="plWin" style="padding:5px 10px">Chọn khung trên bản vẽ &lt;</button></span></div>' +
-      '<div class="pl-sec">Tỉ lệ in</div><label class="dvd-frow"><span>Khít khổ giấy</span><span class="v"><input type="checkbox" id="plFit"' + (PS.fit ? ' checked' : '') + '></span></label>' +
-      '<label class="dvd-frow"><span>Tỉ lệ 1 :</span><span class="v"><input id="plScale" list="plScales" inputmode="decimal" style="width:90px" value="' + esc(PS.scale) + '"><datalist id="plScales">' + SCALES.map(v => '<option value="' + v + '">').join('') + '</datalist></span></label>' +
-      '<label class="dvd-frow"><span>Căn giữa trang</span><span class="v"><input type="checkbox" id="plCenter"' + (PS.center ? ' checked' : '') + '></span></label>' +
-      '<label class="dvd-frow"><span>Lề giấy (mm)</span><span class="v"><input id="plMargin" inputmode="decimal" style="width:70px" value="' + esc(PS.margin) + '"></span></label>' +
-      '<div class="pl-sec">Kiểu in</div><label class="dvd-frow"><span>Màu nét</span><span class="v"><select id="plStyle">' + opt('mono', 'Đen trắng (monochrome.ctb)', PS.style === 'mono') + opt('color', 'Màu (theo bản vẽ)', PS.style === 'color') + opt('gray', 'Thang xám (grayscale.ctb)', PS.style === 'gray') + '</select></span></label>' +
-      '<label class="dvd-frow"><span>In bề rộng nét</span><span class="v"><input type="checkbox" id="plLw"' + (PS.lw ? ' checked' : '') + '></span></label>' +
-      '</div><div class="pl-right"><div class="pl-sec">Xem trước</div><div class="pl-prev"><canvas id="plPrev"></canvas></div><div class="pl-info" id="plInfo"></div>' +
-      '<div class="pl-btns"><button type="button" class="btn-ok" data-f="pdf">Xuất PDF</button><button type="button" class="btn-ghost" data-f="print">In…</button><button type="button" class="btn-ghost" data-f="png">Ảnh PNG</button></div></div></div>';
-    const d = A.dialog({ title: 'In bản vẽ (Plot)', wide: true, html, noOk: true, cancelText: 'Đóng' });
+      F('Thiết lập trang', R('Tên:', '<select disabled><option>&lt;Không&gt;</option></select> <button type="button" class="acw-btn" disabled>Thêm…</button>')) +
+      F('Máy in / máy vẽ', R('Tên:', '<select id="plDev">' + opt('pdf', 'DWG To PDF.pc3', dev === 'pdf') + opt('print', 'Máy in Windows (hệ thống)', dev === 'print') + opt('png', 'PublishToWeb PNG.pc3', dev === 'png') + '</select>') +
+        '<div class="acw-note" id="plDevN" style="margin:0 0 2px"></div><label class="acw-ck dis"><input type="checkbox" disabled checked><span>In ra file</span></label>') +
+      '<div style="display:flex;gap:8px">' + F('Khổ giấy', '<select id="plPaper" style="width:100%">' + Object.keys(PAPERS).map(k => opt(k, 'ISO ' + k + ' (' + PAPERS[k][0] + '.00 x ' + PAPERS[k][1] + '.00 MM)', k === PS.paper)).join('') + '</select>', 'flex:1') +
+        F('Số bản', '<input type="number" value="1" disabled style="width:60px">', 'flex:0 0 auto') + '</div>' +
+      '<div style="display:flex;gap:8px">' + F('Vùng in', R('In gì:', '<select id="plArea">' + opt('extents', 'Phạm vi (Extents)', PS.area === 'extents') + opt('display', 'Màn hình (Display)', PS.area === 'display') + opt('window', 'Khung (Window)', PS.area === 'window') + '</select>') +
+          '<button type="button" class="acw-btn" id="plWin">Khung&lt;</button>', 'flex:1') +
+        F('Tỉ lệ in', '<label class="acw-ck"><input type="checkbox" id="plFit"' + (PS.fit ? ' checked' : '') + '><span>Khít khổ giấy</span></label>' +
+          R('Tỉ lệ 1 :', '<input id="plScale" list="plScales" inputmode="decimal" style="width:80px" value="' + esc(PS.scale) + '"><datalist id="plScales">' + SCALES.map(v => '<option value="' + v + '">').join('') + '</datalist>') +
+          '<label class="acw-ck dis"><input type="checkbox" disabled><span>Co giãn bề rộng nét</span></label>', 'flex:1') + '</div>' +
+      F('Dời gốc in (gốc = vùng in được)', '<div style="display:flex;gap:10px;align-items:center">' + R('Lề (mm):', '<input id="plMargin" inputmode="decimal" style="width:60px" value="' + esc(PS.margin) + '">') + '<label class="acw-ck"><input type="checkbox" id="plCenter"' + (PS.center ? ' checked' : '') + '><span>Căn giữa bản in</span></label></div>') +
+      '</div><div class="pl-right">' +
+      F('Bảng kiểu in (gán bút)', '<select id="plStyle" style="width:calc(100% - 40px)">' + opt('mono', 'monochrome.ctb', PS.style === 'mono') + opt('color', 'Không (in theo màu bản vẽ)', PS.style === 'color') + opt('gray', 'grayscale.ctb', PS.style === 'gray') + '</select>') +
+      F('Tuỳ chọn in', '<label class="acw-ck dis"><input type="checkbox" disabled><span>In nền</span></label><br><label class="acw-ck"><input type="checkbox" id="plLw"' + (PS.lw ? ' checked' : '') + '><span>In bề rộng nét của đối tượng</span></label><br>' +
+        '<label class="acw-ck dis"><input type="checkbox" disabled><span>In độ trong suốt</span></label><br><label class="acw-ck dis"><input type="checkbox" disabled checked><span>In theo kiểu in</span></label>') +
+      F('Hướng bản vẽ', '<label class="acw-ck"><input type="radio" name="plLand" value="0"' + (!PS.land ? ' checked' : '') + '><span>Dọc (Portrait)</span></label><br><label class="acw-ck"><input type="radio" name="plLand" value="1"' + (PS.land ? ' checked' : '') + '><span>Ngang (Landscape)</span></label><br><label class="acw-ck dis"><input type="checkbox" disabled><span>In lộn ngược</span></label>') +
+      '<div class="pl-prev"><canvas id="plPrev"></canvas></div><div class="pl-info" id="plInfo"></div></div></div>';
+    const d = A.dialog({ title: 'In — Model', wide: true, help: 'PLOT', html, okText: 'OK', left: '<button type="button" class="acw-btn" id="plPv">Xem trước…</button><button type="button" class="acw-btn" disabled>Áp cho layout</button>',
+      ok: () => { read(); if(PS.area === 'window' && !PS.win){ say('Chưa chọn khung in.'); return false; } const f = g('plDev').value; setTimeout(() => doPlot(f), 0); } });
     const root = d.root; root.querySelector('.modal').classList.add('pl-modal');
     const g = id => root.querySelector('#' + id);
-    const read = () => { PS.paper = g('plPaper').value; PS.land = g('plLand').value === '1'; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; g('plScale').disabled = PS.fit; psSave(); };
+    const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; g('plDevN').textContent = PS.dev === 'pdf' ? 'Xuất file PDF vector' : PS.dev === 'png' ? 'Xuất ảnh PNG' : 'Mở hộp in của hệ điều hành'; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; g('plScale').disabled = PS.fit; psSave(); };
     let pvT = 0;
     const preview = () => { clearTimeout(pvT); pvT = setTimeout(() => {
       read(); const c = g('plPrev'); if(!c) return; const [Wmm, Hmm] = paperMM(); const box = 300; const s = Math.min(box / Wmm, (box * 0.78) / Hmm);
@@ -306,7 +317,9 @@
     root.querySelectorAll('select,input').forEach(el => { el.addEventListener('change', preview); el.addEventListener('input', preview); });
     g('plScale').disabled = PS.fit;
     g('plWin').onclick = () => { read(); d.close(); pickWindow(); };
-    root.querySelector('.pl-btns').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if(!b) return; read(); if(PS.area === 'window' && !PS.win){ say('Chưa chọn khung in.'); return; } d.close(); doPlot(b.dataset.f); });
+    g('plPv').onclick = () => { read(); try{ const [Wmm, Hmm] = paperMM(); const r = plotRender(Math.max(40, 1100 / Math.max(Wmm, Hmm) * 25.4), true); const c = r.canvas; const k = Math.min((innerWidth * 0.8) / c.width, (innerHeight * 0.75) / c.height, 1);
+      const pd = A.dialog({ title: 'Xem trước bản in', wide: true, cls: 'acw-free', help: false, html: '<div style="background:#3a414d;padding:12px;display:grid;place-items:center"><canvas id="plBig" style="position:static;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.5);width:' + Math.round(c.width * k) + 'px;height:' + Math.round(c.height * k) + 'px"></canvas></div>', noOk: true, cancelText: 'Đóng' });
+      const bc = pd.root.querySelector('#plBig'); bc.width = c.width; bc.height = c.height; const x = bc.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(c, 0, 0); }catch(err){ say('Không dựng được bản xem trước.'); } };
     preview();
   }
   function pickWindow(){
@@ -320,12 +333,12 @@
   A.openPlot = openPlot;
   plain(['PLOT', 'PRINT'], 'In bản vẽ theo khổ giấy & tỉ lệ (PDF / máy in / PNG) — Ctrl+P', () => { if(A.busy()) A.cancel(true); if(A.deskUI && A.deskUI()) openPlot(); else { const b = document.getElementById('exportBtn'); if(b) b.click(); } });
   const plotCSS = document.createElement('style'); plotCSS.textContent = `
-  .pl-modal{max-width:780px !important;width:min(780px,calc(100vw - 24px))}
+  .pl-modal{max-width:840px !important;width:min(840px,calc(100vw - 24px))}
   .pl-wrap{display:flex;gap:16px;flex-wrap:wrap}
   .pl-left{flex:1 1 320px;min-width:280px}
-  .pl-right{flex:0 0 320px;display:flex;flex-direction:column;gap:8px}
+  .pl-right{flex:0 0 320px;display:flex;flex-direction:column;gap:0}
   .pl-sec{font:700 11px system-ui,sans-serif;color:#8f99a8;text-transform:uppercase;margin:8px 0 4px;letter-spacing:.03em}
-  .pl-prev{background:#3a414d;border-radius:6px;min-height:240px;display:grid;place-items:center;padding:10px}
+  .pl-prev{background:#3a414d;border-radius:2px;min-height:170px;display:grid;place-items:center;padding:8px}
   .pl-prev canvas{position:static !important;box-shadow:0 3px 12px rgba(0,0,0,.5);background:#fff}
   .pl-info{font:12px system-ui,sans-serif;color:#cfd6e0;line-height:1.5}
   .pl-btns{display:flex;gap:6px;flex-wrap:wrap}
@@ -446,10 +459,13 @@
   A.FONT_FILE = FONT_FILE;
   const TS = A.TS = (() => { let o = null; try{ o = JSON.parse(localStorage.getItem('dvd:tstyle') || 'null'); }catch(_){} if(!o || !o.list || !o.list.Standard) o = { cur: 'Standard', list: { Standard: { font: 'Arial', wf: 1 } } }; if(!o.list[o.cur]) o.cur = 'Standard'; return o; })();
   const tsSave = () => { try{ localStorage.setItem('dvd:tstyle', JSON.stringify(TS)); }catch(_){} if(A.onTStyle) A.onTStyle(); };
+  A.tsSave = tsSave; A.FONTS = FONTS;
+  // hệ số rộng có dấu: âm = chữ ngược (Backwards)
+  const stXs = st => (st.wf > 0 ? st.wf : 1) * (st.bk ? -1 : 1);
   A.tsSetCur = name => { if(!TS.list[name]) return false; TS.cur = name; tsSave(); return true; };
-  A.tsApply = (w, name) => { const st = TS.list[name]; if(!st) return; w.style = name; w.ff = st.font; if(st.wf && Math.abs(st.wf - 1) > 1e-3) w.xs = st.wf; else delete w.xs; };
+  A.tsApply = (w, name) => { const st = TS.list[name]; if(!st) return; w.style = name; w.ff = st.font; const xs = stXs(st); if(Math.abs(xs - 1) > 1e-3) w.xs = xs; else delete w.xs; };
   const _np = A.newProps;
-  A.newProps = function(e){ const r = _np.apply(this, arguments); if(e && e.type === 'TEXT' && e.ff == null){ const st = TS.list[TS.cur]; if(st){ e.style = TS.cur; e.ff = st.font; if(st.wf && Math.abs(st.wf - 1) > 1e-3 && e.xs == null) e.xs = st.wf; } } return r; };
+  A.newProps = function(e){ const r = _np.apply(this, arguments); if(e && e.type === 'TEXT' && e.ff == null){ const st = TS.list[TS.cur]; if(st){ e.style = TS.cur; e.ff = st.font; const xs = stXs(st); if(Math.abs(xs - 1) > 1e-3 && e.xs == null) e.xs = xs; } } return r; };
   function openStyles(){
     let sel = TS.cur;
     const d = A.dialog({ title: 'Kiểu chữ (Text Style)', wide: true, okText: 'Đóng', noCancel: true,
