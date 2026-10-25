@@ -55,7 +55,7 @@
   A.commit = function(ch, msg){ const r = _commitA.apply(this, arguments); try{ if(r && ch && ch.add && ch.add.length && !ch.rep && !ch.del && /^Đã chèn khối/.test(msg || '')){ const a = ch.add.find(e => e.att); if(a) setTimeout(() => editAttribs(a), 60); } }catch(_){} return r; };
   // kích đúp khối có thuộc tính -> sửa thuộc tính
   const _dbl = A.onDblEnt;
-  A.onDblEnt = function(e){ if(e && e.grp && !(A.inRefedit && A.inRefedit()) && modelEntities.some(x => x.grp === e.grp && x.att) && !e.tbld && !String(e.blk || '').startsWith('*')){ editAttribs(e); return true; } return _dbl ? _dbl.apply(this, arguments) : false; };
+  A.onDblEnt = function(e){ if(e && e.grp && !(A.inRefedit && A.inRefedit()) && modelEntities.some(x => x.grp === e.grp && x.att) && !e.tbld && !String(e.blk || '').startsWith('*')){ (A.eattedit || editAttribs)(e); return true; } return _dbl ? _dbl.apply(this, arguments) : false; };
   plain(['ATTEXPORT', 'ATTEXT', 'DATAEXTRACTION', 'DX'], 'Xuất bảng thuộc tính khối ra CSV (Excel)', () => {
     const groups = new Map(); for(const e of modelEntities){ if(e.att && e.grp){ let g = groups.get(e.grp); if(!g){ g = { blk: String(e.blk || '').replace(/^\*/, ''), vals: {}, x: e.bip ? e.bip.x : e.x, y: e.bip ? e.bip.y : e.y, layer: e.layer }; groups.set(e.grp, g); } g.vals[e.att] = e.text || ''; } }
     if(!groups.size){ say('Bản vẽ không có khối nào có thuộc tính.'); return; }
@@ -139,7 +139,7 @@
   }
   let _xLoadTok = 0;
   async function loadAllRefs(){ const tok = ++_xLoadTok; const L = xrefs(); if(!L.length) return; const key = bkey();
-    for(const X of L){ if(tok !== _xLoadTok || key !== bkey()) return; try{ if(!isModelView()) continue; await loadRef(X); }catch(err){ console.warn('xref', err); } }
+    for(const X of L){ if(tok !== _xLoadTok || key !== bkey()) return; try{ if(!isModelView() || X.unloaded) continue; await loadRef(X); }catch(err){ console.warn('xref', err); } }
     try{ draw(); A.paint(); }catch(_){} }
   const _onLoadX = A.onLoad; A.onLoad = function(){ if(_onLoadX) _onLoadX.apply(this, arguments); XLOADED.clear(); setTimeout(loadAllRefs, 30); };
   cmd(['XATTACH', 'XA'], 'Gắn bản vẽ tham chiếu ngoài (DWG/DXF) làm nền', async () => {
@@ -147,7 +147,7 @@
     log('Đang đọc ' + f.name + '…');
     let p; try{ p = await parseRef(kind, kind === 'dwg' ? await f.arrayBuffer() : await f.text()); }catch(err){ console.error(err); say('Không đọc được file tham chiếu.'); return; }
     if(!p.ents.length){ say('File tham chiếu không có hình.'); return; }
-    const X = { id: uid('X'), name: f.name, kind, ins: { x: 0, y: 0 }, sc: 1, rot: 0, fade: true };
+    const X = { id: uid('X'), name: f.name, kind, ins: { x: 0, y: 0 }, sc: 1, rot: 0, fade: true, t: Date.now() };
     const pv = p.ents.slice(0, 3000);
     const r = await A.getPoint('Chỉ định điểm chèn tham chiếu (Enter = 0,0)', { kw: [{ k: 'S', t: 'Tỉ lệ' }], preview: (g, q) => g.shift(pv, q.x, q.y, '#8fb3d9') });
     if(r.kw === 'S'){ const v = await A.getNum('Tỉ lệ', { def: 1 }); if(v.num > 0) X.sc = v.num; const r2 = await A.getPoint('Chỉ định điểm chèn'); if(r2.pt) X.ins = r2.pt; }
@@ -157,21 +157,54 @@
     const ents = placeRef(p.ents, X, p.lt); for(const e of ents) modelEntities.push(e); XLOADED.set(X.id, ents.length);
     bbDirty = true; try{ invalidateSnap(); buildLayerList(); }catch(_){} draw(); A.paint();
     log('Đã gắn tham chiếu ' + f.name + ' (' + ents.length + ' đối tượng, chỉ xem — bắt điểm được). Quản lý: lệnh XREF.');
+    if(xrD && xrD.render) xrD.render();
   });
+  // External References (như AutoCAD 2027: bảng nổi, danh sách File References + Details, menu chuột phải Open / Attach / Unload / Reload / Detach / Bind)
+  let xrD = null;
   function openXrefManager(){
     if(!hasDoc()){ say('Mở bản vẽ trước.'); return; }
-    const render = root => { const L = xrefs(); root.querySelector('tbody').innerHTML = L.length ? L.map(X => '<tr data-id="' + X.id + '"><td><b>' + esc(X.name) + '</b></td><td>' + (XLOADED.has(X.id) ? '<span style="color:#7ee787">Đã nạp</span> · ' + XLOADED.get(X.id) : '<span style="color:#ffb347">Chưa nạp</span>') + '</td><td>' + (+X.ins.x).toFixed(1) + ', ' + (+X.ins.y).toFixed(1) + '</td><td>' + X.sc + '</td><td style="white-space:nowrap"><button class="tg" data-a="rl" title="Nạp lại">⟳</button><button class="tg" data-a="fd" title="Làm mờ / rõ">◐</button><button class="tg" data-a="bd" title="Gộp vào bản vẽ (Bind)">⤓</button><button class="tg" data-a="op" title="Mở file tham chiếu">↗</button><button class="tg" data-a="dt" title="Gỡ (Detach)">✕</button></td></tr>').join('') : '<tr><td colspan="5" style="color:#8f99a8;padding:10px">Chưa có tham chiếu ngoài. Bấm "Gắn file…".</td></tr>'; };
-    A.dialog({ title: 'Tham chiếu ngoài (External References)', wide: true, okText: 'Đóng', noCancel: true,
-      html: '<div class="lm-bar"><button data-a="add">＋ Gắn file DWG/DXF…</button></div><div class="lm-tbl"><table><thead><tr><th>Tên</th><th>Trạng thái</th><th>Điểm chèn</th><th>Tỉ lệ</th><th></th></tr></thead><tbody></tbody></table></div><p style="margin:6px 0 0">Tham chiếu chỉ để xem và bắt điểm, không sửa được, không ghi vào file khi lưu. "Gộp" biến tham chiếu thành đối tượng thường của bản vẽ.</p>',
-      onOpen: root => { render(root); root.addEventListener('click', async e => { const b = e.target.closest('[data-a]'); if(!b) return; const a = b.dataset.a;
-        if(a === 'add'){ root.remove(); DVDCmd.run('XATTACH'); return; }
-        const id = b.closest('tr').dataset.id; const L = xrefs(); const X = L.find(x => x.id === id); if(!X) return;
-        if(a === 'rl'){ const n = await loadRef(X); xsave(L); draw(); log(n ? 'Đã nạp lại ' + X.name : 'Không tìm thấy dữ liệu tham chiếu ' + X.name); }
-        if(a === 'fd'){ X.fade = X.fade === false; xsave(L); await loadRef(X); draw(); }
-        if(a === 'dt'){ if(!confirm('Gỡ tham chiếu "' + X.name + '"?')) return; removeRefEnts(id); xsave(L.filter(x => x.id !== id)); idbDel('xref:' + id); draw(); }
-        if(a === 'bd'){ if(!confirm('Gộp "' + X.name + '" thành đối tượng thường của bản vẽ? (không gỡ lại được bằng XREF)')) return; const ents = modelEntities.filter(x => x.xr === id).map(x => { const w = deep(x); delete w.xr; w.layer = String(w.layer).replace('|', '$0$'); return w; }); removeRefEnts(id); xsave(L.filter(x => x.id !== id)); A.commit({ add: ents }, 'Đã gộp ' + ents.length + ' đối tượng từ ' + X.name); }
-        if(a === 'op'){ const blob = await idbGet('xref:' + id); if(!blob){ say('Không còn dữ liệu file.'); return; } root.remove(); if(X.kind === 'dwg') loadDWG(await blob.arrayBuffer(), X.name); else loadDXF(await new Response(blob).text(), X.name); return; }
-        render(root); }); } });
+    if(xrD && document.body.contains(xrD.root)){ xrD.render(); return; }
+    const K = A.acw; let sel = null; const sizes = new Map();
+    const st = X => X.unloaded ? 'Đã gỡ nạp' : X.missing ? 'Không tìm thấy' : XLOADED.has(X.id) ? 'Đã nạp' : 'Chưa nạp';
+    const kb = n => n == null ? '' : n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+    const dt = t => t ? new Date(t).toLocaleDateString() : '';
+    const html = '<div class="acw xr-pal"><div class="lm-tb"><button type="button" data-a="add" title="Gắn DWG / DXF…">' + (A.ico ? A.ico('XATTACH') : '＋') + '</button><button type="button" data-a="rla" title="Nạp lại tất cả tham chiếu">' + (A.ico ? A.ico('REGEN') : '⟳') + '</button><span class="sp"></span><span class="acw-note" style="margin:0">Gắn DWG…</span></div>' +
+      '<div class="acw-lab">Tham chiếu file</div><div class="ls-grid" style="height:190px"><table><thead><tr><th>Tên tham chiếu</th><th>Trạng thái</th><th>Dung lượng</th><th>Loại</th><th>Ngày</th><th style="width:100%">Đường dẫn lưu</th></tr></thead><tbody id="xrB"></tbody></table></div>' +
+      '<div class="acw-lab" style="margin-top:8px">Chi tiết</div><div class="pg-det" id="xrD" style="height:auto;min-height:150px"></div>' +
+      '<div class="acw-note">Tham chiếu chỉ để xem và bắt điểm, không ghi vào file khi lưu. Bấm chuột phải vào tham chiếu để Mở / Gỡ nạp / Nạp lại / Gỡ / Gộp.</div></div>';
+    xrD = A.dialog({ title: 'Tham chiếu ngoài', cls: 'acw-free', help: 'XREF', html, noOk: true, cancelText: 'Đóng', modeless: true, cancel: () => { xrD = null; } });
+    const root = xrD.root, $ = id => root.querySelector('#' + id); root.querySelector('.modal').style.width = '560px';
+    const render = () => { if(!document.body.contains(root)) return; const L = xrefs(); if(sel && sel !== '*' && !L.some(x => x.id === sel)) sel = null;
+      // kích thước file: đọc bất đồng bộ từ bộ nhớ, mỗi tham chiếu một lần
+      for(const X of L) if(!sizes.has(X.id)){ sizes.set(X.id, null); idbGet('xref:' + X.id).then(b => { if(b){ sizes.set(X.id, b.size); render(); } }).catch(() => {}); }
+      const me = String((typeof currentName !== 'undefined' && currentName) || 'Bản vẽ');
+      $('xrB').innerHTML = '<tr data-id="*"' + (sel === '*' ? ' class="sel"' : '') + '><td translate="no"><b>' + esc(me.replace(/\.[^.]+$/, '')) + '</b></td><td>Đang mở</td><td></td><td></td><td></td><td></td></tr>' +
+        L.map(X => '<tr data-id="' + X.id + '"' + (sel === X.id ? ' class="sel"' : '') + '><td translate="no">' + esc(X.name.replace(/\.[^.]+$/, '')) + '</td><td style="color:' + (XLOADED.has(X.id) && !X.unloaded ? '#e8ecf2' : '#ffb347') + '">' + st(X) + '</td><td>' + kb(sizes.get(X.id)) + '</td><td>Gắn</td><td>' + dt(X.t) + '</td><td translate="no">' + esc(X.name) + '</td></tr>').join('');
+      details(); };
+    xrD.render = render;
+    const details = () => { const L = xrefs(), X = L.find(x => x.id === sel); const row = (k, v) => '<span>' + k + '</span><span translate="no">' + esc(v) + '</span>';
+      if(sel === '*'){ $('xrD').innerHTML = '<div class="dp-info">' + row('Tên tham chiếu:', String((typeof currentName !== 'undefined' && currentName) || '')) + row('Số tham chiếu:', String(L.length)) + '</div>'; return; }
+      if(!X){ $('xrD').innerHTML = '<span class="acw-note" style="margin:0">Chọn một tham chiếu để xem chi tiết.</span>'; return; }
+      $('xrD').innerHTML = '<div class="dp-info">' + row('Tên tham chiếu:', X.name.replace(/\.[^.]+$/, '')) + '<span>Trạng thái:</span><span>' + st(X) + '</span>' + row('Dung lượng:', kb(sizes.get(X.id)) || '—') + '<span>Loại:</span><span>Gắn (Attach)</span>' + row('Ngày:', dt(X.t) || '—') +
+        row('Số đối tượng:', String(XLOADED.get(X.id) || 0)) + row('Điểm chèn:', (+X.ins.x).toFixed(2) + ', ' + (+X.ins.y).toFixed(2)) + row('Tỉ lệ:', String(X.sc || 1)) + row('Góc xoay:', String(X.rot || 0) + '°') + '<span>Làm mờ:</span><span><label class="acw-ck" style="margin:0"><input type="checkbox" id="xrF"' + (X.fade !== false ? ' checked' : '') + '><span>Làm mờ tham chiếu</span></label></span>' + row('Đường dẫn lưu:', X.name) + '</div>';
+      const f = $('xrF'); if(f) f.onchange = async () => { X.fade = f.checked; xsave(L); if(!X.unloaded) await loadRef(X); draw(); }; };
+    const act = async (a, id) => { const L = xrefs(); const X = L.find(x => x.id === id);
+      if(a === 'add'){ DVDCmd.run('XATTACH'); return; }
+      if(a === 'rla'){ for(const Y of L) if(!Y.unloaded) await loadRef(Y); xsave(L); draw(); render(); log('Đã nạp lại ' + L.filter(Y => !Y.unloaded).length + ' tham chiếu.'); return; }
+      if(!X) return;
+      if(a === 'rl'){ X.unloaded = false; const n = await loadRef(X); xsave(L); draw(); log(n ? 'Đã nạp lại ' + X.name : 'Không tìm thấy dữ liệu tham chiếu ' + X.name); }
+      if(a === 'ul'){ removeRefEnts(id); X.unloaded = true; xsave(L); draw(); log('Đã gỡ nạp ' + X.name + ' (vẫn giữ trong danh sách).'); }
+      if(a === 'dt'){ removeRefEnts(id); xsave(L.filter(x => x.id !== id)); idbDel('xref:' + id); sel = null; draw(); log('Đã gỡ tham chiếu ' + X.name + '.'); }
+      if(a === 'bd'){ const ents = modelEntities.filter(x => x.xr === id).map(x => { const w = deep(x); delete w.xr; w.layer = String(w.layer).replace('|', '$0$'); return w; }); removeRefEnts(id); xsave(L.filter(x => x.id !== id)); A.commit({ add: ents }, 'Đã gộp tham chiếu ' + X.name + ' (' + ents.length + ' đối tượng)'); sel = null; }
+      if(a === 'op'){ const blob = await idbGet('xref:' + id); if(!blob){ say('Không còn dữ liệu file.'); return; } xrD.close(); xrD = null; if(X.kind === 'dwg') loadDWG(await blob.arrayBuffer(), X.name); else loadDXF(await new Response(blob).text(), X.name); return; }
+      render(); };
+    root.querySelector('.lm-tb').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if(b) act(b.dataset.a); });
+    $('xrB').addEventListener('click', e => { const tr = e.target.closest('tr[data-id]'); if(!tr) return; sel = tr.dataset.id; render(); });
+    $('xrB').addEventListener('dblclick', e => { const tr = e.target.closest('tr[data-id]'); if(tr && tr.dataset.id !== '*') act('op', tr.dataset.id); });
+    $('xrB').addEventListener('contextmenu', e => { const tr = e.target.closest('tr[data-id]'); e.preventDefault(); if(tr){ sel = tr.dataset.id; render(); } const id = sel && sel !== '*' ? sel : null; const X = id && xrefs().find(x => x.id === id);
+      if(A.acwMenu) A.acwMenu(e.clientX, e.clientY, [['Mở', () => act('op', id), !id], ['Gắn…', () => act('add')], null, ['Gỡ nạp', () => act('ul', id), !id || (X && X.unloaded)], ['Nạp lại', () => act('rl', id), !id], ['Gỡ', () => act('dt', id), !id], ['Gộp…', () => A.dialog({ title: 'Gộp tham chiếu', help: 'XREF', html: '<div class="acw" style="max-width:380px">Gộp "' + esc(X ? X.name : '') + '" thành đối tượng thường của bản vẽ? Không gỡ lại được bằng XREF.</div>', okText: 'Gộp', ok: () => act('bd', id) }), !id || (X && X.unloaded)]]); });
+    root.querySelector('.modal').addEventListener('pointerenter', render);
+    render();
   }
   plain(['XREF', 'XR', 'ER', 'EXTERNALREFERENCES'], 'Quản lý tham chiếu ngoài (nạp lại, gỡ, gộp, mở)', () => openXrefManager());
 

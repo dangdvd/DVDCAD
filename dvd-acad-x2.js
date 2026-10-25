@@ -18,6 +18,7 @@
 
   /* ====================== MLINE (đường đôi: tường) ====================== */
   const MLS = Object.assign({ offs: [0.5, -0.5], caps: true, name: 'STANDARD' }, (() => { try{ return JSON.parse(localStorage.getItem('dvd:mlstyle') || '{}'); }catch(_){ return {}; } })());
+  A.MLINESTYLE = MLS;
   function offsetOpen(P, o, closed){
     const n = P.length, out = [];
     for(let i = 0; i < n; i++){
@@ -35,7 +36,8 @@
     const sh = just === 'T' ? -mx : just === 'B' ? -mn : 0; const lines = offs.map(o => offsetOpen(P, o + sh, closed));
     const rk = offs.map((o, i) => i).sort((i, j) => offs[i] - offs[j]); const mlk = []; rk.forEach((i, r) => { mlk[i] = r; });   // mlk: thứ tự đường từ phải sang trái (cho MLEDIT)
     const out = lines.map((v, i) => ({ type: 'POLYLINE', closed, vertices: v, mlk: mlk[i] }));
-    if(!closed && MLS.caps && lines.length > 1){ const iT = offs.indexOf(mx), iB = offs.indexOf(mn); for(const k of [0, P.length - 1]) out.push({ type: 'LINE', x1: lines[iT][k].x, y1: lines[iT][k].y, x2: lines[iB][k].x, y2: lines[iB][k].y }); }
+    // nắp đầu / cuối (capS / capE như Caps Start / End của MLSTYLE; kiểu cũ chỉ có caps)
+    if(!closed && lines.length > 1){ const iT = offs.indexOf(mx), iB = offs.indexOf(mn); for(const k of [0, P.length - 1]){ const on = k === 0 ? (MLS.capS != null ? MLS.capS : MLS.caps) : (MLS.capE != null ? MLS.capE : MLS.caps); if(on) out.push({ type: 'LINE', x1: lines[iT][k].x, y1: lines[iT][k].y, x2: lines[iB][k].x, y2: lines[iB][k].y }); } }
     return out;
   }
   cmd(['MLINE', 'ML'], 'Đường đôi (tường, đường ống) — canh lề, tỉ lệ, kiểu', async () => {
@@ -203,7 +205,7 @@
   const getViews = () => { try{ return JSON.parse(localStorage.getItem(vk()) || '[]'); }catch(_){ return []; } };
   const setViews = L => { try{ localStorage.setItem(vk(), JSON.stringify(L)); }catch(_){} };
   function restoreView(v){ try{ if(A.pushView) A.pushView(); }catch(_){} view.scale = v.s; view.offsetX = v.x; view.offsetY = v.y; if(v.r != null && typeof setRotation === 'function'){ try{ setRotation(v.r); }catch(_){ view.rot = v.r; } } draw(); try{ A.paint(); }catch(_){} }
-  A.namedViews = { get: getViews, restore: restoreView };
+  A.namedViews = { get: getViews, set: setViews, restore: restoreView };
   plain(['VIEW', 'V', 'DDVIEW'], 'Lưu / gọi lại góc nhìn 2D đặt tên', () => {
     const render = root => { const L = getViews(); root.querySelector('#vwL').innerHTML = L.length ? L.map((v, i) => '<div style="display:flex;gap:6px;align-items:center;margin:4px 0"><span style="flex:1">' + esc(v.name) + '</span><button data-g="' + i + '">Xem</button><button data-d="' + i + '">Xoá</button></div>').join('') : '<p style="opacity:.7">Chưa có góc nhìn nào.</p>'; };
     A.dialog({ title: 'Góc nhìn đặt tên (VIEW)', html: '<div id="vwL"></div><div style="display:flex;gap:6px;margin-top:10px"><input id="vwN" placeholder="Tên góc nhìn mới" style="flex:1"><button id="vwS">Lưu góc nhìn hiện tại</button></div>', noOk: true, cancelText: 'Đóng',

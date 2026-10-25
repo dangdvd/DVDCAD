@@ -633,7 +633,7 @@
     manage: { en: 'Manage', vi: 'Quản lý', panels: [
       { id: 'draft', en: 'Drafting', vi: 'Trợ giúp vẽ', items: [big('DSETTINGS', 'Drafting\nSettings', 'Cài đặt\nbắt điểm'), big('SETVAR', 'System\nVariables', 'Biến\nhệ thống'), col(sm('TOSNAP', 'Object Snap', 'Bắt điểm', { tog: 'osnap' }), sm('TORTHO', 'Ortho Mode', 'Vuông góc', { tog: 'ortho' }), sm('TPOLAR', 'Polar Tracking', 'Góc cực', { tog: 'polar' })), col(sm('SNAPANG', 'Snap Angle', 'Xoay lưới / ortho'), sm('SNAP', 'Snap', 'Bước nhảy'), sm('GRID', 'Grid', 'Lưới'))] },
       { id: 'units', en: 'Units', vi: 'Đơn vị', items: [big('UNITS', 'Units', 'Đơn vị'), col(sm('CALIB', 'Calibrate Scale', 'Tỉ lệ đo'), sm('CAL', 'QuickCalc', 'Máy tính'))] },
-      { id: 'clean', en: 'Cleanup', vi: 'Dọn dẹp', items: [big('PURGE', 'Purge', 'Dọn\nlớp trống'), big('OVERKILL', 'Overkill', 'Xoá\nnét trùng'), big('AUDIT', 'Audit', 'Kiểm tra\nlỗi'), col(sm('LAYMRG', 'Layer Merge', 'Gộp lớp'), sm('LAYDEL', 'Layer Delete', 'Xoá lớp'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer'))] },
+      { id: 'clean', en: 'Cleanup', vi: 'Dọn dẹp', items: [big('PURGE', 'Purge', 'Dọn\nbản vẽ'), big('OVERKILL', 'Overkill', 'Xoá\nnét trùng'), big('AUDIT', 'Audit', 'Kiểm tra\nlỗi'), col(sm('LAYMRG', 'Layer Merge', 'Gộp lớp'), sm('LAYDEL', 'Layer Delete', 'Xoá lớp'), sm('SETBYLAYER', 'Set to ByLayer', 'Về ByLayer'))] },
       { id: 'mutil', en: 'Utilities', vi: 'Tiện ích', items: [big('COUNT', 'Count', 'Đếm\nkhối'), big('QSELECT', 'Quick\nSelect', 'Chọn\nnhanh'), col(sm('DBLIST', 'List Database', 'Liệt kê bản vẽ'), sm('JPGOUT', 'Export JPG', 'Xuất ảnh JPG'), sm('COPYHIST', 'Copy History', 'Chép lịch sử lệnh'))] },
       { id: 'apps', en: 'Applications', vi: 'Ứng dụng', items: [big('SCRIPT', 'Run\nScript', 'Chạy\nscript'), col(sm('ALIASEDIT', 'Edit Aliases', 'Lệnh tắt (PGP)'), sm('CAL', 'QuickCalc', 'Máy tính'))] },
       { id: 'dwg', en: 'Drawing', vi: 'Bản vẽ', items: [big('DWGPROPS', 'Drawing\nProperties', 'Thông tin\nbản vẽ'), col(sm('RENAME', 'Rename', 'Đổi tên'), sm('TIME', 'Time', 'Thời gian'), sm('STATUS', 'Status', 'Trạng thái')), col(sm('OPTIONS', 'Options', 'Tuỳ chọn'), sm('PTYPE', 'Point Style', 'Kiểu điểm'), sm('LAYERSTATE', 'Layer States', 'Trạng thái lớp')), col(sm('AUTOCOMPLETE', 'AutoComplete', 'Gợi ý lệnh'), sm('DRAGMODE', 'Drag Mode', 'Xem trước khi kéo'), sm('REINIT', 'Reinitialize', 'Nạp lại'))] },
@@ -1003,6 +1003,7 @@
 
   /* ---------------- bảng màu ACI ---------------- */
   function aciPicker(rect, cb){
+    if(A.selectColor && A.deskUI && A.deskUI()){ closePop(); A.selectColor(null, cb, { byLayer: true }); return; }   // máy tính: hộp Select Color như AutoCAD
     closePop(); popEl = document.createElement('div'); popEl.className = 'ac-pop'; popEl.style.padding = '8px';
     const hex = i => '#' + ((ACI_RGB[i] >>> 0) & 0xffffff).toString(16).padStart(6, '0');
     let h = '<div class="hd" style="padding:0 0 4px">Màu chỉ số (ACI)</div><div class="aci-grid">';

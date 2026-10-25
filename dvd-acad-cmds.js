@@ -357,7 +357,7 @@
   });
 
   async function textCmd(multi){
-    let ha = 'left', va = 'alphabetic', p, mRot = null;
+    let ha = 'left', va = 'alphabetic', p, mRot = null, boxW = 0;
     if(multi){   // MTEXT như AutoCAD: góc thứ nhất, rồi góc đối diện hoặc [Cao chữ/Canh lề/Xoay/Kiểu chữ/Chiều rộng]; không hỏi lại cao chữ
       log('Kiểu chữ hiện hành: "' + (A.TS ? A.TS.cur : 'Standard') + '"  Cao chữ: ' + fmt(MEM.th || defaultTextH()));
       const a = await A.getPoint('Chỉ định góc thứ nhất'); if(!a.pt) return;
@@ -372,7 +372,7 @@
         break;
       }
       if(!b.pt) return;
-      const x0 = Math.min(a.pt.x, b.pt.x), x1 = Math.max(a.pt.x, b.pt.x), y0 = Math.min(a.pt.y, b.pt.y), y1 = Math.max(a.pt.y, b.pt.y);
+      const x0 = Math.min(a.pt.x, b.pt.x), x1 = Math.max(a.pt.x, b.pt.x), y0 = Math.min(a.pt.y, b.pt.y), y1 = Math.max(a.pt.y, b.pt.y); boxW = x1 - x0;
       ha = jk[1] === 'C' ? 'center' : jk[1] === 'R' ? 'right' : 'left'; va = jk[0] === 'M' ? 'middle' : jk[0] === 'B' ? 'bottom' : 'top';
       p = { x: ha === 'center' ? (x0 + x1) / 2 : ha === 'right' ? x1 : x0, y: va === 'middle' ? (y0 + y1) / 2 : va === 'bottom' ? y0 : y1 };
     } else {
@@ -401,6 +401,15 @@
     let rot = multi && mRot != null ? mRot : 0;
     if(!multi){ const ra = await A.getAngle('Chỉ định góc xoay chữ', { base: p, def: MEM.trot || 0 }); rot = ra.num != null ? ra.num : (MEM.trot || 0); MEM.trot = rot; }
     remember();
+    // máy tính: soạn chữ ngay trên bản vẽ + tab "Text Editor" (như AutoCAD); điện thoại: hộp nhập chữ
+    if(A.inplaceText && A.deskUI && A.deskUI()){
+      const R = await A.inplaceText({ x: p.x, y: p.y, h, rot, ha, va, w: multi ? boxW : 0, multi, value: '' }); if(!R || !R.text.trim()) return;
+      const make = (q, text) => { const w = mk('TEXT', { x: q.x, y: q.y, text, h: R.h, rot, ha: R.ha, va: R.va }); A.textFinish && A.textFinish(w, R); return w; };
+      if(multi){ A.commit({ add: [make(p, R.text)] }); return; }
+      // TEXT (DTEXT): mỗi dòng là 1 đối tượng chữ riêng, dòng sau cách dòng trước 1.5 lần cao chữ (như AutoCAD)
+      const r0 = rot * D2R, dn = { x: Math.sin(r0) * R.h * 1.5, y: -Math.cos(r0) * R.h * 1.5 }; const add = [];
+      R.text.split('\n').forEach((t, i) => { if(t.trim()) add.push(make({ x: p.x + dn.x * i, y: p.y + dn.y * i }, t)); }); if(add.length) A.commit({ add }); return;
+    }
     const s = await askText({ title: multi ? 'Nội dung chữ nhiều dòng' : 'Nội dung chữ', value: '' });
     if(s == null || !s.trim()) return;
     A.commit({ add: [mk('TEXT', { x: p.x, y: p.y, text: s.replace(/\r/g, ''), h, rot, ha, va })] });
@@ -410,7 +419,14 @@
   cmd(['DDEDIT', 'ED', 'TEXTEDIT'], 'Sửa nội dung chữ', async () => {
     for(;;){
       const r = await A.getEnt('Chọn chữ cần sửa', { filter: e => e.type === 'TEXT' }); if(!r.ent) return;
-      const e = r.ent; const s = await askText({ title: 'Sửa chữ', value: String(e.text || '') }); if(s == null || !s.trim()) continue;
+      const e = r.ent;
+      if(A.inplaceText && A.deskUI && A.deskUI()){   // sửa ngay trên bản vẽ như AutoCAD
+        const multi = !!(e.mt || String(e.text || '').includes('\n') || e.mtp); const R = await A.inplaceText({ x: e.x, y: e.y, h: e.h || 2.5, rot: e.rot || 0, ha: e.ha || 'left', va: e.va || 'alphabetic', w: e.mtwk ? e.mtwk * (e.h || 1) : 0, multi, single: !multi, value: A.textSrc ? A.textSrc(e) : String(e.text || ''), style: e.style, font: e.ff, col: e.bl ? '' : e.col, dim: !!e.dimd });
+        if(!R || !R.text.trim()) continue;
+        const w = copyOf(e); w.text = R.text; if(!w.dimd){ w.h = R.h; w.ha = R.ha; w.va = R.va; if(A.textFinish) A.textFinish(w, R); }
+        if(w.dimd) w.dimd.ov = (w.dimv != null && R.text === dimFmtOf(w)) ? null : R.text; A.commit({ rep: [[e, w]] }); continue;
+      }
+      const s = await askText({ title: 'Sửa chữ', value: String(e.text || '') }); if(s == null || !s.trim()) continue;
       const w = copyOf(e); w.text = s; if(w.dimd) w.dimd.ov = (w.dimv != null && s === dimFmtOf(w)) ? null : s; A.commit({ rep: [[e, w]] });
     }
   });
@@ -571,27 +587,56 @@
   cmd(['ARRAY', 'AR'], 'Nhân bản dạng mảng (chữ nhật / tròn)', async () => arrayCmd(null));
   cmd(['ARRAYRECT'], 'Mảng chữ nhật', async () => arrayCmd('R'));
   cmd(['ARRAYPOLAR'], 'Mảng tròn quanh tâm', async () => arrayCmd('PO'));
+  // ARRAYRECT / ARRAYPOLAR như AutoCAD 2027: chọn đối tượng → xem trước mảng mặc định (4 × 3 / 6 phần tử) + tab "Array Creation";
+  // sửa ở dòng lệnh (COUnt, Spacing, COLumns, Rows…) hoặc trên ribbon, Enter = xong, Esc = huỷ
+  function arrayItems(st, sel){
+    const out = [];
+    if(st.k === 'R'){ for(let i = 0; i < st.C; i++) for(let j = 0; j < st.R; j++){ if(!i && !j) continue; out.push(...remapGroups(sel.map(e => { const w = copyOf(e); translateEnt(w, st.dx * i, st.dy * j); return w; }))); } return out; }
+    const F = st.F * (st.cw ? -1 : 1), step = Math.abs(Math.abs(F) - 360) < 1e-9 ? F / st.N : F / (st.N - 1);
+    for(let i = 1; i < st.N; i++){ const a = step * i; out.push(...remapGroups(sel.map(e => { const w = copyOf(e); if(st.rot) rotateEnt(w, a, st.c); else { const ce = entCenter(w), q = _rotPt(ce, st.c, a * D2R); translateEnt(w, q.x - ce.x, q.y - ce.y); } return w; }))); }
+    return out;
+  }
   async function arrayCmd(type){
     const s = await A.getSel('Chọn đối tượng'); const sel = s.sel || []; if(!sel.length) return;
-    if(!type){ const t = await A.getKw('Chọn kiểu mảng', { kw: [{ k: 'R', t: 'Chữ nhật' }, { k: 'PO', t: 'Tròn' }], def: 'Chữ nhật' }); type = t.kw || 'R'; }
+    if(!type){ const t = await A.getKw('Nhập kiểu mảng', { kw: [{ k: 'R', t: 'Chữ nhật' }, { k: 'PA', t: 'Theo đường' }, { k: 'PO', t: 'Tròn' }], def: 'Chữ nhật' }); type = t.kw || 'R'; if(type === 'PA'){ DVDCmd.run('ARRAYPATH'); return; } }
     const bb = bboxOf(sel) || { x0: 0, y0: 0, x1: 1, y1: 1 }; const w0 = (bb.x1 - bb.x0) || 1, h0 = (bb.y1 - bb.y0) || 1;
-    if(type === 'R'){
-      const v = await askNum({ title: 'Mảng chữ nhật', hint: 'Khoảng cách tính từ gốc đối tượng này tới đối tượng kế tiếp', fields: [{ label: 'Số cột', value: String(MEM.ac || 4) }, { label: 'Số hàng', value: String(MEM.ar || 1) }, { label: 'Khoảng cột', value: String(MEM.acs || +(w0 * 1.5).toPrecision(3)) }, { label: 'Khoảng hàng', value: String(MEM.ars || +(h0 * 1.5).toPrecision(3)) }] });
-      if(!v) return; const C = Math.max(1, Math.min(500, Math.round(v[0] || 1))), R = Math.max(1, Math.min(500, Math.round(v[1] || 1))), dx = v[2] || 0, dy = v[3] || 0;
-      if(C * R * sel.length > 60000){ say('Mảng quá lớn.'); return; }
-      Object.assign(MEM, { ac: C, ar: R, acs: dx, ars: dy }); remember();
-      const add = []; for(let i = 0; i < C; i++) for(let j = 0; j < R; j++){ if(!i && !j) continue; add.push(...remapGroups(sel.map(e => { const w = copyOf(e); translateEnt(w, dx * i, dy * j); return w; }))); }
-      if(A.arrCommit && A.arrCommit(sel, add, { k: 'R', C, R, dx, dy }, 'Đã tạo mảng ' + C + '×' + R)) return;
-      A.commit({ add }, 'Đã tạo mảng ' + C + '×' + R); return;
-    }
-    const c = await A.getPoint('Chỉ định tâm mảng'); if(!c.pt) return;
-    const v = await askNum({ title: 'Mảng tròn', fields: [{ label: 'Số phần tử (kể cả gốc)', value: String(MEM.apn || 6) }, { label: 'Góc lấp đầy (độ)', value: String(MEM.apa || 360) }, { label: 'Xoay theo (1 = có)', value: '1' }] });
-    if(!v) return; const N = Math.max(2, Math.min(1000, Math.round(v[0] || 6))), F = isFinite(v[1]) ? v[1] : 360, rotItems = v[2] !== 0;
-    Object.assign(MEM, { apn: N, apa: F }); remember();
-    const step = Math.abs(Math.abs(F) - 360) < 1e-9 ? F / N : F / (N - 1); const add = [];
-    for(let i = 1; i < N; i++){ const a = step * i; add.push(...remapGroups(sel.map(e => { const w = copyOf(e); if(rotItems) rotateEnt(w, a, c.pt); else { const ce = entCenter(w), q = _rotPt(ce, c.pt, a * D2R); translateEnt(w, q.x - ce.x, q.y - ce.y); } return w; }))); }
-    if(A.arrCommit && A.arrCommit(sel, add, { k: 'P', N, F, rot: rotItems, c: { x: c.pt.x, y: c.pt.y } }, 'Đã tạo mảng tròn ' + N + ' phần tử')) return;
-    A.commit({ add }, 'Đã tạo mảng tròn ' + N + ' phần tử');
+    let st;
+    if(type === 'R') st = { k: 'R', C: 4, R: 3, dx: +(w0 * 1.5).toPrecision(4), dy: +(h0 * 1.5).toPrecision(4), assoc: A.MEM.arrAssoc !== false };
+    else { const c = await A.getPoint('Chỉ định tâm mảng hoặc', { kw: [{ k: 'B', t: 'Điểm gốc' }, { k: 'A', t: 'Trục xoay' }] }); if(!c.pt) return; st = { k: 'P', c: c.pt, N: 6, F: 360, rot: true, cw: false, assoc: A.MEM.arrAssoc !== false }; }
+    const big = () => (st.k === 'R' ? st.C * st.R : st.N) * sel.length > 60000;
+    A._arr = st; A._arrUpd = () => { try{ A.paint(); }catch(_){} };
+    try{ if(A.ribbonCtx) A.ribbonCtx(st.k === 'R' ? 'arrayctx' : 'arrayctxp'); }catch(_){}
+    const refreshRib = () => { try{ if(A.ribbon) A.ribbon.render(); }catch(_){} };
+    try{
+      for(;;){
+        const kw = st.k === 'R' ? [{ k: 'AS', t: 'Liên kết' }, { k: 'B', t: 'Điểm gốc' }, { k: 'COU', t: 'Số lượng' }, { k: 'S', t: 'Khoảng cách' }, { k: 'COL', t: 'Cột' }, { k: 'R', t: 'Hàng' }, { k: 'L', t: 'Tầng' }, { k: 'X', t: 'Thoát' }]
+          : [{ k: 'AS', t: 'Liên kết' }, { k: 'B', t: 'Điểm gốc' }, { k: 'I', t: 'Số phần tử' }, { k: 'A', t: 'Góc giữa' }, { k: 'F', t: 'Góc lấp đầy' }, { k: 'ROW', t: 'Hàng' }, { k: 'L', t: 'Tầng' }, { k: 'ROT', t: 'Xoay phần tử' }, { k: 'X', t: 'Thoát' }];
+        const r = await A.getPoint('Chọn ô nắm để sửa mảng hoặc', { kw, def: 'Thoát', rubber: false, noSnap: true, previewAlways: true, preview: g => { if(!big()) g.ents(arrayItems(st, sel)); } });
+        if(r.none || r.kw === 'X' || r.pt) break;   // Enter / Thoát / bấm vào bản vẽ = xong
+        if(r.kw === 'AS'){ const k = await A.getKw('Tạo mảng liên kết', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: st.assoc ? 'Có' : 'Không' }); if(k.kw) st.assoc = k.kw === 'Y'; }
+        else if(r.kw === 'B' || r.kw === 'L' || r.kw === 'ROW'){ log(r.kw === 'L' ? 'Mảng nhiều tầng (3D) chưa hỗ trợ.' : r.kw === 'ROW' ? 'Mảng tròn nhiều hàng chưa hỗ trợ.' : 'Đổi điểm gốc mảng chưa hỗ trợ.'); }
+        else if(r.kw === 'COU'){ const a = await A.getNum('Nhập số cột', { def: st.C }); if(a.num >= 1) st.C = Math.min(500, Math.round(a.num)); const b = await A.getNum('Nhập số hàng', { def: st.R }); if(b.num >= 1) st.R = Math.min(500, Math.round(b.num)); }
+        else if(r.kw === 'S'){ const a = await A.getDist('Chỉ định khoảng cách giữa các cột', { def: st.dx }); if(a.num != null) st.dx = a.num; const b = await A.getDist('Chỉ định khoảng cách giữa các hàng', { def: st.dy }); if(b.num != null) st.dy = b.num; }
+        else if(r.kw === 'COL'){ const a = await A.getNum('Nhập số cột', { def: st.C }); if(a.num >= 1) st.C = Math.min(500, Math.round(a.num)); const b = await A.getDist('Chỉ định khoảng cách giữa các cột', { def: st.dx }); if(b.num != null) st.dx = b.num; }
+        else if(r.kw === 'R'){ const a = await A.getNum('Nhập số hàng', { def: st.R }); if(a.num >= 1) st.R = Math.min(500, Math.round(a.num)); const b = await A.getDist('Chỉ định khoảng cách giữa các hàng', { def: st.dy }); if(b.num != null) st.dy = b.num; }
+        else if(r.kw === 'I'){ const a = await A.getNum('Nhập số phần tử trong mảng', { def: st.N }); if(a.num >= 2) st.N = Math.min(1000, Math.round(a.num)); }
+        else if(r.kw === 'A'){ const a = await A.getNum('Chỉ định góc giữa các phần tử', { def: +(st.F / (Math.abs(st.F - 360) < 1e-9 ? st.N : st.N - 1)).toPrecision(6) }); if(a.num) st.F = Math.min(360, Math.abs(a.num) * (Math.abs(st.F - 360) < 1e-9 ? st.N : st.N - 1)); }
+        else if(r.kw === 'F'){ const a = await A.getNum('Chỉ định góc lấp đầy (+ = ngược chiều kim đồng hồ, − = cùng chiều)', { def: st.cw ? -st.F : st.F }); if(a.num){ st.cw = a.num < 0; st.F = Math.min(360, Math.abs(a.num)); } }
+        else if(r.kw === 'ROT'){ const k = await A.getKw('Xoay các phần tử khi tạo mảng', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: st.rot ? 'Có' : 'Không' }); if(k.kw) st.rot = k.kw === 'Y'; }
+        refreshRib();
+      }
+    } finally { try{ if(A.ribbonCtx) A.ribbonCtx(null); }catch(_){} A._arr = null; A._arrUpd = null; }
+    if(big()){ say('Mảng quá lớn.'); return; }
+    const add = arrayItems(st, sel); if(!add.length){ log('Mảng chỉ có 1 phần tử.'); return; }
+    const svA = A.MEM.arrAssoc; A.MEM.arrAssoc = st.assoc;
+    try{
+      if(st.k === 'R'){ Object.assign(MEM, { ac: st.C, ar: st.R, acs: st.dx, ars: st.dy }); remember();
+        if(A.arrCommit && A.arrCommit(sel, add, { k: 'R', C: st.C, R: st.R, dx: st.dx, dy: st.dy }, 'Đã tạo mảng ' + st.C + '×' + st.R)) return;
+        A.commit({ add }, 'Đã tạo mảng ' + st.C + '×' + st.R); return; }
+      Object.assign(MEM, { apn: st.N, apa: st.F }); remember(); const F = st.F * (st.cw ? -1 : 1);
+      if(A.arrCommit && A.arrCommit(sel, add, { k: 'P', N: st.N, F, rot: st.rot, c: { x: st.c.x, y: st.c.y } }, 'Đã tạo mảng tròn ' + st.N + ' phần tử')) return;
+      A.commit({ add }, 'Đã tạo mảng tròn ' + st.N + ' phần tử');
+    } finally { A.MEM.arrAssoc = svA; }
   }
 
   // STRETCH

@@ -572,7 +572,14 @@
   });
   const lasKey = () => 'dvd:las::' + docName();
   const getLAS = () => { try{ return JSON.parse(localStorage.getItem(lasKey()) || '{}'); }catch(_){ return {}; } };
-  A.layerState = { save: (n) => { const o = getLAS(); o[n] = snap(); localStorage.setItem(lasKey(), JSON.stringify(o)); }, restore: (n) => { const o = getLAS(); if(o[n]){ restoreSnap(o[n]); return true; } return false; }, list: () => Object.keys(getLAS()) };
+  const setLAS = o => { try{ localStorage.setItem(lasKey(), JSON.stringify(o)); }catch(_){} };
+  // mask: chỉ gọi lại các thuộc tính chọn (như "Layer properties to restore" của AutoCAD): on, frz, lock, col, lt, lw, cur
+  const mergeSnap = (S, m) => { if(!m) return S; const C = snap(), O = Object.assign({}, C);
+    if(m.on) O.off = S.off || []; if(m.frz) O.fz = S.fz || []; if(m.lock) O.lk = S.lk || []; if(m.col) O.hex = Object.assign({}, C.hex, S.hex); if(m.lt) O.layLT = Object.assign({}, C.layLT, S.layLT); if(m.lw) O.layLW = Object.assign({}, C.layLW, S.layLW); if(m.cur && S.cur) O.cur = S.cur; return O; };
+  A.layerState = { save: (n, desc) => { const o = getLAS(); const S = snap(); S.desc = desc != null ? desc : ((o[n] && o[n].desc) || ''); S.t = Date.now(); S.layers = A.layerNames(); o[n] = S; setLAS(o); },
+    restore: (n, mask) => { const o = getLAS(); if(o[n]){ restoreSnap(mergeSnap(o[n], mask)); return true; } return false; }, list: () => Object.keys(getLAS()), all: () => getLAS(), snap: () => snap(),
+    del: n => { const o = getLAS(); delete o[n]; setLAS(o); }, rename: (a, b) => { const o = getLAS(); if(!o[a]) return 'Không thấy trạng thái lớp.'; if(o[b]) return 'Tên đã có.'; o[b] = o[a]; delete o[a]; setLAS(o); return ''; },
+    apply: S => restoreSnap(S), setDesc: (n, d) => { const o = getLAS(); if(o[n]){ o[n].desc = d; setLAS(o); } }, put: (n, S) => { const o = getLAS(); o[n] = S; setLAS(o); }, same: n => { const o = getLAS(); if(!o[n]) return false; const a = Object.assign({}, o[n]), b = snap(); delete a.desc; delete a.t; delete a.layers; return sameSnap(a, b); } };
   plain(['LAYERSTATE', 'LAS', 'LMAN'], 'Quản lý trạng thái lớp: lưu / gọi lại tình trạng bật, tắt, khoá, màu của các lớp', () => {
     const render = root => { const o = getLAS(); const n = Object.keys(o); root.querySelector('#lsL').innerHTML = n.length ? n.map(k => '<tr><td>' + esc(k) + '</td><td>' + (o[k].off.length + o[k].fz.length) + ' tắt/đóng băng · ' + o[k].lk.length + ' khoá</td><td><button data-r="' + esc(k) + '">Gọi lại</button> <button data-d="' + esc(k) + '">✕</button></td></tr>').join('') : '<tr><td colspan="3" style="opacity:.7">Chưa lưu trạng thái nào.</td></tr>'; };
     A.dialog({ title: 'Trạng thái lớp (Layer States)', wide: true, noOk: true, cancelText: 'Đóng', html: '<div class="lm-bar"><input id="lsN" placeholder="Tên trạng thái mới (vd In kết cấu)"><button id="lsS">Lưu trạng thái hiện tại</button></div><div class="lm-tbl"><table><thead><tr><th>Tên</th><th>Nội dung</th><th></th></tr></thead><tbody id="lsL"></tbody></table></div>',
@@ -659,13 +666,14 @@
   });
   setTimeout(applyAll, 0); setTimeout(applyAll, 1500);
   // ---- SCRIPT (.scr) ----
+  const SCR_CL = new Set(['COLOR', 'COL', 'INSERT', 'I', 'BLOCK', 'B', 'PURGE', 'PU']);
   async function runScript(text, label){
     const lines = String(text).replace(/\r/g, '').split('\n'); const toks = [];
     for(const ln of lines){ if(/^\s*;/.test(ln)) continue; const parts = ln.split(' '); for(const p of parts) toks.push(p); }
     while(toks.length && toks[toks.length - 1] === '') toks.pop();
     const wait = ms => new Promise(r => setTimeout(r, ms)); let n = 0;
     for(const t of toks){
-      if(!A.busy()){ if(t === '') continue; DVDCmd.run(t); n++; }
+      if(!A.busy()){ if(t === '') continue; const u = t.toUpperCase().replace(/^[_.]+/, ''); DVDCmd.run(SCR_CL.has(u) ? '-' + u : t); n++; }   // lệnh nay mở hộp thoại: script chạy bản dòng lệnh như trước
       else A.input(t);
       await wait(25);
     }

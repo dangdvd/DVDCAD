@@ -85,6 +85,19 @@
   .hc-props{display:grid;grid-template-columns:auto 108px auto 108px;gap:4px 6px;align-items:center;font-size:11.5px;padding:4px}
   .hc-props label{display:contents;color:#dfe5ee}
   .hc-props select,.hc-props input{height:21px;background:#262b34;color:#e6eaf0;border:1px solid #4a5363;border-radius:2px;font:11.5px inherit;padding:0 4px;width:108px;box-sizing:border-box}
+  .sc-grid{display:grid;grid-template-columns:repeat(24,18px);gap:2px;background:#262b34;border:1px solid #5a6578;padding:4px;width:max-content}
+  .sc-sw{width:18px;height:18px;padding:0;border:1px solid rgba(0,0,0,.45);border-radius:0;cursor:pointer}
+  .sc-sw:hover{outline:1px solid #fff;outline-offset:0}
+  .sc-sw.on{outline:2px solid #fff;outline-offset:1px;position:relative;z-index:1}
+  .sc-row{display:flex;gap:2px;margin-bottom:4px}
+  .sc-row .sc-sw{width:22px;height:22px}
+  .sc-old,.sc-new{display:inline-block;width:46px;height:26px;border:1px solid #5a6578}
+  .sc-new{margin-left:-1px}
+  .arx{display:grid;grid-template-columns:auto 86px;gap:3px 6px;align-items:center;font-size:11.5px;padding:2px 4px}
+  .arx label{display:contents;color:#dfe5ee}
+  .arx input{height:21px;background:#262b34;color:#e6eaf0;border:1px solid #4a5363;border-radius:2px;font:11.5px inherit;padding:0 4px;width:86px;box-sizing:border-box}
+  .arx input:disabled{opacity:.45}
+  .arx-b{display:flex;gap:2px;align-items:stretch}
   .acw-cmp{width:100%;border-collapse:collapse;font-size:12px}
   .acw-cmp th{background:#434c5b;font-weight:400;text-align:left;padding:3px 6px;border-right:1px solid #5a6578;position:sticky;top:0}
   .acw-cmp td{padding:2px 6px;border-bottom:1px solid rgba(255,255,255,.05);white-space:nowrap}
@@ -896,6 +909,956 @@
   }
   A.openOptions = openOptions;
   plain(['OPTIONS', 'OP', 'PREFERENCES', 'TUYCHON'], 'Tuỳ chọn (Options): hiển thị, mở / lưu, in, trợ giúp vẽ, chọn đối tượng', () => { if(A.busy && A.busy()) A.cancel(true); openOptions(); });
+
+  /* ==================================================================
+     COLOR — Select Color (Index Color · True Color · Color Books) như AutoCAD
+     ================================================================== */
+  const aciTab = () => { try{ return ACI_RGB; }catch(_){ return null; } };
+  const aciHex = i => { const T = aciTab(); return T ? '#' + ((T[i] >>> 0) & 0xffffff).toString(16).padStart(6, '0') : '#ffffff'; };
+  const ACI_NM = { 1: 'red', 2: 'yellow', 3: 'green', 4: 'cyan', 5: 'blue', 6: 'magenta', 7: 'white' };
+  const hexRgb = h => { const n = parseInt(String(h || '').replace('#', ''), 16); return isFinite(n) ? [(n >> 16) & 255, (n >> 8) & 255, n & 255] : [255, 255, 255]; };
+  const rgbHex = (r, g, b) => '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(+v || 0))).toString(16).padStart(2, '0')).join('');
+  const aciExact = h => { const T = aciTab(); if(!T) return 0; const n = parseInt(String(h || '').replace('#', ''), 16); for(let i = 1; i <= 255; i++) if(((T[i] >>> 0) & 0xffffff) === n) return i; return 0; };
+  // chuỗi người dùng gõ trong ô Color: số ACI, tên (red…), "r,g,b", #rrggbb, bylayer / byblock
+  function parseColor(t){ t = String(t || '').trim().toLowerCase(); if(!t) return null; if(t === 'bylayer') return 'BYLAYER'; if(t === 'byblock') return 'BYBLOCK';
+    if(/^#?[0-9a-f]{6}$/.test(t)) return '#' + t.replace('#', ''); if(/^\d{1,3}$/.test(t) && +t >= 1 && +t <= 255) return aciHex(+t);
+    const m = /^(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})$/.exec(t); if(m) return rgbHex(m[1], m[2], m[3]);
+    const k = Object.keys(ACI_NM).find(i => ACI_NM[i] === t); return k ? aciHex(+k) : null; }
+  const colLabel = c => c === 'BYLAYER' ? 'ByLayer' : c === 'BYBLOCK' ? 'ByBlock' : (() => { const i = aciExact(c); return i ? (ACI_NM[i] || String(i)) : hexRgb(c).join(','); })();
+  function selectColor(cur, cb, o){
+    o = o || {}; let pick = cur || (o.byLayer !== false ? 'BYLAYER' : '#ffffff'); const old = pick;
+    const sw = i => '<button type="button" class="sc-sw" data-i="' + i + '" style="background:' + aciHex(i) + '" title="' + i + '"></button>';
+    let grid = ''; for(let row = 0; row < 10; row++) for(let c = 0; c < 24; c++){ const i = 10 + c * 10 + row; grid += i <= 249 ? sw(i) : '<span></span>'; }
+    const idx = '<div class="acw-lab">Bảng màu chỉ số AutoCAD (ACI):</div><div class="sc-grid">' + grid + '</div>' +
+      '<div class="acw-row" style="margin:6px 0"><span>Màu chỉ số:</span> <b id="scI" style="font-weight:400;min-width:40px"></b><span class="l"></span><span>Đỏ, Xanh lá, Xanh dương:</span> <b id="scR" style="font-weight:400"></b></div>' +
+      '<div style="display:flex;gap:10px;align-items:flex-start"><div><div class="sc-row">' + [1, 2, 3, 4, 5, 6, 7, 8, 9].map(sw).join('') + '</div><div class="sc-row">' + [250, 251, 252, 253, 254, 255].map(sw).join('') + '</div></div>' +
+      '<span class="l" style="flex:1"></span><div class="acw-btncol">' + K.btn('scBL', 'ByLayer', { dis: o.byLayer === false }) + K.btn('scBB', 'ByBlock', { dis: !o.byBlock }) + '</div></div>';
+    const [r0, g0, b0] = hexRgb(pick !== 'BYLAYER' && pick !== 'BYBLOCK' ? pick : '#ffffff');
+    const tc = '<div class="acw-cols"><div class="c1">' + K.row('Mô hình màu:', K.sel('scMd', [['rgb', 'RGB'], ['hsl', 'HSL']], 'rgb', { dis: 1 })) +
+      ['Đỏ:', 'Xanh lá:', 'Xanh dương:'].map((t, k) => '<div class="acw-row"><span class="l" style="flex:0 0 80px">' + t + '</span><input type="range" min="0" max="255" id="scT' + k + '" value="' + [r0, g0, b0][k] + '" style="flex:1;width:auto"><input type="number" min="0" max="255" id="scN' + k + '" value="' + [r0, g0, b0][k] + '" style="width:60px;flex:0 0 60px"></div>').join('') +
+      K.row('Mã màu:', K.txt('scHex', rgbHex(r0, g0, b0))) + '</div><div class="c2"><input type="color" id="scPk" value="' + rgbHex(r0, g0, b0) + '" style="width:110px;height:110px;padding:0;border:1px solid #5a6578;background:none"></div></div>';
+    const html = '<div class="acw" style="width:560px">' + K.tabs('sc', [['idx', 'Màu chỉ số'], ['tc', 'Màu thật'], ['cb', 'Bảng màu (Color Books)']], 'idx') + '<div class="acw-panes" style="min-height:300px">' +
+      K.pane('sc', 'idx', 'idx', idx) + K.pane('sc', 'tc', 'idx', tc) + K.pane('sc', 'cb', 'idx', '<div class="acw-note">Chưa hỗ trợ bảng màu (Pantone, RAL…). Dùng Màu thật để nhập mã RGB.</div>') + '</div>' +
+      '<div class="acw-row" style="margin-top:8px"><span>Màu:</span>' + K.txt('scC', colLabel(pick)) + '<span class="l"></span><span class="sc-old" title="Cũ"></span><span class="sc-new" title="Mới"></span></div></div>';
+    const d = A.dialog({ title: 'Chọn màu', cls: 'acw-free', help: 'COLOR', html, ok: r => { const v = parseColor(K.val(r, 'scC')); if(v) pick = v; if(pick === 'BYBLOCK' && !o.byBlock){ say('ByBlock chưa dùng được ở đây.'); return false; } cb(pick); } });
+    const root = d.root, $ = id => root.querySelector('#' + id); K.bindTabs(root);
+    const show = (c, from) => { pick = c; const hex = c === 'BYLAYER' || c === 'BYBLOCK' ? '#ffffff' : c; const i = c === 'BYLAYER' ? 'BYLAYER' : c === 'BYBLOCK' ? 'BYBLOCK' : aciExact(hex);
+      $('scI').textContent = i === 'BYLAYER' ? 'ByLayer' : i === 'BYBLOCK' ? 'ByBlock' : i || '—'; $('scR').textContent = c === 'BYLAYER' || c === 'BYBLOCK' ? '—' : hexRgb(hex).join(',');
+      if(from !== 'txt') $('scC').value = colLabel(c); root.querySelector('.sc-new').style.background = c === 'BYLAYER' && A.layerHex ? A.layerHex(A.LS.cur) : hex;
+      root.querySelectorAll('.sc-sw').forEach(b => b.classList.toggle('on', +b.dataset.i === i));
+      if(from !== 'tc' && c !== 'BYLAYER' && c !== 'BYBLOCK'){ const rgb = hexRgb(hex); rgb.forEach((v, k) => { $('scT' + k).value = v; $('scN' + k).value = v; }); $('scHex').value = hex; $('scPk').value = hex; } };
+    root.querySelector('.sc-old').style.background = old === 'BYLAYER' && A.layerHex ? A.layerHex(A.LS.cur) : old === 'BYBLOCK' ? '#ffffff' : old;
+    root.querySelectorAll('.sc-sw').forEach(b => { b.onclick = () => show(aciHex(+b.dataset.i)); b.ondblclick = () => { show(aciHex(+b.dataset.i)); root.querySelector('.dvd-ok').click(); };
+      b.onmouseenter = () => { $('scI').textContent = b.dataset.i; $('scR').textContent = hexRgb(aciHex(+b.dataset.i)).join(','); }; b.onmouseleave = () => show(pick, 'hover'); });
+    $('scBL').onclick = () => show('BYLAYER'); $('scBB').onclick = () => show('BYBLOCK');
+    const fromRgb = () => { const v = [0, 1, 2].map(k => +$('scN' + k).value || 0); show(rgbHex(...v), 'tc'); $('scHex').value = pick; $('scPk').value = pick; };
+    for(let k = 0; k < 3; k++){ $('scT' + k).oninput = () => { $('scN' + k).value = $('scT' + k).value; fromRgb(); }; $('scN' + k).oninput = () => { $('scT' + k).value = $('scN' + k).value; fromRgb(); }; }
+    $('scHex').onchange = () => { const v = parseColor($('scHex').value); if(v && v[0] === '#') show(v); };
+    $('scPk').oninput = () => show($('scPk').value);
+    $('scC').addEventListener('input', () => { const v = parseColor($('scC').value); if(v) show(v, 'txt'); });
+    show(pick);
+    return d;
+  }
+  A.selectColor = selectColor;
+  plain(['COLOR', 'COL', 'COLOUR', 'DDCOLOR'], 'Chọn màu hiện hành (Select Color): bảng ACI, màu thật RGB, ByLayer', () => selectColor(A.LS && A.LS.color, c => {
+    if(c === 'BYBLOCK') return; if(A.setCurColor) A.setCurColor(c); try{ A.onSetChange && A.onSetChange(); }catch(_){} log('Màu hiện hành: ' + colLabel(c)); }, { byLayer: true }));
+
+  /* ==================================================================
+     Tab ngữ cảnh "Array Creation" (ARRAYRECT / ARRAYPOLAR đang chạy) — sửa số lượng / khoảng cách, xem trước ngay
+     ================================================================== */
+  if(A.ribbon && A.ribbon.RIB && A.ribbonAct){
+    const inp = v => { try{ A.input(v); }catch(_){} };
+    A.ribbonAct('ARX_CLOSE', () => inp('')); A.ribbonAct('ARX_ASSOC', () => { const st = A._arr; if(!st) return; st.assoc = !st.assoc; try{ A.ribbon.render(); }catch(_){} });
+    A.ribbonAct('ARX_ROT', () => { const st = A._arr; if(!st) return; st.rot = !st.rot; A._arrUpd && A._arrUpd(); try{ A.ribbon.render(); }catch(_){} });
+    A.ribbonAct('ARX_DIR', () => { const st = A._arr; if(!st) return; st.cw = !st.cw; A._arrUpd && A._arrUpd(); try{ A.ribbon.render(); }catch(_){} });
+    A.ribbonAct('ARX_NONE', () => {});
+    const big = (cmd, en, vi, icon, o) => Object.assign({ t: 'big', cmd, en, vi, icon }, o || {});
+    const fmtN = v => String(+(+v).toPrecision(6));
+    // ô nhập trong bảng: rows = [[nhãn, khoá, tắt?]]; đổi giá trị → cập nhật trạng thái mảng rồi vẽ lại xem trước
+    const fields = (rows, apply) => ({ t: 'html', html: () => { const st = A._arr || {}; return '<div class="arx">' + rows.map(([lab, k, dis]) => '<label><span>' + lab + '</span><input data-k="' + k + '" type="number" step="any" value="' + esc(dis ? 1 : fmtN(apply.get(st, k))) + '"' + (dis ? ' disabled' : '') + '></label>').join('') + '</div>'; },
+      bind: el => { el.addEventListener('keydown', e => { e.stopPropagation(); if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
+        el.addEventListener('change', e => { const i = e.target.closest('input[data-k]'); const st = A._arr; if(!i || !st) return; const v = num(i.value); if(v == null) return; apply.set(st, i.dataset.k, v);
+          el.querySelectorAll('input[data-k]').forEach(x => { if(!x.disabled && x !== i) x.value = fmtN(apply.get(st, x.dataset.k)); }); if(A._arrUpd) A._arrUpd(); }); } });
+    const R = { get: (st, k) => k === 'C' ? st.C : k === 'dx' ? st.dx : k === 'tx' ? st.dx * (st.C - 1) : k === 'R' ? st.R : k === 'dy' ? st.dy : k === 'ty' ? st.dy * (st.R - 1) : 1,
+      set: (st, k, v) => { if(k === 'C') st.C = Math.max(1, Math.min(500, Math.round(v))); if(k === 'R') st.R = Math.max(1, Math.min(500, Math.round(v))); if(k === 'dx') st.dx = v; if(k === 'dy') st.dy = v; if(k === 'tx' && st.C > 1) st.dx = v / (st.C - 1); if(k === 'ty' && st.R > 1) st.dy = v / (st.R - 1); } };
+    const full = st => Math.abs(st.F - 360) < 1e-9;
+    const P = { get: (st, k) => k === 'N' ? st.N : k === 'a' ? st.F / (full(st) ? st.N : st.N - 1) : k === 'F' ? st.F : 1,
+      set: (st, k, v) => { if(k === 'N') st.N = Math.max(2, Math.min(1000, Math.round(v))); if(k === 'F') st.F = Math.max(1e-6, Math.min(360, Math.abs(v))); if(k === 'a') st.F = Math.min(360, Math.abs(v) * (full(st) ? st.N : st.N - 1)); } };
+    const props = (polar) => ({ t: 'html', html: () => { const st = A._arr || {}; return '<div class="arx-b">' + [['ARX_ASSOC', 'Liên kết', 'ARRAYEDIT', st.assoc], ['ARX_NONE', 'Điểm gốc', 'ID', false, 1]].concat(polar ? [['ARX_ROT', 'Xoay phần tử', 'ROTATE', st.rot], ['ARX_DIR', 'Chiều', 'ARRAYPOLAR', !st.cw]] : [])
+        .map(([c, t, ic, on, dis]) => '<button type="button" class="ac-rbig' + (on ? ' on' : '') + '" data-c="' + c + '"' + (dis ? ' disabled style="opacity:.45"' : '') + '>' + (A.ico ? A.ico(ic) : '') + '<span>' + t + '</span></button>').join('') + '</div>'; } });
+    const close = { id: 'arc', en: 'Close', vi: 'Đóng', pri: 0, items: [big('ARX_CLOSE', 'Close\nArray', 'Đóng\nmảng', 'CLOSE')] };
+    A.ribbon.RIB.arrayctx = { en: 'Array Creation', vi: 'Tạo mảng', ctx: true, panels: [
+      { id: 'art', en: 'Type', vi: 'Kiểu', pri: 6, items: [big('ARX_NONE', 'Rectangular', 'Chữ nhật', 'ARRAYRECT')] },
+      { id: 'arcol', en: 'Columns', vi: 'Cột', pri: 0, items: [fields([['Cột:', 'C'], ['Khoảng:', 'dx'], ['Tổng:', 'tx']], R)] },
+      { id: 'arrow', en: 'Rows', vi: 'Hàng', pri: 0, items: [fields([['Hàng:', 'R'], ['Khoảng:', 'dy'], ['Tổng:', 'ty']], R)] },
+      { id: 'arlev', en: 'Levels', vi: 'Tầng', pri: 7, items: [fields([['Tầng:', 'L', 1], ['Khoảng:', 'dz', 1], ['Tổng:', 'tz', 1]], R)] },
+      { id: 'arpro', en: 'Properties', vi: 'Thuộc tính', pri: 3, items: [props(false)] }, close ] };
+    A.ribbon.RIB.arrayctxp = { en: 'Array Creation', vi: 'Tạo mảng', ctx: true, panels: [
+      { id: 'art', en: 'Type', vi: 'Kiểu', pri: 6, items: [big('ARX_NONE', 'Polar', 'Tròn', 'ARRAYPOLAR')] },
+      { id: 'aritm', en: 'Items', vi: 'Phần tử', pri: 0, items: [fields([['Số phần tử:', 'N'], ['Góc giữa:', 'a'], ['Lấp đầy:', 'F']], P)] },
+      { id: 'arrow', en: 'Rows', vi: 'Hàng', pri: 7, items: [fields([['Hàng:', 'R', 1], ['Khoảng:', 'dy', 1], ['Tổng:', 'ty', 1]], P)] },
+      { id: 'arlev', en: 'Levels', vi: 'Tầng', pri: 8, items: [fields([['Tầng:', 'L', 1], ['Khoảng:', 'dz', 1], ['Tổng:', 'tz', 1]], P)] },
+      { id: 'arpro', en: 'Properties', vi: 'Thuộc tính', pri: 3, items: [props(true)] }, close ] };
+  }
+
+  /* ==================================================================
+     Soạn chữ ngay trên bản vẽ (MTEXT / TEXT / DDEDIT) + tab ngữ cảnh "Text Editor" như AutoCAD 2027
+     MTEXT: Enter xuống dòng, Ctrl+Enter hoặc bấm ra ngoài = lưu, Esc = bỏ. TEXT: Enter ở dòng trống = xong, Esc = giữ phần đã gõ.
+     ================================================================== */
+  const css2 = document.createElement('style');
+  css2.textContent = `
+  .te-wrap{position:fixed;left:0;top:0;width:0;height:0;z-index:40;transform-origin:0 0;pointer-events:none}
+  .te-box{position:absolute;pointer-events:auto}
+  .te-ta{display:block;margin:0;padding:2px;border:1px solid #9aa6ba;outline:none;resize:none;overflow:hidden;background:rgba(22,27,36,.94);caret-color:#fff;line-height:1.3;white-space:pre;box-sizing:border-box;min-width:12px;tab-size:4}
+  .te-box.mt .te-ta{border-style:dashed;white-space:pre-wrap;overflow-wrap:normal;word-break:normal}
+  .te-ta::selection{background:rgba(6,150,215,.55)}
+  .te-rul{position:absolute;left:0;right:0;top:-13px;height:12px;border:1px solid #9aa6ba;border-bottom:0;box-sizing:border-box;background:#e9edf3 repeating-linear-gradient(90deg,#6b778a 0 1px,transparent 1px 10px) 0 100%/100% 4px no-repeat}
+  .te-rul::after{content:'';position:absolute;right:-1px;top:-1px;width:5px;height:12px;background:#5a6578}
+  .tx-p{display:grid;grid-template-columns:auto 120px;gap:3px 6px;align-items:center;font-size:11.5px;padding:2px 4px}
+  .tx-p label{display:contents;color:#dfe5ee}
+  .tx-p select,.tx-p input{height:21px;background:#262b34;color:#e6eaf0;border:1px solid #4a5363;border-radius:2px;font:11.5px inherit;padding:0 4px;width:120px;box-sizing:border-box}
+  .tx-p select:disabled{opacity:.45}
+  .tx-p.w{grid-template-columns:auto 170px}.tx-p.w select{width:170px}
+  .tx-fr{display:flex;flex-direction:column;gap:2px;padding:2px 4px}
+  .tx-fr .r{display:flex;gap:2px;align-items:center}
+  .tx-fr .r button{min-width:24px;height:22px;padding:0 5px;background:none;border:1px solid transparent;border-radius:2px;color:#e6eaf0;font:12px inherit;cursor:pointer}
+  .tx-fr .r button:hover{background:#4c5869;border-color:#61708a}
+  .tx-fr .r button:disabled{opacity:.4;cursor:default;background:none;border-color:transparent}
+  .tx-fr .r button.on{background:#0b5f8f;border-color:#0696d7}
+  .tx-fr select{height:21px;background:#262b34;color:#e6eaf0;border:1px solid #4a5363;border-radius:2px;font:11.5px inherit;padding:0 4px;width:150px}
+  `;
+  document.head.appendChild(css2);
+  const FAM = f => (f ? '"' + f + '",' : '') + '-apple-system,system-ui,"Segoe UI",Roboto,Arial,"Noto Sans","Helvetica Neue",sans-serif';
+  let mctx = null;
+  const measure = (t, font) => { if(!mctx) mctx = document.createElement('canvas').getContext('2d'); mctx.font = font; return mctx.measureText(t).width; };
+  // ngắt dòng mềm theo bề rộng khung MTEXT (đơn vị bản vẽ), giữ nguyên xuống dòng cứng; từ dài hơn khung để tràn như AutoCAD
+  function wrapText(src, h, w, ff, xs){
+    if(!(w > 0) || !(h > 0)) return String(src);
+    const font = '100px ' + FAM(ff), lim = w * 100 / (h * (xs || 1));
+    return String(src).split('\n').map(par => { const out = []; let line = '';
+      for(const wd of par.split(/(?<=\s)/)){ const t = line + wd; if(line && measure(t.replace(/\s+$/, ''), font) > lim){ out.push(line.replace(/\s+$/, '')); line = wd; } else line = t; }
+      out.push(out.length ? line.replace(/\s+$/, '') : line); return out.join('\n'); }).join('\n');
+  }
+  // nội dung gốc (trước khi ngắt dòng) của chữ MTEXT — chỉ dùng khi chữ chưa bị sửa nơi khác
+  A.textSrc = e => (e && e.mtp && e.mtwk > 0 && wrapText(e.mtp, e.h, e.mtwk * e.h, e.ff, e.xs) === e.text) ? e.mtp : String((e && e.text) || '');
+  const JUST = { TL: ['left', 'top'], TC: ['center', 'top'], TR: ['right', 'top'], ML: ['left', 'middle'], MC: ['center', 'middle'], MR: ['right', 'middle'], BL: ['left', 'bottom'], BC: ['center', 'bottom'], BR: ['right', 'bottom'], L: ['left', 'alphabetic'], C: ['center', 'alphabetic'], R: ['right', 'alphabetic'] };
+  const JNAME = { TL: 'Trên trái', TC: 'Trên giữa', TR: 'Trên phải', ML: 'Giữa trái', MC: 'Giữa giữa', MR: 'Giữa phải', BL: 'Dưới trái', BC: 'Dưới giữa', BR: 'Dưới phải', L: 'Trái (chân chữ)', C: 'Giữa (chân chữ)', R: 'Phải (chân chữ)' };
+  const jOf = (ha, va) => Object.keys(JUST).find(k => JUST[k][0] === ha && JUST[k][1] === va) || 'TL';
+  const TE = { cur: null, ruler: true };
+  try{ TE.ruler = localStorage.getItem('dvd:teRuler') !== '0'; }catch(_){}
+  function inplaceText(o){
+    if(TE.cur) TE.cur.finish(false);
+    return new Promise(resolve => {
+      const cv = document.getElementById('cv'); if(!cv || typeof toScreen !== 'function'){ resolve(null); return; }
+      const TS = A.TS, stl = o.style && TS && TS.list[o.style] ? o.style : (TS ? TS.cur : 'Standard');
+      const st = { h: +o.h || 2.5, ha: o.ha || 'left', va: o.va || 'alphabetic', style: stl, font: o.font != null ? o.font : ((TS && TS.list[stl] && TS.list[stl].font) || ''), col: o.col === '' || o.col === 'BYLAYER' || o.col == null ? 'BYLAYER' : o.col, colSet: false, styleSet: false, fontSet: false };
+      const rot = +o.rot || 0, multi = !!o.multi, single = !!o.single, w = +o.w || 0;
+      const wrap = document.createElement('div'); wrap.className = 'te-wrap';
+      wrap.innerHTML = '<div class="te-box' + (multi ? ' mt' : '') + '">' + (multi ? '<div class="te-rul"></div>' : '') + '<textarea class="te-ta" spellcheck="false" autocomplete="off"' + (multi ? '' : ' wrap="off"') + '></textarea></div>';
+      document.body.appendChild(wrap);
+      const box = wrap.firstChild, ta = box.querySelector('textarea'), rul = box.querySelector('.te-rul');
+      ta.value = String(o.value || '').replace(/\r/g, '');
+      const colHex = () => st.col === 'BYLAYER' ? (A.layerHex ? A.layerHex((A.LS && A.LS.cur) || '0') : '#ffffff') : st.col === 'BYBLOCK' ? '#ffffff' : st.col;
+      let sig = '';
+      const layout = () => {
+        const r = cv.getBoundingClientRect(), P = toScreen(o.x, o.y), real = st.h * view.scale, fz = Math.max(12, Math.min(160, real)), k = real > 0 ? fz / real : 1;
+        wrap.style.left = (r.left + P.x) + 'px'; wrap.style.top = (r.top + P.y) + 'px';
+        const ang = -rot * Math.PI / 180 + (view.rot || 0); wrap.style.transform = ang ? 'rotate(' + ang + 'rad)' : '';
+        ta.style.font = fz + 'px ' + FAM(st.font); ta.style.lineHeight = multi ? '1.3' : '1.5'; ta.style.color = colHex(); ta.style.textAlign = st.ha === 'center' ? 'center' : st.ha === 'right' ? 'right' : 'left';   // TEXT: dòng sau cách 1.5 lần cao chữ như khi tạo
+        if(rul) rul.style.display = TE.ruler ? '' : 'none';
+        if(multi && w > 0) ta.style.width = Math.max(24, w * view.scale * k + 6) + 'px';
+        else { const ln = ta.value.split('\n'), f = fz + 'px ' + FAM(st.font); ta.style.width = Math.ceil(Math.max(fz * 0.6, ...ln.map(l => measure(l.replace(/\t/g, '    '), f))) + fz * 0.6 + 6) + 'px'; }
+        ta.style.height = '0px'; ta.style.height = ta.scrollHeight + 2 + 'px';
+        const bw = ta.offsetWidth, bh = ta.offsetHeight, lh = fz * (multi ? 1.3 : 1.5), n = Math.max(1, Math.round((bh - 6) / lh)), pad = 3;
+        box.style.left = (st.ha === 'center' ? -bw / 2 : st.ha === 'right' ? -(bw - pad) : -pad) + 'px';
+        const lead = (lh - fz) / 2;   // khoảng thừa trên dòng đầu (line-height)
+        box.style.top = (st.va === 'top' ? -(pad + lead) : st.va === 'middle' ? -bh / 2 : st.va === 'bottom' ? -(pad + (n - 1) * lh + lead + fz) : -(pad + (n - 1) * lh + lead + 0.82 * fz)) + 'px';
+        sig = [view.scale, view.offsetX, view.offsetY, view.rot, r.left, r.top, r.width].join(',');
+      };
+      let done = false, raf = 0; const wasBusy = !!(A.busy && A.busy());
+      const tick = () => { if(done) return; const r = cv.getBoundingClientRect(); if([view.scale, view.offsetX, view.offsetY, view.rot, r.left, r.top, r.width].join(',') !== sig) layout();
+        if(wasBusy && !A.busy()){ finish(false); return; } raf = requestAnimationFrame(tick); };
+      const result = () => { const src = ta.value.replace(/\r/g, ''); const R = { text: src, h: st.h, ha: st.ha, va: st.va, style: st.styleSet ? st.style : o.style, font: st.fontSet ? st.font : undefined, col: st.colSet ? st.col : undefined };
+        if(st.styleSet && !st.fontSet) R.font = undefined;
+        if(multi && w > 0){ const t = wrapText(src, st.h, w, st.font, 1); R.text = t; R.mtwk = w / st.h; if(t !== src) R.mtp = src; }
+        return R; };
+      function finish(ok){ if(done) return; done = true; cancelAnimationFrame(raf); const R = ok ? result() : null;
+        document.removeEventListener('pointerdown', outside, true); document.removeEventListener('mousedown', keepFocus, true); window.removeEventListener('resize', layout);
+        wrap.remove(); if(TE.cur && TE.cur.ta === ta) TE.cur = null; try{ A.ribbonCtx && A.ribbonCtx(null); }catch(_){} resolve(R); }
+      // bấm ra ngoài = lưu (như AutoCAD); bấm lên ribbon / menu / hộp thoại thì vẫn soạn tiếp
+      const KEEP = '#acadTop,.ac-pop,.ac-slide,.dvd-dlg,.acw-ctx,.ac-rtip';
+      function outside(e){ if(box.contains(e.target) || (e.target.closest && e.target.closest(KEEP))) return; const onCanvas = e.target === cv; finish(true); if(onCanvas){ e.preventDefault(); e.stopPropagation(); } }
+      // giữ con trỏ trong ô chữ khi bấm nút trên ribbon (không lấy mất vùng bôi đen)
+      function keepFocus(e){ const t = e.target; if(t.closest && t.closest('#acadTop,.ac-slide,.acw-ctx') && !t.closest('select,input,textarea')) e.preventDefault(); }
+      ta.addEventListener('keydown', e => { e.stopPropagation();
+        if(e.key === 'Escape'){ e.preventDefault(); finish(!multi && !single && ta.value.trim() !== ''); return; }
+        if(e.key === 'Enter' && (e.ctrlKey || e.metaKey || single)){ e.preventDefault(); finish(true); return; }
+        if(e.key === 'Enter' && !multi && !e.shiftKey){ const s = ta.selectionStart, v = ta.value, ls = v.lastIndexOf('\n', s - 1) + 1, le = v.indexOf('\n', s), line = v.slice(ls, le < 0 ? v.length : le);
+          if(!line.trim() && le < 0){ e.preventDefault(); ta.value = v.slice(0, ls).replace(/\n$/, ''); finish(true); return; } }
+        if(e.key === 'F1'){ e.preventDefault(); try{ DVDCmd.showHelp && DVDCmd.showHelp(multi ? 'MTEXT' : 'TEXT'); }catch(_){} } });
+      ta.addEventListener('keyup', e => e.stopPropagation()); ta.addEventListener('keypress', e => e.stopPropagation());
+      ta.addEventListener('input', layout); ta.addEventListener('wheel', e => { e.preventDefault(); cv.dispatchEvent(new WheelEvent('wheel', e)); }, { passive: false });
+      ta.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); teMenu(e.clientX, e.clientY); });
+      document.addEventListener('pointerdown', outside, true); document.addEventListener('mousedown', keepFocus, true); window.addEventListener('resize', layout);
+      TE.cur = { st, ta, o, multi, single, finish, layout, focus: () => { try{ ta.focus({ preventScroll: true }); }catch(_){} } };
+      layout(); TE.cur.focus(); if(o.value) ta.select(); raf = requestAnimationFrame(tick); try{ A.paint && A.paint(); }catch(_){}   // xoá đường dây thun / ô nhập động của bước trước
+      try{ if(A.ribbonCtx && !o.dim) A.ribbonCtx('textctx'); }catch(_){}
+      log(multi ? 'Soạn chữ: Enter = xuống dòng · Ctrl+Enter hoặc bấm ra ngoài = lưu · Esc = bỏ' : single ? 'Sửa chữ: Enter = lưu · Esc = bỏ' : 'Gõ chữ: Enter = dòng mới · Enter ở dòng trống = xong');
+    });
+  }
+  A.inplaceText = inplaceText;
+  // script / LISP / dòng lệnh khi đang soạn chữ: mỗi dòng nhập là một dòng chữ, dòng trống = xong (như AutoCAD đọc chữ từ script)
+  const _input = A.input;
+  A.input = function(text){ const T = TE.cur; if(!T) return _input.apply(this, arguments);
+    const t = String(text == null ? '' : text).replace(/\r/g, '');
+    if(T.single){ if(t !== '') T.ta.value = t; T.finish(true); return true; }
+    if(t === ''){ T.finish(true); return true; }
+    T.ta.value = T.ta.value ? T.ta.value + '\n' + t : t; T.layout(); return true; };
+  // áp kiểu chữ / phông / màu / khung MTEXT đã chọn trong bộ soạn vào đối tượng chữ
+  A.textFinish = (w, R) => {
+    if(!w || !R) return w;
+    if(R.style && A.tsApply && A.TS && A.TS.list[R.style]) A.tsApply(w, R.style);
+    if(R.font !== undefined){ if(R.font) w.ff = R.font; else delete w.ff; }
+    if(R.col !== undefined){ if(R.col === 'BYLAYER'){ w.col = A.layerHex ? A.layerHex(w.layer || '0') : w.col; w.bl = 1; } else if(R.col && R.col !== 'BYBLOCK'){ w.col = R.col; delete w.bl; } }
+    if(R.mtwk > 0) w.mtwk = R.mtwk; else delete w.mtwk;
+    if(R.mtp) w.mtp = R.mtp; else delete w.mtp;
+    return w;
+  };
+  // thao tác trên ô chữ: thay vùng bôi đen (hoặc cả nội dung nếu chưa bôi đen)
+  const teEdit = fn => { const T = TE.cur; if(!T) return; const ta = T.ta; let s = ta.selectionStart, e = ta.selectionEnd; if(s === e){ s = 0; e = ta.value.length; }
+    const out = fn(ta.value.slice(s, e), s, e); if(out == null) return; ta.focus({ preventScroll: true }); ta.setSelectionRange(s, e);
+    if(!document.execCommand || !document.execCommand('insertText', false, out)) ta.setRangeText(out, s, e, 'select'); ta.setSelectionRange(s, s + out.length); T.layout(); };
+  const teInsert = t => { const T = TE.cur; if(!T) return; const ta = T.ta; ta.focus({ preventScroll: true }); if(!document.execCommand || !document.execCommand('insertText', false, t)){ ta.setRangeText(t, ta.selectionStart, ta.selectionEnd, 'end'); } T.layout(); };
+  // các dòng chứa vùng bôi đen
+  const teLines = fn => { const T = TE.cur; if(!T) return; const ta = T.ta, v = ta.value; const s = v.lastIndexOf('\n', ta.selectionStart - 1) + 1; let e = v.indexOf('\n', Math.max(ta.selectionStart, ta.selectionEnd - 1)); if(e < 0) e = v.length;
+    ta.setSelectionRange(s, e); teEdit(t => fn(t.split('\n')).join('\n')); };
+  const BUL = /^(\s*)(•\s|\d+\.\s|[a-z]\.\s|[A-Z]\.\s)/;
+  const bullets = kind => teLines(L => { const plainL = L.map(l => l.replace(BUL, '$1')); if(kind === 'off') return plainL; let i = 0;
+    return plainL.map(l => l.trim() ? (kind === 'bul' ? '• ' : kind === 'num' ? (++i) + '. ' : kind === 'abc' ? String.fromCharCode(97 + (i++ % 26)) + '. ' : String.fromCharCode(65 + (i++ % 26)) + '. ') + l : l); });
+  const SYMS = [['Độ  %%d', '°'], ['Cộng/trừ  %%p', '±'], ['Đường kính  %%c', 'Ø'], null, ['Gần bằng', '≈'], ['Góc', '∠'], ['Đường ranh giới', '⅊'], ['Đường tâm', '℄'], ['Delta', 'Δ'], ['Pha điện', 'φ'], ['Đường dòng', '≡'], ['Đồng nhất', '≣'], ['Không bằng', '≠'], ['Ohm', 'Ω'], ['Omega', 'ω'], ['Micro', 'µ'], ['Bình phương', '²'], ['Lập phương', '³'], null, ['Dấu cách không ngắt', ' ']];
+  function symMenu(x, y){ ctxMenu(x, y, SYMS.map(s => s ? [s[1].trim() ? s[1] + '   ' + s[0] : s[0], () => teInsert(s[1])] : null)); }
+  function teMenu(x, y){ const T = TE.cur; if(!T) return;
+    ctxMenu(x, y, [['Hoàn tác', () => { T.focus(); document.execCommand('undo'); T.layout(); }], ['Làm lại', () => { T.focus(); document.execCommand('redo'); T.layout(); }], null,
+      ['Cắt', () => { T.focus(); document.execCommand('cut'); T.layout(); }], ['Chép', () => { T.focus(); document.execCommand('copy'); }], ['Dán', async () => { try{ const t = await navigator.clipboard.readText(); teInsert(t); }catch(_){ say('Dán bằng Ctrl+V.'); } }], null,
+      ['Chèn ký hiệu…', () => symMenu(x, y)], ['Chọn tất cả', () => { T.focus(); T.ta.select(); }], null,
+      ['Chữ HOA', () => teEdit(t => t.toUpperCase())], ['Chữ thường', () => teEdit(t => t.toLowerCase())], ['Tìm và thay thế…', findReplace], null,
+      ['Lưu và đóng (Ctrl+Enter)', () => T.finish(true)], ['Huỷ (Esc)', () => T.finish(false)]]); }
+  function findReplace(){ const T = TE.cur; if(!T) return;
+    const sel = T.ta.value.slice(T.ta.selectionStart, T.ta.selectionEnd);
+    const html = '<div class="acw" style="width:400px">' + K.row('Tìm:', K.txt('frF', sel.includes('\n') ? '' : sel)) + K.row('Thay bằng:', K.txt('frR', '')) +
+      K.grp('Tuỳ chọn tìm', K.chk('frC', 'Phân biệt hoa thường', 0) + '<br>' + K.chk('frW', 'Chỉ tìm nguyên từ', 0)) + '<div class="acw-row"><span class="l" id="frN"></span>' + K.btn('frNext', 'Tìm tiếp') + K.btn('frOne', 'Thay thế') + K.btn('frAll', 'Thay tất cả') + '</div></div>';
+    const d = A.dialog({ title: 'Tìm và thay thế', cls: 'acw-free', help: 'FIND', html, okText: 'Đóng', noCancel: true, ok: () => { T.focus(); } });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    const rx = g => { const f = $('frF').value; if(!f) return null; let s = f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); if($('frW').checked) s = '(?<![\\p{L}\\p{N}_])' + s + '(?![\\p{L}\\p{N}_])'; return new RegExp(s, 'u' + (g ? 'g' : '') + ($('frC').checked ? '' : 'i')); };
+    const next = () => { const r = rx(true); if(!r) return false; const ta = T.ta; r.lastIndex = ta.selectionEnd; let m = r.exec(ta.value); if(!m){ r.lastIndex = 0; m = r.exec(ta.value); } if(!m){ $('frN').textContent = 'Không tìm thấy.'; return false; } ta.setSelectionRange(m.index, m.index + m[0].length); $('frN').textContent = ''; return true; };
+    $('frNext').onclick = next;
+    $('frOne').onclick = () => { const r = rx(false), ta = T.ta, cur = ta.value.slice(ta.selectionStart, ta.selectionEnd); if(r && cur && new RegExp('^(?:' + r.source + ')$', r.flags).test(cur)){ const s = ta.selectionStart; ta.setRangeText($('frR').value, s, ta.selectionEnd, 'end'); T.layout(); } next(); };
+    $('frAll').onclick = () => { const r = rx(true); if(!r) return; const ta = T.ta; let n = 0; const v = ta.value.replace(r, () => { n++; return $('frR').value; }); if(n){ ta.value = v; T.layout(); } $('frN').textContent = 'Đã thay ' + n + ' chỗ.'; };
+  }
+  function importText(){ const T = TE.cur; if(!T) return; const f = document.createElement('input'); f.type = 'file'; f.accept = '.txt,.csv,text/plain';
+    f.onchange = () => { const file = f.files && f.files[0]; if(!file) return; const rd = new FileReader(); rd.onload = () => { teInsert(String(rd.result || '').replace(/\r\n?/g, '\n')); say('Đã nhập chữ từ ' + file.name); }; rd.readAsText(file); }; f.click(); }
+
+  if(A.ribbon && A.ribbon.RIB && A.ribbonAct){
+    const act = (n, fn) => A.ribbonAct(n, () => { if(!TE.cur) return; fn(TE.cur); if(TE.cur) TE.cur.focus(); });
+    act('TX_CLOSE', T => T.finish(true)); act('TX_UPPER', () => teEdit(t => t.toUpperCase())); act('TX_LOWER', () => teEdit(t => t.toLowerCase()));
+    act('TX_FIND', () => findReplace()); act('TX_IMPORT', () => importText()); act('TX_UNDO', T => { document.execCommand('undo'); T.layout(); }); act('TX_REDO', T => { document.execCommand('redo'); T.layout(); });
+    act('TX_RULER', T => { TE.ruler = !TE.ruler; try{ localStorage.setItem('dvd:teRuler', TE.ruler ? '1' : '0'); }catch(_){} T.layout(); try{ A.ribbon.render(); }catch(_){} });
+    A.ribbonAct('TX_SYM', () => { if(!TE.cur) return; const b = document.querySelector('[data-c="TX_SYM"]'), r = b ? b.getBoundingClientRect() : { left: 200, bottom: 120 }; symMenu(r.left, r.bottom + 2); });
+    A.ribbonAct('TX_BUL', () => { if(!TE.cur) return; const b = document.querySelector('[data-c="TX_BUL"]'), r = b ? b.getBoundingClientRect() : { left: 200, bottom: 120 };
+      ctxMenu(r.left, r.bottom + 2, [['Tắt', () => bullets('off')], null, ['Đánh số  1. 2. 3.', () => bullets('num')], ['Chữ cái thường  a. b. c.', () => bullets('abc')], ['Chữ cái hoa  A. B. C.', () => bullets('ABC')], ['Dấu đầu dòng  •', () => bullets('bul')]]); });
+    A.ribbonAct('TX_NONE', () => {});
+    const big = (cmd, en, vi, icon) => ({ t: 'big', cmd, en, vi, icon }), sm = (cmd, en, vi, icon) => ({ t: 'sm', cmd, en, vi, icon });
+    const refocus = () => { if(TE.cur) setTimeout(() => TE.cur && TE.cur.focus(), 0); };
+    const stop = el => el.addEventListener('keydown', e => { e.stopPropagation(); if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); refocus(); } if(e.key === 'Escape'){ e.preventDefault(); refocus(); } });
+    const style = { t: 'html', html: () => { const T = TE.cur, s = T ? T.st : { style: A.TS ? A.TS.cur : 'Standard', h: 2.5 }; const names = A.TS ? Object.keys(A.TS.list) : ['Standard'];
+        return '<div class="tx-p"><label><span>Kiểu chữ</span><select data-p="style">' + names.map(n => opt(n, n, s.style)).join('') + '</select></label><label><span>Cao chữ</span><input data-p="h" type="number" step="any" min="0" value="' + esc(r6(s.h)) + '"></label>' +
+          '<label><span>Chú thích</span><select disabled><option>Không (Annotative)</option></select></label></div>'; },
+      bind: el => { stop(el); const T = TE.cur; if(!T) return; const s = T.st;
+        el.querySelector('[data-p="style"]').onchange = e => { const n = e.target.value, d = A.TS && A.TS.list[n]; s.style = n; s.styleSet = true; if(d){ s.font = d.font || ''; s.fontSet = false; if(+d.h > 0) s.h = +d.h; } T.layout(); try{ A.ribbon.render(); }catch(_){} refocus(); };
+        el.querySelector('[data-p="h"]').onchange = e => { const v = num(e.target.value); if(v > 0){ s.h = v; T.layout(); } else e.target.value = r6(s.h); refocus(); }; } };
+    const format = { t: 'html', html: () => { const T = TE.cur, s = T ? T.st : { font: '', col: 'BYLAYER' }; const fonts = (A.FONTS || []).slice(); if(s.font && !fonts.includes(s.font)) fonts.unshift(s.font);
+        return '<div class="tx-fr"><div class="r">' + [['B', 'Đậm'], ['I', 'Nghiêng'], ['U', 'Gạch chân'], ['O', 'Gạch trên']].map(([c, t]) => '<button type="button" disabled title="' + t + ' (chưa hỗ trợ)" style="' + (c === 'B' ? 'font-weight:700' : c === 'I' ? 'font-style:italic' : c === 'U' ? 'text-decoration:underline' : 'text-decoration:overline') + '">' + c + '</button>').join('') +
+          '<button type="button" data-c="TX_UPPER" title="Chữ HOA">AA</button><button type="button" data-c="TX_LOWER" title="chữ thường">aa</button></div>' +
+          '<div class="r"><select data-p="font" title="Phông chữ"><option value="">(theo kiểu chữ)</option>' + fonts.map(f => opt(f, f, s.font)).join('') + '</select></div><div class="r">' + K.colorSel('txCol', s.col, { noBlock: 1 }).replace('<select ', '<select title="Màu chữ" ') + '</div></div>'; },
+      bind: el => { stop(el); const T = TE.cur; if(!T) return; const s = T.st;
+        el.querySelector('[data-p="font"]').onchange = e => { s.font = e.target.value || ((A.TS && A.TS.list[s.style] && A.TS.list[s.style].font) || ''); s.fontSet = true; T.layout(); refocus(); };
+        K.bindColors(el, sl => { s.col = sl.value || 'BYLAYER'; s.colSet = true; T.layout(); refocus(); }); } };
+    const para = { t: 'html', html: () => { const T = TE.cur, s = T ? T.st : { ha: 'left', va: 'top' }, j = jOf(s.ha, s.va), ks = T && !T.multi ? Object.keys(JUST) : Object.keys(JUST).slice(0, 9);
+        return '<div class="tx-p w"><label><span>Canh lề</span><select data-p="j">' + ks.map(k => opt(k, k + ' — ' + JNAME[k], j)).join('') + '</select></label></div>'; },
+      bind: el => { stop(el); const T = TE.cur; if(!T) return; el.querySelector('[data-p="j"]').onchange = e => { const J = JUST[e.target.value]; if(J){ T.st.ha = J[0]; T.st.va = J[1]; T.layout(); } refocus(); }; } };
+    A.ribbon.RIB.textctx = { en: 'Text Editor', vi: 'Soạn chữ', ctx: true, panels: [
+      { id: 'txs', en: 'Style', vi: 'Kiểu', pri: 2, items: [style] },
+      { id: 'txf', en: 'Formatting', vi: 'Định dạng', pri: 1, items: [format] },
+      { id: 'txp', en: 'Paragraph', vi: 'Đoạn văn', pri: 3, items: [para, { t: 'col', items: [sm('TX_BUL', 'Bullets and Numbering', 'Đánh số / đầu dòng', 'TJUST')] }] },
+      { id: 'txi', en: 'Insert', vi: 'Chèn', pri: 4, items: [big('TX_SYM', 'Symbol', 'Ký hiệu', 'SYMBOL'), { t: 'col', items: [sm('TX_NONE', 'Field', 'Trường (chưa hỗ trợ)', 'FIELD'), sm('TX_IMPORT', 'Import Text', 'Nhập chữ từ file', 'IMPORT')] }] },
+      { id: 'txt', en: 'Tools', vi: 'Công cụ', pri: 5, items: [big('TX_FIND', 'Find &\nReplace', 'Tìm và\nthay thế', 'FINDREPLACE')] },
+      { id: 'txo', en: 'Options', vi: 'Tuỳ chọn', pri: 6, items: [{ t: 'col', items: [sm('TX_RULER', 'Ruler', 'Thước', 'TEXTALIGN'), sm('TX_UNDO', 'Undo', 'Hoàn tác', 'UNDO'), sm('TX_REDO', 'Redo', 'Làm lại', 'REDO')] }] },
+      { id: 'txc', en: 'Close', vi: 'Đóng', pri: 0, items: [big('TX_CLOSE', 'Close Text\nEditor', 'Đóng\nsoạn chữ', 'CLOSE')] }
+    ] };
+  }
+
+  /* ==================================================================
+     Danh mục đối tượng có tên trong bản vẽ (dùng cho PURGE / RENAME): khối, kiểu kích thước, lớp, kiểu nét, kiểu ghi chú dẫn, kiểu chữ
+     ================================================================== */
+  const css3 = document.createElement('style');
+  css3.textContent = `
+  .pg-mode{display:flex;gap:0;margin:0 0 8px;border:1px solid #5a6578;border-radius:2px;overflow:hidden}
+  .pg-mode button{flex:1;height:26px;border:0;background:#343c4a;color:#dfe5ee;font:12px inherit;cursor:pointer}
+  .pg-mode button + button{border-left:1px solid #5a6578}
+  .pg-mode button.on{background:#0b5f8f;color:#fff}
+  .pg-tree{height:300px}
+  .pg-tree .it{gap:4px}
+  .pg-tree .it .tg{width:12px;text-align:center;color:#b4bdca;cursor:pointer;flex:0 0 12px}
+  .pg-tree .it.l1{padding-left:16px}.pg-tree .it.l2{padding-left:34px}
+  .pg-tree .it .c{color:#9aa6ba;margin-left:auto;padding-left:10px}
+  .pg-tree .it input{margin:0}
+  .pg-det{height:300px;overflow:auto;border:1px solid #5a6578;background:#262b34;padding:6px 8px;box-sizing:border-box;color:#dfe5ee;line-height:1.5}
+  .rn-l{height:260px}
+  `;
+  document.head.appendChild(css3);
+  const blkName = e => e && e.bm && e.bm.name ? e.bm.name : (e && e.blk && !String(e.blk).startsWith('*') ? String(e.blk) : '');
+  function namedData(){
+    const ents = (() => { try{ return modelEntities; }catch(_){ return []; } })();
+    const B = window._dvdBlocks || {}, fileB = A.fileBlockNames ? A.fileBlockNames() : [];
+    // khối đang dùng: có bản chèn trên bản vẽ, hoặc lồng trong khối đang dùng
+    const used = new Set(); for(const e of ents){ const n = blkName(e); if(n) used.add(n); }
+    const st = [...used]; while(st.length){ const n = st.pop(); const d = B[n]; if(!d || !d.entities) continue; for(const x of d.entities) if(x.type === 'INSERT' && x.name && !used.has(x.name)){ used.add(x.name); st.push(x.name); } }
+    const cnt = {}; for(const e of ents){ if(e.grp){ const n = blkName(e); if(n){ cnt[n] = cnt[n] || new Set(); cnt[n].add(e.grp); } } }
+    const blocks = fileB.map(n => ({ n, use: used.has(n) ? (cnt[n] ? cnt[n].size + ' bản chèn trên bản vẽ' : 'lồng trong khối khác') : '' }));
+    // lớp
+    const lc = {}; for(const e of ents){ const l = e.layer || '0'; lc[l] = (lc[l] || 0) + 1; }
+    const inBlk = new Set(); for(const n of fileB){ if(!used.has(n)) continue; const d = B[n]; for(const x of (d && d.entities) || []) inBlk.add(x.layer || '0'); }
+    const layers = A.layerNames().map(n => ({ n, use: n === '0' ? 'Lớp 0 luôn có' : n === A.LS.cur ? 'Lớp hiện hành' : lc[n] ? lc[n] + ' đối tượng' : inBlk.has(n) ? 'Dùng trong định nghĩa khối' : (n === 'Defpoints' ? 'Lớp hệ thống' : '') }));
+    // kiểu nét
+    const ltU = {}; for(const e of ents) if(e.lt) ltU[e.lt] = (ltU[e.lt] || 0) + 1; const ltL = {}; for(const [l, v] of Object.entries(A.LS.layLT || {})) if(v) (ltL[v] = ltL[v] || []).push(l);
+    const ltypes = Object.keys(A.LS.ltd || {}).filter(n => !/^(CONTINUOUS|BYLAYER|BYBLOCK)$/i.test(n)).map(n => ({ n, use: n === A.LS.lt ? 'Kiểu nét hiện hành' : ltU[n] ? ltU[n] + ' đối tượng' : ltL[n] ? 'Gán cho lớp ' + ltL[n].slice(0, 3).join(', ') + (ltL[n].length > 3 ? '…' : '') : '' }));
+    // kiểu chữ
+    const tsU = {}; for(const e of ents) if(e.type === 'TEXT' && !e.dimd && !e.dimx){ const s = e.style || 'Standard'; tsU[s] = (tsU[s] || 0) + 1; }
+    const TS = A.TS || { list: { Standard: {} }, cur: 'Standard' };
+    const tstyles = Object.keys(TS.list).map(n => ({ n, use: n === 'Standard' ? 'Kiểu Standard luôn có' : n === TS.cur ? 'Kiểu chữ hiện hành' : tsU[n] ? tsU[n] + ' chữ' : '' }));
+    // kiểu kích thước
+    const dsU = {}; for(const e of ents) if(e.dimd){ const s = (e.dimd.s && e.dimd.s.name) || 'Standard'; dsU[s] = (dsU[s] || 0) + 1; }
+    const dlib = A.dimStyles ? A.dimStyles.lib() : {}; const dcur = (A.DS && A.DS.name) || 'Standard';
+    const dstyles = Object.keys(dlib).map(n => ({ n, use: n === 'Standard' ? 'Kiểu Standard luôn có' : n === dcur ? 'Kiểu kích thước hiện hành' : dsU[n] ? dsU[n] + ' kích thước' : '' }));
+    // kiểu ghi chú dẫn
+    const ml = A.mlsLib ? A.mlsLib() : null; const mcur = (A.MLS && A.MLS.name) || 'Standard';
+    const mstyles = ml ? Object.keys(ml).map(n => ({ n, use: n === 'Standard' ? 'Kiểu Standard luôn có' : n === mcur ? 'Kiểu hiện hành' : '' })) : [];
+    // kiểu đường đôi (MLSTYLE)
+    const mlc = (A.MLINESTYLE && A.MLINESTYLE.name) || 'STANDARD'; const mlines = Object.keys(mnLib()).map(n => ({ n, use: n === 'STANDARD' ? 'Kiểu STANDARD luôn có' : n === mlc ? 'Kiểu hiện hành' : '' }));
+    // định nghĩa khối động
+    const D = (A.dynDefs && A.dynDefs()) || {}; const dyn = Object.keys(D).map(n => ({ n, use: used.has(n) || ents.some(e => e.bm && e.bm.name === n) ? 'Đang có bản chèn' : '' }));
+    return [
+      { k: 'blk', t: 'Khối', items: blocks }, { k: 'dim', t: 'Kiểu kích thước', items: dstyles }, { k: 'dyn', t: 'Định nghĩa khối động', items: dyn },
+      { k: 'lay', t: 'Lớp', items: layers }, { k: 'lt', t: 'Kiểu nét', items: ltypes }, { k: 'mls', t: 'Kiểu ghi chú dẫn', items: mstyles }, { k: 'mln', t: 'Kiểu đường đôi', items: mlines }, { k: 'ts', t: 'Kiểu chữ', items: tstyles }
+    ];
+  }
+  function purgeItem(k, n){
+    try{
+      if(k === 'blk'){ const B = window._dvdBlocks; if(B && B[n]){ delete B[n]; if(A.saveBlockLib) A.saveBlockLib(A.blockLib()); return true; } return false; }
+      if(k === 'lay'){ if(A.deleteLayer(n)) return false; try{ const i = layerList.findIndex(L => L.name === n); if(i >= 0) layerList.splice(i, 1); }catch(_){} for(const m of [A.LS.orig, A.LS.layLT, A.LS.layLW]) if(m) delete m[n]; A.lsSave(); return true; }
+      if(k === 'lt'){ delete A.LS.ltd[n]; try{ delete LTYPES[n]; }catch(_){} A.lsSave(); return true; }
+      if(k === 'ts'){ if(!A.TS || n === 'Standard' || n === A.TS.cur) return false; delete A.TS.list[n]; A.tsSave(); return true; }
+      if(k === 'dim'){ const lib = A.dimStyles.lib(); if(n === 'Standard' || n === A.DS.name || !lib[n]) return false; delete lib[n]; A.dimStyles.saveLib(lib); return true; }
+      if(k === 'mls'){ return A.mlsDelete ? A.mlsDelete(n) : false; }
+      if(k === 'mln'){ const lib = mnLib(); if(n === 'STANDARD' || n === ((A.MLINESTYLE && A.MLINESTYLE.name) || 'STANDARD') || !lib[n]) return false; delete lib[n]; mnSave(lib); return true; }
+      if(k === 'dyn'){ const D = A.dynDefs(); if(!D[n]) return false; delete D[n]; try{ localStorage.setItem('dvd:dynblk', JSON.stringify(D)); }catch(_){} return true; }
+    }catch(err){ console.warn(err); }
+    return false;
+  }
+  // hình độ dài 0 và chữ rỗng (Unnamed Objects của PURGE)
+  const isZero = e => { const t = 1e-9;
+    if(e.type === 'LINE') return Math.hypot(e.x2 - e.x1, e.y2 - e.y1) < t;
+    if(e.type === 'CIRCLE' || e.type === 'ARC') return !(e.r > t);
+    if(e.type === 'POLYLINE' || e.type === 'LWPOLYLINE' || e.type === 'SPLINE'){ const v = e.vertices || e.pts || []; return v.length < 2 || v.every(q => Math.hypot(q.x - v[0].x, q.y - v[0].y) < t); }
+    return false; };
+  const zeroEnts = () => modelEntities.filter(e => !e.grp && isZero(e) && !(A.isLocked && A.isLocked(e)));
+  const emptyTexts = () => modelEntities.filter(e => e.type === 'TEXT' && !e.grp && !String(e.text || '').trim() && !(A.isLocked && A.isLocked(e)));
+
+  /* ==================================================================
+     PURGE — Purge (như AutoCAD 2027: Purgeable Items / Find Non-Purgeable Items, cây mục có tên, đối tượng không tên)
+     ================================================================== */
+  function openPurge(){
+    if(!A.hasDoc()){ say('Chưa mở bản vẽ.'); return; }
+    let mode = 'p', data = namedData(), open = new Set(), chk = null, pick = null;
+    const resetChk = () => { chk = new Set(); for(const c of data) for(const i of c.items) if(!i.use) chk.add(c.k + '\u0001' + i.n); };
+    resetChk();
+    const html = '<div class="acw" style="width:640px"><div class="pg-mode"><button type="button" data-m="p" class="on">Mục dọn được</button><button type="button" data-m="n">Tìm mục không dọn được</button></div>' +
+      '<div class="acw-cols"><div class="c1" style="flex:1 1 330px"><div class="acw-lab" id="pgH">Mục có tên không dùng</div><div class="acw-list pg-tree" id="pgT" tabindex="0"></div></div>' +
+      '<div class="c2" style="flex:0 0 280px"><div class="acw-lab">Chi tiết</div><div class="pg-det" id="pgD"></div></div></div>' +
+      '<div id="pgO">' + K.grp('Tuỳ chọn', K.chk('pgCf', 'Xác nhận từng mục trước khi dọn', 0, { dis: 1, tip: 'Dọn luôn, có thể Hoàn tác bằng U' }) + '<br>' + K.chk('pgNs', 'Dọn cả mục lồng nhau', 1), 'margin:8px 0 6px') +
+      K.grp('Đối tượng không tên', K.chk('pgZ', 'Dọn hình có độ dài 0', 1) + ' <span class="acw-note" id="pgZn" style="margin:0"></span><br>' + K.chk('pgE', 'Dọn chữ rỗng', 1) + ' <span class="acw-note" id="pgEn" style="margin:0"></span><br>' + K.chk('pgOr', 'Dọn dữ liệu mồ côi', 0, { dis: 1 })) + '</div></div>';
+    const d = A.dialog({ title: 'Dọn bản vẽ', cls: 'acw-free', help: 'PURGE', html, noOk: true, cancelText: 'Đóng',
+      left: K.btn('pgChk', 'Dọn các mục đã chọn') + ' ' + K.btn('pgAll', 'Dọn tất cả') });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    const render = () => {
+      const show = c => mode === 'p' ? c.items.filter(i => !i.use) : c.items.filter(i => i.use);
+      let h = '<div class="it" data-n="*"><span class="tg"></span>' + (mode === 'p' ? '<input type="checkbox" data-all="1"' + (data.every(c => show(c).every(i => chk.has(c.k + '\u0001' + i.n))) && data.some(c => show(c).length) ? ' checked' : '') + '>' : '') + '<span>Tất cả mục</span></div>';
+      for(const c of data){ const L = show(c), op = open.has(c.k);
+        h += '<div class="it l1' + (pick === c.k ? ' on' : '') + '" data-c="' + c.k + '"><span class="tg" data-tg="' + c.k + '">' + (L.length ? (op ? '▾' : '▸') : '') + '</span>' + (mode === 'p' ? '<input type="checkbox" data-cc="' + c.k + '"' + (L.length && L.every(i => chk.has(c.k + '\u0001' + i.n)) ? ' checked' : '') + (L.length ? '' : ' disabled') + '>' : '') + '<span>' + esc(c.t) + '</span><span class="c">' + L.length + '</span></div>';
+        if(op) for(const i of L) h += '<div class="it l2' + (pick === c.k + '\u0001' + i.n ? ' on' : '') + '" data-i="' + esc(c.k + '\u0001' + i.n) + '"><span class="tg"></span>' + (mode === 'p' ? '<input type="checkbox" data-ii="' + esc(c.k + '\u0001' + i.n) + '"' + (chk.has(c.k + '\u0001' + i.n) ? ' checked' : '') + '>' : '') + '<span translate="no">' + esc(i.n) + '</span></div>'; }
+      $('pgT').innerHTML = h; $('pgH').textContent = mode === 'p' ? 'Mục có tên không dùng' : 'Mục có tên đang dùng'; $('pgO').style.display = mode === 'p' ? '' : 'none';
+      root.querySelector('#pgChk').style.display = root.querySelector('#pgAll').style.display = mode === 'p' ? '' : 'none';
+      const z = zeroEnts().length, e = emptyTexts().length; $('pgZn').textContent = '(' + z + ')'; $('pgEn').textContent = '(' + e + ')';
+      detail(); };
+    const detail = () => { let h = '';
+      if(!pick) h = mode === 'p' ? '<div class="acw-note" style="margin:0">Chọn một mục để xem chi tiết. Đánh dấu các mục cần dọn rồi bấm "Dọn các mục đã chọn".</div>' : '<div class="acw-note" style="margin:0">Các mục này đang được dùng nên không dọn được. Chọn một mục để xem lý do.</div>';
+      else if(!pick.includes('\u0001')){ const c = data.find(x => x.k === pick); const L = c ? c.items.filter(i => mode === 'p' ? !i.use : !!i.use) : []; h = '<b>' + esc(c ? c.t : '') + '</b><br>' + (mode === 'p' ? L.length + ' mục không dùng, có thể dọn.' : L.length + ' mục đang dùng.'); }
+      else { const [k, n] = pick.split('\u0001'); const c = data.find(x => x.k === k), i = c && c.items.find(x => x.n === n); h = '<b translate="no">' + esc(n) + '</b><br><span style="color:#9aa6ba">' + esc(c ? c.t : '') + '</span><br><br>' + (i && i.use ? 'Không dọn được: ' + esc(i.use) + '.' : 'Không được dùng trong bản vẽ — có thể dọn.'); }
+      $('pgD').innerHTML = h; };
+    root.querySelector('.pg-mode').onclick = e => { const b = e.target.closest('[data-m]'); if(!b) return; mode = b.dataset.m; pick = null; root.querySelectorAll('.pg-mode button').forEach(x => x.classList.toggle('on', x === b)); render(); };
+    $('pgT').addEventListener('click', e => {
+      const tg = e.target.closest('[data-tg]'); if(tg){ const k = tg.dataset.tg; if(open.has(k)) open.delete(k); else open.add(k); render(); return; }
+      const inp = e.target.closest('input[type=checkbox]');
+      if(inp){ const on = inp.checked; const show = c => c.items.filter(i => !i.use);
+        if(inp.dataset.all) for(const c of data) for(const i of show(c)) on ? chk.add(c.k + '\u0001' + i.n) : chk.delete(c.k + '\u0001' + i.n);
+        if(inp.dataset.cc){ const c = data.find(x => x.k === inp.dataset.cc); for(const i of show(c)) on ? chk.add(c.k + '\u0001' + i.n) : chk.delete(c.k + '\u0001' + i.n); }
+        if(inp.dataset.ii) on ? chk.add(inp.dataset.ii) : chk.delete(inp.dataset.ii);
+        render(); return; }
+      const it = e.target.closest('.it'); if(!it) return; pick = it.dataset.i || it.dataset.c || null; render(); });
+    $('pgT').addEventListener('dblclick', e => { const it = e.target.closest('.it[data-c]'); if(!it) return; const k = it.dataset.c; if(open.has(k)) open.delete(k); else open.add(k); render(); });
+    const run = keys => { let n = 0, guard = 0;
+      for(;;){ let k = 0; for(const key of keys){ const [c, nm] = key.split('\u0001'); if(purgeItem(c, nm)){ k++; log('Đã dọn ' + (data.find(x => x.k === c) || {}).t + ' "' + nm + '".'); } } n += k; data = namedData();
+        if(!$('pgNs').checked || !k || ++guard > 6) break;
+        // mục lồng nhau: khối vừa dọn có thể làm lộ thêm khối / lớp / kiểu không dùng nằm trong các nhóm đã chọn
+        const cats = new Set(keys.map(x => x.split('\u0001')[0])); keys = []; for(const c of data) if(cats.has(c.k)) for(const i of c.items) if(!i.use) keys.push(c.k + '\u0001' + i.n); if(!keys.length) break; }
+      const del = []; if($('pgZ').checked) del.push(...zeroEnts()); if($('pgE').checked) for(const e of emptyTexts()) if(!del.includes(e)) del.push(e);
+      if(del.length){ A.commit({ del }, 'Dọn ' + del.length + ' đối tượng không tên'); n += del.length; }
+      log('PURGE: đã dọn ' + n + ' mục.'); say(n ? 'Đã dọn ' + n + ' mục.' : 'Không có gì để dọn.'); data = namedData(); resetChk(); pick = null; render(); try{ draw(); }catch(_){} };
+    $('pgChk').onclick = () => run([...chk]);
+    $('pgAll').onclick = () => { const keys = []; for(const c of data) for(const i of c.items) if(!i.use) keys.push(c.k + '\u0001' + i.n); run(keys); };
+    render();
+  }
+  A.openPurge = openPurge;
+  plain(['PURGE', 'PU'], 'Dọn bản vẽ (Purge): khối, lớp, kiểu nét, kiểu chữ, kiểu kích thước không dùng; hình độ dài 0, chữ rỗng', () => openPurge());
+  // -PURGE (bản dòng lệnh như AutoCAD — script / LISP gọi (command "PURGE" "A" "*" "N"))
+  ecmd(['-PURGE', '-PU'], 'Dọn bản vẽ bằng dòng lệnh: loại mục, tên (* ?), xác nhận', async () => {
+    const KW = [{ k: 'B', t: 'Khối' }, { k: 'D', t: 'Kiểu kích thước' }, { k: 'LA', t: 'Lớp' }, { k: 'LT', t: 'Kiểu nét' }, { k: 'MA', t: 'Vật liệu' }, { k: 'MU', t: 'Kiểu ghi chú dẫn' }, { k: 'M', t: 'Kiểu đường đôi' }, { k: 'ST', t: 'Kiểu chữ' }, { k: 'Z', t: 'Hình độ dài 0' }, { k: 'E', t: 'Chữ rỗng' }, { k: 'A', t: 'Tất cả' }];
+    const t = await A.getKw('Nhập loại mục không dùng cần dọn', { kw: KW }); if(!t.kw) return;
+    const MAP = { B: 'blk', D: 'dim', LA: 'lay', LT: 'lt', MU: 'mls', M: 'mln', ST: 'ts' };
+    if(t.kw === 'Z' || t.kw === 'E'){ const del = t.kw === 'Z' ? zeroEnts() : emptyTexts(); if(del.length) A.commit({ del }, 'Dọn ' + del.length + ' đối tượng'); log(del.length ? 'Đã dọn ' + del.length + ' đối tượng.' : 'Không có đối tượng nào để dọn.'); return; }
+    if(t.kw === 'MA'){ log('Không có vật liệu nào để dọn.'); return; }
+    const pat = await A.getStr('Nhập tên cần dọn', { def: '*' }); const P = String(pat.str || '*').trim() || '*';
+    const re = new RegExp('^(?:' + P.split(',').map(x => x.trim().replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.')).join('|') + ')$', 'i');
+    const v = await A.getKw('Xác nhận từng tên trước khi dọn?', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: 'Có' }); const ask = v.kw !== 'N';
+    let n = 0;
+    for(let pass = 0; pass < 6; pass++){ let k = 0; const data = namedData();
+      for(const c of data){ if(t.kw !== 'A' && MAP[t.kw] !== c.k) continue;
+        for(const i of c.items){ if(i.use || !re.test(i.n)) continue;
+          if(ask){ const q = await A.getKw('Dọn ' + c.t.toLowerCase() + ' "' + i.n + '"?', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: 'Không' }); if(q.kw !== 'Y') continue; }
+          if(purgeItem(c.k, i.n)){ k++; log('Đang dọn ' + c.t.toLowerCase() + ' "' + i.n + '".'); } } }
+      n += k; if(!k || ask) break; }
+    log(n ? 'Đã dọn ' + n + ' mục.' : 'Không có mục nào không dùng để dọn.');
+  });
+
+  /* ==================================================================
+     RENAME — Rename (như AutoCAD: Named Objects · Items · Old Name · Rename To)
+     ================================================================== */
+  function renameStyle(k, o, n){
+    if(k === 'ts'){ const TS = A.TS; if(!TS || !TS.list[o] || TS.list[n] || o === 'Standard') return o === 'Standard' ? 'Không đổi tên được kiểu Standard.' : 'Tên đã có.';
+      TS.list[n] = TS.list[o]; delete TS.list[o]; if(TS.cur === o) TS.cur = n; A.tsSave();
+      const rep = []; for(const e of modelEntities) if(e.type === 'TEXT' && (e.style || 'Standard') === o){ const w = JSON.parse(JSON.stringify(e)); w.style = n; rep.push([e, w]); } if(rep.length) A.commit({ rep }, 'Đổi tên kiểu chữ ' + o + ' → ' + n); return ''; }
+    if(k === 'dim'){ const lib = A.dimStyles.lib(); if(!lib[o] || lib[n]) return 'Tên đã có.'; if(o === 'Standard') return 'Không đổi tên được kiểu Standard.';
+      lib[n] = lib[o]; delete lib[o]; A.dimStyles.saveLib(lib); if(A.DS.name === o){ A.DS.name = n; if(A.dsSave) A.dsSave(); }
+      const rep = []; for(const e of modelEntities) if(e.dimd && e.dimd.s && e.dimd.s.name === o){ const w = JSON.parse(JSON.stringify(e)); w.dimd.s.name = n; rep.push([e, w]); } if(rep.length) A.commit({ rep }, 'Đổi tên kiểu kích thước ' + o + ' → ' + n); return ''; }
+    if(k === 'mls') return A.mlsRename ? A.mlsRename(o, n) : 'Chưa hỗ trợ.';
+    if(k === 'mln'){ const lib = mnLib(); if(!lib[o]) return 'Không thấy kiểu.'; if(lib[n]) return 'Tên đã có.'; lib[n] = lib[o]; delete lib[o]; mnSave(lib); if(A.MLINESTYLE && A.MLINESTYLE.name === o){ A.MLINESTYLE.name = n; try{ localStorage.setItem('dvd:mlstyle', JSON.stringify(A.MLINESTYLE)); }catch(_){} } return ''; }
+    if(k === 'view'){ const V = A.namedViews; if(!V) return 'Chưa hỗ trợ.'; const L = V.get(); if(L.some(v => v.name === n)) return 'Tên đã có.'; const v = L.find(x => x.name === o); if(!v) return 'Không thấy.'; v.name = n; V.set(L); return ''; }
+    if(k === 'lst'){ return A.layerState && A.layerState.rename ? A.layerState.rename(o, n) : 'Chưa hỗ trợ.'; }
+    return 'Chưa hỗ trợ.';
+  }
+  function openRename(){
+    if(!A.hasDoc()){ say('Chưa mở bản vẽ.'); return; }
+    const TYPES = [['blk', 'Khối'], ['dim', 'Kiểu kích thước'], ['lay', 'Lớp'], ['lst', 'Trạng thái lớp'], ['mls', 'Kiểu ghi chú dẫn'], ['mln', 'Kiểu đường đôi'], ['ts', 'Kiểu chữ'], ['view', 'Góc nhìn']];
+    const items = k => { if(k === 'blk') return [...new Set(modelEntities.map(blkName).filter(Boolean))].concat(A.fileBlockNames ? A.fileBlockNames() : []).filter((v, i, a) => a.indexOf(v) === i).sort();
+      if(k === 'lay') return A.layerNames().filter(n => n !== '0'); if(k === 'ts') return A.TS ? Object.keys(A.TS.list).filter(n => n !== 'Standard') : [];
+      if(k === 'dim') return Object.keys(A.dimStyles ? A.dimStyles.lib() : {}).filter(n => n !== 'Standard'); if(k === 'mls') return A.mlsLib ? Object.keys(A.mlsLib()).filter(n => n !== 'Standard') : []; if(k === 'mln') return Object.keys(mnLib()).filter(n => n !== 'STANDARD');
+      if(k === 'view') return A.namedViews ? A.namedViews.get().map(v => v.name) : []; if(k === 'lst') return A.layerState ? A.layerState.list() : []; return []; };
+    let typ = 'lay', it = null;
+    const html = '<div class="acw" style="width:520px"><div class="acw-cols"><div class="c1" style="flex:1 1 50%"><div class="acw-lab">Loại đối tượng có tên</div>' + K.list('rnT', TYPES.map(([v, t]) => ({ v, t })), typ, 'height:260px') + '</div>' +
+      '<div class="c1" style="flex:1 1 50%"><div class="acw-lab">Mục</div><div class="acw-list rn-l" id="rnI" tabindex="0"></div></div></div>' +
+      '<div class="acw-row" style="margin-top:8px"><span class="l" style="flex:0 0 90px">Tên cũ:</span><input id="rnO" style="flex:1;width:auto"></div>' +
+      '<div class="acw-row">' + K.btn('rnBtn', 'Đổi thành:') + '<input id="rnN" style="flex:1;width:auto"></div></div>';
+    const d = A.dialog({ title: 'Đổi tên', cls: 'acw-free', help: 'RENAME', html, ok: root => { const r = apply(root); return r; } });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    const fill = () => { const L = items(typ); $('rnI').innerHTML = L.length ? L.map(n => '<div class="it' + (n === it ? ' on' : '') + '" data-v="' + esc(n) + '" translate="no">' + esc(n) + '</div>').join('') : '<div class="acw-note" style="padding:6px">Không có mục nào đổi tên được.</div>'; };
+    K.bindList($('rnT'), v => { typ = v; it = null; $('rnO').value = ''; fill(); });
+    $('rnI').addEventListener('click', e => { const x = e.target.closest('.it[data-v]'); if(!x) return; it = x.dataset.v; $('rnO').value = it; $('rnN').value = it; fill(); setTimeout(() => { $('rnN').focus(); $('rnN').select(); }, 0); });
+    $('rnO').addEventListener('input', () => { const v = $('rnO').value; const m = items(typ).includes(v) ? v : null; it = m; fill(); });
+    function apply(){ const o = $('rnO').value.trim(), n = $('rnN').value.trim().replace(/[<>\/\\":;?*|=`]/g, '_');
+      if(!o || !items(typ).includes(o)){ say('Chọn mục cần đổi tên.'); return false; } if(!n || n === o){ say('Nhập tên mới khác tên cũ.'); return false; }
+      if(typ === 'lay'){ if(!A.renameLayer(o, n)) return false; }
+      else if(typ === 'blk'){ if(!renameBlk(o, n)) return false; }
+      else { const err = renameStyle(typ, o, n); if(err){ say(err); return false; } log('Đã đổi tên "' + o + '" thành "' + n + '".'); }
+      return true; }
+    $('rnBtn').onclick = () => { if(apply() !== false){ it = $('rnN').value.trim(); $('rnO').value = it; fill(); } };
+    fill();
+  }
+  function renameBlk(o, n){
+    const B = window._dvdBlocks; if((B && B[n]) || modelEntities.some(e => blkName(e) === n)){ say('Đã có khối "' + n + '".'); return false; }
+    const rep = []; for(const e of modelEntities) if(blkName(e) === o){ const w = JSON.parse(JSON.stringify(e)); if(w.bm && w.bm.name === o) w.bm.name = n; if(w.blk === o) w.blk = n; rep.push([e, w]); }
+    if(B && B[o]){ B[n] = B[o]; delete B[o]; for(const d of Object.values(B)) for(const x of (d && d.entities) || []) if(x.type === 'INSERT' && x.name === o) x.name = n; }
+    try{ const D = A.dynDefs && A.dynDefs(); if(D && D[o]){ D[n] = D[o]; delete D[o]; localStorage.setItem('dvd:dynblk', JSON.stringify(D)); } }catch(_){}
+    if(rep.length) A.commit({ rep }, 'Đổi tên khối ' + o + ' → ' + n); if(A.saveBlockLib) A.saveBlockLib(A.blockLib());
+    log('Đã đổi tên khối "' + o + '" thành "' + n + '".'); return true;
+  }
+  A.openRename = openRename;
+  plain(['RENAME', 'REN', 'DDRENAME'], 'Đổi tên đối tượng có tên (Rename): khối, lớp, kiểu chữ, kiểu kích thước, góc nhìn…', () => openRename());
+
+  /* ==================================================================
+     LAYERSTATE — Layer States Manager (như AutoCAD: bảng trạng thái, Mới / Lưu / Đổi tên / Xoá / Nhập / Xuất, thuộc tính cần gọi lại)
+     ================================================================== */
+  const css4 = document.createElement('style');
+  css4.textContent = `
+  .ls-grid{height:220px;overflow:auto;border:1px solid #5a6578;background:#262b34}
+  .ls-grid table,.vm-props table,.fr-res table{width:100%;border-collapse:collapse;font-size:12px}
+  .ls-grid th,.fr-res th{position:sticky;top:0;background:#434c5b;font-weight:400;text-align:left;padding:3px 6px;border-right:1px solid #5a6578;white-space:nowrap}
+  .ls-grid td,.fr-res td{padding:2px 6px;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.04);cursor:default}
+  .ls-grid tr.sel td,.fr-res tr.sel td{background:#0b5f8f}
+  .ls-props{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}
+  .vm-props{height:300px;overflow:auto;border:1px solid #5a6578;background:#262b34}
+  .vm-props td{padding:2px 6px;border-bottom:1px solid rgba(255,255,255,.05);white-space:nowrap}
+  .vm-props td:first-child{color:#b4bdca;width:42%}
+  .vm-props tr.hd td{background:#384252;color:#e8ecf2;font-weight:600}
+  .vm-props input{width:100%;box-sizing:border-box;height:20px;background:#1f242c;color:#e8ecf2;border:1px solid #4a5363;border-radius:2px;font:12px inherit;padding:0 4px}
+  .fr-res{height:150px;overflow:auto;border:1px solid #5a6578;background:#262b34;margin-top:6px}
+  .fr-more{display:none}.fr-more.on{display:flex}
+  `;
+  document.head.appendChild(css4);
+  const PROPS = [['on', 'Bật / tắt'], ['frz', 'Đóng băng / rã băng'], ['lock', 'Khoá / mở khoá'], ['col', 'Màu'], ['lt', 'Kiểu nét'], ['lw', 'Bề rộng nét'], ['cur', 'Lớp hiện hành']];
+  const LSM_KEY = 'dvd:lsmask';
+  function openLayerStates(){
+    const LST = A.layerState; if(!LST){ say('Chưa sẵn sàng.'); return; }
+    let mask = (() => { try{ return Object.assign({ on: 1, frz: 1, lock: 1, col: 1, lt: 1, lw: 1, cur: 1 }, JSON.parse(localStorage.getItem(LSM_KEY) || '{}')); }catch(_){ return { on: 1, frz: 1, lock: 1, col: 1, lt: 1, lw: 1, cur: 1 }; } })();
+    let sel = null;
+    const html = '<div class="acw" style="width:620px"><div class="acw-lab">Trạng thái lớp</div><div class="acw-cols"><div class="c1"><div class="ls-grid"><table><thead><tr><th>Tên</th><th>Không gian</th><th>Giống bản vẽ</th><th style="width:100%">Mô tả</th></tr></thead><tbody id="lsB"></tbody></table></div>' +
+      K.chk('lsX', 'Không liệt kê trạng thái lớp của Xref', 1, { dis: 1 }) + '</div>' +
+      '<div class="c2 acw-btncol">' + K.btn('lsNew', 'Mới…') + K.btn('lsSave', 'Lưu') + K.btn('lsEdit', 'Sửa…', { dis: 1 }) + K.btn('lsRen', 'Đổi tên') + K.btn('lsDel', 'Xoá') + K.btn('lsImp', 'Nhập…') + K.btn('lsExp', 'Xuất…') + '</div></div>' +
+      K.grp('Tuỳ chọn gọi lại', K.chk('lsOff', 'Tắt các lớp không có trong trạng thái lớp', 0) + '<br>' + K.chk('lsVp', 'Áp thuộc tính như ghi đè khung nhìn', 0, { dis: 1 }), 'margin:8px 0 6px') +
+      K.grp('Thuộc tính lớp cần gọi lại', '<div class="ls-props">' + PROPS.map(([k, t]) => K.chk('lsP_' + k, t, mask[k])).join('') + '</div><div class="acw-row" style="margin-top:4px"><span class="l"></span>' + K.btn('lsAllP', 'Chọn tất cả') + K.btn('lsNoP', 'Bỏ tất cả') + '</div>') +
+      '<div class="acw-note" id="lsCur"></div></div>';
+    const d = A.dialog({ title: 'Quản lý trạng thái lớp', cls: 'acw-free', help: 'LAYERSTATE', html, okText: 'Gọi lại', cancelText: 'Đóng', ok: () => { if(!sel){ say('Chọn một trạng thái lớp.'); return false; } restore(); } });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    const readMask = () => { for(const [k] of PROPS) mask[k] = $('lsP_' + k).checked ? 1 : 0; try{ localStorage.setItem(LSM_KEY, JSON.stringify(mask)); }catch(_){} };
+    const render = () => { const all = LST.all(), names = Object.keys(all).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      if(sel && !all[sel]) sel = null;
+      $('lsB').innerHTML = names.length ? names.map(n => '<tr data-n="' + esc(n) + '"' + (n === sel ? ' class="sel"' : '') + '><td translate="no">' + esc(n) + '</td><td>Model</td><td>' + (LST.same(n) ? '✓' : '') + '</td><td translate="no">' + esc(all[n].desc || '') + '</td></tr>').join('') : '<tr><td colspan="4" style="color:#9aa6ba">Chưa có trạng thái lớp nào. Bấm "Mới…" để lưu tình trạng lớp hiện tại.</td></tr>';
+      ['lsSave', 'lsRen', 'lsDel', 'lsExp'].forEach(id => $(id).disabled = !sel); root.querySelector('.dvd-ok').disabled = !sel;
+      { const cn = names.find(n => LST.same(n)); $('lsCur').innerHTML = 'Trạng thái lớp hiện tại: ' + (cn ? '<span translate="no">' + esc(cn) + '</span>' : '*Chưa lưu*'); } };
+    const restore = () => { readMask(); LST.restore(sel, Object.assign({}, mask));
+      if($('lsOff').checked){ const S = LST.all()[sel]; const known = new Set((S.layers || Object.keys(S.hex || {})).concat(S.off || [], S.fz || [], S.lk || [], [S.cur])); for(const n of A.layerNames()) if(!known.has(n) && n !== A.LS.cur) A.setLayerFlag(n, 'off', true); }
+      log('Đã gọi lại trạng thái lớp "' + sel + '".'); };
+    $('lsB').addEventListener('click', e => { const tr = e.target.closest('tr[data-n]'); if(!tr) return; sel = tr.dataset.n; render(); });
+    $('lsB').addEventListener('dblclick', e => { const tr = e.target.closest('tr[data-n]'); if(!tr) return; sel = tr.dataset.n; restore(); d.close(); });
+    $('lsNew').onclick = () => { let i = 1; while(LST.all()['Trạng thái ' + i]) i++;
+      A.dialog({ title: 'Trạng thái lớp mới cần lưu', cls: 'acw-free', help: 'LAYERSTATE', html: '<div class="acw" style="width:360px">' + K.vrow('Tên trạng thái lớp mới:', K.txt('lnN', 'Trạng thái ' + i)) + K.vrow('Mô tả', K.txt('lnD', '')) + '</div>',
+        ok: r => { const n = K.val(r, 'lnN').trim(); if(!n){ say('Nhập tên.'); return false; } if(LST.all()[n]){ say('Đã có trạng thái "' + n + '".'); return false; } LST.save(n, K.val(r, 'lnD')); sel = n; render(); log('Đã lưu trạng thái lớp "' + n + '".'); } }); };
+    $('lsSave').onclick = () => { if(!sel) return; A.dialog({ title: 'Trạng thái lớp', help: false, html: '<div class="acw" style="max-width:380px">Trạng thái lớp "' + esc(sel) + '" đã có. Ghi đè bằng tình trạng lớp hiện tại?</div>', okText: 'Có', cancelText: 'Không', ok: () => { LST.save(sel); render(); } }); };
+    $('lsRen').onclick = async () => { if(!sel) return; const nn = await askText({ title: 'Đổi tên trạng thái lớp', value: sel }); const t = nn && nn.trim(); if(!t || t === sel) return; const err = LST.rename(sel, t); if(err){ say(err); return; } sel = t; render(); };
+    $('lsDel').onclick = () => { if(!sel) return; LST.del(sel); sel = null; render(); };
+    $('lsExp').onclick = () => { if(!sel) return; const S = LST.all()[sel]; const blob = new Blob([JSON.stringify({ dvdLayerState: 1, name: sel, state: S }, null, 1)], { type: 'application/json' });
+      try{ shareOrDownload(blob, sel.replace(/[\\/:*?"<>|]+/g, '_') + '.las.json', 'application/json'); }catch(_){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = sel + '.las.json'; a.click(); } };
+    $('lsImp').onclick = () => { const f = document.createElement('input'); f.type = 'file'; f.accept = '.json,.las'; f.onchange = () => { const file = f.files && f.files[0]; if(!file) return; const rd = new FileReader();
+      rd.onload = () => { try{ const o = JSON.parse(String(rd.result)); const S = o && o.state; if(!S || !Array.isArray(S.off)) throw 0; let n = String(o.name || file.name.replace(/\..*$/, '')); while(LST.all()[n]) n += ' (2)'; LST.put(n, S); sel = n; render(); log('Đã nhập trạng thái lớp "' + n + '".'); }catch(_){ say('File không phải trạng thái lớp của DVDCAD (.las.json).'); } }; rd.readAsText(file); }; f.click(); };
+    $('lsAllP').onclick = () => { for(const [k] of PROPS) $('lsP_' + k).checked = true; readMask(); };
+    $('lsNoP').onclick = () => { for(const [k] of PROPS) $('lsP_' + k).checked = false; readMask(); };
+    root.querySelector('.ls-props').addEventListener('change', readMask);
+    render();
+  }
+  A.openLayerStates = openLayerStates;
+  plain(['LAYERSTATE', 'LAS', 'LMAN'], 'Quản lý trạng thái lớp (Layer States Manager): lưu, gọi lại, đổi tên, nhập / xuất', () => openLayerStates());
+
+  /* ==================================================================
+     VIEW — View Manager (như AutoCAD: cây Views · bảng thuộc tính · Set Current / New / Delete)
+     ================================================================== */
+  function openViewManager(){
+    const V = A.namedViews; if(!V){ say('Chưa sẵn sàng.'); return; }
+    let L = V.get().map(v => Object.assign({}, v)), sel = '*cur', pend = null;
+    const geo = v => { const w = W(), h = H(), sc = v.s || 1; const ox = v.x, oy = v.y; const c = { x: (w / 2 - ox) / sc, y: -(h / 2 - oy) / sc }; return { c, w: w / sc, h: h / sc }; };
+    const curV = () => ({ name: 'Hiện tại', s: view.scale, x: view.offsetX, y: view.offsetY, r: view.rot || 0 });
+    const presets = [['Trên', 0], ['Xoay 90°', Math.PI / 2], ['Xoay 180°', Math.PI], ['Xoay 270°', 3 * Math.PI / 2]];
+    const html = '<div class="acw" style="width:700px"><div class="acw-cols"><div class="c1" style="flex:0 0 210px"><div class="acw-lab">Góc nhìn</div><div class="acw-list pg-tree" id="vmT" tabindex="0" style="height:300px"></div></div>' +
+      '<div class="c1" style="flex:1 1 auto"><div class="acw-lab" id="vmH">Thuộc tính</div><div class="vm-props" id="vmP"></div></div>' +
+      '<div class="c2 acw-btncol" style="padding-top:16px">' + K.btn('vmCur', 'Đặt hiện hành') + K.btn('vmNew', 'Mới…') + K.btn('vmLay', 'Cập nhật lớp') + K.btn('vmBnd', 'Sửa biên…', { dis: 1 }) + K.btn('vmDel', 'Xoá') + '</div></div></div>';
+    const d = A.dialog({ title: 'Quản lý góc nhìn', cls: 'acw-free', help: 'VIEW', html, left: K.btn('vmApply', 'Áp dụng'), ok: () => { commit(); if(pend) go(pend); } });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    const commit = () => { V.set(L); };
+    const go = v => { if(v.pre != null){ try{ if(typeof setRotation === 'function') setRotation(v.pre); else view.rot = v.pre; }catch(_){ view.rot = v.pre; } draw(); return; } V.restore(v); if(v.lay && A.layerState && A.layerState.apply) A.layerState.apply(v.lay); log('Góc nhìn "' + v.name + '".'); };
+    const node = (id, t, lvl, ex) => '<div class="it ' + (lvl ? 'l' + lvl : '') + (sel === id ? ' on' : '') + '" data-v="' + esc(id) + '"><span class="tg">' + (ex || '') + '</span><span' + (id.startsWith('m:') ? ' translate="no"' : '') + '>' + esc(t) + '</span></div>';
+    const render = () => { let h = node('*cur', 'Hiện tại', 0) + node('*model', 'Góc nhìn mô hình', 0, '▾');
+      for(const v of L) h += node('m:' + v.name, v.name, 2); h += node('*lay', 'Góc nhìn layout', 0, '') + node('*pre', 'Góc nhìn mẫu', 0, '▾'); for(const [t] of presets) h += node('p:' + t, t, 2);
+      $('vmT').innerHTML = h; props(); const isM = sel.startsWith('m:'); $('vmDel').disabled = !isM; $('vmLay').disabled = !isM; $('vmCur').disabled = !(isM || sel.startsWith('p:')); };
+    const props = () => { let v = null, t = '';
+      if(sel === '*cur'){ v = curV(); t = 'Hiện tại'; } else if(sel.startsWith('m:')){ v = L.find(x => x.name === sel.slice(2)); t = v ? v.name : ''; } else if(sel.startsWith('p:')){ const p = presets.find(x => x[0] === sel.slice(2)); t = p ? p[0] : ''; }
+      $('vmH').innerHTML = 'Thuộc tính' + (t ? ' — <span' + (sel.startsWith('m:') ? ' translate="no"' : '') + '>' + esc(t) + '</span>' : '');
+      if(!v){ $('vmP').innerHTML = '<table><tr><td colspan="2" style="color:#9aa6ba;white-space:normal;width:auto">' + (sel.startsWith('p:') ? 'Góc nhìn mẫu: đặt hướng xoay màn hình (mặt bằng 2D).' : sel === '*lay' ? 'Chưa có góc nhìn layout.' : 'Chọn một góc nhìn để xem thuộc tính.') + '</td></tr></table>'; return; }
+      const g = geo(v), ed = sel.startsWith('m:'), f = x => (+x).toFixed(Math.max(0, Math.min(6, (window.measPrec != null ? measPrec : 4))));
+      const row = (k, val, inp) => '<tr><td>' + k + '</td><td>' + (inp && ed ? '<input data-k="' + inp + '" value="' + esc(val) + '"' + (inp === 'cat' ? ' placeholder="<Không>"' : '') + '>' : esc(val)) + '</td></tr>';
+      $('vmP').innerHTML = '<table><tr class="hd"><td colspan="2">Tổng quát</td></tr>' + row('Tên', v.name, 'name') + row('Nhóm', v.cat || '', 'cat') + row('Loại góc nhìn', 'Mô hình') + row('Ảnh chụp lớp', v.lay ? 'Có' : 'Không') +
+        '<tr class="hd"><td colspan="2">Khung nhìn</td></tr>' + row('Tâm X', f(g.c.x), 'cx') + row('Tâm Y', f(g.c.y), 'cy') + row('Chiều cao', f(g.h), 'h') + row('Chiều rộng', f(g.w)) + row('Góc xoay', f(-(v.r || 0) * 180 / Math.PI) + '°', 'r') + '</table>'; };
+    $('vmP').addEventListener('keydown', e => { e.stopPropagation(); if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
+    $('vmP').addEventListener('change', e => { const i = e.target.closest('input[data-k]'); if(!i || !sel.startsWith('m:')) return; const v = L.find(x => x.name === sel.slice(2)); if(!v) return; const k = i.dataset.k, val = i.value.trim();
+      if(k === 'name'){ if(!val || L.some(x => x !== v && x.name === val)){ say('Tên trống hoặc đã có.'); props(); return; } v.name = val; sel = 'm:' + val; render(); return; }
+      if(k === 'cat'){ v.cat = val && val !== '<Không>' ? val : undefined; return; }
+      const n = num(val.replace('°', '')); if(n == null){ props(); return; } const g = geo(v);
+      if(k === 'h' && n > 0){ v.s = H() / n; } const g2 = geo(v); const cx = k === 'cx' ? n : g.c.x, cy = k === 'cy' ? n : g.c.y;
+      if(k === 'r') v.r = -n * Math.PI / 180;
+      v.x = W() / 2 - cx * v.s; v.y = H() / 2 + cy * v.s; void g2; props(); });
+    $('vmT').addEventListener('click', e => { const it = e.target.closest('.it[data-v]'); if(!it) return; const v = it.dataset.v; if(v === '*model' || v === '*pre') return; sel = v; render(); });
+    $('vmT').addEventListener('dblclick', e => { const it = e.target.closest('.it[data-v]'); if(!it) return; sel = it.dataset.v; $('vmCur').click(); });
+    $('vmCur').onclick = () => { if(sel.startsWith('m:')){ pend = L.find(x => x.name === sel.slice(2)); } else if(sel.startsWith('p:')){ const p = presets.find(x => x[0] === sel.slice(2)); pend = { name: p[0], pre: p[1] }; } if(pend) log('Góc nhìn hiện hành (khi bấm OK): ' + pend.name); };
+    $('vmApply').onclick = () => { commit(); if(pend){ go(pend); pend = null; render(); } };
+    $('vmDel').onclick = () => { if(!sel.startsWith('m:')) return; L = L.filter(x => x.name !== sel.slice(2)); sel = '*model'; sel = '*cur'; render(); };
+    $('vmLay').onclick = () => { const v = L.find(x => x.name === sel.slice(2)); if(v && A.layerState){ v.lay = A.layerState.snap(); say('Đã cập nhật ảnh chụp lớp cho "' + v.name + '".'); props(); } };
+    $('vmNew').onclick = () => { let i = 1; while(L.some(v => v.name === 'Góc nhìn ' + i)) i++;
+      A.dialog({ title: 'Thuộc tính góc nhìn mới', cls: 'acw-free', help: 'VIEW', html: '<div class="acw" style="width:400px">' + K.row('Tên góc nhìn:', K.txt('nvN', 'Góc nhìn ' + i)) + K.row('Nhóm góc nhìn:', K.txt('nvC', '', { ph: '<Không>' })) +
+        K.grp('Biên', K.rad('nvB', 'cur', 'Hiển thị hiện tại', 1) + '<br>' + K.rad('nvB', 'win', 'Chọn cửa sổ', 0)) + K.grp('Cài đặt', K.chk('nvL', 'Lưu ảnh chụp lớp cùng góc nhìn', 1)) + '</div>',
+        ok: r => { const n = K.val(r, 'nvN').trim(); if(!n){ say('Nhập tên.'); return false; } if(L.some(v => v.name === n)){ say('Đã có góc nhìn "' + n + '".'); return false; }
+          const v = { name: n, s: view.scale, x: view.offsetX, y: view.offsetY, r: view.rot || 0 }; const c = K.val(r, 'nvC').trim(); if(c) v.cat = c; if(r.querySelector('#nvL').checked && A.layerState) v.lay = A.layerState.snap();
+          const add = () => { L.push(v); sel = 'm:' + n; render(); };
+          if((r.querySelector('input[name=nvB]:checked') || {}).value !== 'win'){ add(); return; }
+          // chọn cửa sổ: tạm ẩn View Manager, bấm 2 góc trên bản vẽ
+          setTimeout(async () => { d.root.style.display = 'none'; const w = await pickWin(); d.root.style.display = '';
+            if(w){ const g = { x0: Math.min(w[0].x, w[1].x), x1: Math.max(w[0].x, w[1].x), y0: Math.min(w[0].y, w[1].y), y1: Math.max(w[0].y, w[1].y) }; const sc = Math.min(W() / Math.max(1e-9, g.x1 - g.x0), H() / Math.max(1e-9, g.y1 - g.y0)) * 0.96; v.s = sc; v.x = W() / 2 - (g.x0 + g.x1) / 2 * sc; v.y = H() / 2 + (g.y0 + g.y1) / 2 * sc; }
+            add(); }, 0); } }); };
+    // chọn cửa sổ 2 góc trên bản vẽ (khi hộp thoại tạm ẩn)
+    const pickWin = () => new Promise(res => { const cv = document.getElementById('cv'); let a = null; log('Chỉ định góc thứ nhất của cửa sổ góc nhìn (Esc = huỷ)');
+      const pt = e => { const r = cv.getBoundingClientRect(); return toWorld(e.clientX - r.left, e.clientY - r.top); };
+      const dn = e => { if(e.target !== cv) return; e.preventDefault(); e.stopPropagation(); if(!a){ a = pt(e); log('Chỉ định góc đối diện'); return; } const b = pt(e); off(); res([a, b]); };
+      const kd = e => { if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); off(); res(null); } };
+      const off = () => { document.removeEventListener('pointerdown', dn, true); window.removeEventListener('keydown', kd, true); };
+      document.addEventListener('pointerdown', dn, true); window.addEventListener('keydown', kd, true); });
+    render();
+  }
+  A.openViewManager = openViewManager;
+  plain(['VIEW', 'V', 'DDVIEW'], 'Quản lý góc nhìn (View Manager): lưu, gọi lại, sửa góc nhìn đặt tên', () => openViewManager());
+
+  /* ==================================================================
+     FIND — Find and Replace (như AutoCAD: Find what / Replace with / Find where, danh sách kết quả, Thêm tuỳ chọn)
+     ================================================================== */
+  const FR = { hist: [], rhist: [] };
+  function openFind(pre){
+    if(!A.hasDoc()){ say('Chưa mở bản vẽ.'); return; }
+    let scope = selEnts.size ? 'sel' : 'all', selSet = scope === 'sel' ? [...selEnts] : [], hits = [], idx = -1;
+    const dl = (id, L) => '<datalist id="' + id + '">' + L.map(v => '<option value="' + esc(v) + '">').join('') + '</datalist>';
+    const html = '<div class="acw" style="width:640px"><div class="acw-cols"><div class="c1">' + K.vrow('Tìm:', '<input id="fdF" list="fdFL" value="' + esc(pre || '') + '">' + dl('fdFL', FR.hist)) + K.vrow('Thay bằng:', '<input id="fdR" list="fdRL">' + dl('fdRL', FR.rhist)) + '</div>' +
+      '<div class="c1" style="flex:0 0 230px">' + K.vrow('Tìm ở:', '<div class="acw-row" style="margin:0"><select id="fdW" style="flex:1;width:auto"><option value="all">Toàn bản vẽ</option><option value="sel"' + (scope === 'sel' ? ' selected' : '') + '>Vùng chọn hiện tại</option></select>' + K.btn('fdSel', A.ICONS && A.ICONS.SELECT ? A.ico('SELECT') : '⌖') + '</div>') + '<div class="acw-note" id="fdSN"></div></div></div>' +
+      '<div class="acw-row">' + K.chk('fdList', 'Liệt kê kết quả', 1) + '<span class="l"></span><button type="button" class="acw-btn" id="fdMore">Thêm tuỳ chọn ⌄</button></div>' +
+      '<div class="fr-res" id="fdRes"><table><thead><tr><th>Vị trí</th><th>Loại đối tượng</th><th style="width:100%">Nội dung</th></tr></thead><tbody id="fdB"></tbody></table></div>' +
+      '<div class="acw-cols fr-more" id="fdMo" style="margin-top:8px"><div class="c1">' + K.grp('Tuỳ chọn tìm', K.chk('fdC', 'Phân biệt hoa thường', 0) + '<br>' + K.chk('fdWh', 'Chỉ tìm nguyên từ', 0) + '<br>' + K.chk('fdWc', 'Dùng ký tự đại diện (* ?)', 0) + '<br>' + K.chk('fdX', 'Tìm trong Xref', 0, { dis: 1 }) + '<br>' + K.chk('fdBk', 'Tìm trong khối', 1) + '<br>' + K.chk('fdH', 'Bỏ qua mục ẩn', 1) + '<br>' + K.chk('fdDi', 'Phân biệt dấu (ă, â, ê…)', 1)) + '</div>' +
+      '<div class="c1">' + K.grp('Loại chữ', K.chk('fdTa', 'Giá trị thuộc tính khối', 1) + '<br>' + K.chk('fdTd', 'Chữ kích thước / ghi chú dẫn', 1) + '<br>' + K.chk('fdTt', 'Chữ một dòng / nhiều dòng', 1) + '<br>' + K.chk('fdTb', 'Chữ trong bảng', 1) + '<br>' + K.chk('fdTh', 'Mô tả siêu liên kết', 0, { dis: 1 })) + '</div></div>' +
+      '<div class="acw-note" id="fdN"></div></div>';
+    const d = A.dialog({ title: 'Tìm và thay thế', cls: 'acw-free', help: 'FIND', html, noOk: true, cancelText: 'Hoàn tất', modeless: true,
+      left: K.btn('fdRep', 'Thay thế') + ' ' + K.btn('fdAll', 'Thay tất cả') + ' ' + K.btn('fdNext', 'Tìm', { def: 1 }) });
+    const root = d.root, $ = id => root.querySelector('#' + id), C = id => $(id).checked;
+    const fold = ch => ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+    const norm = s => C('fdDi') ? s : fold(s);
+    // bỏ dấu từng ký tự, giữ bảng vị trí về chuỗi gốc (để thay đúng chỗ khi không phân biệt dấu)
+    const normMap = src => { let n = ''; const map = []; for(let i = 0; i < src.length;){ const ch = String.fromCodePoint(src.codePointAt(i)), t = fold(ch); for(let k = 0; k < t.length; k++) map.push(i); n += t; i += ch.length; } map.push(src.length); return { n, map }; };
+    const mkRe = g => { const f = $('fdF').value; if(!f) return null; let s = norm(f).replace(/[.+^${}()|[\]\\]/g, '\\$&'); s = C('fdWc') ? s.replace(/\*/g, '.*').replace(/\?/g, '.') : s.replace(/[*?]/g, '\\$&');
+      if(C('fdWh')) s = '(?<![\\p{L}\\p{N}_])' + s + '(?![\\p{L}\\p{N}_])'; return new RegExp(s, 'u' + (g ? 'g' : '') + (C('fdC') ? '' : 'i')); };
+    const kindOf = e => e.tbld ? 'tb' : e.att ? 'att' : (e.dimd || e.dimx || e.ldr) ? 'dim' : 'txt';
+    const KN = { tb: 'Bảng', att: 'Thuộc tính khối', dim: 'Kích thước', txt: 'Chữ' };
+    const textOf = e => e.tbld ? e.tbld.cells.map(r => r.join('\t')).join('\n') : (A.textSrc ? A.textSrc(e) : String(e.text || ''));
+    const pool = () => { const src = $('fdW').value === 'sel' ? selSet : modelEntities; const seenTb = new Set();
+      return src.filter(e => { if(e.type !== 'TEXT') return false; if(C('fdH') && e.vh) return false; const k = kindOf(e);
+        if(k === 'tb'){ if(!C('fdTb') || seenTb.has(e.tbld)) return false; seenTb.add(e.tbld); return true; }
+        if(k === 'att') return C('fdTa'); if(k === 'dim') return C('fdTd'); if(e.grp && !C('fdBk') && !e.att) return false; return C('fdTt'); }); };
+    const search = () => { const re = mkRe(false); hits = re ? pool().filter(e => re.test(norm(textOf(e)))) : []; idx = -1; list(); };
+    const list = () => { $('fdRes').style.display = C('fdList') ? '' : 'none';
+      $('fdB').innerHTML = hits.slice(0, 500).map((e, i) => '<tr data-i="' + i + '"' + (i === idx ? ' class="sel"' : '') + '><td>Model</td><td>' + KN[kindOf(e)] + '</td><td translate="no">' + esc(textOf(e).replace(/\s*\n\s*/g, ' ⏎ ').slice(0, 120)) + '</td></tr>').join('');
+      $('fdN').textContent = $('fdF').value ? (hits.length ? 'Tìm thấy ' + hits.length + ' đối tượng.' : 'Không tìm thấy.') : ''; };
+    const show = i => { const e = hits[i]; if(!e) return; idx = i; try{ selEnts.clear(); selEnts.add(e); refreshPanSel(); }catch(_){} const b = entBBox(e);
+      if(b){ const w = Math.max(b.x1 - b.x0, e.h * 6 || 1), h = Math.max(b.y1 - b.y0, e.h * 4 || 1), cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2; try{ A.pushView && A.pushView(); }catch(_){} zoomToWorldRect(cx - w * 1.5, cy - h * 1.5, cx + w * 1.5, cy + h * 1.5); }
+      try{ draw(); }catch(_){} list(); const tr = $('fdB').querySelector('tr.sel'); if(tr) tr.scrollIntoView({ block: 'nearest' }); };
+    const remember = () => { const f = $('fdF').value, r = $('fdR').value; if(f && !FR.hist.includes(f)) FR.hist.unshift(f); if(r && !FR.rhist.includes(r)) FR.rhist.unshift(r); FR.hist.length = Math.min(FR.hist.length, 12); FR.rhist.length = Math.min(FR.rhist.length, 12); };
+    const replIn = (e, R) => { const re = mkRe(true); const w = JSON.parse(JSON.stringify(e)); const rp = s => { if(C('fdDi')) return String(s).replace(re, () => R); const src = String(s), M = normMap(src); let out = '', last = 0; M.n.replace(re, (m, ...a) => { const off = a.find(x => typeof x === 'number'); const s0 = M.map[off], s1 = M.map[off + m.length]; out += src.slice(last, s0) + R; last = s1; return m; }); return out + src.slice(last); };
+      if(w.tbld) w.tbld.cells = w.tbld.cells.map(r => r.map(c => rp(c == null ? '' : c)));
+      else { const t = rp(textOf(e)); if(e.mtp && e.mtwk > 0 && A.textSrc(e) === e.mtp){ w.mtp = t; w.text = wrapText(t, e.h, e.mtwk * e.h, e.ff, e.xs); if(w.text === t) delete w.mtp; } else w.text = t; if(w.dimd) w.dimd.ov = w.text; }
+      delete w.userAdded; return w; };
+    $('fdNext').onclick = () => { remember(); if(!hits.length) search(); if(!hits.length) return; show((idx + 1) % hits.length); };
+    $('fdRep').onclick = () => { remember(); if(idx < 0){ $('fdNext').click(); return; } const e = hits[idx]; if(!e || (A.isLocked && A.isLocked(e))){ say('Đối tượng bị khoá.'); return; } const w = replIn(e, $('fdR').value); A.commit({ rep: [[e, w]] }, 'Đã thay 1 chữ'); hits[idx] = w; const re = mkRe(false); if(!re.test(norm(textOf(w)))){ hits.splice(idx, 1); idx--; } if(hits.length) show((idx + 1) % hits.length); else list(); };
+    $('fdAll').onclick = () => { remember(); search(); const R = $('fdR').value; const rep = hits.filter(e => !(A.isLocked && A.isLocked(e))).map(e => [e, replIn(e, R)]); if(rep.length){ A.commit({ rep }, 'Đã thay ' + rep.length + ' chữ'); say('Đã thay ' + rep.length + ' đối tượng.'); } else say('Không tìm thấy.'); search(); };
+    $('fdB').addEventListener('click', e => { const tr = e.target.closest('tr[data-i]'); if(tr) show(+tr.dataset.i); });
+    $('fdMore').onclick = () => { const on = $('fdMo').classList.toggle('on'); $('fdMore').textContent = on ? 'Ít tuỳ chọn ⌃' : 'Thêm tuỳ chọn ⌄'; };
+    $('fdSel').onclick = () => { d.root.style.display = 'none'; const done = () => { d.root.style.display = ''; selSet = [...selEnts]; $('fdW').value = selSet.length ? 'sel' : 'all'; $('fdSN').textContent = selSet.length ? selSet.length + ' đối tượng đã chọn' : ''; search(); };
+      log('Chọn đối tượng rồi Enter (hoặc bấm chuột phải) để quay lại Tìm và thay thế.'); const k = e => { if(e.key === 'Enter' || e.key === 'Escape'){ window.removeEventListener('keydown', k, true); document.removeEventListener('contextmenu', c2, true); done(); } };
+      const c2 = e => { e.preventDefault(); window.removeEventListener('keydown', k, true); document.removeEventListener('contextmenu', c2, true); done(); }; window.addEventListener('keydown', k, true); document.addEventListener('contextmenu', c2, true); };
+    root.addEventListener('input', e => { if(e.target.id === 'fdF') search(); });
+    root.addEventListener('change', e => { if(e.target.type === 'checkbox' || e.target.id === 'fdW') search(); });
+    root.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.tagName === 'INPUT'){ e.preventDefault(); $('fdNext').click(); } });
+    $('fdSN').textContent = selSet.length ? selSet.length + ' đối tượng đã chọn' : '';
+    setTimeout(() => { try{ $('fdF').focus(); $('fdF').select(); }catch(_){} }, 30);
+    search();
+  }
+  A.openFind = openFind;
+  plain(['FIND', 'FINDREPLACE', 'REPLACE', 'THAYCHU'], 'Tìm và thay thế (Find and Replace): chữ, thuộc tính khối, kích thước, bảng', () => openFind());
+
+  /* ==================================================================
+     EATTEDIT — Enhanced Attribute Editor (như AutoCAD: Attribute · Text Options · Properties)
+     ================================================================== */
+  const css5 = document.createElement('style');
+  css5.textContent = `
+  .ea-hd{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center;margin-bottom:8px}
+  .ea-hd b{font-weight:600}
+  .acw .acw-btn svg{width:16px;height:16px;vertical-align:-3px;flex:0 0 auto}
+  .acw .acw-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px}
+  .gt-grid{display:grid;grid-template-columns:44px repeat(2,minmax(0,1fr)) repeat(3,minmax(0,.62fr));gap:4px 8px;align-items:center}
+  .gt-grid .h{color:#b4bdca;text-align:center;font-size:11.5px}
+  .gt-c{display:flex;gap:3px;align-items:center}
+  .gt-c input{flex:1 1 auto;width:0;min-width:0;height:22px;box-sizing:border-box}
+  .gt-b{width:24px;height:22px;flex:0 0 24px;padding:0;border:1px solid #5a6578;background:#11151b;color:#fff;font:15px "Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",sans-serif;cursor:pointer;border-radius:1px;line-height:1}
+  .gt-b.sym{width:40px;height:30px;flex:0 0 40px;font-size:19px}
+  .gt-pick{display:grid;grid-template-columns:repeat(5,44px);gap:4px;padding:6px;background:#2b313b;border:1px solid #5a6578;position:fixed;z-index:200;box-shadow:0 6px 20px rgba(0,0,0,.45)}
+  .gt-pick button{height:40px;border:1px solid #5a6578;background:#11151b;color:#fff;font:21px "Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",sans-serif;cursor:pointer}
+  .gt-pick button:hover{border-color:#0696d7}
+  .dp-grid{display:grid;grid-template-columns:150px 1fr;gap:4px 10px;align-items:center}
+  .dp-grid span{color:#dfe5ee}
+  .dp-grid textarea{height:70px;resize:vertical}
+  .dp-info{display:grid;grid-template-columns:150px 1fr;gap:5px 10px;color:#dfe5ee}
+  .dp-info span:nth-child(odd){color:#b4bdca}
+  `;
+  document.head.appendChild(css5);
+  function eattedit(ent){
+    const gid = ent && ent.grp; let list = gid ? modelEntities.filter(e => e.grp === gid && e.att) : [];
+    if(!list.length){ log('Khối này không có thuộc tính.'); return false; }
+    const name = (ent.bm && ent.bm.name) || String(ent.blk || '').replace(/^\*/, '');
+    const W0 = new Map(list.map(e => [e, JSON.parse(JSON.stringify(e))])); let cur = list[0], dirty = false;
+    const TSN = A.TS ? Object.keys(A.TS.list) : ['Standard'];
+    const JS = [['left|alphabetic', 'Trái'], ['center|alphabetic', 'Giữa'], ['right|alphabetic', 'Phải'], ['center|middle', 'Chính giữa'], ['left|top', 'Trên trái'], ['center|top', 'Trên giữa'], ['right|top', 'Trên phải'], ['left|middle', 'Giữa trái'], ['right|middle', 'Giữa phải'], ['left|bottom', 'Dưới trái'], ['center|bottom', 'Dưới giữa'], ['right|bottom', 'Dưới phải']];
+    const html = '<div class="acw" style="width:520px"><div class="ea-hd"><span>Khối:</span><b translate="no">' + esc(name) + '</b><span style="grid-row:span 2">' + K.btn('eaSel', (A.ICONS && A.ICONS.SELECT ? A.ico('SELECT') : '') + '<span>Chọn khối</span>') + '</span><span>Nhãn:</span><b id="eaTag" translate="no"></b></div>' +
+      K.tabs('ea', [['att', 'Thuộc tính khối'], ['txt', 'Tuỳ chọn chữ'], ['pr', 'Thuộc tính đối tượng']], 'att') + '<div class="acw-panes" style="min-height:250px">' +
+      K.pane('ea', 'att', 'att', '<div class="ls-grid" style="height:170px"><table><thead><tr><th>Nhãn</th><th>Lời nhắc</th><th style="width:100%">Giá trị</th></tr></thead><tbody id="eaB"></tbody></table></div><div class="acw-row" style="margin-top:8px"><span class="l" style="flex:0 0 60px">Giá trị:</span><input id="eaV" style="flex:1;width:auto"></div>') +
+      K.pane('ea', 'txt', 'att', '<div class="acw-cols"><div class="c1">' + K.row('Kiểu chữ:', K.sel('eaTs', TSN.map(n => [n, n]), '')) + K.row('Canh lề:', K.sel('eaJ', JS, '')) + K.row('Cao chữ:', K.num('eaH', 0, { min: 0 })) + K.row('Góc xoay:', K.num('eaR', 0)) + '</div><div class="c1">' +
+        K.row('Hệ số rộng:', K.num('eaW', 1, { min: 0.01 })) + K.row('Góc nghiêng:', K.num('eaO', 0, { dis: 1 }), { dis: 1 }) + K.chk('eaAn', 'Chú thích (Annotative)', 0, { dis: 1 }) + '<br>' + K.chk('eaBk', 'Viết ngược', 0, { dis: 1 }) + '<br>' + K.chk('eaUd', 'Lộn ngược', 0, { dis: 1 }) + '</div></div>') +
+      K.pane('ea', 'pr', 'att', K.row('Lớp:', K.sel('eaL', A.layerNames().map(n => [n, n]), '')) + K.row('Kiểu nét:', K.sel('eaLt', [['BYLAYER', 'ByLayer']], 'BYLAYER', { dis: 1 }), { dis: 1 }) + K.row('Màu:', K.colorSel('eaC', 'BYLAYER', { noBlock: 1 })) + K.row('Bề rộng nét:', K.sel('eaLw', [['-1', 'ByLayer']], '-1', { dis: 1 }), { dis: 1 }) + K.row('Kiểu in:', K.sel('eaPs', [['', 'ByLayer']], '', { dis: 1 }), { dis: 1 })) +
+      '</div></div>';
+    const d = A.dialog({ title: 'Sửa thuộc tính khối nâng cao', cls: 'acw-free', help: 'EATTEDIT', html, left: K.btn('eaAp', 'Áp dụng', { dis: 1 }), ok: () => { apply(); } });
+    const root = d.root, $ = id => root.querySelector('#' + id); K.bindTabs(root);
+    const W = () => W0.get(cur);
+    const fill = () => { $('eaB').innerHTML = list.map((e, i) => { const w = W0.get(e); return '<tr data-i="' + i + '"' + (e === cur ? ' class="sel"' : '') + '><td translate="no">' + esc(e.att) + '</td><td translate="no">' + esc(e.attp || e.att) + '</td><td translate="no">' + esc(w.text || '') + '</td></tr>'; }).join('');
+      const w = W(); $('eaTag').textContent = cur.att; $('eaV').value = w.text || ''; $('eaTs').value = w.style || 'Standard'; $('eaJ').value = (w.ha || 'left') + '|' + (w.va || 'alphabetic'); if(!$('eaJ').value) $('eaJ').value = 'left|alphabetic';
+      $('eaH').value = r6(w.h || 2.5); $('eaR').value = r6(w.rot || 0); $('eaW').value = r6(w.xs || 1); $('eaL').value = w.layer || '0';
+      const c = w.bl ? 'BYLAYER' : (w.col || 'BYLAYER'), cs = $('eaC'); if(![...cs.options].some(o => o.value === c)){ const op = document.createElement('option'); op.value = c; op.textContent = '■ ' + c; cs.insertBefore(op, cs.lastElementChild); } cs.value = c; };
+    const touch = () => { dirty = true; $('eaAp').disabled = false; };
+    $('eaB').addEventListener('click', e => { const tr = e.target.closest('tr[data-i]'); if(!tr) return; cur = list[+tr.dataset.i]; fill(); setTimeout(() => { $('eaV').focus(); $('eaV').select(); }, 0); });
+    $('eaV').addEventListener('input', () => { W().text = $('eaV').value; const td = $('eaB').querySelector('tr.sel td:last-child'); if(td) td.textContent = $('eaV').value; touch(); });
+    $('eaTs').onchange = () => { const w = W(); if(A.tsApply) A.tsApply(w, $('eaTs').value); else w.style = $('eaTs').value; touch(); };
+    $('eaJ').onchange = () => { const [ha, va] = $('eaJ').value.split('|'); W().ha = ha; W().va = va; touch(); };
+    $('eaH').onchange = () => { const v = num($('eaH').value); if(v > 0){ W().h = v; touch(); } };
+    $('eaR').onchange = () => { const v = num($('eaR').value); if(v != null){ W().rot = v; touch(); } };
+    $('eaW').onchange = () => { const v = num($('eaW').value); if(v > 0){ if(Math.abs(v - 1) > 1e-6) W().xs = v; else delete W().xs; touch(); } };
+    $('eaL').onchange = () => { const w = W(); w.layer = $('eaL').value; if(w.bl) w.col = A.layerHex(w.layer); touch(); };
+    K.bindColors(root, s => { const w = W(); if(s.value === 'BYLAYER'){ w.bl = 1; w.col = A.layerHex(w.layer || '0'); } else { delete w.bl; w.col = s.value; } touch(); });
+    function apply(){ const rep = []; for(const e of list){ const w = W0.get(e); if(JSON.stringify(w) !== JSON.stringify(e)){ const c = JSON.parse(JSON.stringify(w)); delete c.userAdded; rep.push([e, c]); } }
+      if(rep.length){ A.commit({ rep }, 'Đã sửa ' + rep.length + ' thuộc tính'); const m = new Map(rep); list = list.map(e => m.get(e) || e); const nW = new Map(); for(const e of list) nW.set(e, JSON.parse(JSON.stringify(e))); W0.clear(); for(const [k, v] of nW) W0.set(k, v); cur = m.get(cur) || cur; }
+      dirty = false; $('eaAp').disabled = true; }
+    $('eaAp').onclick = () => { apply(); fill(); };
+    $('eaSel').onclick = () => { if(dirty) apply(); d.close(); DVDCmd.run('EATTEDIT'); };
+    root.querySelector('.acw').addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.id === 'eaV'){ e.preventDefault(); e.stopPropagation(); const i = list.indexOf(cur); if(i < list.length - 1){ cur = list[i + 1]; fill(); $('eaV').select(); } else root.querySelector('.dvd-ok').click(); } }, true);
+    fill(); setTimeout(() => { try{ $('eaV').focus(); $('eaV').select(); }catch(_){} }, 30);
+    return true;
+  }
+  A.eattedit = eattedit;
+  DVDCmd.register(['EATTEDIT', 'ATTEDIT', 'ATE'], 'Sửa thuộc tính khối (Enhanced Attribute Editor): giá trị, chữ, lớp, màu', () => A.run('EATTEDIT', async (A2, c) => {
+    const pre = ((c && c.pre) || []).find(e => e.grp && modelEntities.some(x => x.grp === e.grp && x.att));
+    const r = pre ? { ent: pre } : await A.getEnt('Chọn khối', { filter: e => !!e.grp && modelEntities.some(x => x.grp === e.grp && x.att) }); if(r.ent) setTimeout(() => eattedit(r.ent), 0); }), { engine: true });
+
+  /* ==================================================================
+     TOLERANCE — Geometric Tolerance (như AutoCAD: Sym · Tolerance 1/2 · Datum 1/2/3, 2 hàng, Height, Projected Tolerance Zone, Datum Identifier)
+     ================================================================== */
+  const GSYM = [['⌖', 'Vị trí'], ['◎', 'Đồng tâm / đồng trục'], ['⌯', 'Đối xứng'], ['∥', 'Song song'], ['⊥', 'Vuông góc'], ['∠', 'Nghiêng'], ['⌭', 'Trụ'], ['⏥', 'Phẳng'], ['○', 'Tròn'], ['⏤', 'Thẳng'], ['⌓', 'Biên dạng mặt'], ['⌒', 'Biên dạng đường'], ['↗', 'Đảo hướng kính'], ['⌰', 'Đảo toàn phần']];
+  const GMC = [['Ⓜ', 'Lớn nhất (MMC)'], ['Ⓛ', 'Nhỏ nhất (LMC)'], ['Ⓢ', 'Không phụ thuộc kích thước (RFS)']];
+  function gtPick(btn, items, cols, cb){
+    document.querySelectorAll('.gt-pick').forEach(p => p.remove());
+    const pop = document.createElement('div'); pop.className = 'gt-pick'; pop.style.gridTemplateColumns = 'repeat(' + cols + ',44px)';
+    pop.innerHTML = items.map(([s, t]) => '<button type="button" data-s="' + esc(s) + '" title="' + esc(t) + '">' + esc(s) + '</button>').join('') + '<button type="button" data-s="" title="Không">&nbsp;</button>';
+    document.body.appendChild(pop); const r = btn.getBoundingClientRect(); pop.style.left = Math.min(r.left, innerWidth - pop.offsetWidth - 6) + 'px'; pop.style.top = Math.min(r.bottom + 3, innerHeight - pop.offsetHeight - 6) + 'px';
+    const off = e => { if(!pop.contains(e.target)){ pop.remove(); document.removeEventListener('pointerdown', off, true); } }; setTimeout(() => document.addEventListener('pointerdown', off, true), 0);
+    pop.onclick = e => { const b = e.target.closest('[data-s]'); if(!b) return; pop.remove(); document.removeEventListener('pointerdown', off, true); cb(b.dataset.s); };
+  }
+  function tolDialog(){
+    return new Promise(res => {
+      const row = r => '<button type="button" class="gt-b sym" data-sym="' + r + '"></button>' +
+        [1, 2].map(t => '<div class="gt-c"><button type="button" class="gt-b" data-dia="' + r + t + '" title="Đường kính Ø"></button><input id="gtT' + r + t + '"><button type="button" class="gt-b" data-mc="T' + r + t + '" title="Điều kiện vật liệu"></button></div>').join('') +
+        [1, 2, 3].map(t => '<div class="gt-c"><input id="gtD' + r + t + '"><button type="button" class="gt-b" data-mc="D' + r + t + '" title="Điều kiện vật liệu"></button></div>').join('');
+      const html = '<div class="acw" style="width:640px"><div class="gt-grid"><span class="h">Ký hiệu</span><span class="h">Dung sai 1</span><span class="h">Dung sai 2</span><span class="h">Chuẩn 1</span><span class="h">Chuẩn 2</span><span class="h">Chuẩn 3</span>' + row(1) + row(2) + '</div>' +
+        '<div class="acw-cols" style="margin-top:10px"><div class="c1">' + K.row('Chiều cao:', K.txt('gtH', '')) + K.row('Mã nhận dạng chuẩn:', K.txt('gtId', '')) + '</div><div class="c1"><div class="acw-row"><span class="l">Vùng dung sai chiếu:</span><button type="button" class="gt-b" id="gtP" title="Ⓟ"></button></div></div></div></div>';
+      const st = { sym: {}, dia: {}, mc: {}, p: false };
+      const d = A.dialog({ title: 'Dung sai hình học', cls: 'acw-free', help: 'TOLERANCE', html, cancel: () => res(null), ok: root => {
+        const v = id => K.val(root, id).trim(); const rows = [];
+        for(const r of [1, 2]){ const cells = []; if(st.sym[r]) cells.push(st.sym[r]);
+          for(const t of [1, 2]){ const x = v('gtT' + r + t); if(x || st.dia[r + '' + t]) cells.push((st.dia[r + '' + t] ? 'Ø' : '') + x + (st.mc['T' + r + t] || '')); }
+          for(const t of [1, 2, 3]){ const x = v('gtD' + r + t); if(x) cells.push(x + (st.mc['D' + r + t] || '')); }
+          if(cells.length) rows.push(cells); }
+        const h = v('gtH'); if(h || st.p) rows.push([h + (st.p ? ' Ⓟ' : '')].map(s => s.trim()));
+        const id = v('gtId'); if(id) rows.push(['-' + id + '-']);
+        if(!rows.length){ say('Chưa nhập nội dung.'); return false; } res(rows); } });
+      const root = d.root;
+      root.querySelectorAll('[data-sym]').forEach(b => b.onclick = () => gtPick(b, GSYM, 5, s => { st.sym[b.dataset.sym] = s; b.textContent = s; }));
+      root.querySelectorAll('[data-dia]').forEach(b => b.onclick = () => { const k = b.dataset.dia; st.dia[k] = !st.dia[k]; b.textContent = st.dia[k] ? 'Ø' : ''; });
+      root.querySelectorAll('[data-mc]').forEach(b => b.onclick = () => gtPick(b, GMC, 4, s => { st.mc[b.dataset.mc] = s; b.textContent = s; }));
+      root.querySelector('#gtP').onclick = e => { st.p = !st.p; e.currentTarget.textContent = st.p ? 'Ⓟ' : ''; };
+    });
+  }
+  DVDCmd.register(['TOLERANCE', 'TOL'], 'Khung dung sai hình học (Geometric Tolerance, GD&T)', () => A.run('TOLERANCE', async () => {
+    const rows = await tolDialog(); if(!rows) return;
+    const th = A.dimTxt ? A.dimTxt() : 2.5, H = th * 2;
+    const cw = c => Math.max(H, [...c].length * th * 0.82 + th);
+    const build = p => { const add = []; let y = p.y;
+      for(const cells of rows){ let x = p.x; for(const c of cells){ const w = cw(c); add.push({ type: 'POLYLINE', vertices: [{ x, y }, { x: x + w, y }, { x: x + w, y: y - H }, { x, y: y - H }], closed: true }); add.push({ type: 'TEXT', x: x + w / 2, y: y - H / 2, h: th, rot: 0, text: c, ha: 'center', va: 'middle' }); x += w; } y -= H; }
+      return add; };
+    const r = await A.getPoint('Nhập vị trí dung sai', { preview: (g, p) => g.ents(build(p)) }); if(!r.pt) return;
+    const gid = A.newGroupId('TOL'); const add = build(r.pt).map(e => { A.newProps(e); delete e.lt; e.grp = gid; e.blk = '*TOLERANCE'; return e; });
+    A.commit({ add }, 'Khung dung sai');
+  }), { engine: true });
+
+  /* ==================================================================
+     DWGPROPS — Drawing Properties (như AutoCAD: General · Summary · Statistics · Custom)
+     ================================================================== */
+  function openDwgProps(){
+    if(!A.hasDoc()){ say('Chưa mở bản vẽ.'); return; }
+    const dn = (() => { try{ return currentName || ''; }catch(_){ return ''; } })(), PK = 'dvd:props::' + dn, TK = 'dvd:time::' + dn;
+    const P = (() => { try{ return JSON.parse(localStorage.getItem(PK) || '{}'); }catch(_){ return {}; } })(), T = (() => { try{ return JSON.parse(localStorage.getItem(TK) || 'null') || {}; }catch(_){ return {}; } })();
+    const dt = ms => ms ? new Date(ms).toLocaleString() : '—', dur = ms => { const m = Math.round((ms || 0) / 60000); return Math.floor(m / 60) + ' giờ ' + (m % 60) + ' phút'; };
+    const by = {}; for(const e of modelEntities) by[e.type] = (by[e.type] || 0) + 1;
+    const ext = dn.split('.').pop().toUpperCase(), cus = Object.assign({}, P.custom || {});
+    const info = rows => '<div class="dp-info">' + rows.map(([k, v]) => '<span>' + k + '</span><span translate="no">' + esc(v) + '</span>').join('') + '</div>';
+    const txt = (k, l) => '<span>' + l + '</span><input data-k="' + k + '" value="' + esc(P[k] || '') + '">';
+    const html = '<div class="acw" style="width:480px">' + K.tabs('dp', [['gen', 'Tổng quát'], ['sum', 'Tóm tắt'], ['sta', 'Thống kê'], ['cus', 'Tuỳ chỉnh']], 'sum') + '<div class="acw-panes" style="min-height:330px">' +
+      K.pane('dp', 'gen', 'sum', info([['Tên file:', dn || '—'], ['Loại:', (ext === 'DWG' ? 'Bản vẽ AutoCAD' : ext === 'DXF' ? 'AutoCAD DXF' : ext) + ' (.' + ext.toLowerCase() + ')'], ['Vị trí:', (A.desktopPath && A.desktopPath()) || 'Bộ nhớ của ứng dụng'], ['Số đối tượng:', String(modelEntities.length)], ['Số lớp:', String(A.layerNames().length)], ['Tạo:', dt(T.created)], ['Sửa:', dt(T.edited)], ['Mở:', dt(T.opened)]])) +
+      K.pane('dp', 'sum', 'sum', '<div class="dp-grid">' + txt('title', 'Tiêu đề:') + txt('subject', 'Chủ đề:') + txt('author', 'Tác giả:') + txt('checker', 'Người kiểm:') + txt('keywords', 'Từ khoá:') + '<span>Ghi chú:</span><textarea data-k="comments">' + esc(P.comments || '') + '</textarea>' + txt('hyperlink', 'Đường dẫn gốc siêu liên kết:') + '</div>') +
+      K.pane('dp', 'sta', 'sum', info([['Tạo:', dt(T.created)], ['Sửa:', dt(T.edited)], ['Người sửa cuối:', P.author || '—'], ['Số lần sửa đổi:', String(P.rev || '—')], ['Tổng thời gian sửa:', dur(T.total)]]) + '<div class="acw-lab" style="margin-top:10px">Đối tượng theo loại</div>' + info(Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, v]) => [k, String(v)]))) +
+      K.pane('dp', 'cus', 'sum', '<div class="acw-cols"><div class="c1"><div class="ls-grid" style="height:280px"><table><thead><tr><th>Tên</th><th style="width:100%">Giá trị</th></tr></thead><tbody id="dpC"></tbody></table></div></div><div class="c2 acw-btncol">' + K.btn('dpAdd', 'Thêm…') + K.btn('dpDel', 'Xoá') + '</div></div>') + '</div></div>';
+    let csel = null;
+    const d = A.dialog({ title: 'Thuộc tính bản vẽ: ' + dn, cls: 'acw-free', help: 'DWGPROPS', html, ok: root => { const o = Object.assign({}, P); root.querySelectorAll('[data-k]').forEach(i => o[i.dataset.k] = i.value); o.custom = cus;
+      try{ localStorage.setItem(PK, JSON.stringify(o)); }catch(_){} try{ A.updateFields && A.updateFields(true); }catch(_){} log('Đã lưu thuộc tính bản vẽ.'); } });
+    const root = d.root, $ = id => root.querySelector('#' + id); K.bindTabs(root);
+    const fillC = () => { const k = Object.keys(cus); $('dpC').innerHTML = k.length ? k.map(n => '<tr data-n="' + esc(n) + '"' + (n === csel ? ' class="sel"' : '') + '><td translate="no">' + esc(n) + '</td><td><input data-c="' + esc(n) + '" value="' + esc(cus[n]) + '" style="width:100%;box-sizing:border-box"></td></tr>').join('') : '<tr><td colspan="2" style="color:#9aa6ba">Chưa có thuộc tính tuỳ chỉnh.</td></tr>'; $('dpDel').disabled = !csel; };
+    $('dpC').addEventListener('click', e => { const tr = e.target.closest('tr[data-n]'); if(tr){ csel = tr.dataset.n; root.querySelectorAll('#dpC tr').forEach(x => x.classList.toggle('sel', x === tr)); $('dpDel').disabled = false; } });
+    $('dpC').addEventListener('input', e => { const i = e.target.closest('input[data-c]'); if(i) cus[i.dataset.c] = i.value; });
+    $('dpAdd').onclick = () => A.dialog({ title: 'Thêm thuộc tính tuỳ chỉnh', cls: 'acw-free', help: 'DWGPROPS', html: '<div class="acw" style="width:340px">' + K.vrow('Tên thuộc tính:', K.txt('daN', '')) + K.vrow('Giá trị:', K.txt('daV', '')) + '</div>',
+      ok: r => { const n = K.val(r, 'daN').trim(); if(!n){ say('Nhập tên.'); return false; } if(n in cus){ say('Đã có thuộc tính "' + n + '".'); return false; } cus[n] = K.val(r, 'daV'); csel = n; fillC(); } });
+    $('dpDel').onclick = () => { if(csel){ delete cus[csel]; csel = null; fillC(); } };
+    fillC();
+  }
+  A.openDwgProps = openDwgProps;
+  plain(['DWGPROPS', 'THONGTIN'], 'Thuộc tính bản vẽ (Drawing Properties): tiêu đề, tác giả, từ khoá, ghi chú, thống kê, thuộc tính tuỳ chỉnh', () => openDwgProps());
+
+  /* ==================================================================
+     MLEADERSTYLE — Multileader Style Manager + Modify Multileader Style (Leader Format · Leader Structure · Content)
+     ================================================================== */
+  const MLK = 'dvd:mlslib';
+  const MLF = ['arrow', 'asz', 'land', 'th', 'frame'];
+  const mlVals = o => { const v = {}; for(const k of MLF) v[k] = o[k]; return v; };
+  const mlsLib = () => { let o = null; try{ o = JSON.parse(localStorage.getItem(MLK) || 'null'); }catch(_){} if(!o || typeof o !== 'object') o = {}; const M = A.MLS || {}; const cur = M.name || 'Standard'; if(!o[cur]) o[cur] = mlVals(M); if(!o.Standard) o.Standard = { arrow: 'closed', asz: 0, land: 1.2, th: 0, frame: false }; return o; };
+  const mlsSaveLib = o => { try{ localStorage.setItem(MLK, JSON.stringify(o)); }catch(_){} };
+  const mlsSaveCur = () => { try{ localStorage.setItem('dvd:mls', JSON.stringify(A.MLS)); }catch(_){} };
+  const mlsSetCur = (n, lib) => { lib = lib || mlsLib(); if(!lib[n] || !A.MLS) return false; Object.assign(A.MLS, lib[n], { name: n }); mlsSaveCur(); return true; };
+  A.mlsLib = mlsLib;
+  A.mlsDelete = n => { const lib = mlsLib(); if(n === 'Standard' || n === ((A.MLS && A.MLS.name) || 'Standard') || !lib[n]) return false; delete lib[n]; mlsSaveLib(lib); return true; };
+  A.mlsRename = (o, n) => { const lib = mlsLib(); if(!lib[o]) return 'Không thấy kiểu.'; if(lib[n]) return 'Tên đã có.'; if(o === 'Standard') return 'Không đổi tên được kiểu Standard.'; lib[n] = lib[o]; delete lib[o]; mlsSaveLib(lib); if(A.MLS && A.MLS.name === o){ A.MLS.name = n; mlsSaveCur(); } return ''; };
+  const ARW = [['closed', 'Tam giác đặc (Closed filled)'], ['open', 'Mở (Open)'], ['dot', 'Chấm (Dot)'], ['tick', 'Gạch chéo (Oblique)'], ['none', 'Không (None)']];
+  function mlPreview(cnv, v){ if(!cnv || !A.leaderEnts || !A.MLS) return; const save = Object.assign({}, A.MLS); Object.assign(A.MLS, v); let ents = [];
+    try{ const h = v.th > 0 ? v.th : 2.5; ents = A.leaderEnts([{ x: 0, y: 0 }, { x: h * 4, y: h * 3 }], window.DVDI18N && DVDI18N.lang === 'en' ? 'Default Text' : 'Chữ mặc định', h).map(e => Object.assign({ col: '#e8eef7' }, e)); }catch(_){} Object.assign(A.MLS, save); K.paint(cnv, ents, { pad: 14 }); }
+  function editMls(title, v0, onOk){
+    const v = Object.assign({}, v0);
+    const html = '<div class="acw acw-dimdlg" style="width:min(720px,97vw)">' + K.tabs('ml', [['fmt', 'Định dạng đường dẫn'], ['str', 'Cấu trúc đường dẫn'], ['cnt', 'Nội dung']], 'fmt') + '<div class="acw-cols" style="margin-top:0"><div class="c1"><div class="acw-panes" style="min-height:330px">' +
+      K.pane('ml', 'fmt', 'fmt', K.grp('Chung', K.row('Kiểu:', K.sel('mlTy', [['str', 'Thẳng'], ['spl', 'Cong (Spline)'], ['none', 'Không']], 'str', { dis: 1 }), { dis: 1 }) + K.row('Màu:', K.colorSel('mlCl', 'BYLAYER'), { dis: 1 }) + K.row('Kiểu nét:', K.sel('mlLt', [['BYLAYER', 'ByLayer']], 'BYLAYER', { dis: 1 }), { dis: 1 }) + K.row('Bề rộng nét:', K.sel('mlLw', [['-1', 'ByLayer']], '-1', { dis: 1 }), { dis: 1 })) +
+        K.grp('Mũi tên', K.row('Ký hiệu:', K.sel('mlA', ARW, v.arrow)) + K.row('Cỡ (0 = theo kiểu kích thước):', K.num('mlS', r6(v.asz || 0), { min: 0 }))) + K.grp('Ngắt đường dẫn', K.row('Cỡ chỗ ngắt:', K.num('mlBr', 3.75, { dis: 1 }), { dis: 1 }))) +
+      K.pane('ml', 'str', 'fmt', K.grp('Ràng buộc', K.chk('mlMx', 'Số điểm tối đa của đường dẫn', 1, { dis: 1 }) + '<br>' + K.chk('mlA1', 'Góc đoạn thứ nhất', 0, { dis: 1 }) + '<br>' + K.chk('mlA2', 'Góc đoạn thứ hai', 0, { dis: 1 })) +
+        K.grp('Cài đặt gờ (landing)', K.chk('mlAl', 'Tự động có gờ', 1, { dis: 1 }) + K.row('Đặt độ dài gờ (× cao chữ):', K.num('mlL', r6(v.land || 1.2), { min: 0 }))) + K.grp('Tỉ lệ', K.chk('mlAn', 'Chú thích (Annotative)', 0, { dis: 1 }) + '<br>' + K.rad('mlSc', 'lay', 'Theo tỉ lệ layout', 0, { dis: 1 }) + '<br>' + K.rad('mlSc', 'sp', 'Tỉ lệ chỉ định', 1, { dis: 1 }))) +
+      K.pane('ml', 'cnt', 'fmt', K.row('Loại ghi chú dẫn:', K.sel('mlCt', [['mt', 'Chữ nhiều dòng (Mtext)'], ['blk', 'Khối'], ['none', 'Không']], 'mt', { dis: 1 }), { dis: 1 }) +
+        K.grp('Tuỳ chọn chữ', K.row('Kiểu chữ:', K.sel('mlTs', (A.TS ? Object.keys(A.TS.list) : ['Standard']).map(n => [n, n]), A.TS ? A.TS.cur : 'Standard', { dis: 1 }), { dis: 1 }) + K.row('Cao chữ (0 = theo kiểu kích thước):', K.num('mlT', r6(v.th || 0), { min: 0 })) + K.chk('mlF', 'Khung quanh chữ', v.frame) + '<br>' + K.chk('mlLj', 'Luôn canh trái', 0, { dis: 1 })) +
+        K.grp('Nối đường dẫn', K.rad('mlCn', 'h', 'Nối ngang', 1, { dis: 1 }) + ' ' + K.rad('mlCn', 'v', 'Nối dọc', 0, { dis: 1 }))) +
+      '</div></div><div class="c2" style="padding-top:8px">' + K.canvas('mlPv', 220, 200) + '</div></div></div>';
+    const d = A.dialog({ title, cls: 'acw-free', help: 'MLEADERSTYLE', html, ok: () => { read(); onOk(v); } });
+    const root = d.root, $ = id => root.querySelector('#' + id); K.bindTabs(root);
+    const read = () => { v.arrow = $('mlA').value; v.asz = Math.max(0, num($('mlS').value) || 0); v.land = num($('mlL').value) > 0 ? num($('mlL').value) : 1.2; v.th = Math.max(0, num($('mlT').value) || 0); v.frame = $('mlF').checked; };
+    root.addEventListener('input', () => { read(); mlPreview($('mlPv'), v); }); root.addEventListener('change', () => { read(); mlPreview($('mlPv'), v); });
+    mlPreview($('mlPv'), v);
+  }
+  function openMlsManager(){
+    let lib = mlsLib(), sel = (A.MLS && A.MLS.name) || 'Standard', filter = 'all';
+    const html = '<div class="acw" style="width:600px"><div class="acw-lab">Kiểu ghi chú dẫn hiện hành: <b id="mmCur" translate="no"></b></div><div class="acw-cols"><div class="c1" style="flex:0 0 190px"><div class="acw-lab">Kiểu:</div><div class="acw-list" id="mmL" style="height:250px" tabindex="0"></div>' +
+      K.vrow('Liệt kê:', K.sel('mmF', [['all', 'Tất cả kiểu'], ['use', 'Kiểu đang dùng']], 'all')) + '</div><div class="c1"><div class="acw-lab">Xem trước: <span id="mmPn" translate="no"></span></div>' + K.canvas('mmPv', 240, 250) + '</div>' +
+      '<div class="c2 acw-btncol" style="padding-top:16px">' + K.btn('mmSet', 'Đặt hiện hành') + K.btn('mmNew', 'Mới…') + K.btn('mmMod', 'Sửa…') + K.btn('mmDel', 'Xoá') + '</div></div></div>';
+    const d = A.dialog({ title: 'Quản lý kiểu ghi chú dẫn', cls: 'acw-free', help: 'MLEADERSTYLE', html, noOk: true, cancelText: 'Đóng' });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    const render = () => { lib = mlsLib(); const curN = (A.MLS && A.MLS.name) || 'Standard'; if(!lib[sel]) sel = curN; const names = Object.keys(lib).sort((a, b) => a === 'Standard' ? -1 : b === 'Standard' ? 1 : a.localeCompare(b)).filter(n => filter === 'all' || n === curN);
+      $('mmL').innerHTML = names.map(n => '<div class="it' + (n === sel ? ' on' : '') + '" data-v="' + esc(n) + '" translate="no">' + (n === curN ? '▸ ' : '') + esc(n) + '</div>').join(''); $('mmCur').textContent = curN; $('mmPn').textContent = sel;
+      $('mmDel').disabled = sel === 'Standard' || sel === curN; mlPreview($('mmPv'), lib[sel]); };
+    $('mmL').addEventListener('click', e => { const it = e.target.closest('.it[data-v]'); if(!it) return; sel = it.dataset.v; render(); });
+    $('mmL').addEventListener('dblclick', e => { const it = e.target.closest('.it[data-v]'); if(!it) return; sel = it.dataset.v; $('mmSet').click(); });
+    $('mmF').onchange = () => { filter = $('mmF').value; render(); };
+    $('mmSet').onclick = () => { if(mlsSetCur(sel, lib)){ log('Kiểu ghi chú dẫn hiện hành: ' + sel); render(); } };
+    $('mmNew').onclick = () => { let i = 1; while(lib['Kiểu ' + i]) i++;
+      A.dialog({ title: 'Tạo kiểu ghi chú dẫn mới', cls: 'acw-free', help: 'MLEADERSTYLE', html: '<div class="acw" style="width:340px">' + K.vrow('Tên kiểu mới:', K.txt('mnN', 'Kiểu ' + i)) + K.vrow('Bắt đầu từ:', K.sel('mnF', Object.keys(lib).map(n => [n, n]), sel)) + K.chk('mnAn', 'Chú thích (Annotative)', 0, { dis: 1 }) + '</div>', okText: 'Tiếp tục',
+        ok: r => { const n = K.val(r, 'mnN').trim(); if(!n){ say('Nhập tên.'); return false; } if(lib[n]){ say('Đã có kiểu "' + n + '".'); return false; } const base = lib[K.val(r, 'mnF')] || lib.Standard;
+          setTimeout(() => editMls('Sửa kiểu ghi chú dẫn: ' + n, base, v => { lib = mlsLib(); lib[n] = mlVals(v); mlsSaveLib(lib); sel = n; render(); }), 0); } }); };
+    $('mmMod').onclick = () => { const n = sel; editMls('Sửa kiểu ghi chú dẫn: ' + n, lib[n], v => { lib = mlsLib(); lib[n] = mlVals(v); mlsSaveLib(lib); if(n === ((A.MLS && A.MLS.name) || 'Standard')) mlsSetCur(n, lib); render(); }); };
+    $('mmDel').onclick = () => { if(A.mlsDelete(sel)){ sel = (A.MLS && A.MLS.name) || 'Standard'; render(); } };
+    render();
+  }
+  A.openMlsManager = openMlsManager;
+  plain(['MLEADERSTYLE', 'MLS'], 'Quản lý kiểu ghi chú dẫn (Multileader Style Manager): mũi tên, gờ, cao chữ, khung chữ', () => openMlsManager());
+
+  /* ==================================================================
+     MLSTYLE — Multiline Style (như AutoCAD: danh sách kiểu · mô tả · xem trước; New / Modify: Caps, Elements)
+     ================================================================== */
+  const MNK = 'dvd:mlstylelib';
+  const mnVals = o => ({ offs: (o.offs || [0.5, -0.5]).slice(), caps: o.caps !== false, capS: o.capS != null ? !!o.capS : o.caps !== false, capE: o.capE != null ? !!o.capE : o.caps !== false, desc: o.desc || '' });
+  const mnLib = () => { let o = null; try{ o = JSON.parse(localStorage.getItem(MNK) || 'null'); }catch(_){} if(!o || typeof o !== 'object') o = {}; const M = A.MLINESTYLE || { name: 'STANDARD' }; if(!o[M.name]) o[M.name] = mnVals(M); if(!o.STANDARD) o.STANDARD = mnVals({ offs: [0.5, -0.5], caps: true }); return o; };
+  const mnSave = o => { try{ localStorage.setItem(MNK, JSON.stringify(o)); }catch(_){} };
+  const mnSetCur = (n, lib) => { const M = A.MLINESTYLE; if(!M || !lib[n]) return false; const v = mnVals(lib[n]); Object.assign(M, v, { name: n, caps: v.capS || v.capE }); try{ localStorage.setItem('dvd:mlstyle', JSON.stringify(M)); }catch(_){} return true; };
+  function mnPreview(cnv, v){ const ents = [], offs = v.offs || [], L = 6; const mx = Math.max(...offs), mn = Math.min(...offs);
+    // đường đôi gấp khúc: ngang rồi lên
+    for(const o of offs){ ents.push({ type: 'POLYLINE', closed: false, col: '#e8eef7', vertices: [{ x: 0, y: o }, { x: L - o, y: o }, { x: L - o, y: L * 0.55 }] }); }
+    if(offs.length > 1){ if(v.capS) ents.push({ type: 'LINE', col: '#e8eef7', x1: 0, y1: mx, x2: 0, y2: mn }); if(v.capE) ents.push({ type: 'LINE', col: '#e8eef7', x1: L - mx, y1: L * 0.55, x2: L - mn, y2: L * 0.55 }); }
+    K.paint(cnv, ents, { pad: 18 }); }
+  function editMln(title, v0, onOk){
+    const v = mnVals(v0); let es = 0;
+    const html = '<div class="acw" style="width:640px"><div class="acw-row"><span style="flex:0 0 90px">Mô tả:</span><input id="meD" value="' + esc(v.desc) + '" style="flex:1;width:auto"></div>' + '<div class="acw-cols"><div class="c1" style="flex:1 1 50%">' +
+      K.grp('Nắp', '<table class="acw-cmp" style="width:auto"><tr><th></th><th>Đầu</th><th>Cuối</th></tr>' +
+        '<tr><td>Đoạn thẳng:</td><td><input type="checkbox" id="meCs"' + (v.capS ? ' checked' : '') + '></td><td><input type="checkbox" id="meCe"' + (v.capE ? ' checked' : '') + '></td></tr>' +
+        '<tr><td style="opacity:.45">Cung ngoài:</td><td><input type="checkbox" disabled></td><td><input type="checkbox" disabled></td></tr><tr><td style="opacity:.45">Cung trong:</td><td><input type="checkbox" disabled></td><td><input type="checkbox" disabled></td></tr>' +
+        '<tr><td style="opacity:.45">Góc:</td><td><input value="90.00" disabled style="width:54px"></td><td><input value="90.00" disabled style="width:54px"></td></tr></table>') +
+      K.grp('Tô màu', K.row('Màu tô:', K.sel('meF', [['', 'Không']], '', { dis: 1 }), { dis: 1 })) + K.chk('meJ', 'Hiện mối nối', 0, { dis: 1 }) + '</div>' +
+      '<div class="c1" style="flex:1 1 50%">' + K.grp('Thành phần', '<div class="ls-grid" style="height:120px"><table><thead><tr><th>Khoảng lệch</th><th>Màu</th><th style="width:100%">Kiểu nét</th></tr></thead><tbody id="meB"></tbody></table></div>' +
+        '<div class="acw-row" style="margin-top:6px">' + K.btn('meAdd', 'Thêm') + K.btn('meDel', 'Xoá') + '</div>' + K.row('Khoảng lệch:', K.num('meO', 0)) + K.row('Màu:', K.sel('meC', [['', 'ByLayer']], '', { dis: 1 }), { dis: 1 }) + K.row('Kiểu nét:', K.btn('meLt', 'Kiểu nét…', { dis: 1 }), { dis: 1 })) +
+      K.canvas('mePv', 300, 120) + '</div></div></div>';
+    const d = A.dialog({ title, cls: 'acw-free', help: 'MLSTYLE', html, ok: r => { if(!v.offs.length){ say('Cần ít nhất 1 thành phần.'); return false; } v.desc = K.val(r, 'meD'); v.caps = v.capS || v.capE; onOk(v); } });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    const fill = () => { const ord = v.offs.map((o, i) => i).sort((a, b) => v.offs[b] - v.offs[a]); $('meB').innerHTML = ord.map(i => '<tr data-i="' + i + '"' + (i === es ? ' class="sel"' : '') + '><td>' + r6(v.offs[i]) + '</td><td>BYLAYER</td><td>ByLayer</td></tr>').join('');
+      $('meO').value = v.offs[es] != null ? r6(v.offs[es]) : ''; $('meDel').disabled = v.offs.length < 2; mnPreview($('mePv'), v); };
+    $('meB').addEventListener('click', e => { const tr = e.target.closest('tr[data-i]'); if(tr){ es = +tr.dataset.i; fill(); } });
+    $('meO').addEventListener('change', () => { const n = num($('meO').value); if(n != null && v.offs[es] != null){ v.offs[es] = n; fill(); } });
+    $('meAdd').onclick = () => { v.offs.push(0); es = v.offs.length - 1; fill(); setTimeout(() => { $('meO').focus(); $('meO').select(); }, 0); };
+    $('meDel').onclick = () => { if(v.offs.length < 2) return; v.offs.splice(es, 1); es = 0; fill(); };
+    $('meCs').onchange = () => { v.capS = $('meCs').checked; fill(); }; $('meCe').onchange = () => { v.capE = $('meCe').checked; fill(); };
+    fill();
+  }
+  function openMlStyle(){
+    let lib = mnLib(), sel = (A.MLINESTYLE && A.MLINESTYLE.name) || 'STANDARD';
+    const html = '<div class="acw" style="width:560px"><div class="acw-lab">Kiểu đường đôi hiện hành: <b id="mnCur" translate="no"></b></div><div class="acw-cols"><div class="c1"><div class="acw-lab">Kiểu:</div><div class="acw-list" id="mnL" style="height:170px" tabindex="0"></div>' +
+      '<div class="acw-lab" style="margin-top:8px">Mô tả:</div><input id="mnD" readonly style="width:100%;box-sizing:border-box"><div class="acw-lab" style="margin-top:8px">Xem trước: <span id="mnPn" translate="no"></span></div>' + K.canvas('mnPv', 400, 110) + '</div>' +
+      '<div class="c2 acw-btncol" style="padding-top:16px">' + K.btn('mnSet', 'Đặt hiện hành') + K.btn('mnNew', 'Mới…') + K.btn('mnMod', 'Sửa…') + K.btn('mnRen', 'Đổi tên') + K.btn('mnDel', 'Xoá') + K.btn('mnLoad', 'Tải…', { dis: 1 }) + K.btn('mnSv', 'Lưu…', { dis: 1 }) + '</div></div></div>';
+    const d = A.dialog({ title: 'Kiểu đường đôi', cls: 'acw-free', help: 'MLSTYLE', html, ok: () => { mnSetCur(sel, lib); log('Kiểu MLINE hiện hành: ' + sel); } });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    const render = () => { lib = mnLib(); const curN = (A.MLINESTYLE && A.MLINESTYLE.name) || 'STANDARD'; if(!lib[sel]) sel = curN; const names = Object.keys(lib).sort((a, b) => a === 'STANDARD' ? -1 : b === 'STANDARD' ? 1 : a.localeCompare(b));
+      $('mnL').innerHTML = names.map(n => '<div class="it' + (n === sel ? ' on' : '') + '" data-v="' + esc(n) + '"><span translate="no">' + esc(n) + '</span>' + (n === curN ? ' (hiện hành)' : '') + '</div>').join('');
+      $('mnCur').textContent = curN; $('mnPn').textContent = sel; $('mnD').value = lib[sel].desc || ''; $('mnDel').disabled = $('mnRen').disabled = sel === 'STANDARD' || sel === curN; mnPreview($('mnPv'), mnVals(lib[sel])); };
+    $('mnL').addEventListener('click', e => { const it = e.target.closest('.it[data-v]'); if(!it) return; sel = it.dataset.v; render(); });
+    $('mnSet').onclick = () => { mnSetCur(sel, lib); render(); };
+    $('mnNew').onclick = () => A.dialog({ title: 'Tạo kiểu đường đôi mới', cls: 'acw-free', help: 'MLSTYLE', html: '<div class="acw" style="width:340px">' + K.vrow('Tên kiểu mới:', K.txt('mnN', '')) + K.vrow('Bắt đầu từ:', K.sel('mnF', Object.keys(lib).map(n => [n, n]), sel)) + '</div>', okText: 'Tiếp tục',
+      ok: r => { const n = K.val(r, 'mnN').trim().toUpperCase().replace(/\s+/g, '_'); if(!n){ say('Nhập tên.'); return false; } if(lib[n]){ say('Đã có kiểu "' + n + '".'); return false; }
+        const base = lib[K.val(r, 'mnF')] || lib.STANDARD; setTimeout(() => editMln('Kiểu đường đôi mới: ' + n, base, v => { lib = mnLib(); lib[n] = v; mnSave(lib); sel = n; render(); }), 0); } });
+    $('mnMod').onclick = () => { const n = sel; editMln('Sửa kiểu đường đôi: ' + n, lib[n], v => { lib = mnLib(); lib[n] = v; mnSave(lib); if(n === ((A.MLINESTYLE && A.MLINESTYLE.name) || 'STANDARD')) mnSetCur(n, lib); render(); }); };
+    $('mnRen').onclick = async () => { const nn = await askText({ title: 'Đổi tên kiểu đường đôi', value: sel }); const t = nn && nn.trim().toUpperCase().replace(/\s+/g, '_'); if(!t || t === sel) return; if(lib[t]){ say('Tên đã có.'); return; } lib[t] = lib[sel]; delete lib[sel]; mnSave(lib); sel = t; render(); };
+    $('mnDel').onclick = () => { delete lib[sel]; mnSave(lib); sel = (A.MLINESTYLE && A.MLINESTYLE.name) || 'STANDARD'; render(); };
+    render();
+  }
+  A.openMlStyle = openMlStyle;
+  plain(['MLSTYLE'], 'Kiểu đường đôi (Multiline Style): khoảng lệch các đường, nắp đầu / cuối', () => openMlStyle());
 
   try{ DVDCmd.refresh && DVDCmd.refresh(); }catch(_){}
 })();

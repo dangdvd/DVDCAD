@@ -641,7 +641,7 @@
   plain(['CLEANSCREENOFF'], 'Tắt màn hình sạch: hiện lại ribbon', () => clean(false));
   if(!document.getElementById('dvdX9css')){ const st = document.createElement('style'); st.id = 'dvdX9css'; st.textContent = 'html.acad-clean #dvdTP{display:none!important}'; document.head.appendChild(st); }
   cmd(['BASE'], 'Đặt điểm gốc chèn của bản vẽ (dùng khi chèn bản vẽ này làm khối / xref)', async () => { const cur = A.drawBase || { x: 0, y: 0 }; const p = await A.getPoint('Điểm gốc chèn <' + fmtN(cur.x) + ',' + fmtN(cur.y) + '>'); if(!p.pt) return; A.drawBase = { x: p.pt.x, y: p.pt.y }; try{ localStorage.setItem('dvd:base:' + baseName(), JSON.stringify(A.drawBase)); }catch(_){} log('INSBASE = ' + fmtN(p.pt.x) + ',' + fmtN(p.pt.y)); });
-  cmd(['COLOR', 'COL', 'COLOUR'], 'Màu hiện hành cho đối tượng mới (số ACI 1–255, ByLayer, tên màu, #rrggbb)', async () => {
+  cmd(['-COLOR', '-COL'], 'Màu hiện hành bằng dòng lệnh (số ACI 1–255, ByLayer, tên màu, #rrggbb) — cho script / LISP', async () => {
     const LS = A.LS; const cur = LS && LS.color; const r = await A.getStr('Màu mới (1–255, BYLAYER, đỏ/vàng/xanh…, #rrggbb)', { def: cur === 'BYLAYER' || !cur ? 'BYLAYER' : String(cur) }); let v = String(r.str || '').trim(); if(!v) return;
     const NAMES = { red: 1, do: 1, 'đỏ': 1, yellow: 2, vang: 2, 'vàng': 2, green: 3, xanhla: 3, 'xanh lá': 3, cyan: 4, blue: 5, xanh: 5, 'xanh dương': 5, magenta: 6, tim: 6, 'tím': 6, white: 7, trang: 7, 'trắng': 7, gray: 8, xam: 8, 'xám': 8 };
     let col = null; if(/^bylayer$/i.test(v)) col = 'BYLAYER'; else if(/^#[0-9a-f]{6}$/i.test(v)) col = v.toLowerCase(); else if(/^\d+$/.test(v) && +v >= 1 && +v <= 255) col = aciHex(+v); else if(NAMES[v.toLowerCase()]) col = aciHex(NAMES[v.toLowerCase()]);

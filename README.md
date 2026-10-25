@@ -6,6 +6,16 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5m: soạn chữ tại chỗ, tab Array Creation, các hộp thoại còn lại như AutoCAD 2027
+- Bộ soạn chữ tại chỗ (`A.inplaceText`, `A.textFinish`, `A.textSrc` trong `dvd-acad-dlg.js`):
+  - MTEXT / TEXT / DDEDIT soạn ngay trên bản vẽ, đúng vị trí, cỡ, góc, canh lề; tab ngữ cảnh **Text Editor**.
+  - MTEXT ngắt dòng theo bề rộng khung; giữ nội dung gốc (`mtp`) và tỉ lệ khung (`mtwk`) để sửa lại.
+  - Nhập từ script / LISP / dòng lệnh đi thẳng vào ô soạn (mỗi dòng một dòng chữ, dòng trống = xong).
+- Tab ngữ cảnh **Array Creation** cho ARRAYRECT / ARRAYPOLAR (sửa số lượng, khoảng, xem trước tức thì); vòng lặp sửa mảng như AutoCAD (`A.getPoint` với `previewAlways`).
+- **Select Color** (`A.selectColor`) cho COLOR và mọi ô chọn màu; `-COLOR` / `-PURGE` cho script, LISP gọi `(command "COLOR" …)` / `(command "PURGE" …)` chạy bản dòng lệnh.
+- Hộp thoại theo bố cục AutoCAD: PURGE, RENAME, Layer States Manager, View Manager, Find and Replace (không phân biệt dấu), Enhanced Attribute Editor, Geometric Tolerance, Drawing Properties, Multileader Style Manager, Multiline Style, External References.
+- Thư viện kiểu có tên mới: kiểu ghi chú dẫn (`dvd:mlslib`), kiểu đường đôi (`dvd:mlstylelib`, nắp đầu / cuối riêng `capS` / `capE`).
+
 ## v5l: hộp thoại và ribbon như AutoCAD 2027
 - Khung hộp thoại chung (`A.dialog` trong `dvd-acad-cmds.js`):
   - thanh tiêu đề kéo được, nút **?** / **×**, nút OK · Cancel · Help ở góc dưới phải;

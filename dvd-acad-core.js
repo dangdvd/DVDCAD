@@ -706,10 +706,10 @@
       cC.save(); cC.strokeStyle = P.mode === 'WP' ? '#4da6ff' : P.mode === 'CP' ? '#33dd88' : '#ffcf33'; cC.setLineDash(P.mode === 'WP' ? [] : [6, 4]); cC.lineWidth = 1.4; cC.beginPath(); cC.moveTo(pts[0].x, pts[0].y); for(const q of pts.slice(1)) cC.lineTo(q.x, q.y); if(P.mode !== 'F') cC.closePath();
       if(P.mode !== 'F'){ cC.fillStyle = P.mode === 'WP' ? 'rgba(77,166,255,.12)' : 'rgba(51,221,136,.12)'; cC.fill(); } cC.stroke(); cC.restore(); }
     // xem trước của lệnh
-    if(r && (mouseIn || lastTouch) && lastPt && (r.type === 'pt' || r.type === 'dist' || r.type === 'ang')){
-      const g = previewApi(cC);
-      if(r.base && r.rubber !== false) g.line(r.base, lastPt, 'rgba(232,238,247,.75)', [6, 4]);
-      if(r.preview){ try{ r.preview(g, { x: lastPt.x, y: lastPt.y }); }catch(err){ console.warn(err); } }
+    if(r && (((mouseIn || lastTouch) && lastPt) || r.previewAlways) && (r.type === 'pt' || r.type === 'dist' || r.type === 'ang')){   // previewAlways: hình xem trước không phụ thuộc con trỏ (mảng đang tạo)
+      const g = previewApi(cC), lp = lastPt || { x: 0, y: 0 };
+      if(r.base && r.rubber !== false && lastPt) g.line(r.base, lastPt, 'rgba(232,238,247,.75)', [6, 4]);
+      if(r.preview){ try{ r.preview(g, { x: lp.x, y: lp.y }); }catch(err){ console.warn(err); } }
     }
     if(r && r.type === 'sel' && r.preview && lastPt){ try{ r.preview(previewApi(cC), { x: lastPt.x, y: lastPt.y }); }catch(_){} }
     // đường truy bắt / polar

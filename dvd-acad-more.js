@@ -82,6 +82,7 @@
 
   /* ===================== MLEADER / QLEADER (ghi chú có mũi tên) ===================== */
   function txtH(){ try{ const m = A.MLS; if(m && m.th > 0) return m.th; }catch(_){} try{ const d = A.DS; if(d && d.txt > 0) return d.txt; }catch(_){} try{ return +defaultTextH().toPrecision(3); }catch(_){ return 2.5; } }
+  A.leaderEnts = (pts, text, h) => leaderEnts(pts, text, h);   // dùng cho ô xem trước của Multileader Style Manager
   function leaderEnts(pts, text, h){
     const out = []; const M = A.MLS || {}; const s = M.asz > 0 ? M.asz : h * ((A.DS && A.DS.asz) || 1); const ak = M.arrow || 'closed';
     const a = pts[0], b = pts[1]; const L = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / L, uy = (b.y - a.y) / L;

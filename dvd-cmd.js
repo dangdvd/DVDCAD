@@ -707,7 +707,7 @@
     palBody.innerHTML = h; bindSingle(e);
     const b3 = palBody.querySelector('[data-a="view3d"]'); if(b3) b3.addEventListener('click', () => { const A2 = ACAD(); if(!A2 || !A2.open3D) return; if(e.cam3) A2.open3D({ cam: { pos: [e.x, e.y, e.cam3.z], target: [e.x + e.cam3.dx, e.y + e.cam3.dy, e.cam3.tz] } }); else A2.open3D(); });
   }
-  function pickColor(cb, cur){ const i = document.createElement('input'); i.type = 'color'; i.value = /^#[0-9a-f]{6}$/i.test(cur || '') ? cur : '#ffffff'; i.style.cssText = 'position:fixed;left:-100px;top:0;opacity:0'; document.body.appendChild(i); i.addEventListener('change', () => { cb(i.value); i.remove(); }); i.addEventListener('blur', () => setTimeout(() => i.remove(), 400)); i.click(); }
+  function pickColor(cb, cur){ const AC = ACAD(); if(AC && AC.selectColor && AC.deskUI && AC.deskUI()){ AC.selectColor(cur, c => { if(c && c !== 'BYBLOCK') cb(c); }, { byLayer: true }); return; } const i = document.createElement('input'); i.type = 'color'; i.value = /^#[0-9a-f]{6}$/i.test(cur || '') ? cur : '#ffffff'; i.style.cssText = 'position:fixed;left:-100px;top:0;opacity:0'; document.body.appendChild(i); i.addEventListener('change', () => { cb(i.value); i.remove(); }); i.addEventListener('blur', () => setTimeout(() => i.remove(), 400)); i.click(); }
   function commitSingle(e, fn){
     if(!isModelView()) return;
     if(modelEntities.indexOf(e) < 0){ palSig = ''; return; }

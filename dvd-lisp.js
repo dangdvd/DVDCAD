@@ -421,13 +421,15 @@
   /* ---------------- (command …) ---------------- */
   const argStr = a => { if(a === null || a === undefined) return ''; if(typeof a === 'string') return a; if(a instanceof LI) return String(a.v); if(typeof a === 'number') return String(+a.toPrecision(15)); if(Array.isArray(a) && a.length >= 2 && isNum(a[0])) return nv(a[0]) + ',' + nv(a[1]); if(a instanceof Ename){ return null; } if(a instanceof SS) return null; return str(a, true); };
   async function waitPrompt(seq, maxMs){ const t0 = Date.now(); for(;;){ if(!A().busy()) return 'done'; if(A().reqInfo() && (A().reqSeq || 0) !== seq) return 'req'; if(maxMs && Date.now() - t0 > maxMs) return 'timeout'; await sleep(8); } }
+  // như AutoCAD: trong (command …) lệnh có bản dòng lệnh (-LAYER, -INSERT, -COLOR…) chạy bản đó thay cho hộp thoại
+  const clName = n => DVDCmd.commands.some(c => c.k.includes('-' + n)) ? '-' + n : n;
   async function command(...args){
     flushOut();
     if(!args.length){ if(A().busy()) A().cancel(true); return null; }
     let i = 0;
     if(!A().busy()){
       const name = String(argStr(args[0]) || '').replace(/^[_.'-]+/, '').toUpperCase(); i = 1; if(!name) return null;
-      const seq = A().reqSeq || 0; DVDCmd.run(name); await waitPrompt(seq, 1500);
+      const seq = A().reqSeq || 0; DVDCmd.run(clName(name)); await waitPrompt(seq, 1500);
     }
     for(; i < args.length; i++){
       const a = args[i];
@@ -438,7 +440,7 @@
         for(const e of ents) A().pickEnt3D(e); await sleep(5);
         if(i + 1 >= args.length || !(args[i + 1] instanceof SS || args[i + 1] instanceof Ename)){ A().input(''); await waitPrompt(seq, 1500); } continue; }
       if(!A().busy()){
-        const name = String(argStr(a) || '').replace(/^[_.'-]+/, '').toUpperCase(); if(!name) continue; const seq = A().reqSeq || 0; DVDCmd.run(name); await waitPrompt(seq, 1500); continue; }
+        const name = String(argStr(a) || '').replace(/^[_.'-]+/, '').toUpperCase(); if(!name) continue; const seq = A().reqSeq || 0; DVDCmd.run(clName(name)); await waitPrompt(seq, 1500); continue; }
       const s = argStr(a); const seq = A().reqSeq || 0; A().input(s); await waitPrompt(seq, 1500);
     }
     return null;

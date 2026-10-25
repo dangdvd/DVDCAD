@@ -1,4 +1,4 @@
-# DVDCAD v5l — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5m — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,35 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Soạn chữ, mảng và các hộp thoại còn lại như AutoCAD 2027 (v5m)
+- **MTEXT / TEXT / DDEDIT soạn ngay trên bản vẽ** (máy tính), như AutoCAD:
+  - Ô soạn nằm đúng chỗ chữ, đúng cỡ, góc xoay và canh lề. MTEXT có khung (ngắt dòng theo bề rộng khung) và thước phía trên.
+  - MTEXT: **Enter** = xuống dòng, **Ctrl+Enter** hoặc bấm ra ngoài = lưu, **Esc** = bỏ.
+  - TEXT (DTEXT): **Enter** = dòng mới (mỗi dòng là một chữ riêng, cách 1,5 lần cao chữ), **Enter ở dòng trống** = xong, **Esc** = giữ phần đã gõ.
+  - DDEDIT / bấm đúp chữ: sửa tại chỗ; MTEXT mở lại đúng nội dung gốc trước khi ngắt dòng.
+  - Tab ribbon **Text Editor** hiện khi đang soạn:
+    - Style: kiểu chữ, cao chữ.
+    - Formatting: phông, màu, CHỮ HOA / chữ thường.
+    - Paragraph: canh lề 9 kiểu, đánh số / đầu dòng.
+    - Insert: ký hiệu (°, ±, Ø, ≈, ∠, Δ, ², ³, ≠, Ω, µ…), nhập chữ từ file .txt.
+    - Tools: Tìm và thay thế. Options: thước, hoàn tác / làm lại. Close Text Editor.
+  - Chuột phải trong ô soạn: hoàn tác, cắt / chép / dán, ký hiệu, chữ hoa / thường, tìm và thay thế.
+  - Script và LISP vẫn dùng được: `TEXT 10,10 2.5 0 Dòng 1` rồi dòng trống; `(command "TEXT" "0,0" "3" "0" "Chữ" "")`.
+- **ARRAYRECT / ARRAYPOLAR** có tab ribbon **Array Creation**: sửa số cột / hàng / khoảng / tổng, số phần tử / góc lấp đầy, liên kết, xoay phần tử ngay trên ribbon, bản xem trước cập nhật tức thì. Dòng lệnh vẫn có đủ tuỳ chọn (`COU`, `S`, `COL`, `R`, `I`, `A`, `F`, `ROT`…).
+- **COLOR** mở hộp **Select Color** (Index Color · True Color · Color Books). `-COLOR` là bản dòng lệnh cho script / LISP. Ô "Chọn màu…" ở các hộp thoại và bảng Thuộc tính cũng mở hộp này.
+- Hộp thoại mới theo bố cục AutoCAD:
+  - **PURGE**: hai chế độ *Mục dọn được* / *Tìm mục không dọn được* (kèm lý do), cây mục có tên (khối, kiểu kích thước, lớp, kiểu nét, kiểu ghi chú dẫn, kiểu đường đôi, kiểu chữ, khối động), dọn hình độ dài 0 và chữ rỗng, dọn cả mục lồng nhau. `-PURGE` cho script: `-PURGE A * N`.
+  - **RENAME**: Named Objects · Items · Old Name · Rename To — khối, kiểu kích thước, lớp, trạng thái lớp, kiểu ghi chú dẫn, kiểu đường đôi, kiểu chữ, góc nhìn.
+  - **LAYERSTATE** (Layer States Manager): Mới / Lưu / Đổi tên / Xoá / Nhập / Xuất (.las.json), chọn thuộc tính cần gọi lại (bật tắt, đóng băng, khoá, màu, kiểu nét, bề rộng nét, lớp hiện hành), tắt lớp không có trong trạng thái.
+  - **VIEW** (View Manager): cây Hiện tại / Góc nhìn mô hình / Góc nhìn mẫu, bảng thuộc tính sửa được (tên, nhóm, tâm, chiều cao, góc xoay), New (hiển thị hiện tại hoặc chọn cửa sổ, lưu ảnh chụp lớp), Update Layers, Delete, Set Current.
+  - **FIND** (Find and Replace): danh sách kết quả, phóng tới chữ tìm thấy, Replace / Replace All / Find Next, tìm trong vùng chọn; thêm tuỳ chọn: hoa thường, nguyên từ, ký tự đại diện `* ?`, **không phân biệt dấu** (tìm `thep` ra `thép`), loại chữ (thuộc tính, kích thước, chữ, bảng).
+  - **EATTEDIT** (Enhanced Attribute Editor, cũng mở khi bấm đúp khối có thuộc tính): tab Attribute / Text Options / Properties — sửa giá trị, kiểu chữ, canh lề, cao chữ, góc, hệ số rộng, lớp, màu; Apply; Select block.
+  - **TOLERANCE** (Geometric Tolerance): 2 hàng Sym · Tolerance 1/2 (Ø, điều kiện vật liệu Ⓜ Ⓛ Ⓢ) · Datum 1/2/3, Height + Projected Tolerance Zone Ⓟ, Datum Identifier.
+  - **DWGPROPS** (Drawing Properties): tab General / Summary / Statistics / Custom (thuộc tính tuỳ chỉnh Thêm / Xoá).
+  - **MLEADERSTYLE** (Multileader Style Manager): nhiều kiểu có tên, xem trước, Set Current / New / Modify / Delete; Modify có tab Leader Format / Leader Structure / Content.
+  - **MLSTYLE** (Multiline Style): nhiều kiểu có tên, xem trước; New / Modify với nắp đầu / cuối riêng và danh sách thành phần (khoảng lệch) Thêm / Xoá.
+  - **XREF** (External References): bảng nổi File References + Details; chuột phải: Mở, Gắn, Gỡ nạp, Nạp lại, Gỡ, Gộp; bật / tắt làm mờ.
 
 ## Hộp thoại và ribbon như AutoCAD 2027 (v5l)
 - **Mọi hộp thoại** có khung như AutoCAD:
