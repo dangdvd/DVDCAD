@@ -41,7 +41,7 @@
   // chèn khối: định nghĩa thuộc tính -> thuộc tính có giá trị mặc định, rồi mở hộp nhập giá trị
   function attMembers(gid){ return modelEntities.filter(e => e.grp === gid && e.att); }
   function editAttribs(ent){
-    const gid = ent.grp; const list = attMembers(gid); if(!list.length){ log('Khối này không có thuộc tính.'); return false; }
+    const gid = ent.grp; const list = attMembers(gid).filter(e => !e.acon); if(!list.length){ log('Khối này không có thuộc tính sửa được.'); return false; }
     const name = String(ent.blk || '').replace(/^\*/, '');
     A.dialog({ title: 'Sửa thuộc tính khối "' + name + '"', wide: true, html: '<div class="lm-tbl"><table><thead><tr><th>Thuộc tính</th><th>Lời nhắc</th><th style="width:55%">Giá trị</th></tr></thead><tbody>' + list.map((e, i) => '<tr><td><b>' + esc(e.att) + '</b></td><td style="color:#aab3c0">' + esc(e.attp || '') + '</td><td><input data-i="' + i + '" value="' + esc(e.text || '') + '" style="width:100%"></td></tr>').join('') + '</tbody></table></div>',
       onOpen: r => { const f = r.querySelector('input[data-i]'); if(f) setTimeout(() => { f.focus(); f.select(); }, 30); },
@@ -52,7 +52,7 @@
   cmd(['EATTEDIT', 'ATTEDIT', 'ATE'], 'Sửa giá trị thuộc tính của khối', async () => { const r = await A.getEnt('Chọn khối có thuộc tính', { filter: e => !!e.grp && modelEntities.some(x => x.grp === e.grp && x.att) }); if(r.ent) setTimeout(() => editAttribs(r.ent), 0); });
   // sau khi INSERT: nếu khối có thuộc tính -> hỏi giá trị ngay (như AutoCAD)
   const _commitA = A.commit;
-  A.commit = function(ch, msg){ const r = _commitA.apply(this, arguments); try{ if(r && ch && ch.add && ch.add.length && !ch.rep && !ch.del && /^Đã chèn khối/.test(msg || '')){ const a = ch.add.find(e => e.att); if(a) setTimeout(() => editAttribs(a), 60); } }catch(_){} return r; };
+  A.commit = function(ch, msg){ const r = _commitA.apply(this, arguments); try{ if(r && ch && ch.add && ch.add.length && !ch.rep && !ch.del && /^Đã chèn khối/.test(msg || '')){ const a = ch.add.find(e => e.att && !e.acon && !e.apre); if(a) setTimeout(() => editAttribs(a), 60); } }catch(_){} return r; };
   // kích đúp khối có thuộc tính -> sửa thuộc tính
   const _dbl = A.onDblEnt;
   A.onDblEnt = function(e){ if(e && e.grp && !(A.inRefedit && A.inRefedit()) && modelEntities.some(x => x.grp === e.grp && x.att) && !e.tbld && !String(e.blk || '').startsWith('*')){ (A.eattedit || editAttribs)(e); return true; } return _dbl ? _dbl.apply(this, arguments) : false; };

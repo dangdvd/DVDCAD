@@ -6,6 +6,22 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5n: chữ định dạng, trường, cột, MLSTYLE đủ mục, BATTMAN như AutoCAD 2027
+- Chữ có định dạng (`dvd-acad-dlg.js`):
+  - Lưu theo từng đoạn: `e.rt` = `[{ t, b, i, u, o, f }]`; `e.rtx` = chữ lúc gán (chữ bị sửa ở nơi khác thì bỏ định dạng).
+  - Phần dàn dòng / chia cột dùng chung cho vẽ (`A.drawRichText`), khung bao (`A.richExtent`) và xuất DXF / DWG (`A.richPieces`).
+  - Đọc mã MTEXT của AutoCAD bằng `A.mtextRuns`. Lưu / mở lại qua XDATA "DVDCAD" (`rt`, `rtx`, `cols`, `mtp`, `mtwk`).
+- Bộ soạn chữ tại chỗ dùng vùng soạn có định dạng (contenteditable):
+  - B / I / U / O theo vùng chọn hoặc cho chữ gõ tiếp; hoàn tác riêng.
+  - Có trường (khối nền xám), ngắt cột, dán chữ thuần.
+- Trường: hộp thoại Field (`A.fieldDialog`) và lệnh FIELD mới. `A.fieldValue` có thêm ngày tạo / ngày lưu, định dạng ngày kiểu AutoCAD (`A.fmtDate`), chữ hoa / thường, thuộc tính tuỳ chỉnh. UPDATEFIELD cập nhật cả trường nằm trong chữ.
+- Cột MTEXT (`e.cols = { n, w, g, h, dyn }`): mỗi cột xuất thành một MTEXT riêng. Các mảnh phụ mang `colx` và được bỏ khi mở lại.
+- Chữ lộn ngược (`e.ud`) và góc nghiêng (`e.obl`): vẽ, khung bao, DXF (51 / 71 & 4), DWG, kiểu chữ.
+- MLINE / MLSTYLE:
+  - Thêm màu / kiểu nét từng thành phần, tô màu, mối nối, nắp cung ngoài / cung trong, góc nắp (`A.mlineEnts`).
+  - Đọc / ghi file .mln (`A.mln.parse`, `A.mln.write`).
+- BATTMAN (`A.battman`): Edit Attribute có xem trước (hoàn tác khi Cancel) và Settings. Chế độ thuộc tính (`ainv`, `acon`, `aver`, `apre`, `alock`, `aml`) đi qua `A.syncAtts`. ATTDISP có thêm Bật (ON).
+
 ## v5m: soạn chữ tại chỗ, tab Array Creation, các hộp thoại còn lại như AutoCAD 2027
 - Bộ soạn chữ tại chỗ (`A.inplaceText`, `A.textFinish`, `A.textSrc` trong `dvd-acad-dlg.js`):
   - MTEXT / TEXT / DDEDIT soạn ngay trên bản vẽ, đúng vị trí, cỡ, góc, canh lề; tab ngữ cảnh **Text Editor**.

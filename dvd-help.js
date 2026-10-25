@@ -26,7 +26,7 @@ window.DVD_HELP = {
   TEXT: { u: ['Chỉ định điểm đầu của chữ (hoặc J = canh lề, S = kiểu chữ).', 'Chỉ định chiều cao chữ.', 'Chỉ định góc xoay.', 'Gõ chữ ngay trên bản vẽ: Enter = dòng mới (mỗi dòng một chữ), Enter ở dòng trống = xong, Esc = giữ phần đã gõ.'],
     o: [['J', 'Canh lề', 'L, C, R, M, TL, TC, TR, ML, MC, MR, BL, BC, BR'], ['S', 'Kiểu chữ', 'đặt kiểu chữ hiện hành; ? = liệt kê']] },
   MTEXT: { u: ['Chỉ định góc thứ nhất của khung chữ.', 'Chỉ định góc đối diện, hoặc chọn tuỳ chọn.', 'Gõ nội dung ngay trên bản vẽ (tab Text Editor trên ribbon): Enter = xuống dòng, Ctrl+Enter hoặc bấm ra ngoài = lưu, Esc = bỏ.'],
-    o: [['H', 'Cao chữ', ''], ['J', 'Canh lề', 'TL … BR'], ['R', 'Xoay', ''], ['S', 'Kiểu chữ', ''], ['W', 'Chiều rộng', 'nhập chiều rộng thay cho góc đối diện']] },
+    o: [['H', 'Cao chữ', ''], ['J', 'Canh lề', 'TL … BR'], ['R', 'Xoay', ''], ['S', 'Kiểu chữ', ''], ['W', 'Chiều rộng', 'nhập chiều rộng thay cho góc đối diện']], n: 'Trong ô soạn: Ctrl+B / Ctrl+I / Ctrl+U = đậm / nghiêng / gạch chân phần đã chọn · Alt+Enter = ngắt cột · tab Text Editor: Field (trường), Columns (cột).' },
   HATCH: { u: ['Bấm điểm bên trong vùng kín cần tô (hoặc S để chọn đường kín).', 'Lặp lại cho vùng khác; Enter để kết thúc.'],
     o: [['S', 'Chọn đối tượng', ''], ['T', 'Cài đặt', 'hộp thoại mẫu, tỉ lệ, góc'], ['P', 'Mẫu', ''], ['SC', 'Tỉ lệ', ''], ['A', 'Góc', ''], ['U', 'Hoàn tác', '']], n: 'Biến hệ thống: HPNAME, HPSCALE, HPANG.' },
   MOVE: { u: ['Chọn đối tượng, Enter.', 'Chỉ định điểm gốc (hoặc D = độ dời).', 'Chỉ định điểm thứ hai — hoặc Enter để dùng điểm thứ nhất làm độ dời.'], o: [['D', 'Độ dời', 'nhập dx,dy']] },

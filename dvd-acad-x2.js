@@ -31,15 +31,37 @@
     }
     return out;
   }
-  function mlineEnts(P, closed, S, just){
-    const offs = MLS.offs.map(v => v * S), mx = Math.max(...offs), mn = Math.min(...offs);
-    const sh = just === 'T' ? -mx : just === 'B' ? -mn : 0; const lines = offs.map(o => offsetOpen(P, o + sh, closed));
+  // M = kiểu (mặc định kiểu hiện hành): offs, ecol / elt (màu / kiểu nét từng đường), caps · capS / capE (nắp thẳng), arcS / arcE (cung ngoài), inrS / inrE (cung trong),
+  // angS / angE (góc nắp, độ), joints (hiện mối nối), fill (màu tô)
+  function mlineEnts(P, closed, S, just, M){
+    M = M || MLS; const offs = M.offs.map(v => v * S), mx = Math.max(...offs), mn = Math.min(...offs);
+    const sh = just === 'T' ? -mx : just === 'B' ? -mn : 0; const lines = offs.map(o => offsetOpen(P, o + sh, closed)), n = P.length;
+    // góc nắp khác 90°: dời điểm đầu / cuối từng đường dọc theo đoạn đầu / cuối
+    if(!closed && n >= 2){ const unit = (a, b) => { const L = dist(a, b) || 1; return { x: (b.x - a.x) / L, y: (b.y - a.y) / L }; };
+      for(const [k, a, b, ang] of [[0, P[0], P[1], M.angS], [n - 1, P[n - 2], P[n - 1], M.angE]]){ const g = +ang; if(!(g > 0 && g < 180) || Math.abs(g - 90) < 1e-6) continue; const u = unit(a, b), ct = Math.cos(g * Math.PI / 180) / Math.sin(g * Math.PI / 180);
+        offs.forEach((o, i) => { const d = (o + sh) * ct; lines[i][k] = { x: lines[i][k].x + u.x * d, y: lines[i][k].y + u.y * d }; }); } }
     const rk = offs.map((o, i) => i).sort((i, j) => offs[i] - offs[j]); const mlk = []; rk.forEach((i, r) => { mlk[i] = r; });   // mlk: thứ tự đường từ phải sang trái (cho MLEDIT)
-    const out = lines.map((v, i) => ({ type: 'POLYLINE', closed, vertices: v, mlk: mlk[i] }));
-    // nắp đầu / cuối (capS / capE như Caps Start / End của MLSTYLE; kiểu cũ chỉ có caps)
-    if(!closed && lines.length > 1){ const iT = offs.indexOf(mx), iB = offs.indexOf(mn); for(const k of [0, P.length - 1]){ const on = k === 0 ? (MLS.capS != null ? MLS.capS : MLS.caps) : (MLS.capE != null ? MLS.capE : MLS.caps); if(on) out.push({ type: 'LINE', x1: lines[iT][k].x, y1: lines[iT][k].y, x2: lines[iB][k].x, y2: lines[iB][k].y }); } }
+    const ecol = M.ecol || [], elt = M.elt || [];
+    const out = lines.map((v, i) => { const e = { type: 'POLYLINE', closed, vertices: v, mlk: mlk[i] }; if(ecol[i] && ecol[i] !== 'BYLAYER') e._col = ecol[i]; if(elt[i] && elt[i] !== 'BYLAYER') e.lt = elt[i]; return e; });
+    const iT = offs.indexOf(mx), iB = offs.indexOf(mn), top = lines[iT], bot = lines[iB];
+    if(lines.length > 1){
+      if(M.fill){ const h = closed ? { type: 'HATCH', loops: [top.slice(), bot.slice()], solid: true } : { type: 'HATCH', loops: [top.concat(bot.slice().reverse())], solid: true }; if(M.fill !== 'BYLAYER') h._col = M.fill; out.unshift(h); }
+      if(M.joints){ for(let k = closed ? 0 : 1; k < (closed ? n : n - 1); k++) out.push({ type: 'LINE', x1: top[k].x, y1: top[k].y, x2: bot[k].x, y2: bot[k].y }); }
+    }
+    // nắp đầu / cuối: đoạn thẳng, cung ngoài (nối 2 đường ngoài cùng), cung trong (nối từng cặp đường bên trong)
+    if(!closed && lines.length > 1){
+      const ord = offs.map((o, i) => i).sort((a, b) => offs[b] - offs[a]);
+      const arc = (a, b, out2) => { const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2, r = dist(a, b) / 2; if(!(r > 1e-9)) return null; const fa = Math.atan2(a.y - cy, a.x - cx) * 180 / Math.PI, fb = fa + 180, mid = (fa + 90) * Math.PI / 180;
+        const ccw = Math.cos(mid) * out2.x + Math.sin(mid) * out2.y > 0, nz = v => ((v % 360) + 360) % 360; return ccw ? { type: 'ARC', cx, cy, r, a1: nz(fa), a2: nz(fb) } : { type: 'ARC', cx, cy, r, a1: nz(fb), a2: nz(fa) }; };
+      for(const [k, s2, dir] of [[0, 'S', { x: P[0].x - P[1].x, y: P[0].y - P[1].y }], [n - 1, 'E', { x: P[n - 1].x - P[n - 2].x, y: P[n - 1].y - P[n - 2].y }]]){
+        const ln = M['cap' + s2] != null ? M['cap' + s2] : M.caps;
+        if(ln) out.push({ type: 'LINE', x1: top[k].x, y1: top[k].y, x2: bot[k].x, y2: bot[k].y });
+        if(M['arc' + s2]){ const a = arc(top[k], bot[k], dir); if(a) out.push(a); }
+        if(M['inr' + s2]) for(let p1 = 1, p2 = ord.length - 2; p1 < p2; p1++, p2--){ const a = arc(lines[ord[p1]][k], lines[ord[p2]][k], dir); if(a) out.push(a); } }
+    }
     return out;
   }
+  A.mlineEnts = (P, closed, S, just, M) => mlineEnts(P, closed, S, just, M);
   cmd(['MLINE', 'ML'], 'Đường đôi (tường, đường ống) — canh lề, tỉ lệ, kiểu', async () => {
     let S = MEM.mlS || 220, J = MEM.mlJ || 'Z';
     const jN = { T: 'Trên', Z: 'Giữa', B: 'Dưới' };
@@ -53,11 +75,11 @@
       const P = [r.pt]; let closed = false;
       for(;;){
         const q = await A.getPoint('Điểm tiếp theo', { base: P[P.length - 1], kw: P.length >= 3 ? [{ k: 'C', t: 'Đóng' }, { k: 'U', t: 'Bỏ đoạn' }] : [{ k: 'U', t: 'Bỏ đoạn' }],
-          preview: (g, p) => { for(const e of mlineEnts(P.concat([p]), false, S, J)){ if(e.type === 'POLYLINE') g.poly(e.vertices, false); else g.line({ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }); } } });
+          preview: (g, p) => { for(const e of mlineEnts(P.concat([p]), false, S, J)){ if(e.type === 'POLYLINE') g.poly(e.vertices, false); else if(e.type === 'LINE') g.line({ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }); else if(e.type === 'ARC'){ const q = []; for(let t = 0; t <= 16; t++){ const a = (e.a1 + (e.a2 - e.a1) * t / 16) * Math.PI / 180; q.push({ x: e.cx + e.r * Math.cos(a), y: e.cy + e.r * Math.sin(a) }); } g.poly(q, false); } } } });
         if(q.kw === 'U'){ if(P.length > 1) P.pop(); continue; } if(q.kw === 'C'){ closed = true; break; } if(!q.pt) break; if(dist(q.pt, P[P.length - 1]) > 1e-9) P.push(q.pt);
       }
       if(P.length < 2) return;
-      const gid = A.newGroupId('ML'); const ents = mlineEnts(P, closed, S, J).map(e => { A.newProps(e); e.grp = gid; e.blk = '*MLINE'; return e; });
+      const gid = A.newGroupId('ML'); const ents = mlineEnts(P, closed, S, J).map(e => { A.newProps(e); if(e._col){ e.col = e._col; delete e.bl; } delete e._col; e.grp = gid; e.blk = '*MLINE'; return e; });
       A.commit({ add: ents }, 'Đã vẽ đường đôi'); log('MLINE: ' + (P.length - (closed ? 0 : 1)) + ' đoạn (một nhóm — EXPLODE để sửa từng nét).'); return;
     }
   });

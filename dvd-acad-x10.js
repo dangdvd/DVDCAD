@@ -230,15 +230,20 @@
     return [];
   }
   // đồng bộ mọi bản chèn của khối với danh sách thuộc tính defs (giữ giá trị đang có theo tên thuộc tính)
+  // keepPos: true = giữ thuộc tính của bản chèn · false = theo định nghĩa, giữ lớp / màu của bản chèn (ATTSYNC) · 'def' = hoàn toàn theo định nghĩa (BATTMAN)
   function syncAtts(name, defs, keepPos){
     const del = [], add = []; let nInst = 0;
     for(const [gid, mem] of instances(name)){
       const f = mem.find(x => !x.att) || mem[0]; const M = f.bm; const old = mem.filter(x => x.att); const byTag = new Map(old.map(x => [x.att, x]));
       for(const x of old) del.push(x); nInst++;
       defs.forEach((d, i) => { const o = byTag.get(d.tag); let w;
-        if(o && keepPos){ w = copy(o); }
-        else { w = A.xformEnt(deep(d.prim), M); delete w.attdef; delete w.userAdded; if(o){ for(const k of ['layer', 'col', 'bl', 'lw', 'ff', 'style']) if(o[k] != null) w[k] = o[k]; } else { if(!w.layer || w.layer === '0'){ w.layer = M.lay || f.layer || '0'; } if(!w.col) w.col = A.layerHex(w.layer); } }
-        w.type = 'TEXT'; w.att = d.tag; w.attp = d.prompt; w.text = o ? (o.text || '') : (d.def || ''); w.attOrd = i; w.grp = gid; w.blk = f.blk; w.bm = M; if(f.bip) w.bip = f.bip; add.push(w); });
+        if(o && keepPos === true){ w = copy(o); }
+        else { w = A.xformEnt(deep(d.prim), M); delete w.attdef; delete w.userAdded; if(o && keepPos !== 'def'){ for(const k of ['layer', 'col', 'bl', 'lw', 'ff', 'style']) if(o[k] != null) w[k] = o[k]; } else { if(!w.layer || w.layer === '0'){ w.layer = M.lay || f.layer || '0'; } if(!w.col) w.col = A.layerHex(w.layer); } }
+        w.type = 'TEXT'; w.att = d.tag; w.attp = d.prompt; w.text = o ? (o.text || '') : (d.def || ''); w.attOrd = i; w.grp = gid; w.blk = f.blk; w.bm = M; if(f.bip) w.bip = f.bip;
+        // chế độ thuộc tính (BATTMAN / ATTDEF): ẩn, hằng số, xác nhận, đặt sẵn, khoá vị trí, nhiều dòng
+        const md = (d.prim && d.prim.attdef && d.prim.attdef.mode) || {}; for(const [k, f2] of [['inv', 'ainv'], ['ver', 'aver'], ['pre', 'apre'], ['lock', 'alock'], ['ml', 'aml']]){ if(md[k]) w[f2] = 1; else delete w[f2]; }
+        if(md.con){ w.acon = 1; w.text = d.def || ''; } else delete w.acon;
+        add.push(w); });
     }
     return { del, add, nInst };
   }

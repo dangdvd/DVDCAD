@@ -17,7 +17,7 @@
   const hexRGB = h => { let s = String(h || '').replace('#', ''); if(s.length === 3) s = s.split('').map(c => c + c).join(''); const n = parseInt(s, 16); return /^[0-9a-f]{6}$/i.test(s) ? n : null; };
   const isAciColor = h => { const n = hexRGB(h); if(n == null) return true; const a = A.aciNear(h); return (ACI_RGB[a] >>> 0) === n; };
   // thuộc tính riêng của DVDCAD ghi kèm (XDATA) để mở lại trong DVDCAD còn nguyên
-  const XKEYS = ['cid', 'dord', 'anno', 'fld', 'url', 'dyn', 'dvs', 'mt'];
+  const XKEYS = ['cid', 'dord', 'anno', 'fld', 'url', 'dyn', 'dvs', 'mt', 'rt', 'rtx', 'cols', 'mtp', 'mtwk'];   // rt / cols: chữ có định dạng, cột (đọc lại đúng trong DVDCAD)
 
   let UTF8 = false;   // DXF R2007+: chữ ghi thẳng UTF-8 (không cần mã \U+)
   function dxfStr(s){ if(UTF8) return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[\x00-\x1f]/g, ' '); return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }
@@ -167,7 +167,7 @@
         for(let i = 0; i < n; i++){ const a = V[i], b = V[(i + 1) % V.length]; const w = (i < n - 1 || cl) ? m.get(key(a) + '|' + key(b)) : null; P(10, a.x); P(20, a.y); if(w){ P(40, w[0]); P(41, w[1]); } } };
       const lwpoly = (verts, closed) => { if(verts.length < 2) return; head('LWPOLYLINE', 'AcDbPolyline'); P(90, verts.length); P(70, closed ? 1 : 0); P(43, 0); for(const v of verts){ P(10, v.x); P(20, v.y); if(v.bulge) P(42, v.bulge); } };
       const just = t => ({ hj: t.ha === 'center' ? 1 : (t.ha === 'right' || t.ha === 'end') ? 2 : 0, vj: t.va === 'bottom' ? 1 : t.va === 'middle' ? 2 : t.va === 'top' ? 3 : 0 });
-      const textBody = (t, val) => { const { hj, vj } = just(t); P(10, t.x); P(20, t.y); P(30, 0); P(40, t.h || 2.5); P(1, dxfStr(val)); if(t.rot) P(50, t.rot); if(t.xs && Math.abs(Math.abs(t.xs) - 1) > 1e-3) P(41, Math.abs(t.xs)); if(t.style && stUsed.has(t.style)) P(7, dxfStr(t.style)); if(t.xs < 0) P(71, 2); if(hj) P(72, hj); if(hj || vj){ P(11, t.x); P(21, t.y); P(31, 0); } return { hj, vj }; };
+      const textBody = (t, val) => { const { hj, vj } = just(t); P(10, t.x); P(20, t.y); P(30, 0); P(40, t.h || 2.5); P(1, dxfStr(val)); if(t.rot) P(50, t.rot); if(t.xs && Math.abs(Math.abs(t.xs) - 1) > 1e-3) P(41, Math.abs(t.xs)); if(t.obl) P(51, t.obl); if(t.style && stUsed.has(t.style)) P(7, dxfStr(t.style)); if(t.xs < 0 || t.ud) P(71, (t.xs < 0 ? 2 : 0) | (t.ud ? 4 : 0)); if(hj) P(72, hj); if(hj || vj){ P(11, t.x); P(21, t.y); P(31, 0); } return { hj, vj }; };
       if(e.att && o.inBlock && e.type === 'TEXT'){ head('ATTDEF', 'AcDbText'); const { vj } = textBody(e, e.text || ''); P(100, 'AcDbAttributeDefinition'); P(3, dxfStr(e.attp || e.att)); P(2, dxfStr(e.att)); P(70, 0); if(vj) P(74, vj); return; }
       switch(e.type){
         case 'LINE': head('LINE', 'AcDbLine'); P(10, e.x1); P(20, e.y1); P(30, 0); P(11, e.x2); P(21, e.y2); P(31, 0); break;
@@ -180,6 +180,12 @@
         case 'IMAGE': try{ lwpoly(imgCorners(e), true); }catch(_){} break;
         case 'TEXT': {
           if(!e.text) break; const txt = String(e.text);
+          if(A.richPieces && (e.cols || (e.rt && e.rtx === e.text))){   // chữ có định dạng / có cột: mã MTEXT (\L \O {\f…|b1|i1;}), mỗi cột một MTEXT
+            const ps = A.richPieces(e, mtStr); if(!ps.length) break;
+            const mtx = (q, main) => { head('MTEXT', 'AcDbMText'); P(10, q.x); P(20, q.y); P(30, 0); P(40, e.h || 2.5); P(41, 0); P(71, q.ap); P(72, 1); const s = q.str; for(let k = 0; k < s.length; k += 250){ const part = s.slice(k, k + 250); if(k + 250 < s.length) P(3, part); else P(1, part); } if(!s.length) P(1, '');
+              if(e.style && stUsed.has(e.style)) P(7, dxfStr(e.style)); const r = (e.rot || 0) * D2R; P(11, Math.cos(r)); P(21, Math.sin(r)); P(31, 0); P(73, 1); P(44, 1);
+              if(!main && !o.inBlock && !o.dimBlock){ P(1001, 'DVDCAD'); P(1000, 'P:{"colx":1}'); } };   // cột phụ: DVDCAD bỏ khi mở lại (đã gộp trong cột đầu)
+            for(let k = 1; k < ps.length; k++) mtx(ps[k], false); mtx(ps[0], true); break; }
           if(txt.includes('\n') || e.mt){ const { hj, vj } = just(e); const ap = (vj === 3 ? 0 : vj === 2 ? 3 : 6) + (hj === 1 ? 2 : hj === 2 ? 3 : 1);
             head('MTEXT', 'AcDbMText'); P(10, e.x); P(20, e.y); P(30, 0); P(40, e.h || 2.5); P(41, 0); P(71, ap); P(72, 1); const s = mtStr(txt); for(let k = 0; k < s.length; k += 250){ const part = s.slice(k, k + 250); if(k + 250 < s.length) P(3, part); else P(1, part); } if(!s.length) P(1, '');
             if(e.style && stUsed.has(e.style)) P(7, dxfStr(e.style)); const r = (e.rot || 0) * D2R; P(11, Math.cos(r)); P(21, Math.sin(r)); P(31, 0); P(73, 1); P(44, 1); break; }

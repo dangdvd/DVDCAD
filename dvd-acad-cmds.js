@@ -357,7 +357,7 @@
   });
 
   async function textCmd(multi){
-    let ha = 'left', va = 'alphabetic', p, mRot = null, boxW = 0;
+    let ha = 'left', va = 'alphabetic', p, mRot = null, boxW = 0, boxH = 0;
     if(multi){   // MTEXT như AutoCAD: góc thứ nhất, rồi góc đối diện hoặc [Cao chữ/Canh lề/Xoay/Kiểu chữ/Chiều rộng]; không hỏi lại cao chữ
       log('Kiểu chữ hiện hành: "' + (A.TS ? A.TS.cur : 'Standard') + '"  Cao chữ: ' + fmt(MEM.th || defaultTextH()));
       const a = await A.getPoint('Chỉ định góc thứ nhất'); if(!a.pt) return;
@@ -372,7 +372,7 @@
         break;
       }
       if(!b.pt) return;
-      const x0 = Math.min(a.pt.x, b.pt.x), x1 = Math.max(a.pt.x, b.pt.x), y0 = Math.min(a.pt.y, b.pt.y), y1 = Math.max(a.pt.y, b.pt.y); boxW = x1 - x0;
+      const x0 = Math.min(a.pt.x, b.pt.x), x1 = Math.max(a.pt.x, b.pt.x), y0 = Math.min(a.pt.y, b.pt.y), y1 = Math.max(a.pt.y, b.pt.y); boxW = x1 - x0; boxH = y1 - y0;
       ha = jk[1] === 'C' ? 'center' : jk[1] === 'R' ? 'right' : 'left'; va = jk[0] === 'M' ? 'middle' : jk[0] === 'B' ? 'bottom' : 'top';
       p = { x: ha === 'center' ? (x0 + x1) / 2 : ha === 'right' ? x1 : x0, y: va === 'middle' ? (y0 + y1) / 2 : va === 'bottom' ? y0 : y1 };
     } else {
@@ -403,7 +403,7 @@
     remember();
     // máy tính: soạn chữ ngay trên bản vẽ + tab "Text Editor" (như AutoCAD); điện thoại: hộp nhập chữ
     if(A.inplaceText && A.deskUI && A.deskUI()){
-      const R = await A.inplaceText({ x: p.x, y: p.y, h, rot, ha, va, w: multi ? boxW : 0, multi, value: '' }); if(!R || !R.text.trim()) return;
+      const R = await A.inplaceText({ x: p.x, y: p.y, h, rot, ha, va, w: multi ? boxW : 0, boxH: multi ? boxH : 0, multi, value: '' }); if(!R || !R.text.trim()) return;
       const make = (q, text) => { const w = mk('TEXT', { x: q.x, y: q.y, text, h: R.h, rot, ha: R.ha, va: R.va }); A.textFinish && A.textFinish(w, R); return w; };
       if(multi){ A.commit({ add: [make(p, R.text)] }); return; }
       // TEXT (DTEXT): mỗi dòng là 1 đối tượng chữ riêng, dòng sau cách dòng trước 1.5 lần cao chữ (như AutoCAD)
@@ -421,7 +421,7 @@
       const r = await A.getEnt('Chọn chữ cần sửa', { filter: e => e.type === 'TEXT' }); if(!r.ent) return;
       const e = r.ent;
       if(A.inplaceText && A.deskUI && A.deskUI()){   // sửa ngay trên bản vẽ như AutoCAD
-        const multi = !!(e.mt || String(e.text || '').includes('\n') || e.mtp); const R = await A.inplaceText({ x: e.x, y: e.y, h: e.h || 2.5, rot: e.rot || 0, ha: e.ha || 'left', va: e.va || 'alphabetic', w: e.mtwk ? e.mtwk * (e.h || 1) : 0, multi, single: !multi, value: A.textSrc ? A.textSrc(e) : String(e.text || ''), style: e.style, font: e.ff, col: e.bl ? '' : e.col, dim: !!e.dimd });
+        const multi = !!(e.mt || String(e.text || '').includes('\n') || e.mtp || e.rt || e.cols); const R = await A.inplaceText({ x: e.x, y: e.y, h: e.h || 2.5, rot: e.rot || 0, ha: e.ha || 'left', va: e.va || 'alphabetic', w: e.cols ? e.cols.n * e.cols.w + (e.cols.n - 1) * (e.cols.g || 0) : e.mtwk ? e.mtwk * (e.h || 1) : 0, cols: e.cols, runs: A.rtOf ? A.rtOf(e) : null, multi, single: !multi, value: A.textSrc ? A.textSrc(e) : String(e.text || ''), style: e.style, font: e.ff, col: e.bl ? '' : e.col, dim: !!e.dimd });
         if(!R || !R.text.trim()) continue;
         const w = copyOf(e); w.text = R.text; if(!w.dimd){ w.h = R.h; w.ha = R.ha; w.va = R.va; if(A.textFinish) A.textFinish(w, R); }
         if(w.dimd) w.dimd.ov = (w.dimv != null && R.text === dimFmtOf(w)) ? null : R.text; A.commit({ rep: [[e, w]] }); continue;
@@ -1887,7 +1887,9 @@
     const s = Math.min((cnv.width - 2 * pad) / Math.max(bb.x1 - bb.x0, 1e-9), (cnv.height - 2 * pad) / Math.max(bb.y1 - bb.y0, 1e-9));
     const sv = { scale: view.scale, offsetX: view.offsetX, offsetY: view.offsetY, rot: view.rot }; const svW = _RTW, svH = _RTH;
     view.scale = s; view.rot = 0; view.offsetX = cnv.width / 2 - (bb.x0 + bb.x1) / 2 * s; view.offsetY = cnv.height / 2 + (bb.y0 + bb.y1) / 2 * s; _RTW = cnv.width; _RTH = cnv.height;
-    try{ let n = 0; for(const e of ents){ if(n++ > (o.max || 3000)) break; const c = e._c && e._c !== 'BYLAYER' ? e._c : (e.col || o.col || '#cfd8e6'); A.drawEntOn(g, e, c, e.lw >= 30 ? 2 : 1, []); } }
+    try{ let n = 0; for(const e of ents){ if(n++ > (o.max || 3000)) break; const c = e._c && e._c !== 'BYLAYER' ? e._c : (e.col || o.col || '#cfd8e6');
+        if(e.type === 'HATCH' && e.solid){ g.save(); g.fillStyle = c; g.globalAlpha = 0.5; g.beginPath(); for(const lp of e.loops || []) lp.forEach((q, k) => { const P = toScreen(q.x, q.y); if(k) g.lineTo(P.x, P.y); else g.moveTo(P.x, P.y); }); g.fill('evenodd'); g.restore(); continue; }   // tô đặc (ô xem trước MLSTYLE…)
+        A.drawEntOn(g, e, c, e.lw >= 30 ? 2 : 1, []); } }
     finally { Object.assign(view, sv); _RTW = svW; _RTH = svH; }
   };
   // hình mẫu cho ô xem trước của Dimension Style Manager (như AutoCAD): kích thước ngang, dọc, bán kính, góc theo kiểu sn

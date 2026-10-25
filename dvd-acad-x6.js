@@ -389,20 +389,31 @@
   const FLD = { date: 'Ngày hiện tại', file: 'Tên bản vẽ', author: 'Người vẽ (DWGPROPS)', title: 'Tiêu đề (DWGPROPS)', area: 'Diện tích đối tượng', len: 'Chiều dài / chu vi đối tượng', count: 'Số đối tượng trong bản vẽ' };
   const propsKey = () => 'dvd:props::' + docName();
   const getProps = () => { try{ return JSON.parse(localStorage.getItem(propsKey()) || '{}'); }catch(_){ return {}; } };
+  // định dạng ngày kiểu AutoCAD / .NET: dd/MM/yyyy, d MMMM yyyy, HH:mm, h:mm tt, 'chữ cố định'…
+  function fmtDate(d, f){
+    if(!f || f === 'short') f = 'dd/MM/yyyy'; if(f === 'long') f = "'ngày' d 'tháng' M 'năm' yyyy";
+    const loc = window.DVDI18N && DVDI18N.lang === 'en' ? 'en-US' : 'vi-VN', p2 = n => String(n).padStart(2, '0'), H = d.getHours();
+    const T = { yyyy: d.getFullYear(), yy: p2(d.getFullYear() % 100), MMMM: d.toLocaleString(loc, { month: 'long' }), MMM: d.toLocaleString(loc, { month: 'short' }), MM: p2(d.getMonth() + 1), M: d.getMonth() + 1,
+      dddd: d.toLocaleString(loc, { weekday: 'long' }), ddd: d.toLocaleString(loc, { weekday: 'short' }), dd: p2(d.getDate()), d: d.getDate(), HH: p2(H), H, hh: p2(H % 12 || 12), h: H % 12 || 12, mm: p2(d.getMinutes()), m: d.getMinutes(), ss: p2(d.getSeconds()), s: d.getSeconds(), tt: H < 12 ? 'AM' : 'PM' };
+    return String(f).replace(/'([^']*)'|yyyy|yy|MMMM|MMM|MM|M|dddd|ddd|dd|d|HH|H|hh|h|mm|m|ss|s|tt/g, (m, q) => q != null ? q : String(T[m]));
+  }
+  const caseOf = (v, c) => { v = String(v == null ? '' : v); if(c === 'up') return v.toUpperCase(); if(c === 'lo') return v.toLowerCase(); if(c === 'fc') return v.charAt(0).toUpperCase() + v.slice(1); if(c === 'tc') return v.replace(/(^|\s)(\S)/g, (m, a, b) => a + b.toUpperCase()); return v; };
   function fieldValue(f){
-    const P = getProps();
-    if(f.k === 'date'){ const d = new Date(); const p2 = n => String(n).padStart(2, '0'); return f.fmt === 'long' ? 'ngày ' + d.getDate() + ' tháng ' + (d.getMonth() + 1) + ' năm ' + d.getFullYear() : p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
-    if(f.k === 'file') return String(docName()).replace(/\.[^.]+$/, '');
-    if(f.k === 'author') return P.author || '';
-    if(f.k === 'title') return P.title || '';
-    if(f.k === 'count') return String(modelEntities.length);
-    if(f.k === 'area' || f.k === 'len'){ const o = modelEntities.find(e => e.cid === f.ref); if(!o) return '####'; let v = f.k === 'area' ? areaOf(o) : lenOf(o); const div = f.fmt === 'm2' ? 1e6 : f.fmt === 'm' ? 1e3 : 1; v /= div; const d = f.dec != null ? f.dec : 2; return v.toFixed(d) + (f.fmt === 'm2' ? ' m²' : f.fmt === 'm' ? ' m' : ''); }
-    return '';
+    const P = getProps(); let v = '';
+    if(f.k === 'date' || f.k === 'cdate' || f.k === 'sdate'){ let ms = Date.now(); if(f.k !== 'date'){ const t = getTime() || {}; ms = f.k === 'cdate' ? t.created : (t.edited || t.created); } if(!ms) return '----'; v = fmtDate(new Date(ms), f.fmt); }
+    else if(f.k === 'file'){ const n = String(docName()); v = f.fx === 'ext' ? n : n.replace(/\.[^.]+$/, ''); }
+    else if(/^(author|title|subject|keywords|comments|checker|hyperlink)$/.test(f.k)) v = P[f.k] || '';
+    else if(f.k === 'custom') v = (P.custom || {})[f.name] || '';
+    else if(f.k === 'count') v = String(modelEntities.length);
+    else if(f.k === 'area' || f.k === 'len'){ const o = f.ref && modelEntities.find(e => e.cid === f.ref); if(!o) return '####'; let x = f.k === 'area' ? areaOf(o) : lenOf(o); const div = f.fmt === 'm2' ? 1e6 : f.fmt === 'm' ? 1e3 : f.fmt === 'cm2' ? 100 : f.fmt === 'cm' ? 10 : 1; x /= div; const dd = f.dec != null ? f.dec : 2; v = x.toFixed(dd) + (f.fmt === 'm2' ? ' m²' : f.fmt === 'm' ? ' m' : f.fmt === 'cm2' ? ' cm²' : f.fmt === 'cm' ? ' cm' : ''); }
+    return caseOf(v, f.cs);
   }
   const fieldText = f => (f.pre || '') + fieldValue(f) + (f.suf || '');
-  A.fieldValue = fieldValue;
+  A.fieldValue = fieldValue; A.fmtDate = fmtDate; A.areaOf = o => areaOf(o); A.lenOf = o => lenOf(o);
   function updateFields(silent){
-    const rep = []; for(const e of modelEntities){ if(!e.fld || A.isLocked(e)) continue; const t = fieldText(e.fld); if(t !== e.text){ const w = copy(e); w.text = t; rep.push([e, w]); } }
+    const rep = []; for(const e of modelEntities){ if(A.isLocked(e)) continue;
+      if(e.rt && A.rtFieldsRefresh){ const w = A.rtFieldsRefresh(e); if(w) rep.push([e, w]); continue; }   // trường nằm trong chữ có định dạng
+      if(!e.fld) continue; const t = fieldText(e.fld); if(t !== e.text){ const w = copy(e); w.text = t; rep.push([e, w]); } }
     if(rep.length) A.commit({ rep }, 'Cập nhật ' + rep.length + ' trường'); else if(!silent) log('Các trường đã cập nhật.');
     return rep.length;
   }

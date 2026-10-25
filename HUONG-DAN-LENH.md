@@ -1,4 +1,4 @@
-# DVDCAD v5m — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5n — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,44 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Chữ định dạng, trường, cột, MLSTYLE và BATTMAN như AutoCAD 2027 (v5n)
+- **MTEXT có định dạng như AutoCAD:** bôi đen rồi bấm **B / I / U / Ō** (hoặc **Ctrl+B / Ctrl+I / Ctrl+U**) để đậm, nghiêng, gạch chân, gạch trên đúng phần chữ đã chọn.
+  - Chưa bôi đen thì áp cho chữ gõ tiếp.
+  - Nút trên tab Text Editor sáng theo định dạng ở con trỏ.
+  - Ô soạn có hoàn tác riêng (Ctrl+Z / Ctrl+Y).
+  - Lưu DXF / DWG thành mã MTEXT chuẩn (`{\fArial|b1|i0;…}`, `\L…\l`, `\O…\o`) nên AutoCAD hiện đúng. Mở file MTEXT có định dạng của AutoCAD cũng giữ được đậm / nghiêng / gạch chân / gạch trên.
+- **Trường (Field)** — tab Text Editor → Field, chuột phải → Chèn trường…, hoặc lệnh **FIELD**:
+  - Hộp thoại Field gồm nhóm trường, tên trường, định dạng, giá trị xem trước và biểu thức trường (`%<\AcVar Title>%`).
+  - Các trường có:
+    - ngày hiện tại / ngày tạo / ngày lưu (định dạng `dd/MM/yyyy`, `d MMMM yyyy`, `HH:mm`…);
+    - tiêu đề, chủ đề, tác giả, từ khoá, ghi chú, người kiểm, đường dẫn gốc siêu liên kết, tên file, thuộc tính tuỳ chỉnh (DWGPROPS);
+    - diện tích / chiều dài đối tượng (bấm "Chọn đối tượng"; đơn vị bản vẽ, m², cm²; số lẻ);
+    - số đối tượng.
+  - Trường nằm ngay trong chữ (nền xám, không in) và tự cập nhật khi mở bản vẽ, khi đổi DWGPROPS và khi chạy UPDATEFIELD.
+- **Cột (Columns)** — tab Text Editor → Columns:
+  - Không chia cột, Cột động, 2–6 cột tĩnh, Chèn ngắt cột (**Alt+Enter**), Cài đặt cột… (kiểu cột, số cột, chiều cao, bề rộng cột, khoảng cách, tổng).
+  - Chữ tự chảy sang cột sau khi đầy chiều cao.
+  - Khi lưu DXF / DWG, mỗi cột là một MTEXT nên AutoCAD hiện đúng. DVDCAD mở lại vẫn là một chữ có cột.
+- **Chữ lộn ngược và góc nghiêng:** Text Style (Lộn ngược, Góc nghiêng), Enhanced Attribute Editor và BATTMAN. Đọc / ghi DXF và DWG (mã 51, 71). "Viết dọc" chỉ có với phông SHX, như AutoCAD.
+- **MLSTYLE** đủ các mục như AutoCAD:
+  - Mỗi thành phần có khoảng lệch, màu, kiểu nét.
+  - Nắp đầu / cuối gồm đoạn thẳng, cung ngoài, cung trong, góc nắp.
+  - Có màu tô (Fill) và hiện mối nối (Display joints).
+  - **Tải… / Lưu…** file **.mln** đúng định dạng AutoCAD (đọc được acad.mln).
+- **BATTMAN (Block Attribute Manager)**:
+  - Chọn khối (bấm trên bản vẽ hoặc chọn trong danh sách); bảng Nhãn / Lời nhắc / Mặc định / Chế độ; Đồng bộ, Lên, Xuống, Sửa…, Xoá; Có trong bản vẽ: N.
+  - Sửa… mở hộp **Edit Attribute**:
+    - Thuộc tính khối: chế độ Ẩn / Hằng số / Xác nhận / Đặt sẵn / Khoá vị trí / Nhiều dòng; Nhãn, Lời nhắc, Mặc định.
+    - Tuỳ chọn chữ: kiểu, canh lề, cao, góc, chú thích, viết ngược, lộn ngược, hệ số rộng, góc nghiêng, bề rộng khung.
+    - Thuộc tính đối tượng: lớp, kiểu nét, màu, bề rộng nét.
+    - Có **Xem trước thay đổi** ngay trên bản vẽ; Cancel thì trả lại như cũ.
+  - Cài đặt…: chọn cột hiện trong danh sách, tô đỏ nhãn trùng, áp thay đổi cho các bản chèn đã có.
+  - Thuộc tính **Ẩn** không hiện trên bản vẽ (ATTDISP Bình thường). **ATTDISP Bật** hiện cả thuộc tính ẩn.
+  - Thuộc tính **Hằng số** không sửa được trong EATTEDIT. Thuộc tính **Đặt sẵn** không hỏi khi chèn khối.
+- **Enhanced Attribute Editor (EATTEDIT):** bật thêm góc nghiêng, chú thích, viết ngược, lộn ngược, kiểu nét, bề rộng nét. Giá trị nhiều dòng dùng được với thuộc tính Nhiều dòng.
+  - Ô "Kiểu in" (Plot style) vẫn tắt khi bản vẽ dùng bảng in theo màu (.ctb), như AutoCAD.
+- **PURGE / RENAME** gọi tên nhóm theo AutoCAD: Blocks, Dimension Styles, Layers, Linetypes, Multileader Styles, Multiline Styles, Text Styles.
 
 ## Soạn chữ, mảng và các hộp thoại còn lại như AutoCAD 2027 (v5m)
 - **MTEXT / TEXT / DDEDIT soạn ngay trên bản vẽ** (máy tính), như AutoCAD:
