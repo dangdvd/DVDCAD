@@ -1124,12 +1124,13 @@ function parseDXF(text){
   const num=(g,c)=>{ for(const it of g) if(it.code===c) return parseFloat(it.value); return undefined; };
   const str=(g,c)=>{ for(const it of g) if(it.code===c) return it.value.trim(); return undefined; };
   // XCLIP (SPATIAL_FILTER trong OBJECTS): xdict của INSERT -> ACAD_FILTER -> SPATIAL
-  const xclMap=new Map();
+  const xclMap=new Map(), imgDefMap=new Map();   // + IMAGEDEF: handle → đường dẫn tệp ảnh
   { const D=new Map(), F=new Map(); let i=0;
     for(;i<pairs.length-1;i++){ if(pairs[i].code===0&&pairs[i].value.trim()==='SECTION'&&pairs[i+1].code===2&&pairs[i+1].value.trim()==='OBJECTS') break; }
-    for(;i<pairs.length;i++){ if(pairs[i].code!==0) continue; const t=pairs[i].value.trim(); if(t==='ENDSEC') break; if(t!=='DICTIONARY'&&t!=='SPATIAL_FILTER') continue;
+    for(;i<pairs.length;i++){ if(pairs[i].code!==0) continue; const t=pairs[i].value.trim(); if(t==='ENDSEC') break; if(t!=='DICTIONARY'&&t!=='SPATIAL_FILTER'&&t!=='IMAGEDEF') continue;
       const g=[]; let k=i+1; for(;k<pairs.length&&pairs[k].code!==0;k++) g.push(pairs[k]);
       const h=(str(g,5)||'').toUpperCase(); if(!h) continue;
+      if(t==='IMAGEDEF'){ imgDefMap.set(h, str(g,1)||''); i=k-1; continue; }
       if(t==='DICTIONARY'){ const en={}; let nm=null; for(const it of g){ if(it.code===3) nm=it.value.trim().toUpperCase(); else if((it.code===350||it.code===360)&&nm!=null){ en[nm]=it.value.trim().toUpperCase(); nm=null; } } D.set(h,en); }
       else { const v=[]; for(let q=0;q<g.length;q++) if(g[q].code===10){ const y=g[q+1]&&g[q+1].code===20?parseFloat(g[q+1].value):0; v.push({x:parseFloat(g[q].value),y}); }
         const m40=g.filter(it=>it.code===40).map(it=>parseFloat(it.value)); F.set(h,{v,en:(num(g,71)??1)!==0,inv:m40.length>=24?m40.slice(-24,-12):null}); }
@@ -1236,7 +1237,9 @@ function parseDXF(text){
         const xs=all(g,14), ys=all(g,24); let pts=[]; const W2=(x,y)=>({x:px+ux*(x+0.5)+vx*(h-(y+0.5)), y:py+uy*(x+0.5)+vy*(h-(y+0.5))});
         if(xs.length>=3) pts=xs.map((x,i)=>W2(x,ys[i])); else if(xs.length===2){ const a=W2(xs[0],ys[0]), b=W2(xs[1],ys[1]); pts=[a,{x:b.x,y:a.y},b,{x:a.x,y:b.y}]; } else pts=[W2(-0.5,h-0.5),W2(w-0.5,h-0.5),W2(w-0.5,-0.5),W2(-0.5,-0.5)];
         if(pts.length>3&&Math.hypot(pts[0].x-pts[pts.length-1].x,pts[0].y-pts[pts.length-1].y)<1e-9) pts.pop(); return {type:'POLYLINE',layer,closed:true,vertices:pts,wipe:1}; }
-      case 'IMAGE':{ const px=num(g,10),py=num(g,20),ux=num(g,11),uy=num(g,21),vx=num(g,12),vy=num(g,22),w=num(g,13),h=num(g,23); if(![px,py,ux,uy,vx,vy,w,h].every(isFinite)) return null; return {type:'POLYLINE',layer,closed:true,_img:true,vertices:[{x:px,y:py},{x:px+ux*w,y:py+uy*w},{x:px+ux*w+vx*h,y:py+uy*w+vy*h},{x:px+vx*h,y:py+vy*h}]}; }
+      case 'IMAGE':{ const px=num(g,10),py=num(g,20),ux=num(g,11),uy=num(g,21),vx=num(g,12),vy=num(g,22),w=num(g,13),h=num(g,23); if(![px,py,ux,uy,vx,vy,w,h].every(isFinite)) return null;
+        const xs=all(g,14), ys=all(g,24), cl=(num(g,280)||0)!==0&&xs.length>=2?xs.map((x,k)=>({x,y:ys[k]||0})):null;
+        return acadImage(layer,{x:px,y:py},{x:ux,y:uy},{x:vx,y:vy},w,h,imgDefMap.get((str(g,340)||'').toUpperCase()),num(g,283),cl)||{type:'POLYLINE',layer,closed:true,_img:true,vertices:[{x:px,y:py},{x:px+ux*w,y:py+uy*w},{x:px+ux*w+vx*h,y:py+uy*w+vy*h},{x:px+vx*h,y:py+vy*h}]}; }
       default: return null;
     }
   }
@@ -1530,7 +1533,8 @@ function transformPrim(e,M){
     case 'ELLIPSE': if(mIsId(M)) return e; if(mSim(M)){ const c=mApply(M,e.cx,e.cy), mx=M.a*e.mx+M.c*e.my, my=M.b*e.mx+M.d*e.my, mir=(M.a*M.d-M.b*M.c)<0; const p1=e.p1||0, p2=e.p2==null?2*Math.PI:e.p2; return {type:'ELLIPSE',layer:L,cx:c.x,cy:c.y,mx,my,ratio:e.ratio,p1:mir?-p2:p1,p2:mir?-p1:p2}; } return {type:'POLYLINE',layer:L,closed:false,vertices:smpEllipse(e).map(p=>mApply(M,p.x,p.y))};
     case 'HATCH': { const o={type:'HATCH',layer:L,solid:e.solid,loops:e.loops.map(lp=>lp.map(p=>mApply(M,p.x,p.y)))}; if(e.pat){ const s=Math.hypot(M.a,M.b); o.pat=e.pat; o.psc=(e.psc||1)*s; o.pang=(e.pang||0)+Math.atan2(M.b,M.a)*180/Math.PI; } return o; }
     case 'XLINE':{ const a=mApply(M,e.x,e.y), dx=M.a*e.dx+M.c*e.dy, dy=M.b*e.dx+M.d*e.dy; return (dx||dy)?{type:'XLINE',layer:L,x:a.x,y:a.y,dx,dy,ray:e.ray}:null; }
-    case 'IMAGE':{ const a=mApply(M,e.x,e.y), sc=Math.hypot(M.a,M.b); return Object.assign({},e,{x:a.x,y:a.y,w:e.w*sc,h:e.h*sc,rot:(e.rot||0)+Math.atan2(M.b,M.a)*180/Math.PI}); }
+    case 'IMAGE':{ const a=mApply(M,e.x,e.y), sc=Math.hypot(M.a,M.b); const o=Object.assign({},e,{x:a.x,y:a.y,w:e.w*sc,h:e.h*sc,rot:(e.rot||0)+Math.atan2(M.b,M.a)*180/Math.PI});
+      if(e.clip&&e.clip.poly){ const pts=e.clip.poly.map(q=>mApply(M,q.x,q.y)), xs=pts.map(q=>q.x), ys=pts.map(q=>q.y); o.clip={x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys),poly:pts}; } return o; }
     default: return null;
   }
 }
@@ -1999,6 +2003,20 @@ function solid3dBox(e){ if(e.pts){ const v=e.pts||[]; if(!v.length) return null;
 // IMAGEFRAME: 0 ẩn khung ảnh, 1 hiện & in, 2 hiện nhưng không in · IMAGEQUALITY: 0 nháp, 1 mịn
 let IMAGEFRAME=(()=>{ try{ const v=localStorage.getItem('dvd:imgframe'); return v==null?1:+v; }catch(_){ return 1; } })(), IMAGEQUALITY=(()=>{ try{ const v=localStorage.getItem('dvd:imgq'); return v==null?1:+v; }catch(_){ return 1; } })();
 // ẢNH NỀN (IMAGEATTACH): {type:'IMAGE', x,y góc dưới trái, w,h, rot (độ), img: id ảnh trong IndexedDB, op: độ mờ}
+// ảnh IMAGE của AutoCAD → ảnh DVDCAD: góc dưới trái, rộng / cao theo vector 1 điểm ảnh × cỡ ảnh, góc xoay, fade → độ đậm;
+// id ảnh theo đường dẫn tệp của IMAGEDEF (bản Windows nạp tệp từ thư mục bản vẽ — xem _imgRefs); khung cắt (toạ độ điểm ảnh, trục Y hướng xuống) → clip
+let _dwgImgDef=null; const _imgRefs=[];
+function acadImage(layer,p,u,v,W,Hh,file,fade,clip){
+  const fw=Math.hypot(u.x,u.y)*W, fh=Math.hypot(v.x,v.y)*Hh; if(!(fw>0&&fh>0)) return null;
+  const f=String(file||'').trim(), nm=f.split(/[\\/]/).pop(); let id=null;
+  if(nm){ let h=0x811c9dc5; for(const c of f.toLowerCase()){ h^=c.charCodeAt(0); h=Math.imul(h,16777619)>>>0; } id='X'+h.toString(36); _imgRefs.push({id,file:f,base:window.__dvdCurPath||null}); }
+  const o={type:'IMAGE',layer,x:p.x,y:p.y,w:fw,h:fh,rot:Math.atan2(u.y,u.x)*180/Math.PI,op:Math.max(0.05,1-Math.min(100,Math.max(0,+fade||0))/100),name:nm||'image'}; if(id) o.img=id;
+  if(clip){ const W2=(x,y)=>({x:p.x+u.x*(x+0.5)+v.x*(Hh-(y+0.5)), y:p.y+u.y*(x+0.5)+v.y*(Hh-(y+0.5))});
+    const full=clip.length===2&&Math.abs(Math.min(clip[0].x,clip[1].x)+0.5)<1e-6&&Math.abs(Math.min(clip[0].y,clip[1].y)+0.5)<1e-6&&Math.abs(Math.max(clip[0].x,clip[1].x)-(W-0.5))<1e-6&&Math.abs(Math.max(clip[0].y,clip[1].y)-(Hh-0.5))<1e-6;
+    if(!full){ let pts=clip.length===2?[W2(clip[0].x,clip[0].y),W2(clip[1].x,clip[0].y),W2(clip[1].x,clip[1].y),W2(clip[0].x,clip[1].y)]:clip.map(q=>W2(q.x,q.y));
+      if(pts.length>3&&Math.hypot(pts[0].x-pts[pts.length-1].x,pts[0].y-pts[pts.length-1].y)<1e-9) pts.pop();
+      if(pts.length>=3){ const xs=pts.map(q=>q.x), ys=pts.map(q=>q.y); o.clip={x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys),poly:pts}; } } }
+  return o; }
 function imgCorners(e){ const r=(e.rot||0)*Math.PI/180, c=Math.cos(r), s=Math.sin(r); const ux=c*e.w, uy=s*e.w, vx=-s*e.h, vy=c*e.h; return [{x:e.x,y:e.y},{x:e.x+ux,y:e.y+uy},{x:e.x+ux+vx,y:e.y+uy+vy},{x:e.x+vx,y:e.y+vy}]; }
 function drawImageEnt(e){
   const im=window.DVDImg?DVDImg.get(e.img):null; const cs=imgCorners(e).map(p=>toScreen(p.x,p.y));
@@ -4603,7 +4621,9 @@ function dwgEntity(e){
     case 'WIPEOUT':{ const p=e.position,u=e.uPixel,v=e.vPixel,s=e.imageSize||{x:1,y:1}; if(!(p&&u&&v)) return null; const h=s.y||1, w=s.x||1; const W2=(x,y)=>({x:p.x+u.x*(x+0.5)+v.x*(h-(y+0.5)), y:p.y+u.y*(x+0.5)+v.y*(h-(y+0.5))});
       const cb=e.clippingBoundaryPath||[]; let pts; if(cb.length>=3) pts=cb.map(q=>W2(q.x,q.y)); else if(cb.length===2){ const a=W2(cb[0].x,cb[0].y), b=W2(cb[1].x,cb[1].y); pts=[a,{x:b.x,y:a.y},b,{x:a.x,y:b.y}]; } else pts=[W2(-0.5,h-0.5),W2(w-0.5,h-0.5),W2(w-0.5,-0.5),W2(-0.5,-0.5)];
       if(pts.length>3&&Math.hypot(pts[0].x-pts[pts.length-1].x,pts[0].y-pts[pts.length-1].y)<1e-9) pts.pop(); return {type:'POLYLINE',layer,closed:true,vertices:pts,wipe:1}; }
-    case 'IMAGE':{ const p=e.position,u=e.uPixel,v=e.vPixel,s=e.imageSize; if(!(p&&u&&v&&s)) return null; const w=s.x,h=s.y; return {type:'POLYLINE',layer,closed:true,_img:true,vertices:[{x:p.x,y:p.y},{x:p.x+u.x*w,y:p.y+u.y*w},{x:p.x+u.x*w+v.x*h,y:p.y+u.y*w+v.y*h},{x:p.x+v.x*h,y:p.y+v.y*h}]}; }
+    case 'IMAGE':{ const p=e.position,u=e.uPixel,v=e.vPixel,s=e.imageSize; if(!(p&&u&&v&&s)) return null; const w=s.x,h=s.y;
+      const cb=e.clipping&&Array.isArray(e.clippingBoundaryPath)&&e.clippingBoundaryPath.length>=2?e.clippingBoundaryPath:null;
+      return acadImage(layer,p,u,v,w,h,_dwgImgDef&&_dwgImgDef.get(String(e.imageDefHandle||'')),e.fade,cb)||{type:'POLYLINE',layer,closed:true,_img:true,vertices:[{x:p.x,y:p.y},{x:p.x+u.x*w,y:p.y+u.y*w},{x:p.x+u.x*w+v.x*h,y:p.y+u.y*w+v.y*h},{x:p.x+v.x*h,y:p.y+v.y*h}]}; }
     default: return null;   // các loại khác hiện bỏ qua (VIEWPORT, ATTDEF…)
   }
 }
@@ -5034,8 +5054,9 @@ async function loadDWG(arrayBuffer, srcName){
     const ptr=lib.dwg_read_data(arrayBuffer,_DwgType.DWG);
     if(ptr==null){ valEl.classList.remove('show'); toast('Không đọc được file DWG này.'); return; }
     const db=lib.convert(ptr); _dwgDyn=dwgDynInfo(lib, ptr, db);   // khối động AutoCAD: đọc trước khi giải phóng
+    _dwgImgDef=new Map(); try{ for(const d of ((db.objects&&db.objects.IMAGEDEF)||[])) if(d&&d.handle!=null) _dwgImgDef.set(String(d.handle), d.fileName||''); }catch(_){}
     try{ lib.dwg_free(ptr); }catch(_){}   // giải phóng cấu trúc C NGAY sau convert (db đã là bản sao JS độc lập) -> hạ đỉnh RAM khi mở file lớn trên iPhone
-    const built=dwgBuild(db); window._dvdDwgX=null; _dwgDyn=null;   // dữ liệu riêng chỉ cho bản vẽ này (không áp nhầm sang XREF / so sánh)
+    const built=dwgBuild(db); window._dvdDwgX=null; _dwgDyn=null; _dwgImgDef=null;   // dữ liệu riêng chỉ cho bản vẽ này (không áp nhầm sang XREF / so sánh)
     if(!built.entities.length){ valEl.classList.remove('show'); toast('DWG đọc được nhưng chưa có đối tượng 2D nào được hỗ trợ.'); return; }
     entities=built.entities; insunits=built.insunits; normClosedPolys(entities);
     editUndoStack.length=0; redoStack.length=0; updateUndoRedoBtns();   // xoá lịch sử Undo/Redo khi mở bản vẽ mới
@@ -5055,7 +5076,7 @@ async function loadDWG(arrayBuffer, srcName){
     toast(_truncated?`Bản vẽ quá lớn: chỉ hiện ${entities.length} đối tượng đầu (giới hạn bộ nhớ của máy)`:`Đã đọc DWG: ${entities.length} đối tượng${nLay?` · ${nLay} layout in`:''}${UNIT[insunits]?` · ${UNIT[insunits]}`:''}`);
     currentKey=key; loadOverlay(); loadCalib();   // khôi phục đo/ghi chú đã lưu cho file này (Model)
   }catch(err){
-    console.error(err); window._dvdDwgX=null; _dwgDyn=null;
+    console.error(err); window._dvdDwgX=null; _dwgDyn=null; _dwgImgDef=null;
     toast('Lỗi giải mã DWG. Có thể do phiên bản chưa hỗ trợ, hoặc cần mạng lần đầu để tải bộ giải mã.');
   }
 }

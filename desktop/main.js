@@ -175,6 +175,26 @@ ipcMain.handle('fs:write', async (_e, p, data) => {
   if(CAD_EXT.test(p)) addRecent(p);
   return true;
 });
+// tệp ảnh đi kèm bản vẽ (IMAGE / IMAGEDEF của AutoCAD trỏ tới ".\\ten.jpg"): chỉ trong thư mục của bản vẽ đã được cấp quyền, chỉ đuôi ảnh
+const IMG_EXT = /\.(png|jpe?g|bmp|gif|tiff?|webp)$/i;
+function sidePaths(cad, rel){
+  const dir = path.dirname(norm(cad)), r = String(rel || '').replace(/\\/g, '/'), out = [];
+  if(!path.isAbsolute(r) && !/^[a-z]:/i.test(r)){ const p = path.resolve(dir, r); if(p.startsWith(dir + path.sep)) out.push(p); }   // đường dẫn tương đối nằm trong thư mục bản vẽ
+  out.push(path.join(dir, path.basename(r)));   // như AutoCAD: không thấy thì tìm cùng tên trong thư mục bản vẽ
+  return [...new Set(out)].filter(p => IMG_EXT.test(p));
+}
+ipcMain.handle('fs:readSide', async (_e, cad, rel) => {
+  if(!canRead.has(key(cad))) throw new Error('Không có quyền đọc file này.');
+  for(const p of sidePaths(cad, rel)){ try{ const buf = await fs.promises.readFile(p); return { name: path.basename(p), data: new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength) }; }catch(_){} }
+  return null;
+});
+ipcMain.handle('fs:writeSide', async (_e, cad, name, data) => {
+  if(!canWrite.has(key(cad))) throw new Error('Không có quyền ghi file này.');
+  const n = String(name || ''); if(!n || n !== path.basename(n) || n.includes('..') || !IMG_EXT.test(n)) throw new Error('Tên tệp ảnh không hợp lệ: ' + n);
+  const p = path.join(path.dirname(norm(cad)), n), tmp = p + '.dvdtmp';
+  try{ await fs.promises.writeFile(tmp, Buffer.from(data)); await fs.promises.rename(tmp, p); }catch(e){ fs.promises.unlink(tmp).catch(() => {}); throw e; }
+  return p;
+});
 ipcMain.handle('fs:dropped', (_e, list) => { const ok = []; for(const p of [].concat(list || [])) if(p && CAD_EXT.test(p)){ grantRead(p); addRecent(p); ok.push(norm(p)); } return ok; });
 
 // stat bất đồng bộ, có hạn giờ: ổ mạng / USB đã rút không làm treo trang Bắt đầu

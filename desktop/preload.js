@@ -21,6 +21,9 @@ contextBridge.exposeInMainWorld('dvdDesktop', {
   saveDialog: o => call('dlg:save', o || {}),
   readFile: p => call('fs:read', p),
   writeFile: (p, data) => call('fs:write', p, data instanceof ArrayBuffer ? new Uint8Array(data) : data),
+  // tệp ảnh cạnh bản vẽ (IMAGE như AutoCAD): đọc theo đường dẫn trong IMAGEDEF, ghi kèm khi lưu
+  readSide: (cad, rel) => call('fs:readSide', cad, rel),
+  writeSide: (cad, name, data) => call('fs:writeSide', cad, name, data instanceof ArrayBuffer ? new Uint8Array(data) : data),
   droppedPaths: files => call('fs:dropped', Array.from(files || []).map(f => { try{ return webUtils.getPathForFile(f); }catch(_){ return ''; } })),
   recentList: () => call('recent:list'),
   recentRemove: p => call('recent:remove', p),

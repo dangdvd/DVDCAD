@@ -5925,7 +5925,8 @@ class LibreEntityConverter {
       "num_clip_verts"
     ).data;
     const clip_verts = libredwg.dwg_dynapi_entity_value(entity, "clip_verts").data;
-    const clippingBoundaryPath = libredwg.dwg_ptr_to_point3d_array(
+    // DVDCAD: đỉnh khung cắt của IMAGE là 2RD (như WIPEOUT) — bản gốc đọc nhầm thành điểm 3D
+    const clippingBoundaryPath = libredwg.dwg_ptr_to_point2d_array(
       clip_verts,
       countBoundaryPoints
     );

@@ -46,7 +46,11 @@
         if(o.geo && A.geoSet) A._geoFromFile = o.geo;
         if(o.imgs && A.imgPut) for(const [id, u] of Object.entries(o.imgs)) fetch(u).then(r => r.blob()).then(b => A.imgPut(id, b)).then(() => { try{ draw(); }catch(_){} }).catch(() => {}); } }catch(err){ console.warn(err); }
       // khung đa tuyến mang thông số ảnh (imgx) → ảnh IMAGE như trước khi lưu
-      try{ if(typeof modelEntities !== 'undefined') for(const e of modelEntities){ if(e.type !== 'POLYLINE' || !e.imgx) continue; const q = e.imgx; delete e.imgx; delete e.vertices; delete e.closed; delete e.bulges; e.type = 'IMAGE'; Object.assign(e, q); } }catch(_){}
+      try{ if(typeof modelEntities !== 'undefined') for(const e of modelEntities){ if((e.type !== 'POLYLINE' && e.type !== 'IMAGE') || !e.imgx) continue; const q = e.imgx; delete e.imgx; delete e.vertices; delete e.closed; delete e.bulges; e.type = 'IMAGE'; Object.assign(e, q); } }catch(_){}
+      // ảnh IMAGE của AutoCAD (IMAGEDEF trỏ tệp ảnh): bản Windows đọc tệp trong thư mục bản vẽ; bản web dùng ảnh đã nạp trước đó (nếu có)
+      try{ const R = typeof _imgRefs !== 'undefined' ? _imgRefs.splice(0) : []; const used = new Set((typeof modelEntities !== 'undefined' ? modelEntities : []).filter(e => e.type === 'IMAGE' && e.img).map(e => e.img)), seen = new Set();
+        const D = window.dvdDesktop; for(const r of R){ if(!used.has(r.id) || seen.has(r.id) || !r.base || !D || !D.readSide || !A.imgPut) continue; seen.add(r.id);
+          D.readSide(r.base, r.file).then(f => f ? A.imgPut(r.id, new Blob([f.data])) : null).then(el => { if(el) try{ draw(); }catch(_){} }).catch(() => {}); } }catch(_){}
       if(prev) prev(); }; })(A.onLoad);
   function writeR2000(ents, opt){
     const full = !!(opt && opt.layouts) || (typeof modelEntities !== 'undefined' && ents === modelEntities);   // lưu cả bản vẽ → ghi kèm các layout giấy
@@ -91,6 +95,12 @@
     const hStStd = H(); const needShx = ltDefs.some(x => (x.d.txt || []).some(t => t.sh)); const hStShx = needShx ? H() : null;
     const hApAcad = H(), hApDvd = H(), hDsStd = H(), hVpAct = H();
     const layH = new Map(); for(const ly of layers) layH.set(ly, H());
+    // ảnh (IMAGEATTACH, GEOMAPIMAGE…): thực thể IMAGE + IMAGEDEF như AutoCAD, trỏ tới tệp ".\tên.jpg" cạnh bản vẽ
+    // (bản Windows ghi kèm tệp ảnh khi lưu — A.lastImgFiles; ETRANSMIT đóng gói cùng tên); ảnh chưa nạp xong → chỉ khung như trước
+    const imgDefs = new Map(); A.lastImgFiles = [];
+    for(const e of ents){ if(e.type !== 'IMAGE' || !e.img || imgDefs.has(e.img) || !A.imgFile || !(e.w > 0 && e.h > 0)) continue; let f = null; try{ f = A.imgFile(e.img, e.name); }catch(_){} if(!f) continue;
+      let nm = f.name, k = 1; while([...imgDefs.values()].some(D => D.name.toLowerCase() === nm.toLowerCase())) nm = f.name.replace(/(\.[^.]+)$/, '_' + (++k) + '$1');
+      imgDefs.set(e.img, { h: H(), name: nm, key: nm.replace(/\.[^.]+$/, ''), pw: f.w, ph: f.h, px: e.w / f.w, png: f.png, rs: [] }); A.lastImgFiles.push({ id: e.img, name: nm, url: f.url }); }
     // ---------- khối, kích thước (như bản R12) ----------
     const byGrp = new Map(); for(const e of ents) if(e.grp){ let a = byGrp.get(e.grp); if(!a){ a = []; byGrp.set(e.grp, a); } a.push(e); }
     const grpCnt = new Map(); if(byGrp.size) for(const x of modelEntities) if(x.grp && byGrp.has(x.grp)) grpCnt.set(x.grp, (grpCnt.get(x.grp) || 0) + 1);
@@ -194,6 +204,7 @@
         ['CELLSTYLEMAP', 'AcDbCellStyleMap', ODBX, 1152], ['MENTALRAYRENDERSETTINGS', 'AcDbMentalRayRenderSettings', 'SCENEOE', 1024], ['ACDBDETAILVIEWSTYLE', 'AcDbDetailViewStyle', ODBX, 1025],
         ['ACDBSECTIONVIEWSTYLE', 'AcDbSectionViewStyle', ODBX, 1025], ['RASTERVARIABLES', 'AcDbRasterVariables', 'ISM', 0], ['ACDBPLACEHOLDER', 'AcDbPlaceHolder', ODBX, 0], ['LAYOUT', 'AcDbLayout', ODBX, 0]]) cls(c[0], c[1], c[2], c[3]); }
     if(geo) cls('GEODATA', 'AcDbGeoData', 'ObjectDBX Classes', 4095);
+    if(imgDefs.size){ cls('IMAGE', 'AcDbRasterImage', 'ISM', 127, true); cls('IMAGEDEF', 'AcDbRasterImageDef', 'ISM', 0); cls('IMAGEDEF_REACTOR', 'AcDbRasterImageDefReactor', 'ISM', 1); if(!V2007) cls('RASTERVARIABLES', 'AcDbRasterVariables', 'ISM', 0); }
     if(DYNX && dynBase.size){ const O = 'ObjectDBX Classes', used = new Set(); for(const B of dynBase.values()) if(B.g){ used.add('ACAD_EVALUATION_GRAPH'); used.add('ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION'); for(const n of B.g.N) used.add(n.t); }
       for(const c of [['ACAD_EVALUATION_GRAPH', 'AcDbEvalGraph'], ['BLOCKVISIBILITYPARAMETER', 'AcDbBlockVisibilityParameter'], ['BLOCKVISIBILITYGRIP', 'AcDbBlockVisibilityGrip'],
         ['BLOCKLINEARPARAMETER', 'AcDbBlockLinearParameter'], ['BLOCKLINEARGRIP', 'AcDbBlockLinearGrip'], ['BLOCKSTRETCHACTION', 'AcDbBlockStretchAction'],
@@ -279,7 +290,8 @@
         case 'POLYLINE': { if(e.pw && e.wq && e.wq.length){ const B = (A.bvOf && A.bvOf(e)) || e.vertices || []; if(B.length === e.pw.length && B.length >= 2){   // đa tuyến rộng dạng gốc: đỉnh + cung + độ rộng 40/41 từng đỉnh
               head('LWPOLYLINE', 'AcDbPolyline'); P(90, B.length); P(70, e.closed ? 1 : 0); B.forEach((v, k) => { P(10, v.x); P(20, v.y); P(40, e.pw[k][2] || 0); P(41, e.pw[k][3] || 0); if(v.bulge) P(42, v.bulge); }); break; } }
           if(e.wq && e.wq.length && (e.vertices || []).length >= 2){ widthPoly(e); break; } if(e.wipe && !o.inBlock && (e.vertices || []).length >= 3){ wipeout(e, head); break; } const bv = A.bvOf ? A.bvOf(e) : null; lwpoly(bv && bv.length >= 2 ? bv : (e.vertices || []), !!e.closed); break; }
-        case 'IMAGE': try{ lwpoly(e.cpoly && e.cpoly.length >= 3 ? e.cpoly : imgCorners(e), true); }catch(_){} break;   // ảnh đã cắt (EXPORTLAYOUT): khung theo đường cắt
+        case 'IMAGE': { const D = !o.inBlock && !o.dimBlock && imgDefs.get(e.img); if(D){ imageEnt(e, D, head); break; }
+          try{ lwpoly(e.cpoly && e.cpoly.length >= 3 ? e.cpoly : imgCorners(e), true); }catch(_){} break; }   // ảnh chưa có dữ liệu: khung (ảnh đã cắt — EXPORTLAYOUT: theo đường cắt)
         case 'TEXT': {
           if(!e.text) break; const txt = String(e.text);
           if(A.richPieces && (e.cols || (e.rt && e.rtx === e.text))){   // chữ có định dạng / có cột: mã MTEXT (\L \O {\f…|b1|i1;}), mỗi cột một MTEXT
@@ -300,6 +312,17 @@
       }
       if(wrote && e.type !== 'SOLID3D') xd();
     }
+    // ảnh: gốc = góc dưới trái, vector u / v của 1 điểm ảnh, cỡ ảnh (điểm ảnh), IMAGEDEF + IMAGEDEF_REACTOR; độ đậm → fade;
+    // khung cắt (IMAGECLIP, đường cắt EXPORTLAYOUT) → đa giác toạ độ điểm ảnh (gốc góc trên trái, trục Y hướng xuống, điểm đầu lặp lại ở cuối)
+    function imageEnt(e, D, head){
+      const r = (e.rot || 0) * D2R, c = Math.cos(r), s = Math.sin(r), W = D.pw, Hh = D.ph;
+      const toPx = q => { const dx = q.x - e.x, dy = q.y - e.y; return { x: (dx * c + dy * s) / e.w * W - 0.5, y: Hh - (-dx * s + dy * c) / e.h * Hh - 0.5 }; };
+      const cp = e.cpoly && e.cpoly.length >= 3 ? e.cpoly : e.clip && e.clip.w > 0 && e.clip.h > 0 ? [{ x: e.clip.x, y: e.clip.y }, { x: e.clip.x + e.clip.w, y: e.clip.y }, { x: e.clip.x + e.clip.w, y: e.clip.y + e.clip.h }, { x: e.clip.x, y: e.clip.y + e.clip.h }] : null;
+      const hI = head('IMAGE', 'AcDbRasterImage'), hR = H(); D.rs.push([hR, hI]);
+      P(90, 0); P(10, e.x); P(20, e.y); P(30, 0); P(11, c * e.w / W); P(21, s * e.w / W); P(31, 0); P(12, -s * e.h / Hh); P(22, c * e.h / Hh); P(32, 0); P(13, W); P(23, Hh); P(340, D.h);
+      P(70, 7 | (D.png ? 8 : 0)); P(280, cp ? 1 : 0); P(281, 50); P(282, 50); P(283, Math.max(0, Math.min(100, Math.round((1 - (e.op != null ? +e.op : 1)) * 100)))); P(360, hR);
+      if(cp){ const V = cp.map(toPx); V.push(V[0]); P(71, 2); P(91, V.length); for(const q of V){ P(14, q.x); P(24, q.y); } } else { P(71, 1); P(91, 2); P(14, -0.5); P(24, -0.5); P(14, W - 0.5); P(24, Hh - 0.5); }
+      if(yr >= 2010) P(290, 0); }
     // vùng che: thực thể WIPEOUT (như IMAGE, khung cắt theo đa giác; toạ độ khung trong ô ảnh 1×1, trục Y hướng xuống)
     function wipeout(e, head){
       const V = e.vertices; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for(const q of V){ x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); }
@@ -393,9 +416,17 @@
     const dict = (h, owner, entries, hard) => { P(0, 'DICTIONARY'); P(5, h); if(owner !== '0'){ P(102, '{ACAD_REACTORS'); P(330, owner); P(102, '}'); } P(330, owner); P(100, 'AcDbDictionary'); if(hard) P(280, 1); P(281, 1); for(const [k, v] of entries){ P(3, k); P(350, v); } };
     const hWv = hasWipe ? H() : null; const xdat = dvdData(ents, full); const hXr = xdat ? H() : null;
     const rootE = [['ACAD_GROUP', hGroupD], ['ACAD_LAYOUT', hLayoutD], ['ACAD_MLINESTYLE', hMlsD], ['ACAD_PLOTSETTINGS', hPsetD], ['ACAD_PLOTSTYLENAME', hPsnD]]; if(hWv) rootE.push(['ACAD_WIPEOUT_VARS', hWv]); if(hXr) rootE.push(['DVDCAD_DATA', hXr]);
+    const hImgD = imgDefs.size ? H() : null, hImgV = hImgD ? H() : null; if(hImgD) rootE.push(['ACAD_IMAGE_DICT', hImgD], ['ACAD_IMAGE_VARS', hImgV]);
     if(N7) rootE.push(['ACAD_COLOR', N7.color], ['ACAD_MATERIAL', N7.mat], ['ACAD_MLEADERSTYLE', N7.mlds], ['ACAD_SCALELIST', N7.scl], ['ACAD_TABLESTYLE', N7.tbs], ['ACAD_VISUALSTYLE', N7.vis]);
     rootE.sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
     dict(hRoot, '0', rootE);
+    if(hImgD){ dict(hImgD, hRoot, [...imgDefs.values()].map(D => [dxfStr(D.key), D.h]));
+      for(const D of imgDefs.values()){ P(0, 'IMAGEDEF'); P(5, D.h); P(102, '{ACAD_REACTORS'); P(330, hImgD); for(const [hR] of D.rs) P(330, hR); P(102, '}'); P(330, hImgD);
+        P(100, 'AcDbRasterImageDef'); P(90, 0); P(1, dxfStr('.\\' + D.name)); P(10, D.pw); P(20, D.ph); P(11, D.px); P(21, D.px); P(280, 1); P(281, 0);
+        for(const [hR, hI] of D.rs){ P(0, 'IMAGEDEF_REACTOR'); P(5, hR); P(330, hI); P(100, 'AcDbRasterImageDefReactor'); P(90, 2); P(330, hI); } }
+      const un = { 4: 1, 5: 2, 6: 3, 7: 4, 1: 5, 2: 6, 10: 7, 3: 8 }[(typeof insunits !== 'undefined' && insunits) | 0] || 0;
+      P(0, 'RASTERVARIABLES'); P(5, hImgV); P(102, '{ACAD_REACTORS'); P(330, hRoot); P(102, '}'); P(330, hRoot); P(100, 'AcDbRasterVariables'); P(90, 0);
+      P(70, typeof IMAGEFRAME !== 'undefined' && IMAGEFRAME === 0 ? 0 : 1); P(71, typeof IMAGEQUALITY !== 'undefined' && IMAGEQUALITY === 0 ? 0 : 1); P(72, un); }
     if(hWv){ P(0, 'WIPEOUTVARIABLES'); P(5, hWv); P(102, '{ACAD_REACTORS'); P(330, hRoot); P(102, '}'); P(330, hRoot); P(100, 'AcDbWipeoutVariables'); P(70, (typeof WIPEFRAME !== 'undefined' && WIPEFRAME === 0) ? 0 : 1); }
     if(hXr){ P(0, 'XRECORD'); P(5, hXr); P(102, '{ACAD_REACTORS'); P(330, hRoot); P(102, '}'); P(330, hRoot); P(100, 'AcDbXrecord'); P(280, 1); P(1, 'DVDCAD1'); for(let k = 0; k < xdat.length; k += 240) P(300, xdat.slice(k, k + 240)); }
     if(geo){ const r6 = v => Math.round((+v || 0) * 1e8) / 1e8, nr = (+geo.north || 0) * Math.PI / 180, un = { 1: 1, 2: 2, 4: 4, 5: 5, 6: 6 }[(typeof insunits !== 'undefined' && insunits) | 0] || 6;

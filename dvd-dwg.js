@@ -178,7 +178,9 @@
     WIPEOUT: ['AcDbWipeout', 'WipeOut|Product Desc: Object Enabler for WipeOut entity | Company: Autodesk, Inc. | WEB Address: www.autodesk.com', 2175, 1],
     WIPEOUTVARIABLES: ['AcDbWipeoutVariables', 'WipeOut|Product Desc:     WipeOut Dbx Application|Company:          Autodesk, Inc.|WEB Address:      www.autodesk.com', 0, 0],
     // vị trí địa lý (GEOGRAPHICLOCATION, R2010+)
-    GEODATA: ['AcDbGeoData', ODBX, 4095, 0] };
+    GEODATA: ['AcDbGeoData', ODBX, 4095, 0],
+    // ảnh (như AutoCAD): thực thể IMAGE → IMAGEDEF (tệp ảnh) + IMAGEDEF_REACTOR, biến RASTERVARIABLES
+    IMAGE: ['AcDbRasterImage', 'ISM', 127, 1], IMAGEDEF: ['AcDbRasterImageDef', 'ISM', 0, 0], IMAGEDEF_REACTOR: ['AcDbRasterImageDefReactor', 'ISM', 1, 0], RASTERVARIABLES: ['AcDbRasterVariables', 'ISM', 0, 0] };
   const LWV = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211];
   const lwIndex = v => { if(v == null || !isFinite(v)) return 29; v = Math.round(v); if(v === -1) return 29; if(v === -2) return 30; if(v === -3) return 31; let b = 0, bd = Infinity; LWV.forEach((w, i) => { const d = Math.abs(w - v); if(d < bd){ bd = d; b = i; } }); return b; };
   const up = s => String(s == null ? '' : s).toUpperCase();
@@ -342,7 +344,7 @@
     }
 
     /* ---------- thực thể: gom theo khối ---------- */
-    const SUP = new Set(['LINE', 'CIRCLE', 'ARC', 'POINT', 'LWPOLYLINE', 'TEXT', 'MTEXT', 'SOLID', '3DFACE', 'ELLIPSE', 'XLINE', 'RAY', 'HATCH', 'INSERT', 'ATTDEF', 'DIMENSION', 'WIPEOUT', 'VIEWPORT']);
+    const SUP = new Set(['LINE', 'CIRCLE', 'ARC', 'POINT', 'LWPOLYLINE', 'TEXT', 'MTEXT', 'SOLID', '3DFACE', 'ELLIPSE', 'XLINE', 'RAY', 'HATCH', 'INSERT', 'ATTDEF', 'DIMENSION', 'WIPEOUT', 'VIEWPORT', 'IMAGE']);
     const blocks = []; { let cur = null;
       for(const r of (S.BLOCKS || [])){
         if(r.type === 'BLOCK'){ cur = { blk: r, ents: [], end: null, br: ref(r.plain().get(330)) }; blocks.push(cur); continue; }
@@ -375,9 +377,9 @@
     // từ điển mở rộng của thực thể (INSERT của khối động → AcDbBlockRepresentation) được giữ, các đối tượng khác thuộc thực thể thì bỏ
     const entXd = new Set(); if(R07) for(const [, bi] of blockInfo) for(const r of bi.main) for(const v of r.group102('ACAD_XDICTIONARY')) entXd.add(ref(v));
     { const dropped = new Set(); let changed = true; const isEnt = h => entH.has(h);
-      const cand = objsDxf.filter(r => ['DICTIONARY', 'ACDBDICTIONARYWDFLT', 'ACDBPLACEHOLDER', 'MLINESTYLE', 'LAYOUT', 'XRECORD'].includes(r.type) || (hasWipe && r.type === 'WIPEOUTVARIABLES') || (R10 && r.type === 'GEODATA') || (R07 && DYNT.includes(r.type)));
+      const cand = objsDxf.filter(r => ['DICTIONARY', 'ACDBDICTIONARYWDFLT', 'ACDBPLACEHOLDER', 'MLINESTYLE', 'LAYOUT', 'XRECORD', 'IMAGEDEF', 'IMAGEDEF_REACTOR', 'RASTERVARIABLES'].includes(r.type) || (hasWipe && r.type === 'WIPEOUTVARIABLES') || (R10 && r.type === 'GEODATA') || (R07 && DYNT.includes(r.type)));
       for(const r of objsDxf) if(!cand.includes(r)) dropped.add(ref(r.get(5)));
-      while(changed){ changed = false; for(const r of cand){ const h = ref(r.get(5)); if(dropped.has(h)) continue; const ow = ref(r.plain().get(330)); if(h !== H_NOD && ((isEnt(ow) && !entXd.has(h)) || dropped.has(ow))){ dropped.add(h); changed = true; } } }
+      while(changed){ changed = false; for(const r of cand){ const h = ref(r.get(5)); if(dropped.has(h)) continue; const ow = ref(r.plain().get(330)); if(h !== H_NOD && ((isEnt(ow) && !entXd.has(h) && r.type !== 'IMAGEDEF_REACTOR') || dropped.has(ow))){ dropped.add(h); changed = true; } } }
       for(const r of cand){ const h = ref(r.get(5)); if(!dropped.has(h)){ keep.push(r); outObjH.add(h); } } }
     // từ điển mở rộng (102 {ACAD_XDICTIONARY) của bản ghi khối — chỉ khi từ điển đó được giữ
     const xdicOf = new Map(); for(const r of blockRecs){ const x = r.group102('ACAD_XDICTIONARY').map(ref).find(v => outObjH.has(v)); if(x) xdicOf.set(ref(r.get(5)), x); }
@@ -455,13 +457,13 @@
         o.d.BL(V.length); if(hasB) o.d.BL(V.length); if(hasW) o.d.BL(V.length);
         V.forEach((q, i) => { if(!i) o.d.RD2([q.x, q.y]); else { o.d.DD(q.x, V[i - 1].x); o.d.DD(q.y, V[i - 1].y); } });
         if(hasB) for(const q of V) o.d.BD(q.b); if(hasW) for(const q of V){ o.d.BD(q.sw); o.d.BD(q.ew); } }
-      else if(t === 'WIPEOUT'){ o = obj(cls('WIPEOUT'), h, r); entCommon(o, c);   // như IMAGE: gốc, vector u/v của 1 điểm ảnh, cỡ ảnh, khung cắt (toạ độ điểm ảnh)
+      else if(t === 'WIPEOUT' || t === 'IMAGE'){ o = obj(cls(t), h, r); entCommon(o, c);   // IMAGE / WIPEOUT: gốc, vector u/v của 1 điểm ảnh, cỡ ảnh, khung cắt (toạ độ điểm ảnh)
         const V = []; let k = null; for(const x of r.g){ if(x[0] === 14) k = [parseFloat(x[1]) || 0, 0]; else if(x[0] === 24 && k){ k[1] = parseFloat(x[1]) || 0; V.push(k); k = null; } }
         o.d.BL(r.int(90)); o.d.BD3(r.pt(10)); o.d.BD3(r.pt(11)); o.d.BD3(r.pt(12)); o.d.RD2([r.num(13, 1), r.num(23, 1)]);
         o.d.BS(r.int(70, 7)); o.d.B(r.int(280, 1)); o.d.RC(r.int(281, 50)); o.d.RC(r.int(282, 50)); o.d.RC(r.int(283, 0));
         if(R10) o.d.B(r.int(290));   // R2010+: cắt phía trong/ngoài
         const ct = V.length === 2 ? 1 : 2; o.d.BS(ct); if(ct === 2) o.d.BL(V.length); for(const q of V) o.d.RD2(q);
-        o.hd.H(5, 0); o.hd.H(3, 0); }
+        if(t === 'IMAGE'){ const d = ref(r.get(340)), x = ref(r.get(360)); o.hd.H(5, outObjH.has(d) ? d : 0); o.hd.H(3, outObjH.has(x) ? x : 0); } else { o.hd.H(5, 0); o.hd.H(3, 0); } }
       else if(t === 'TEXT'){ o = obj(T.TEXT, h, r); entCommon(o, c); textData(o, r, r); o.hd.H(5, styleH(r)); }
       else if(t === 'ATTDEF'){ o = obj(T.ATTDEF, h, r); entCommon(o, c); const s2 = r.after('AcDbAttributeDefinition'); textData(o, r, s2);
         attData(o, s2); if(R10) o.d.RC(0); o.T(s2.get(3, '')); o.hd.H(5, styleH(r)); }
@@ -626,6 +628,10 @@
         if(r.type === 'ACDBDICTIONARYWDFLT') o.hd.H(5, ref(r.after('AcDbDictionaryWithDefault').get(340)));
       }
       else if(r.type === 'ACDBPLACEHOLDER'){ const o = obj(cls('ACDBPLACEHOLDER'), h); objCommon(o, owner, rx); }
+      else if(r.type === 'IMAGEDEF'){ const o = obj(cls('IMAGEDEF'), h); objCommon(o, owner, rx); const s = r.after('AcDbRasterImageDef');   // BL bản, 2RD cỡ (điểm ảnh), TV tệp, B đã nạp, RC đơn vị, 2RD cỡ 1 điểm ảnh
+        o.d.BL(s.int(90)); o.d.RD2([s.num(10, 1), s.num(20, 1)]); o.T(s.get(1, '')); o.d.B(s.int(280, 1)); o.d.RC(s.int(281)); o.d.RD2([s.num(11, 1), s.num(21, 1)]); }
+      else if(r.type === 'IMAGEDEF_REACTOR'){ const o = obj(cls('IMAGEDEF_REACTOR'), h); objCommon(o, owner, rx); o.d.BL(r.after('AcDbRasterImageDefReactor').int(90, 2)); }
+      else if(r.type === 'RASTERVARIABLES'){ const o = obj(cls('RASTERVARIABLES'), h); objCommon(o, owner, rx); const s = r.after('AcDbRasterVariables'); o.d.BL(s.int(90)); o.d.BS(s.int(70, 1)); o.d.BS(s.int(71, 1)); o.d.BS(s.int(72)); }
       else if(r.type === 'WIPEOUTVARIABLES'){ const o = obj(cls('WIPEOUTVARIABLES'), h); objCommon(o, owner, rx); o.d.BS(r.after('AcDbWipeoutVariables').int(70, 1)); }
       else if(r.type === 'GEODATA') geodata(r, h, owner, rx);
       else if(r.type === 'MLINESTYLE'){ const o = obj(T.MLINESTYLE, h); objCommon(o, owner, rx); const s = r.after('AcDbMlineStyle');

@@ -159,6 +159,8 @@
     let dxf; try{ dxf = entitiesToDXF(ME().filter(e => !e.xr), { layouts: true }); }catch(err){ console.warn(err); log('Không tạo được DXF.'); return; }
     files.push({ name: uniq(nm + '.dxf'), data: await toU8(dxf) }); rep.push('Bản vẽ: ' + nm + '.dxf (' + ME().filter(e => !e.xr).length + ' đối tượng)');
     const imgs = new Map(); for(const e of ME()) if(e.type === 'IMAGE' && e.img && !imgs.has(e.img)) imgs.set(e.img, e.name || e.img);
+    // ảnh đã ghi thành IMAGE + IMAGEDEF ".\tên": tệp ảnh cùng tên đặt cạnh bản vẽ trong gói → AutoCAD mở gói thấy ảnh
+    for(const f of (A.lastImgFiles || []).slice()){ try{ const b = new Uint8Array(await (await fetch(f.url)).arrayBuffer()); files.push({ name: uniq(f.name), data: b }); rep.push('Ảnh: ' + f.name); imgs.delete(f.id); }catch(_){} }
     for(const [id, n] of imgs){ let b = null; try{ b = A.proIdbGet ? await A.proIdbGet('img:' + id) : null; }catch(_){} if(b){ const fn = uniq('images/' + String(n).replace(/[\\/:*?"<>|]+/g, '_')); files.push({ name: fn, data: await toU8(b) }); rep.push('Ảnh: ' + fn); } else rep.push('Ảnh (thiếu dữ liệu): ' + n); }
     const X = (A.xrefList ? A.xrefList() : []) || [];
     for(const x of X){ let b = null; try{ b = A.proIdbGet ? await A.proIdbGet('xref:' + x.id) : null; }catch(_){} if(b){ const fn = uniq('xref/' + String(x.name).replace(/[\\/:*?"<>|]+/g, '_')); files.push({ name: fn, data: await toU8(b) }); rep.push('Tham chiếu: ' + fn); } else rep.push('Tham chiếu (thiếu dữ liệu): ' + x.name); }

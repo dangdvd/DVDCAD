@@ -75,9 +75,14 @@
   // ghi ảnh với id có sẵn (mở lại ảnh nhúng trong tệp DVDCAD)
   A.imgPut = async (id, blob) => { if(!id || !blob) return null; await idbPut('img:' + id, blob); const u = URL.createObjectURL(blob); const el = new Image(); await new Promise(r => { el.onload = r; el.onerror = r; el.src = u; }); IMG.set(id, el); return el; };
   // dữ liệu ảnh (data URL JPEG) của một ảnh đã nạp — để nhúng vào DXF / DWG khi lưu
-  A.imgDataURL = (id, maxPx) => { const im = window.DVDImg ? DVDImg.get(id) : null; if(!im || !im.complete || !im.naturalWidth) return null;
+  A.imgDataURL = (id, maxPx, type) => { const im = window.DVDImg ? DVDImg.get(id) : null; if(!im || !im.complete || !im.naturalWidth) return null; const png = type === 'image/png';
     try{ const s = Math.min(1, (maxPx || 4096) / Math.max(im.naturalWidth, im.naturalHeight)); const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * s)); c.height = Math.max(1, Math.round(im.naturalHeight * s));
-      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.9); }catch(_){ return null; } };
+      const g = c.getContext('2d'); if(!png){ g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); } g.drawImage(im, 0, 0, c.width, c.height); return png ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.9); }catch(_){ return null; } };
+  // tệp ảnh đi kèm bản vẽ (IMAGEDEF của AutoCAD trỏ tới ".\tên"): tên ổn định theo tên ảnh + id, PNG giữ nền trong suốt, còn lại JPEG; cỡ điểm ảnh như dữ liệu nhúng
+  A.imgFile = (id, name) => { const im = window.DVDImg ? DVDImg.get(id) : null; if(!im || !im.complete || !im.naturalWidth) return null;
+    const png = /\.png$/i.test(name || ''), url = A.imgDataURL(id, 4096, png ? 'image/png' : null); if(!url) return null;
+    const s = Math.min(1, 4096 / Math.max(im.naturalWidth, im.naturalHeight)), stem = String(name || 'image').replace(/\.[^.]*$/, '').replace(/[\\/:*?"<>|\s]+/g, '_').replace(/^[._]+/, '').slice(0, 60) || 'image';
+    return { name: stem + '_' + String(id).replace(/[^A-Za-z0-9]/g, '').slice(-6) + (png ? '.png' : '.jpg'), url, png, w: Math.max(1, Math.round(im.naturalWidth * s)), h: Math.max(1, Math.round(im.naturalHeight * s)) }; };
   cmd(['IMAGEATTACH', 'IAT', 'IMAGE', 'IM'], 'Chèn ảnh nền (ảnh chụp, bản scan) vào bản vẽ', async () => {
     const f = await pickFile('image/*'); if(!f){ return; }
     const id = uid('I'); await idbPut('img:' + id, f);

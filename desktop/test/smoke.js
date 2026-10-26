@@ -22,6 +22,12 @@ let failed = 0;
 function check(ok, msg){ console.log((ok ? '  ✓ ' : '  ✗ ') + msg); if(!ok) failed++; }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t < ms){ try{ if(await fn()) return true; }catch(_){} await sleep(200); } return false; }
+// ảnh PNG w×h (RGB) để thử IMAGE của AutoCAD trỏ tới tệp ảnh cạnh bản vẽ
+const CRC_T = (() => { const t = []; for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b) c = CRC_T[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const chunk = (t, d) => { const n = Buffer.alloc(4); n.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]), c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([n, td, c]); };
+  const ih = Buffer.alloc(13); ih.writeUInt32BE(w, 0); ih.writeUInt32BE(h, 4); ih[8] = 8; ih[9] = 2; const raw = Buffer.alloc((w * 3 + 1) * h); for(let y = 0; y < h; y++) for(let x = 0; x < w; x++) raw[y * (w * 3 + 1) + 1 + x * 3] = 200;
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ih), chunk('IDAT', require('zlib').deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]); }
 
 (async () => {
   const dwgCopy = path.join(tmp, 'Mặt bằng tầng 1.dwg');
@@ -138,6 +144,8 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
       add([{ type: 'HATCH', loops: [[{ x: 0, y: 200 }, { x: 50, y: 200 }, { x: 50, y: 250 }, { x: 0, y: 250 }]], pat: 'ANSI31', psc: 1, pang: 0 }, { type: 'HATCH', loops: [[{ x: 60, y: 200 }, { x: 110, y: 200 }, { x: 85, y: 250 }]], pat: 'SOLID', solid: true },
         { type: 'TEXT', x: 0, y: -30, h: 5, text: 'Chữ tiếng Việt: ĐƯỜNG ỐNG Ø100', rot: 15 }, { type: 'TEXT', x: 0, y: -60, h: 3.5, text: 'Dòng một\nDòng hai', mt: 1 }, { type: 'ELLIPSE', cx: 400, cy: 0, mx: 30, my: 0, ratio: 0.5, p1: 0, p2: Math.PI }]);
       for(const s of ['BOX\n700,0\n740,40\n25\n', 'WIPEOUT\n100,500\n140,500\n140,540\n100,540\n\n']){ await A.runScript(s); await w(300); for(let i = 0; i < 5 && A.busy(); i++){ A.cancel(); await w(60); } }
+      { const c = document.createElement('canvas'); c.width = 40; c.height = 30; const g = c.getContext('2d'); g.fillStyle = '#08f'; g.fillRect(0, 0, 40, 30);   // ảnh → IMAGE + IMAGEDEF
+        const im = await A.imgAdd(await new Promise(r => c.toBlob(r, 'image/jpeg')), 'anh-nen.jpg'); add({ type: 'IMAGE', x: 600, y: 300, w: 80, h: 60, rot: 0, img: im.id, name: 'anh-nen.jpg', op: 0.8 }); }
       // khối động: 2 trạng thái hiển thị + kéo giãn + lật; bản chèn đang ở trạng thái "Dong", dài 150, lật ngang
       { const L = (x1, y1, x2, y2) => A.newProps({ type: 'LINE', x1, y1, x2, y2 }); A.commit({ add: [L(900, 0, 1000, 0), L(1000, 0, 1000, 50), L(900, 0, 900, 50), L(900, 0, 950, 50)] });
         A.makeBlock(modelEntities.slice(-4), { x: 900, y: 0 }, 'CUA_DONG', 'convert');
@@ -152,8 +160,24 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
         res[v] = { same: sig() === s0, dyn: d0.length > 0 && dsig() === d0, n: modelEntities.length, s3d: modelEntities.some(e => e.type === 'SOLID3D'), wipe: modelEntities.some(e => e.wipe), b64: btoa(bin) }; }
       return res; });
     for(const v of Object.keys(syn)){ const q = syn[v];
-      check(q.same && q.s3d && q.wipe && q.dyn, 'bản vẽ tổng hợp (kích thước, hatch, chữ Việt, kiểu nét chữ/hình, khối 3D, vùng che, khối động) → DWG ' + v.slice(1) + ' → mở lại giống hệt (' + q.n + ' đối tượng)');
+      check(q.same && q.s3d && q.wipe && q.dyn, 'bản vẽ tổng hợp (kích thước, hatch, chữ Việt, kiểu nét chữ/hình, khối 3D, vùng che, ảnh, khối động) → DWG ' + v.slice(1) + ' → mở lại giống hệt (' + q.n + ' đối tượng)');
       if(outDir){ fs.mkdirSync(outDir, { recursive: true }); fs.writeFileSync(path.join(outDir, 'tong-hop-' + v + '.dwg'), Buffer.from(q.b64, 'base64')); } }
+    // ảnh: lưu bản vẽ có ảnh → IMAGE + IMAGEDEF ".\tên" và tệp ảnh ghi kèm cạnh bản vẽ (AutoCAD thấy ảnh)
+    const dwgImg = path.join(tmp, 'co-anh.dwg'); await stubSave(dwgImg);
+    await win.evaluate(async () => { const A = DVDAcad, c = document.createElement('canvas'); c.width = 64; c.height = 32; const g = c.getContext('2d'); g.fillStyle = '#c00'; g.fillRect(0, 0, 64, 32);
+      const im = await A.imgAdd(await new Promise(r => c.toBlob(r, 'image/png')), 'logo.png'); A.commit({ add: [A.newProps({ type: 'IMAGE', x: 500, y: 500, w: 64, h: 32, rot: 15, img: im.id, name: 'logo.png', op: 1 })] });
+      localStorage.removeItem('dvd:dwgsrv'); DVDCmd.run('SAVEDWG'); });
+    check(await until(() => head(dwgImg) === 'AC1032' && fs.readdirSync(tmp).some(f => /^logo_\w+\.png$/.test(f)), 60000), 'lưu bản vẽ có ảnh: DWG + tệp ảnh ghi kèm cạnh bản vẽ (' + fs.readdirSync(tmp).filter(f => /\.png$/.test(f)).join(', ') + ')');
+    keep(dwgImg, 'co-anh-R2018.dwg');
+    // IMAGE của AutoCAD (IMAGEDEF ".\pic.png", không có dữ liệu DVDCAD): mở → đọc tệp ảnh trong thư mục bản vẽ
+    fs.writeFileSync(path.join(tmp, 'pic.png'), pngFile(6, 4));
+    const acadImg = path.join(tmp, 'anh-acad.dxf');
+    fs.writeFileSync(acadImg, ['0', 'SECTION', '2', 'ENTITIES', '0', 'LINE', '5', '50', '8', '0', '10', '0', '20', '0', '30', '0', '11', '10', '21', '0', '31', '0',
+      '0', 'IMAGE', '5', '51', '8', '0', '100', 'AcDbEntity', '100', 'AcDbRasterImage', '90', '0', '10', '2', '20', '3', '30', '0', '11', '0.5', '21', '0', '31', '0', '12', '0', '22', '0.5', '32', '0', '13', '6', '23', '4', '340', '60', '70', '7', '280', '0', '281', '50', '282', '50', '283', '0', '71', '1', '91', '2', '14', '-0.5', '24', '-0.5', '14', '5.5', '24', '3.5',
+      '0', 'ENDSEC', '0', 'SECTION', '2', 'OBJECTS', '0', 'IMAGEDEF', '5', '60', '100', 'AcDbRasterImageDef', '90', '0', '1', '.\\pic.png', '10', '6', '20', '4', '11', '0.5', '21', '0.5', '280', '1', '281', '0', '0', 'ENDSEC', '0', 'EOF', ''].join('\r\n'));
+    await app.evaluate(({ dialog }, p) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [p] }); }, acadImg);
+    await win.evaluate(() => DVDDesktop.openDialog());
+    check(await until(() => win.evaluate(() => { const e = modelEntities.find(x => x.type === 'IMAGE'), im = e && window.DVDImg && DVDImg.get(e.img); return currentName === 'anh-acad.dxf' && !!im && im.naturalWidth === 6 && Math.abs(e.w - 3) < 1e-9; }), 30000), 'mở DXF của AutoCAD có IMAGE: thành ảnh, đọc tệp ảnh (.\\pic.png) trong thư mục bản vẽ');
     // DWG 2007 qua ODA File Converter (Linux/macOS: ODA giả ghi AC1032; Windows chưa cài ODA → tự ghi bằng bộ ghi gốc)
     const dwgOda = path.join(tmp, 'luu-oda.dwg'); await stubSave(dwgOda);
     await win.evaluate(() => { localStorage.setItem('dvd:dwgsrv', JSON.stringify({ url: '', ver: 'ACAD2007' })); DVDCmd.run('SAVEDWG'); });
