@@ -1545,16 +1545,17 @@ function explodeInto(list,blocks,M,out,depth,ctxAci,ix){
     const effL=(ix && ix.layer && (e.layer||'0')==='0') ? ix.layer : e.layer;
     if(HIDDEN_LAYERS.has(effL)) continue;                   // layer tắt/đóng băng -> ẩn như AutoCAD
     if(e.type==='INSERT'){
-      if(e.inv) continue;   // INSERT ẩn: không vẽ
+      const _dvN=depth===1&&ix&&ix.dv&&e._et!=null&&ix.dv.by.has(e._et)?ix.dv.by.get(e._et):null;   // khối lồng trong khối động: thuộc các trạng thái này
+      if(e.inv&&!_dvN) continue;   // INSERT ẩn: không vẽ (trừ khối lồng ngay trong khối động — đổi trạng thái thì hiện)
       const blk=blocks[e.name]; if(!blk){ if(e.attribs) for(const at of e.attribs){ const tt=transformPrim(at,M); if(tt){ tt.col=resolveColor(at.aci,at.layer,ctxAci); tt.att=at.att; out.push(tt); } } continue; }
       // màu kế thừa cho con BYBLOCK = màu của chính INSERT
       const insAci=(e.aci>=1&&e.aci<=255)?e.aci:(e.aci===0?(ctxAci!=null?ctxAci:7):layerAci(effL));
       const insLt=e.lt==='BYBLOCK'?((ix&&ix.lt)||'CONTINUOUS'):(e.lt||LAYER_LT[effL]||'CONTINUOUS');
       const insLw=e.lw>0?e.lw:(e.lwb?((ix&&ix.lw)||0):(LAYER_LW[effL]||0));
-      const nx={layer:effL, lt:insLt, lw:insLw, lts:(e.lts||1)*((ix&&ix.lts)||1), grp:ix&&ix.grp, blk:ix&&ix.blk, bip:ix&&ix.bip, bm:ix&&ix.bm, dv:ix&&ix.dv, dyn:ix&&ix.dyn};
+      const nx={layer:effL, lt:insLt, lw:insLw, lts:(e.lts||1)*((ix&&ix.lts)||1), grp:ix&&ix.grp, blk:ix&&ix.blk, bip:ix&&ix.bip, bm:ix&&ix.bm, dv:ix&&ix.dv, dyn:ix&&ix.dyn, dvs:_dvN||(ix&&ix.dvs)||null, hid:!!((ix&&ix.hid)||(e.inv&&_dvN))};
       // khối động: bản chèn trỏ khối ẩn danh *U → tên khối gốc (DVDCAD: XDATA dbn; AutoCAD: AcDbBlockRepBTag), trạng thái hiển thị theo các nét đang hiện
-      const _tn=depth===0?((e._x&&e._x.dbn)||blk.trueName||null):null, _tb=_tn&&blocks[_tn];
-      if(depth===0&&_tb&&_tb.dynVis&&!(e._x&&e._x.dbn)){ nx.dv=_tb.dynVis; const ds=e._dst&&e._dst[_tb.dynVis.id]; nx.dyn={st:ds&&_tb.dynVis.states.includes(ds)?ds:_tb.dynVis.stateOf(blk.entities),L:{},fx:0,fy:0}; }
+      const _tn=depth===0?((e._x&&e._x.dbn)||blk.trueName||null):null, _tb=_tn&&blocks[_tn], _dv=(_tb&&_tb.dynVis)||(_tn&&blk.dynVis)||null;
+      if(depth===0&&_dv&&!(e._x&&e._x.dbn)){ nx.dv=_dv; const ds=e._dst&&e._dst[_dv.id]; nx.dyn={st:ds&&_dv.states.includes(ds)?ds:_dv.stateOf(blk.entities),L:{},fx:0,fy:0}; }
       const t=(e.rot||0)*Math.PI/180, cosT=Math.cos(t), sinT=Math.sin(t);
       const cols=Math.max(1,e.cols||1), rows=Math.max(1,e.rows||1);
       const _attOut=()=>{ if(!e.attribs) return; for(const at of e.attribs){ if(HIDDEN_LAYERS.has(at.layer)) continue; const tt=transformPrim(at,M); if(!tt) continue; const x=Object.assign({},tt,{col:resolveColor(at.aci,at.layer,ctxAci)}); x.att=at.att; if(at.ff) x.ff=at.ff; if(nx.grp){ x.grp=nx.grp; x.blk=nx.blk; if(nx.bip) x.bip=nx.bip; if(nx.bm) x.bm=nx.bm; } out.push(x); } };
@@ -1581,9 +1582,10 @@ function explodeInto(list,blocks,M,out,depth,ctxAci,ix){
         const ls=(e.lts||1)*(ix&&e.lt==='BYBLOCK'?(ix.lts||1):1); if(Math.abs(ls-1)>1e-9) x.lts=ls;
         if(ix&&ix.grp){ x.grp=ix.grp; x.blk=ix.blk; if(ix.bip) x.bip=ix.bip; if(ix.bm){ x.bm=ix.bm; if(effL!==(e.layer||'0')) x.l0=1; } }
         if(e.style!=null)x.style=e.style; { const xx=e._x; delete x._x; if(xx&&depth===0) Object.assign(x, xx); else if(xx&&depth===1&&ix&&ix.grp){ if(xx.dvs) x.dvs=xx.dvs; if(xx.dyn) x.dyn=xx.dyn; } }
-        if(depth===1&&ix&&ix.dv&&e._et!=null&&!x.dvs){ const d=ix.dv.by.get(e._et); if(d) x.dvs=d.slice(); if(ix.dyn) x.dyn=Object.assign({},ix.dyn); }   // khối động AutoCAD
+        if(ix&&ix.dv&&!x.dvs){ const d=depth===1?(e._et!=null?ix.dv.by.get(e._et):null):ix.dvs; if(d){ x.dvs=d.slice(); if(ix.dyn) x.dyn=Object.assign({},ix.dyn); } }   // khối động AutoCAD (cả nét của khối lồng)
         delete x._et; delete x._h; delete x.inv;
-        if(e.inv){ if(!x.dvs) continue; x.vh=1; }   // nét ẩn: chỉ giữ khi thuộc khối động (đổi trạng thái được), còn lại không vẽ như AutoCAD
+        if(e.inv&&depth>1) continue;   // nét ẩn bên trong khối lồng (trạng thái riêng của khối lồng): không vẽ
+        if(e.inv||(depth>1&&ix&&ix.hid)){ if(!x.dvs) continue; x.vh=1; }   // nét ẩn: chỉ giữ khi thuộc khối động (đổi trạng thái được), còn lại không vẽ như AutoCAD
         out.push(x); }
     }
   }
@@ -4649,6 +4651,7 @@ function dwgList(arr){
     try{
     if(e.type==='MLINE'){ for(const m of dwgMline(e)){ m.aci=e.colorIndex; if(typeof e.color==='number' && e.color>0 && e.color!==16777215) m.rgb=e.color; o.push(m); } continue; }
     const c=dwgEntity(e); if(c&&e.isVisible===false) c.inv=1;
+    if(c&&_dwgDyn&&e.handle!=null){ const h=String(e.handle).toUpperCase(); c._h=h; if(e.type==='INSERT'&&_dwgDyn.insSt.has(h)) c._dst={dwg:_dwgDyn.insSt.get(h)}; }
     if(c&&X&&e.handle!=null){ const it=X[String(e.handle).toUpperCase()]; if(it) dvdApplyX(c,it); }
     if(c){
       c.aci=e.colorIndex;
@@ -4962,6 +4965,51 @@ function dwgBuild(db){
   return { entities: mergeText(resolveBlocks(model, blocks, !isMobileDevice())), insunits:(db.header&&db.header.INSUNITS)||0, layouts, blocks:collectBlocks(model), dims:extractDims(db) };
 }
 // Chỉ dựng (parse) các block ĐƯỢC THAM CHIẾU bởi INSERT/DIMENSION; bỏ block không dùng → tiết kiệm RAM lớn.
+// khối động AutoCAD trong DWG — đọc thẳng cấu trúc LibreDWG (bộ chuyển của libredwg-web bỏ qua các đối tượng này):
+// BLOCKVISIBILITYPARAMETER (tên + nét từng trạng thái), ACDB_BLOCKREPRESENTATION_DATA (bản chèn → khối gốc), XRECORD (trạng thái hiện tại)
+let _dwgDyn=null;
+function dwgDynInfo(lib, ptr, db){
+  try{ const W=lib.wasmInstance; if(!W||!W.dwg_get_num_objects||!W.HEAP32||!W.dwg_object_get_dxfname) return null;
+    const H8=W.HEAPU8, H16=W.HEAPU16, H32=W.HEAP32, hx=v=>(v==null?'':v.toString(16)).toUpperCase();
+    const str=p0=>{ if(!p0) return ''; if(H8[p0+1]===0&&H8[p0]!==0){ let t='', q=p0>>1; while(H16[q]&&t.length<4096) t+=String.fromCharCode(H16[q++]); return t; } return W.UTF8ToString(p0); };   // R2007+: UTF-16
+    const VPs=[], REP=new Map(), XR=new Map(); const n=W.dwg_get_num_objects(ptr);
+    for(let i=0;i<n;i++){ const o=W.dwg_get_object(ptr,i); if(!o) continue; const dn=W.dwg_object_get_dxfname(o);
+      if(dn!=='BLOCKVISIBILITYPARAMETER'&&dn!=='ACDB_BLOCKREPRESENTATION_DATA'&&dn!=='XRECORD') continue;
+      const tio=W.dwg_object_to_object_tio(o); if(!tio) continue; const g=k=>{ try{ return W.dwg_dynapi_entity_value(tio,k).data; }catch(_){ return null; } };
+      const h=hx(W.dwg_object_get_handle_object(o).value);
+      if(dn==='BLOCKVISIBILITYPARAMETER'){ const ns=g('num_states')|0, sp=g('states'), nb=g('num_blocks')|0; if(!ns||!sp) continue;
+        const ents=nb?W.dwg_ptr_to_object_ref_array(g('blocks'),nb).map(r=>hx(r.absolute_ref)):[]; const states=[];
+        for(let k=0;k<ns;k++){ const b=(sp>>2)+k*6; states.push({ n:str(H32[b+1]), hs:H32[b+2]?W.dwg_ptr_to_object_ref_array(H32[b+3],H32[b+2]).map(r=>hx(r.absolute_ref)):[] }); }   // mỗi trạng thái: parent, tên, số nét, nét, số tham số, tham số
+        VPs.push({ents,states}); }
+      else if(dn==='ACDB_BLOCKREPRESENTATION_DATA'){ const bl=g('block'); if(bl) REP.set(h,hx(W.dwg_ref_get_absref(bl))); }
+      else { let q=g('xdata'), k=0;   // resbuf: mã (0), giá trị (8; chuỗi: cỡ, trang mã, con trỏ 12), kế tiếp (32)
+        while(q&&k++<64){ if(W.HEAP16[q>>1]===1){ XR.set(h,str(H32[(q+12)>>2])); break; } q=H32[(q+32)>>2]; } } }
+    if(!VPs.length&&!REP.size) return null;
+    const recs=(db.tables&&db.tables.BLOCK_RECORD&&db.tables.BLOCK_RECORD.entries)||[], byH=new Map(), recOf=new Map();
+    for(const r of recs){ if(r&&r.handle!=null){ byH.set(String(r.handle).toUpperCase(), r); } for(const e of (r&&r.entities)||[]) if(e&&e.handle!=null) recOf.set(String(e.handle).toUpperCase(), r); }
+    const DI=new Map(); for(const d of ((db.objects&&db.objects.DICTIONARY)||[])) if(d&&d.handle!=null) DI.set(String(d.handle).toUpperCase(), d.entries||{});
+    const idxOf=r=>{ const m=new Map(); (r.entities||[]).forEach((e,i)=>{ if(e&&e.handle!=null) m.set(String(e.handle).toUpperCase(),i); }); return m; };
+    // khối gốc → tham số hiển thị (số thứ tự nét trong khối = ETag)
+    const DV=new Map();
+    for(const vp of VPs){ const r=vp.ents.length?recOf.get(vp.ents[0]):null; if(!r||!r.name) continue; const ix=idxOf(r);
+      const by=new Map(); for(const h of vp.ents){ const v=ix.get(h); if(v!=null) by.set(v,[]); } for(const st of vp.states) for(const h of st.hs){ const v=ix.get(h); if(v!=null&&by.has(v)&&!by.get(v).includes(st.n)) by.get(v).push(st.n); }
+      const sets=vp.states.map(st=>new Set(st.hs.map(h=>ix.get(h)).filter(v=>v!=null)));
+      const match=S=>{ const k=sets.findIndex(a=>a.size===S.size&&[...a].every(v=>S.has(v))); return k>=0?vp.states[k].n:null; };
+      const shownDef=new Set((r.entities||[]).map((e,i)=>e&&e.isVisible!==false&&by.has(i)?i:-1).filter(i=>i>=0)); const def=match(shownDef)||vp.states[0].n;
+      DV.set(String(r.handle).toUpperCase(), { name:r.name, id:'dwg', states:vp.states.map(st=>st.n), def, by,
+        stateOf:list=>{ const S=new Set(list.filter(e=>e&&!e.inv&&e._et!=null&&by.has(e._et)).map(e=>e._et)); return match(S)||def; } }); }
+    // bản chèn → khối gốc + trạng thái (XRECORD trong AppDataCache / ACAD_ENHANCEDBLOCKDATA)
+    const uBlk=new Map(), insSt=new Map();
+    const allIns=[]; for(const e of (db.entities||[])) if(e&&e.type==='INSERT') allIns.push(e); for(const r of recs) for(const e of (r.entities||[])) if(e&&e.type==='INSERT') allIns.push(e);
+    for(const e of allIns){ const xd=e.ownerDictionaryHardId&&String(e.ownerDictionaryHardId).toUpperCase(); const D1=xd&&DI.get(xd), D2=D1&&DI.get(String(D1.AcDbBlockRepresentation||'').toUpperCase()); if(!D2) continue;
+      const tb=REP.get(String(D2.AcDbRepData||'').toUpperCase()), tr=tb&&byH.get(tb); if(!tr||!tr.name||tr.name===e.name) continue;
+      const dv=DV.get(tb)||null; if(!uBlk.has(e.name)) uBlk.set(e.name,{ trueName:tr.name, dv });
+      const D3=DI.get(String(D2.AppDataCache||'').toUpperCase()), D4=D3&&DI.get(String(D3.ACAD_ENHANCEDBLOCKDATA||'').toUpperCase());
+      if(dv&&D4) for(const h of Object.values(D4)){ const v=XR.get(String(h).toUpperCase()); if(v&&dv.states.includes(v)){ insSt.set(String(e.handle).toUpperCase(),v); break; } } }
+    if(!uBlk.size) return null;
+    return { uBlk, insSt, raw:new Map(recs.filter(r=>r&&r.name&&uBlk.has(r.name)).map(r=>[r.name, idxOf(r)])) };
+  }catch(err){ console.warn('dwgDynInfo', err); return null; }
+}
 function buildBlockDefs(db, recs){
   const blocks={}, refBlk=new Set();
   const scanRefs=arr=>{ if(!arr) return; for(const e of arr){ if((e.type==='INSERT'||e.type==='DIMENSION') && e.name) refBlk.add(e.name); } };
@@ -4969,6 +5017,9 @@ function buildBlockDefs(db, recs){
   let skipped=0, kept=0;
   for(const r of recs){ if(!r.name) continue; if(refBlk.has(r.name)){ blocks[r.name]={base:r.basePoint||{x:0,y:0}, entities:dwgList(r.entities)}; kept++; } else skipped++; }
   if(skipped) console.log('DVDCAD: bỏ '+skipped+' block không dùng (giữ '+kept+')');
+  const D=_dwgDyn; if(D) for(const [un,u] of D.uBlk){ const B=blocks[un]; if(!B) continue; B.trueName=u.trueName; if(!u.dv) continue; B.dynVis=u.dv; const ix=D.raw.get(un);
+    if(ix) for(const c of B.entities) if(c&&c._h&&ix.has(c._h)) c._et=ix.get(c._h);
+    (window._dxfDynVis=window._dxfDynVis||{})[u.trueName]={states:u.dv.states,def:u.dv.def}; }
   return blocks;
 }
 async function loadDWG(arrayBuffer, srcName){
@@ -4981,9 +5032,9 @@ async function loadDWG(arrayBuffer, srcName){
     window._dvdDwgX=dvdDwgPrivate(arrayBuffer); window._dvdXData=(window._dvdDwgX&&window._dvdDwgX.d)||null;
     const ptr=lib.dwg_read_data(arrayBuffer,_DwgType.DWG);
     if(ptr==null){ valEl.classList.remove('show'); toast('Không đọc được file DWG này.'); return; }
-    const db=lib.convert(ptr);
+    const db=lib.convert(ptr); _dwgDyn=dwgDynInfo(lib, ptr, db);   // khối động AutoCAD: đọc trước khi giải phóng
     try{ lib.dwg_free(ptr); }catch(_){}   // giải phóng cấu trúc C NGAY sau convert (db đã là bản sao JS độc lập) -> hạ đỉnh RAM khi mở file lớn trên iPhone
-    const built=dwgBuild(db); window._dvdDwgX=null;   // dữ liệu riêng chỉ cho bản vẽ này (không áp nhầm sang XREF / so sánh)
+    const built=dwgBuild(db); window._dvdDwgX=null; _dwgDyn=null;   // dữ liệu riêng chỉ cho bản vẽ này (không áp nhầm sang XREF / so sánh)
     if(!built.entities.length){ valEl.classList.remove('show'); toast('DWG đọc được nhưng chưa có đối tượng 2D nào được hỗ trợ.'); return; }
     entities=built.entities; insunits=built.insunits; normClosedPolys(entities);
     editUndoStack.length=0; redoStack.length=0; updateUndoRedoBtns();   // xoá lịch sử Undo/Redo khi mở bản vẽ mới
@@ -5003,7 +5054,7 @@ async function loadDWG(arrayBuffer, srcName){
     toast(_truncated?`Bản vẽ quá lớn: chỉ hiện ${entities.length} đối tượng đầu (giới hạn bộ nhớ của máy)`:`Đã đọc DWG: ${entities.length} đối tượng${nLay?` · ${nLay} layout in`:''}${UNIT[insunits]?` · ${UNIT[insunits]}`:''}`);
     currentKey=key; loadOverlay(); loadCalib();   // khôi phục đo/ghi chú đã lưu cho file này (Model)
   }catch(err){
-    console.error(err); window._dvdDwgX=null;
+    console.error(err); window._dvdDwgX=null; _dwgDyn=null;
     toast('Lỗi giải mã DWG. Có thể do phiên bản chưa hỗ trợ, hoặc cần mạng lần đầu để tải bộ giải mã.');
   }
 }
