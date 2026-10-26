@@ -47,7 +47,9 @@ Danh sách lệnh đầy đủ: [HUONG-DAN-LENH.md](HUONG-DAN-LENH.md), hoặc b
 - **Lưu DWG**: DVDCAD tự ghi file **.dwg AutoCAD 2018** (AC1032, mặc định), 2013, 2010, 2004 hoặc 2000 — không cần ODA File Converter hay mạng.
   Mở lại trong DVDCAD còn nguyên lớp, kiểu nét, kiểu chữ, khối + thuộc tính, kích thước, hatch, khối 3D, vùng che, khối động, vị trí địa lý.
   - AutoCAD 2017 trở về trước không mở được DWG 2018 — chọn DWG 2013 (AutoCAD 2013 → 2017) hoặc thấp hơn trong `DWGSERVER`.
-  - DWG 2007: định dạng 2007 thật cần **ODA File Converter** (miễn phí, opendesign.com). DVDCAD tự tìm ODA trong `C:\Program Files\ODA`; cài chỗ khác thì chọn đường dẫn trong `DWGSERVER`. Không có ODA thì DVDCAD ghi **DWG 2004** — AutoCAD 2007, 2008, 2009 mở thẳng.
+  - DWG 2007: định dạng 2007 thật cần **ODA File Converter** (miễn phí, cài riêng — không đóng gói kèm DVDCAD). Không có ODA thì DVDCAD ghi **DWG 2004** — AutoCAD 2007, 2008, 2009 mở thẳng.
+    1. `DWGSERVER` → **Tải ODA File Converter**: mở trang tải chính thức của ODA trong trình duyệt. Chọn bản Windows, cài như bình thường.
+    2. Quay lại cửa sổ DVDCAD: hộp `DWGSERVER` tự dò lại và hiện **✓ Đã tìm thấy** (hoặc bấm **Tìm lại**). DVDCAD tìm trong `C:\Program Files\ODA`; cài chỗ khác thì bấm **Chọn…** trỏ tới `ODAFileConverter.exe`.
   - Khối động (bản 2018): tham số hiển thị, **lật** và **kéo giãn** là tham số thật của AutoCAD, có grip trong AutoCAD. Ràng buộc tham số và khối 3D tham số vẫn còn đủ khi mở lại trong DVDCAD.
   - **Ảnh** (IMAGEATTACH, GEOMAPIMAGE…): lưu bản vẽ là DVDCAD ghi luôn tệp ảnh (`tên_xxxxxx.jpg` / `.png`) vào cùng thư mục — AutoCAD mở bản vẽ thấy ảnh. Gửi bản vẽ cho người khác thì gửi kèm các tệp ảnh đó, hoặc dùng `ETRANSMIT` để đóng gói .zip.
   - Mở bản vẽ AutoCAD có ảnh: DVDCAD đọc tệp ảnh nằm trong thư mục của bản vẽ (đường dẫn tương đối hoặc cùng tên).

@@ -41,6 +41,7 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   - **Máy in Windows** cũng có nút **Thuộc tính…** → *Độ sâu màu* (24-bit / 256 màu / đen trắng) + dither theo bảng .ctb như PNG / PDF.
   - **Bản đồ nền đang hiện (GEOMAP)** được in luôn khi PLOT ra PDF / PNG / máy in (tải ô bản đồ cho đúng vùng in, ~200 dpi); xuất ảnh / in theo màn hình cũng có bản đồ. Không cần chụp bằng GEOMAPIMAGE trước.
 - **DWG 2007**: không có ODA File Converter thì ghi **DWG 2004** bằng bộ ghi sẵn có (AutoCAD 2007, 2008, 2009 mở thẳng) — trước đây ghi DWG 2018 nên AutoCAD 2007 không mở được.
+  - Bản Windows (5.14.1): `DWGSERVER` có nút **Tải ODA File Converter** (mở trang tải chính thức của ODA) và **Tìm lại**. Cài xong quay lại DVDCAD là tự tìm thấy — không cần chọn đường dẫn.
 
 ## Bổ sung như AutoCAD 2027 (v5t)
 - **Lưu DWG gốc 2018 / 2013 / 2010 / 2004 / 2000** — không cần ODA File Converter.
@@ -1104,8 +1105,8 @@ Bố cục tab, bảng và biểu tượng theo AutoCAD để người dùng Aut
   - Dữ liệu riêng của DVDCAD (khối 3D tham số, vùng, thứ tự vẽ, chú thích theo tỉ lệ, ràng buộc, kéo giãn / lật của khối động) ghi kèm trong file: mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này.
 - `SAVEAS` / **Ctrl+Shift+S**: chọn *Bản vẽ AutoCAD (\*.dwg)* hoặc *DXF* trong hộp thoại lưu. Bản vẽ mở từ DWG thì hộp thoại gợi ý DWG trước. **Ctrl+S** sau đó ghi đè đúng định dạng đã chọn.
 - `DWGSERVER` — chọn phiên bản: **DWG 2018 / 2013 / 2010 / 2004 / 2000 (bộ ghi sẵn có, mặc định 2018)**, hoặc qua **ODA File Converter** (miễn phí; cần cho DWG 2007).
-  - Bản Windows: cài ODA File Converter là chuyển được ngay trên máy. Bản web: qua máy chủ chuyển đổi của bạn: cài ODA File Converter và **Node.js**, chạy `node server-dwg.js` (đặt biến `ODA` trỏ tới ODAFileConverter); điện thoại cùng mạng nhập `http://<IP máy tính>:8787/convert`.
-  - Không có ODA / máy chủ thì DVDCAD tự ghi bằng bộ ghi sẵn có (cùng năm nếu có, không thì DWG 2018).
+  - Bản Windows: nút **Tải ODA File Converter** mở trang tải của ODA; cài xong quay lại DVDCAD là tự tìm thấy (hoặc bấm **Tìm lại**, **Chọn…** nếu cài chỗ khác). Chuyển ngay trên máy, không cần mạng. Bản web: qua máy chủ chuyển đổi của bạn: cài ODA File Converter và **Node.js**, chạy `node server-dwg.js` (đặt biến `ODA` trỏ tới ODAFileConverter); điện thoại cùng mạng nhập `http://<IP máy tính>:8787/convert`.
+  - Không có ODA / máy chủ thì DVDCAD tự ghi bằng bộ ghi sẵn có: cùng năm nếu có, không thì bản mới nhất mà AutoCAD năm đó mở được (DWG 2007 → DWG 2004).
 
 ## In bản vẽ (PLOT, Ctrl+P)
 Hộp thoại giống AutoCAD:

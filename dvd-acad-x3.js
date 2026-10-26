@@ -213,16 +213,26 @@
     log('Đã tải xuống ' + name + ' (' + lab + ').');
   }
   plain(['SAVEDWG', 'DWGOUT'], 'Lưu ra file DWG: DWG 2018 / 2013 / 2010 / 2004 / 2000 bằng bộ ghi sẵn có (không cần ODA); DWG 2007 qua ODA File Converter', saveDWG);
+  const ODA_URL = 'https://www.opendesign.com/guestfiles/oda_file_converter';
   plain(['DWGSERVER'], 'Cài đặt lưu DWG: phiên bản DWG (2018 → 2000 ghi sẵn có) hoặc qua ODA File Converter / máy chủ chuyển đổi', async () => {
     const c = cfg(), dk = DK(), K = A.acw; let oda = null; if(dk && dk.odaInfo){ try{ oda = await dk.odaInfo(); }catch(_){} }
     // bố cục hộp thoại kiểu AutoCAD: nhóm "Định dạng lưu", "Bộ chuyển đổi trên máy", "Máy chủ chuyển đổi"
     const html = '<div class="acw" style="width:500px">' +
       K.grp('Định dạng lưu', K.row('Phiên bản DWG:', K.sel('dwV', DWG_VERS.map(v => [v, VLAB(v)]), c.ver)) + '<div class="acw-note" style="white-space:normal">DWG 2018, 2013, 2010, 2004 và 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (DWG 2018 = định dạng của AutoCAD 2018 → 2027). DWG 2007 cần ODA File Converter (hoặc máy chủ) — nếu không có, DVDCAD ghi DWG 2004 bằng bộ ghi sẵn có (AutoCAD 2007, 2008, 2009 mở thẳng được).</div>') +
-      (dk ? K.grp('ODA File Converter trên máy', '<div class="acw-row">' + K.txt('dwO', oda && oda.path || '', { dis: 1, ph: 'Chưa tìm thấy — bấm Chọn…' }) + K.btn('dwOp', 'Chọn…') + '</div><div class="acw-note" style="white-space:normal">Bản Windows tự chuyển DXF → DWG bằng ODA File Converter (miễn phí, tải tại opendesign.com). Không cần mạng.</div>') : '') +
+      (dk ? K.grp('ODA File Converter trên máy', '<div class="acw-row">' + K.txt('dwO', oda && oda.path || '', { dis: 1, ph: 'Chưa tìm thấy — bấm Tải ODA File Converter' }).replace('<input ', '<input style="flex:1;min-width:0" ') + K.btn('dwOp', 'Chọn…') + '</div><div class="acw-row">' + K.btn('dwOd', 'Tải ODA File Converter') + K.btn('dwOr', 'Tìm lại') + '<span id="dwOs" style="margin-left:6px"></span></div><div class="acw-note" style="white-space:normal">Chỉ cần cho DWG 2007. ODA File Converter miễn phí, cài riêng (trên trang tải chọn bản Windows). Cài xong quay lại DVDCAD là tự tìm thấy. Chuyển đổi chạy trên máy, không cần mạng.</div>') : '') +
       K.grp('Máy chủ chuyển đổi (tuỳ chọn)', K.row('Địa chỉ:', K.txt('dwU', c.url, { ph: 'http://localhost:8787/convert' })) + '<div class="acw-row">' + K.btn('dwT', 'Thử kết nối') + '<span id="dwS" style="margin-left:6px"></span></div><div class="acw-note" style="white-space:normal">Máy chủ: chạy node server-dwg.js trên máy có ODA File Converter (xem hướng dẫn trong file).</div>') + '</div>';
     A.dialog({ title: 'Lưu DWG', cls: 'acw-free', help: 'DWGSERVER', html, okText: 'Lưu cài đặt',
       onOpen: root => {
-        const op = root.querySelector('#dwOp'); if(op) op.onclick = async () => { const r = await dk.odaPick(); if(r && r.path) root.querySelector('#dwO').value = r.path; };
+        // ODA: tải từ trang chính thức (không đóng gói kèm DVDCAD), cài xong bấm Tìm lại hoặc quay lại cửa sổ là tự dò
+        const oSet = p => { const o = root.querySelector('#dwO'); o.value = o.title = p || ''; root.querySelector('#dwOs').textContent = p ? '✓ Đã tìm thấy' : 'Chưa cài'; };
+        const oFind = async () => { if(!root.isConnected){ window.removeEventListener('focus', oFind); return; } let r = null; try{ r = await dk.odaInfo(); }catch(_){} if(root.isConnected) oSet(r && r.path); };
+        if(root.querySelector('#dwOp')){
+          oSet(oda && oda.path);
+          root.querySelector('#dwOp').onclick = async () => { const r = await dk.odaPick(); if(r && r.path) oSet(r.path); };
+          root.querySelector('#dwOd').onclick = () => { dk.openExternal(ODA_URL); root.querySelector('#dwOs').textContent = 'Cài xong bấm Tìm lại'; };
+          root.querySelector('#dwOr').onclick = oFind;
+          window.addEventListener('focus', oFind);
+        }
         root.querySelector('#dwT').onclick = async () => { const s = root.querySelector('#dwS'), u = root.querySelector('#dwU').value.trim(); if(!u){ s.textContent = 'Chưa nhập địa chỉ.'; return; }
           s.textContent = 'Đang thử…'; try{ const r = await fetch(u, { method: 'GET' }); s.textContent = r.ok ? '✓ Máy chủ đang chạy' : 'Máy chủ trả lỗi ' + r.status; }catch(err){ s.textContent = '✗ Không kết nối được'; } };
       },

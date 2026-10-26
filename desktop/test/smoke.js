@@ -184,6 +184,17 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
     if(process.platform !== 'win32') check(await until(() => head(dwgOda) === 'AC1032'), 'DWG 2007 qua ODA File Converter trên máy');
     else check(await until(() => /^AC10(21|18)$/.test(head(dwgOda)), 60000), 'DWG 2007: qua ODA nếu máy đã cài, chưa cài → tự ghi DWG 2004 gốc, AutoCAD 2007 mở được (' + head(dwgOda) + ')');
     await win.evaluate(() => localStorage.removeItem('dvd:dwgsrv'));
+    // DWGSERVER: nút Tải ODA File Converter mở trang tải chính thức (trình duyệt ngoài), Tìm lại dò lại ODA trên máy
+    await app.evaluate(({ shell }) => { global.__ext = []; shell.openExternal = async u => { global.__ext.push(u); }; });
+    await win.evaluate(() => DVDCmd.run('DWGSERVER'));
+    check(await until(() => win.evaluate(() => !!document.querySelector('#dwOd') && !!document.querySelector('#dwOr'))), 'DWGSERVER có nút Tải ODA File Converter và Tìm lại');
+    await win.click('#dwOd');
+    check(await until(() => app.evaluate(() => global.__ext.join(' ') === 'https://www.opendesign.com/guestfiles/oda_file_converter')), 'Tải ODA File Converter mở trang tải của ODA bằng trình duyệt ngoài');
+    await win.evaluate(() => { document.querySelector('#dwO').value = ''; document.querySelector('#dwOs').textContent = ''; }); await win.click('#dwOr');
+    const od = await (async () => { await until(() => win.evaluate(() => !!document.querySelector('#dwOs').textContent)); return win.evaluate(() => ({ v: document.querySelector('#dwO').value, s: document.querySelector('#dwOs').textContent })); })();
+    if(process.platform !== 'win32') check(od.v === env.ODA && /Đã tìm thấy|Found/.test(od.s), 'Tìm lại thấy ODA File Converter trên máy (' + od.v + ')');
+    else check(!!od.v === /Đã tìm thấy|Found/.test(od.s) && (!!od.v || /Chưa cài|Not installed/.test(od.s)), 'Tìm lại: ' + (od.v || od.s));
+    await win.keyboard.press('Escape');
   }
 
   console.log('8. Lệnh tắt giống AutoCAD (acad.pgp)');

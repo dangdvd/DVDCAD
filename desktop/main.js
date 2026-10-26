@@ -226,7 +226,7 @@ ipcMain.handle('dwg:odaPick', async () => {
   const pr = readJSON('prefs.json', {}); pr.odaPath = r.filePaths[0]; writeJSON('prefs.json', pr); return { path: r.filePaths[0] };
 });
 ipcMain.handle('dwg:convert', async (_e, dxf, ver) => {
-  const oda = findODA(); if(!oda) return { error: 'Chưa có ODA File Converter trên máy — cài bản miễn phí (opendesign.com) hoặc chọn trong DWGSERVER.' };
+  const oda = findODA(); if(!oda) return { error: 'Chưa có ODA File Converter trên máy (miễn phí: DWGSERVER → Tải ODA File Converter)' };
   const V = /^ACAD(2000|2004|2007|2010|2013|2018)$/.test(String(ver)) ? String(ver) : 'ACAD2018';
   const work = await fs.promises.mkdtemp(path.join(app.getPath('temp'), 'dvdcad-dwg-'));
   try{

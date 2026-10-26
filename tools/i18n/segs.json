@@ -1420,9 +1420,6 @@
 "Bản DXF xuất từ DVDCAD (gồm cả phần đã vẽ/sửa)": [
 "dvd-cloud.js"
 ],
-"Bản Windows tự chuyển DXF → DWG bằng ODA File Converter (miễn phí, tải tại opendesign.com). Không cần mạng.": [
-"dvd-acad-x3.js"
-],
 "Bản chèn sau": [
 "dvd-acad-dlg2.js:attr"
 ],
@@ -3067,6 +3064,9 @@
 "Chưa chọn đối tượng.": [
 "dvd-acad-dlg.js"
 ],
+"Chưa cài": [
+"dvd-acad-x3.js"
+],
 "Chưa có ODA File Converter / máy chủ chuyển DWG.": [
 "dvd-acad-x3.js"
 ],
@@ -3264,7 +3264,7 @@
 "Chưa sửa:": [
 "dvd-acad-dlg2.js"
 ],
-"Chưa tìm thấy — bấm Chọn…": [
+"Chưa tìm thấy — bấm Tải ODA File Converter": [
 "dvd-acad-x3.js"
 ],
 "Chưa đăng nhập": [
@@ -3413,6 +3413,9 @@
 ],
 "Chỉ có với phông SHX (như AutoCAD)": [
 "dvd-acad-dlg.js"
+],
+"Chỉ cần cho DWG 2007. ODA File Converter miễn phí, cài riêng (trên trang tải chọn bản Windows). Cài xong quay lại DVDCAD là tự tìm thấy. Chuyển đổi chạy trên máy, không cần mạng.": [
+"dvd-acad-x3.js"
 ],
 "Chỉ dùng phông TrueType": [
 "dvd-acad-dlg.js"
@@ -5310,6 +5313,9 @@
 "CÔNG TRÌNH: …": [
 "dvd-acad-pro.js"
 ],
+"Cài xong bấm Tìm lại": [
+"dvd-acad-x3.js"
+],
 "Cài đặt": [
 "dvd-acad-cmds.js",
 "dvd-acad-dlg.js",
@@ -6185,7 +6191,7 @@
 "DWG đọc được nhưng chưa có đối tượng 2D nào được hỗ trợ.": [
 "index.html"
 ],
-"DWG/DXF · bản màu · v5t": [
+"DWG/DXF · bản màu · v5u": [
 "index.html:html"
 ],
 "DWG: trùng handle": [
@@ -16381,6 +16387,9 @@
 "Tìm khối…": [
 "dvd-acad-x8.js:attr"
 ],
+"Tìm lại": [
+"dvd-acad-x3.js"
+],
 "Tìm lệnh (tên, chữ tắt hoặc nội dung)…": [
 "dvd-cmd.js:attr"
 ],
@@ -16715,6 +16724,9 @@
 ],
 "Tạo…": [
 "dvd-acad-dlg.js"
+],
+"Tải ODA File Converter": [
+"dvd-acad-x3.js"
 ],
 "Tải bản vẽ lên": [
 "dvd-acad-ui.js"
@@ -24381,6 +24393,9 @@
 ],
 "✓ Xong chọn": [
 "dvd-cmd.js"
+],
+"✓ Đã tìm thấy": [
+"dvd-acad-x3.js"
 ],
 "✓ Đóng vùng": [
 "index.html",

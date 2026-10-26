@@ -7869,5 +7869,12 @@
 "Không ghi được ảnh": "Could not write image",
 "bằng bộ ghi sẵn có": "with the built-in writer",
 "mở được)": "can open it)",
-"Ảnh:": "Image:"
+"Ảnh:": "Image:",
+"Chưa cài": "Not installed",
+"Chưa tìm thấy — bấm Tải ODA File Converter": "Not found — click Download ODA File Converter",
+"Chỉ cần cho DWG 2007. ODA File Converter miễn phí, cài riêng (trên trang tải chọn bản Windows). Cài xong quay lại DVDCAD là tự tìm thấy. Chuyển đổi chạy trên máy, không cần mạng.": "Only needed for DWG 2007. ODA File Converter is free and installed separately (pick the Windows version on the download page). After installing, switch back to DVDCAD and it is found automatically. Conversion runs on this computer, no internet needed.",
+"Cài xong bấm Tìm lại": "After installing, click Detect again",
+"Tìm lại": "Detect again",
+"Tải ODA File Converter": "Download ODA File Converter",
+"✓ Đã tìm thấy": "✓ Found"
 }
