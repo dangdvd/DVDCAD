@@ -171,6 +171,8 @@
   const CLASSDEF = { ACDBDICTIONARYWDFLT: ['AcDbDictionaryWithDefault', ODBX, 0, 0], ACDBPLACEHOLDER: ['AcDbPlaceHolder', ODBX, 0, 0], LAYOUT: ['AcDbLayout', ODBX, 0, 0],
     // khối động (như AutoCAD): đồ thị đánh giá, tham số hiển thị + grip, chống purge, dữ liệu biểu diễn của bản chèn
     ACAD_EVALUATION_GRAPH: ['AcDbEvalGraph', ODBX, 1153, 0], BLOCKVISIBILITYPARAMETER: ['AcDbBlockVisibilityParameter', ODBX, 1153, 0], BLOCKVISIBILITYGRIP: ['AcDbBlockVisibilityGrip', ODBX, 1153, 0],
+    BLOCKLINEARPARAMETER: ['AcDbBlockLinearParameter', ODBX, 1153, 0], BLOCKLINEARGRIP: ['AcDbBlockLinearGrip', ODBX, 1153, 0], BLOCKSTRETCHACTION: ['AcDbBlockStretchAction', ODBX, 1153, 0],
+    BLOCKFLIPPARAMETER: ['AcDbBlockFlipParameter', ODBX, 1153, 0], BLOCKFLIPGRIP: ['AcDbBlockFlipGrip', ODBX, 1153, 0], BLOCKFLIPACTION: ['AcDbBlockFlipAction', ODBX, 1153, 0],
     BLOCKGRIPLOCATIONCOMPONENT: ['AcDbBlockGripExpr', ODBX, 1153, 0], ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION: ['AcDbDynamicBlockPurgePreventer', ODBX, 1153, 0], ACDB_BLOCKREPRESENTATION_DATA: ['AcDbBlockRepresentationData', ODBX, 1153, 0],
     // vùng che (như AutoCAD): thực thể WIPEOUT (cùng bố cục IMAGE) + đối tượng WIPEOUTVARIABLES
     WIPEOUT: ['AcDbWipeout', 'WipeOut|Product Desc: Object Enabler for WipeOut entity | Company: Autodesk, Inc. | WEB Address: www.autodesk.com', 2175, 1],
@@ -368,7 +370,8 @@
 
     // ---- đối tượng OBJECTS được giữ (bỏ loại chưa hỗ trợ và những gì thuộc chúng / thuộc thực thể) ----
     const outObjH = new Set([H_NOD]); const keep = [];
-    const DYNT = ['ACAD_EVALUATION_GRAPH', 'BLOCKVISIBILITYPARAMETER', 'BLOCKVISIBILITYGRIP', 'BLOCKGRIPLOCATIONCOMPONENT', 'ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION', 'ACDB_BLOCKREPRESENTATION_DATA'];
+    const DYNT = ['ACAD_EVALUATION_GRAPH', 'BLOCKVISIBILITYPARAMETER', 'BLOCKVISIBILITYGRIP', 'BLOCKGRIPLOCATIONCOMPONENT', 'ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION', 'ACDB_BLOCKREPRESENTATION_DATA',
+      'BLOCKLINEARPARAMETER', 'BLOCKLINEARGRIP', 'BLOCKSTRETCHACTION', 'BLOCKFLIPPARAMETER', 'BLOCKFLIPGRIP', 'BLOCKFLIPACTION'];
     // từ điển mở rộng của thực thể (INSERT của khối động → AcDbBlockRepresentation) được giữ, các đối tượng khác thuộc thực thể thì bỏ
     const entXd = new Set(); if(R07) for(const [, bi] of blockInfo) for(const r of bi.main) for(const v of r.group102('ACAD_XDICTIONARY')) entXd.add(ref(v));
     { const dropped = new Set(); let changed = true; const isEnt = h => entH.has(h);
@@ -566,10 +569,21 @@
       o.d.BL(0); o.d.BL(0); }   // không có lưới nắn
     // khối động (R2007+, bố cục như AutoCAD 2018): biểu thức đánh giá = BL -1, BL 98, BL 99, BS mã giá trị (-9999 = không có) [+ giá trị], BL id
     const brOfXd = new Map(); for(const [b, x] of xdicOf) brOfXd.set(x, b);
-    const evalExpr = (o, r) => { const s = r.after('AcDbEvalExpr'); o.d.BL(-1); o.d.BL(s.int(98, 33)); o.d.BL(s.int(99, 329));
-      if(s.has(70)){ const c = s.int(70); o.d.BS(c); if(c >= 40 && c <= 59) o.d.BD(s.num(140)); else if(c >= 90 && c <= 99) o.d.BL(s.int(140)); else o.d.BS(s.int(140)); } else o.d.BS(-9999);
+    const sub = (r, v) => { const a = r.after(v), q = new Rec(r.type); for(const x of a.g){ if(x[0] === 100) break; q.g.push(x); } return q; };   // nhóm mã của đúng 1 subclass
+    const evalExpr = (o, r) => { const s = sub(r, 'AcDbEvalExpr'); o.d.BL(-1); o.d.BL(s.int(98, 33)); o.d.BL(s.int(99, 329));
+      if(s.has(70)){ const c = s.int(70); o.d.BS(c); if(c >= 40 && c <= 59) o.d.BD(s.num(140)); else if(c >= 90 && c <= 99) o.d.BL(s.int(140)); else if(c === 70) o.d.BS(parseInt(s.all(70)[1], 10) || 0); else o.d.BS(s.int(140)); } else o.d.BS(-9999);
       o.d.BL(s.int(90)); };
-    const blockElem = (o, r) => { const s = r.after('AcDbBlockElement'); o.T(s.get(300, '')); o.d.BL(s.int(98, 33)); o.d.BL(s.int(99, 329)); o.d.BL(s.int(1071)); };
+    const blockElem = (o, r) => { const s = sub(r, 'AcDbBlockElement'); o.T(s.get(300, '')); o.d.BL(s.int(98, 33)); o.d.BL(s.int(99, 329)); o.d.BL(s.int(1071)); };
+    const known = h => entH.has(h) || outObjH.has(h);
+    // grip: phần tử khối + BL id thành phần vị trí X / Y, 3BD vị trí, B xoay vòng, BL trọng số
+    const blockGrip = (o, r) => { evalExpr(o, r); blockElem(o, r); const g = sub(r, 'AcDbBlockGrip'); o.d.BL(g.int(91)); o.d.BL(g.int(92)); o.d.BD3(g.pt(1010)); o.d.B(g.int(280)); o.d.BL(g.int(93, -1)); };
+    // tham số 2 điểm: B hiện thuộc tính, B nối hành động, 3BD gốc / cuối, 4 nhóm liên kết dời điểm (BS số + [BL id, TV tên]), 4 BL id grip, BS vị trí gốc
+    const block2Pt = (o, r) => { evalExpr(o, r); blockElem(o, r); const bp = sub(r, 'AcDbBlockParameter'), s = sub(r, 'AcDbBlock2PtParameter'); o.d.B(bp.int(280, 1)); o.d.B(bp.int(281)); o.d.BD3(s.pt(1010)); o.d.BD3(s.pt(1011));
+      const grips = [], cs = [[], [], [], []]; let cur = -1, id = 0; for(const [c, v] of s.g){ if(c === 91 && grips.length < 4) grips.push(parseInt(v, 10) || 0); else if(c >= 171 && c <= 174) cur = c - 171; else if(cur >= 0 && c === 92 + cur) id = parseInt(v, 10) || 0; else if(cur >= 0 && c === 301 + cur) cs[cur].push([id, v]); }
+      for(const q of cs){ o.d.BS(q.length); for(const [k, nm] of q){ o.d.BL(k); o.T(nm); } } for(let k = 0; k < 4; k++) o.d.BL(grips[k] || 0); o.d.BS(s.int(177)); };
+    // hành động: phần tử khối + 3BD vị trí nhãn, BL số đối tượng chọn + handle, BL số id tham số / hành động được chọn + các id
+    const blockAction = (o, r) => { evalExpr(o, r); blockElem(o, r); const a = sub(r, 'AcDbBlockAction'); o.d.BD3(a.pt(1010)); const hs = a.all(330).map(ref).filter(known);
+      o.d.BL(hs.length); for(const x of hs) o.hd.H(4, x); const ids = a.all(91); o.d.BL(ids.length); for(const v of ids) o.d.BL(parseInt(v, 10) || 0); };
     function dynObj(r, h, owner, rx){ const o = obj(cls(r.type), h); objCommon(o, owner, rx);
       if(r.type === 'ACAD_EVALUATION_GRAPH'){ const g = r.after('AcDbEvalGraph').g; let i = 0; const nx = () => g[i++] || [0, '0'], iv = () => parseInt(nx()[1], 10) || 0;
         while(i < g.length && (g[i][0] === 96 || g[i][0] === 97)) o.d.BL(iv());
@@ -583,7 +597,22 @@
         const all = [], st = []; let cur = null; for(const [c, x] of v.g){ if(c === 331) all.push(ref(x)); else if(c === 303){ cur = { n: x, hs: [] }; st.push(cur); } else if(c === 332 && cur) cur.hs.push(ref(x)); }
         o.d.BL(all.length); for(const x of all) o.hd.H(4, x);
         o.d.BL(st.length); for(const q of st){ o.T(q.n); o.d.BL(q.hs.length); for(const x of q.hs) o.hd.H(4, x); o.d.BL(0); } }
-      else if(r.type === 'BLOCKVISIBILITYGRIP'){ evalExpr(o, r); blockElem(o, r); const g = r.after('AcDbBlockGrip'); o.d.BL(g.int(91)); o.d.BL(g.int(92)); o.d.BD3(g.pt(1010)); o.d.B(g.int(280)); o.d.BL(g.int(93, -1)); }
+      else if(r.type === 'BLOCKVISIBILITYGRIP') blockGrip(o, r);
+      else if(r.type === 'BLOCKLINEARPARAMETER'){ block2Pt(o, r); const f = sub(r, 'AcDbBlockLinearParameter'); o.T(f.get(305, '')); o.T(f.get(306, '')); o.d.BD(f.num(140));
+        o.d.BL(f.int(96)); o.d.BD(f.num(141)); o.d.BD(f.num(142)); o.d.BD(f.num(143)); const vs = f.all(144); o.d.BS(vs.length); for(const v of vs) o.d.BD(parseFloat(v) || 0); }   // tập giá trị: BL kiểu, BD min / max / bước, BS số + BD
+      else if(r.type === 'BLOCKFLIPPARAMETER'){ block2Pt(o, r); const f = sub(r, 'AcDbBlockFlipParameter'); for(const c of [305, 306, 307, 308]) o.T(f.get(c, '')); o.d.BD3(f.pt(1012)); o.d.BL(f.int(96)); o.T(f.get(309, '')); }
+      else if(r.type === 'BLOCKLINEARGRIP'){ blockGrip(o, r); const g = sub(r, 'AcDbBlockLinearGrip'); o.d.BD(g.num(140)); o.d.BD(g.num(141)); o.d.BD(g.num(142)); }
+      else if(r.type === 'BLOCKFLIPGRIP'){ blockGrip(o, r); const g = sub(r, 'AcDbBlockFlipGrip'); o.d.BL(g.int(93)); o.d.BD(g.num(140)); o.d.BD(g.num(141)); o.d.BD(g.num(142)); }
+      else if(r.type === 'BLOCKFLIPACTION'){ blockAction(o, r); const f = sub(r, 'AcDbBlockFlipAction'); for(let k = 0; k < 4; k++){ o.d.BL(f.int(92 + k)); o.T(f.get(301 + k, '')); } }
+      else if(r.type === 'BLOCKSTRETCHACTION'){ blockAction(o, r); const s = sub(r, 'AcDbBlockStretchAction'); o.d.BL(s.int(92)); o.T(s.get(301, '')); o.d.BL(s.int(93)); o.T(s.get(302, ''));
+        // khung (2RD), các nét được dời điểm (handle + BL số + BL chỉ số điểm), các tham số được dời (BL id + BL số + BL chỉ số), BD hệ số, BD góc lệch, RC cờ
+        const pts = [], binds = [], nodes = []; let mode = 0, cur = null;
+        for(const [c, v] of s.g){ if(c === 1011) pts.push([parseFloat(v) || 0, 0]); else if(c === 1021 && pts.length) pts[pts.length - 1][1] = parseFloat(v) || 0; else if(c === 73) mode = 1; else if(c === 75) mode = 2;
+          else if(c === 331 && mode === 1){ cur = { h: ref(v), ix: [] }; binds.push(cur); } else if(c === 95 && mode === 2){ cur = { id: parseInt(v, 10) || 0, ix: [] }; nodes.push(cur); } else if(c === 94 && cur) cur.ix.push(parseInt(v, 10) || 0); }
+        o.d.BL(pts.length); for(const q of pts) o.d.RD2(q);
+        const bs = binds.filter(b => known(b.h)); o.d.BL(bs.length); for(const b of bs){ o.hd.H(4, b.h); o.d.BL(b.ix.length); for(const x of b.ix) o.d.BL(x); }
+        o.d.BL(nodes.length); for(const n of nodes){ o.d.BL(n.id); o.d.BL(n.ix.length); for(const x of n.ix) o.d.BL(x); }
+        o.d.BD(s.num(140, 1)); o.d.BD(s.num(141)); o.d.RC(s.int(280)); }
       else if(r.type === 'BLOCKGRIPLOCATIONCOMPONENT'){ evalExpr(o, r); const g = r.after('AcDbBlockGripExpr'); o.d.BL(g.int(91)); o.T(g.get(300, '')); }
       else if(r.type === 'ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION'){ o.d.BS(r.after('AcDbDynamicBlockPurgePreventer').int(70, 1)); o.hd.H(5, brOfXd.get(owner) || 0); }
       else if(r.type === 'ACDB_BLOCKREPRESENTATION_DATA'){ const s = r.after('AcDbBlockRepresentationData'); o.d.BS(s.int(70, 1)); o.hd.H(5, ref(s.get(340))); } }

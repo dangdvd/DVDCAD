@@ -138,13 +138,13 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
       add([{ type: 'HATCH', loops: [[{ x: 0, y: 200 }, { x: 50, y: 200 }, { x: 50, y: 250 }, { x: 0, y: 250 }]], pat: 'ANSI31', psc: 1, pang: 0 }, { type: 'HATCH', loops: [[{ x: 60, y: 200 }, { x: 110, y: 200 }, { x: 85, y: 250 }]], pat: 'SOLID', solid: true },
         { type: 'TEXT', x: 0, y: -30, h: 5, text: 'Chữ tiếng Việt: ĐƯỜNG ỐNG Ø100', rot: 15 }, { type: 'TEXT', x: 0, y: -60, h: 3.5, text: 'Dòng một\nDòng hai', mt: 1 }, { type: 'ELLIPSE', cx: 400, cy: 0, mx: 30, my: 0, ratio: 0.5, p1: 0, p2: Math.PI }]);
       for(const s of ['BOX\n700,0\n740,40\n25\n', 'WIPEOUT\n100,500\n140,500\n140,540\n100,540\n\n']){ await A.runScript(s); await w(300); for(let i = 0; i < 5 && A.busy(); i++){ A.cancel(); await w(60); } }
-      // khối động: 2 trạng thái hiển thị + kéo giãn + lật; bản chèn đang ở trạng thái "Dong", dài 150
+      // khối động: 2 trạng thái hiển thị + kéo giãn + lật; bản chèn đang ở trạng thái "Dong", dài 150, lật ngang
       { const L = (x1, y1, x2, y2) => A.newProps({ type: 'LINE', x1, y1, x2, y2 }); A.commit({ add: [L(900, 0, 1000, 0), L(1000, 0, 1000, 50), L(900, 0, 900, 50), L(900, 0, 950, 50)] });
         A.makeBlock(modelEntities.slice(-4), { x: 900, y: 0 }, 'CUA_DONG', 'convert');
         const mem = modelEntities.filter(e => e.bm && e.bm.name === 'CUA_DONG'); A.dynDefs().CUA_DONG = { vis: { states: ['Mo', 'Dong'], def: 'Mo' }, lin: [{ name: 'Dai', b: { x: 0, y: 0 }, d: { x: 1, y: 0 }, L0: 100 }], flip: true };
         A.commit({ rep: mem.map((e, i) => { const q = JSON.parse(JSON.stringify(e)); q.dyn = { st: 'Mo', L: { Dai: 100 }, fx: 0, fy: 0 }; if(i === 2) q.dvs = ['Mo']; if(i === 3){ q.dvs = ['Dong']; q.vh = 1; } return [e, q]; }) });
-        A.dynSetState(mem[0].grp, { st: 'Dong', L: { Dai: 150 } }); }
-      const dsig = () => modelEntities.filter(e => e.bm && e.bm.name === 'CUA_DONG').map(e => (e.vh ? 'h' : 'v') + ((e.dyn || {}).st || '') + ((e.dyn && e.dyn.L) || {}).Dai + (e.dvs || []).join('/')).sort().join(',');
+        A.dynSetState(mem[0].grp, { st: 'Dong', L: { Dai: 150 }, fx: 1 }); }
+      const dsig = () => modelEntities.filter(e => e.bm && e.bm.name === 'CUA_DONG').map(e => (e.vh ? 'h' : 'v') + ((e.dyn || {}).st || '') + ((e.dyn && e.dyn.L) || {}).Dai + ((e.dyn || {}).fx ? 'F' : '') + (e.dvs || []).join('/') + '@' + Math.round(Math.min(e.x1, e.x2)) + ':' + Math.round(Math.max(e.x1, e.x2)) + (e.bm.a < 0 ? '-' : '+')).sort().join(',');
       const sig = () => modelEntities.map(e => e.type + (e.blk ? '*' : '') + (e.wipe ? 'W' : '') + '|' + (e.layer || '0') + '|' + (e.lt || '') + '|' + (e.text || '')).sort().join('\n');
       const s0 = sig(), d0 = dsig(), ents = modelEntities.slice(), res = {};
       for(const v of ['R2018', 'R2013', 'R2010', 'R2004', 'R2000']){ const dwg = A.dwgNative(ents, { version: v }); await loadDWG(dwg.slice().buffer, 'tong-hop.dwg'); await w(300);

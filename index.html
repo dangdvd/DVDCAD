@@ -1564,7 +1564,8 @@ function explodeInto(list,blocks,M,out,depth,ctxAci,ix){
         const ox=c*(e.csp||0), oy=r*(e.rsp||0);
         const cell=Object.assign({},e,{ix:(e.ix||0)+(cosT*ox - sinT*oy), iy:(e.iy||0)+(sinT*ox + cosT*oy)});
         const Mi=mMul(M, insertMatrix(cell, blk.base));
-        if(depth===0 && _groupBlocks && !e._dim){ nx.bip={x:cell.ix, y:cell.iy}; nx.bm={name:_tn||e.name, lay:effL, a:Mi.a, b:Mi.b, c:Mi.c, d:Mi.d, e:Mi.e, f:Mi.f}; }
+        if(depth===0 && _groupBlocks && !e._dim){ nx.bip={x:cell.ix, y:cell.iy}; const _fl=e._x&&Array.isArray(e._x.dfl)?e._x.dfl:null, Mb=_fl?mMul(Mi,mS(+_fl[0]<0?-1:1,+_fl[1]<0?-1:1)):Mi;   // khối động đang lật (DVDCAD ghi INSERT không lật như AutoCAD): ma trận khối gồm cả phép lật
+          nx.bm={name:_tn||e.name, lay:effL, a:Mb.a, b:Mb.b, c:Mb.c, d:Mb.d, e:Mb.e, f:Mb.f}; }
         const _o0=out.length;
         explodeInto(blk.entities, blocks, Mi, out, depth+1, insAci, nx);
         if(r===0&&c===0) _attOut();
