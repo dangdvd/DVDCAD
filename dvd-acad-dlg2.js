@@ -1180,7 +1180,7 @@
     $('tlFs').onclick = () => { const re = wildRe($('tlFlt').value || '*'); from = new Set(A.layerNames().filter(n => re.test(n) && !map.has(n))); render(); };
     $('tlMap').onclick = () => { if(!from.size || !to){ say('Chọn lớp ở "Chuyển từ" và một lớp ở "Chuyển sang".'); return; } for(const f of from) if(f !== to) map.set(f, { name: to }); from.clear(); render(); };
     $('tlSame').onclick = () => { const T = new Set(std.map(s => s.name.toUpperCase())); let n = 0; for(const l of A.layerNames()) if(T.has(l.toUpperCase())){ const s = std.find(x => x.name.toUpperCase() === l.toUpperCase()); map.set(l, { name: s.name }); n++; } if(!n) say('Không có lớp cùng tên trong danh sách chuẩn (bấm Nạp… để nạp lớp chuẩn).'); render(); };
-    $('tlLoad').onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.dxf,.dws,.dwt'; i.onchange = () => { const f = i.files[0]; if(!f) return; f.text().then(t => { const L = dxfLayers(t); if(!L.length){ say('Không đọc được bảng lớp (cần tệp DXF).'); return; } for(const s of L) if(!std.some(x => x.name === s.name)) std.push(s); log('Đã nạp ' + L.length + ' lớp chuẩn từ ' + f.name); render(); }); }; i.click(); };
+    $('tlLoad').onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.dws,.dwg,.dwt,.dxf'; i.onchange = () => { const f = i.files[0]; if(!f) return; stdTablesOf(f).catch(() => null).then(T => { const L = T ? T.LAYER : []; if(!L.length){ say('Không đọc được bảng lớp (cần tệp DWS / DWG / DXF).'); return; } for(const s of L) if(!std.some(x => x.name === s.name)) std.push(s); log('Đã nạp ' + L.length + ' lớp chuẩn từ ' + f.name); render(); }); }; i.click(); };
     $('tlNew').onclick = () => A.dialog({ title: 'Lớp mới', cls: 'acw-free', help: 'LAYTRANS', html: '<div class="acw" style="width:320px">' + K.row('Tên:', K.txt('tnN', '')) + K.row('Kiểu nét:', K.ltSel('tnL', 'CONTINUOUS')) + K.row('Màu:', K.colorSel('tnC', '#ffffff', { noBlock: 1 })) + K.row('Bề rộng nét:', K.lwSel('tnW', '0')) + '</div>', onOpen: r => K.bindColors(r),
       ok: r => { const n = K.val(r, 'tnN').trim(); if(!n){ say('Nhập tên.'); return false; } const c = K.val(r, 'tnC'); std.push({ name: n, aci: A.aciNear ? A.aciNear(c === 'BYLAYER' ? '#ffffff' : c) : 7, lt: K.val(r, 'tnL') || 'CONTINUOUS', lw: +K.val(r, 'tnW') || 0 }); to = n; render(); } });
     $('tlEd').onclick = () => { const b = map.get(msel); if(!b) return; const p = Object.assign(props(b.name), b.o || {});
@@ -1589,9 +1589,14 @@
     const html = '<div class="acw" style="width:420px">' + K.grp('Thông báo', K.rad('ssN', 'off', 'Tắt thông báo chuẩn', S.notify === 'off') + '<br>' + K.rad('ssN', 'alert', 'Hiện cảnh báo khi có vi phạm chuẩn', S.notify === 'alert') + '<br>' + K.rad('ssN', 'icon', 'Hiện biểu tượng chuẩn trên thanh trạng thái', S.notify === 'icon')) +
       K.grp('Kiểm tra chuẩn', K.chk('ssA', 'Tự động sửa thuộc tính không chuẩn', S.auto) + '<br>' + K.chk('ssI', 'Hiện các lỗi đã bỏ qua', S.showIgn) + K.vrow('Tệp chuẩn ưu tiên dùng để thay thế:', K.sel('ssP', [['', '(Không)']].concat(F.map(f => [f.name, f.name])), S.pref))) + '</div>';
     A.dialog({ title: 'Cài đặt chuẩn CAD', cls: 'acw-free', help: 'STANDARDS', html, ok: r => { S.notify = K.radio(r, 'ssN') || 'icon'; S.auto = K.on(r, 'ssA') ? 1 : 0; S.showIgn = K.on(r, 'ssI') ? 1 : 0; S.pref = K.val(r, 'ssP') || ''; lsSet(STS, S); stdIcon(); res(true); }, cancel: () => res(false) }); }); }
-  function pickStdFile(){ return new Promise(res => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.dws,.dxf,.dwt'; i.onchange = () => { const f = i.files[0]; if(!f){ res(null); return; }
-    f.text().then(t => { if(!/(^|\n)\s*0\s*\r?\n\s*SECTION/.test(t)){ say('Chỉ đọc được tệp chuẩn dạng DXF ASCII (lưu .dws / .dwg dưới dạng DXF).'); res(null); return; }
-      const data = dxfTables(t); const n = data.LAYER.length + data.LTYPE.length + data.STYLE.length + data.DIMSTYLE.length; if(!n){ say('Tệp không có bảng lớp / kiểu nét / kiểu chữ / kiểu kích thước.'); res(null); return; }
+  // đọc bảng chuẩn từ tệp: DXF ASCII hoặc DWG nhị phân (.dws / .dwg / .dwt qua LibreDWG)
+  async function stdTablesOf(f){ const buf = await f.arrayBuffer();
+    if(A.isDwgBytes && A.isDwgBytes(buf)){ if(!A.dwgStdTables) throw new Error('Thiếu bộ đọc DWG'); return A.dwgStdTables(buf); }
+    const t = new TextDecoder().decode(buf); if(!/(^|\n)\s*0\s*\r?\n\s*SECTION/.test(t)) throw new Error('Không phải tệp DWS / DWG / DXF'); return dxfTables(t); }
+  A.stdTablesOf = stdTablesOf;
+  function pickStdFile(){ return new Promise(res => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.dws,.dwg,.dwt,.dxf'; i.onchange = () => { const f = i.files[0]; if(!f){ res(null); return; }
+    stdTablesOf(f).catch(err => { say('Không đọc được tệp chuẩn ' + f.name + ': ' + (err.message || err)); return null; }).then(data => { if(!data){ res(null); return; }
+      const n = data.LAYER.length + data.LTYPE.length + data.STYLE.length + data.DIMSTYLE.length; if(!n){ say('Tệp không có bảng lớp / kiểu nét / kiểu chữ / kiểu kích thước.'); res(null); return; }
       res({ name: f.name, date: new Date(f.lastModified || Date.now()).toLocaleString(), data }); }); }; i.click(); }); }
   A.stdAttach = (name, dxfText) => { const L = stdFiles().filter(f => f.name !== name); L.push({ name, date: new Date().toLocaleString(), data: dxfTables(dxfText) }); stdFilesSet(L); stdIcon(); return L.length; };
   function standardsDlg(){ return new Promise(res => { let F = stdFiles().map(f => deep(f)), S = stdSet(), sel = F.length ? F[0].name : '', psel = 'lay';
@@ -1742,53 +1747,94 @@
         if(S === 'ex'){ const v = K.val(r, 'awE'); done(deep(all[v] || { st: {} })); return; }
         if(S === 'pre'){ const p = (CT.presets || {})[K.val(r, 'awP')]; done({ st: p ? p.mk() : {}, desc: p ? p.d : '', src: 'preset' }); return; }
         done({ st: {}, desc: '' }); }, cancel: () => res(null) }); }); }
+  // kiểu nét in cố định của bảng kiểu in (chỉ số = giá trị linetype trong .ctb; 31 = dùng kiểu nét đối tượng); độ dài theo mm trên giấy
+  const PSLT = A.PSLT = [['Nét liền', []], ['Nét đứt', [5, -2.5]], ['Nét chấm', [0, -1.5]], ['Gạch chấm', [6, -2, 0, -2]], ['Gạch ngắn', [2.5, -1.5]], ['Gạch vừa', [5, -2]], ['Gạch dài', [10, -2.5]],
+    ['Gạch ngắn kép', [2.5, -1.25, 2.5, -3]], ['Gạch vừa kép', [5, -1.5, 5, -3]], ['Gạch dài kép', [10, -1.5, 10, -3]], ['Gạch vừa - dài', [10, -2, 5, -2]], ['Gạch vừa - 2 gạch ngắn', [5, -1.5, 2, -1.5, 2, -1.5]],
+    ['Gạch dài - gạch ngắn', [10, -2, 2.5, -2]], ['Gạch dài - 2 chấm', [10, -2, 0, -2, 0, -2]], ['Gạch dài - chấm', [10, -2, 0, -2]], ['Gạch vừa - chấm - gạch ngắn - chấm', [5, -1.5, 0, -1.5, 2, -1.5, 0, -1.5]], ['Chấm thưa', [0, -4]],
+    ['ISO gạch', [12, -3]], ['ISO gạch thưa', [12, -18]], ['ISO gạch dài - chấm', [24, -3, 0.5, -3]], ['ISO gạch dài - 2 chấm', [24, -3, 0.5, -3, 0.5, -3]], ['ISO gạch dài - 3 chấm', [24, -3, 0.5, -3, 0.5, -3, 0.5, -3]], ['ISO chấm', [0.5, -3]],
+    ['ISO gạch dài - gạch ngắn', [24, -3, 6, -3]], ['ISO gạch dài - 2 gạch ngắn', [24, -3, 6, -3, 6, -3]], ['ISO gạch - chấm', [12, -3, 0.5, -3]], ['ISO 2 gạch - chấm', [12, -3, 12, -3, 0.5, -3]], ['ISO gạch - 2 chấm', [12, -3, 0.5, -3, 0.5, -3]],
+    ['ISO 2 gạch - 2 chấm', [12, -3, 12, -3, 0.5, -3, 0.5, -3]], ['ISO gạch - 3 chấm', [12, -3, 0.5, -3, 0.5, -3, 0.5, -3]], ['ISO 2 gạch - 3 chấm', [12, -3, 12, -3, 0.5, -3, 0.5, -3, 0.5, -3]]];
+  const PSES = [['0', 'Bằng (Butt)'], ['1', 'Vuông (Square)'], ['2', 'Tròn (Round)'], ['3', 'Thoi (Diamond)']], PSJS = [['0', 'Vát nhọn (Miter)'], ['1', 'Vát (Bevel)'], ['2', 'Tròn (Round)'], ['3', 'Thoi (Diamond)']];
+  const PSFS = [['64', 'Đặc (Solid)'], ['65', 'Ô cờ'], ['66', 'Lưới ô vuông'], ['67', 'Hình thoi'], ['68', 'Sọc ngang'], ['69', 'Xiên trái'], ['70', 'Xiên phải'], ['71', 'Chấm vuông'], ['72', 'Sọc dọc']];
+  A.PSFS = PSFS;
+  const lwTable = W => (Array.isArray(W.lwt) && W.lwt.length >= 27 ? W.lwt : (CT.LWMM || LWS.map(v => v / 100)));
+  // Edit Lineweights: sửa giá trị bảng bề rộng nét (kiểu đang dùng giá trị cũ đổi theo), đơn vị mm / inch, sắp xếp
+  function editLwDlg(W){ return new Promise(res => { const old = lwTable(W).slice(), T = old.slice(); let unit = 'mm';
+    const used = v => Object.values(W.st).some(s => s.lw > 0 && Math.abs(s.lw - Math.round(v * 100)) < 0.5);
+    const html = '<div class="acw" style="width:380px"><div class="acw-lab">Bề rộng nét:</div><div class="lm-grid" style="height:260px"><table class="acw-cmp"><thead><tr><th>#</th><th>Giá trị</th><th>Đang dùng</th></tr></thead><tbody id="elB"></tbody></table></div>' +
+      K.grp('Đơn vị bề rộng nét', K.rad('elU', 'mm', 'Milimét (mm)', 1) + ' &nbsp; ' + K.rad('elU', 'in', 'Inch (in)', 0)) + '<div class="acw-row">' + K.btn('elSort', 'Sắp xếp bề rộng nét') + '</div></div>';
+    const d = A.dialog({ title: 'Sửa bề rộng nét', cls: 'acw-free', help: 'STYLESMANAGER', html, ok: () => { pull();
+        for(let i = 0; i < T.length; i++) if(Math.abs(T[i] - old[i]) > 1e-9){ const a = Math.round(old[i] * 100), b = Math.round(T[i] * 100); for(const s of Object.values(W.st)) if(s.lw === a) s.lw = b; }
+        if(T.every((v, i) => Math.abs(v - (CT.LWMM || [])[i]) < 1e-9)) delete W.lwt; else W.lwt = T.slice(); res(true); }, cancel: () => res(false) });
+    const $ = id => d.root.querySelector('#' + id);
+    const fmt = v => unit === 'mm' ? (+v).toFixed(2) : (+v / 25.4).toFixed(4);
+    const render = () => { $('elB').innerHTML = T.map((v, i) => '<tr><td>' + (i + 1) + '</td><td><input data-i="' + i + '" value="' + fmt(v) + '" style="width:90px"></td><td>' + (used(old[i]) ? '✓' : '') + '</td></tr>').join(''); };
+    const pull = () => d.root.querySelectorAll('#elB input[data-i]').forEach(x => { const n = num(x.value); if(n != null && n >= 0) T[+x.dataset.i] = unit === 'mm' ? n : n * 25.4; });
+    d.root.querySelectorAll('input[name=elU]').forEach(x => x.addEventListener('change', () => { pull(); unit = K.radio(d.root, 'elU'); render(); }));
+    $('elSort').onclick = () => { pull(); const ix = T.map((v, i) => i).sort((a, b) => T[a] - T[b]); const T2 = ix.map(i => T[i]), O2 = ix.map(i => old[i]); T.splice(0, T.length, ...T2); old.splice(0, old.length, ...O2); render(); };
+    $('elB').addEventListener('keydown', e => e.stopPropagation()); render(); }); }
   function plotStyleEditor(name){ const T0 = CT.get(name); if(!T0){ say('Không có bảng kiểu in ' + name); return; } const W = deep(T0); W.st = W.st || {}; let sel = new Set([1]), anchor = 1, tab = 'frm';
-    const stOf = i => W.st[i] || {}, setSt = (i, f) => { const o = Object.assign({}, W.st[i] || {}); f(o); for(const k of Object.keys(o)) if(o[k] == null || o[k] === '' || (k === 'sc' && o[k] >= 100) || (k === 'lw' && !(o[k] > 0)) || (k === 'g' && !o[k])) delete o[k]; if(Object.keys(o).length) W.st[i] = o; else delete W.st[i]; };
+    const stOf = i => W.st[i] || {};
+    const BOOL0 = { g: 1, nd: 1, na: 1, pn: 1, vp: 1 };
+    const setSt = (i, f) => { const o = Object.assign({}, W.st[i] || {}); f(o); for(const k of Object.keys(o)) if(o[k] == null || o[k] === '' || (k === 'sc' && o[k] >= 100) || (k === 'lw' && !(o[k] > 0)) || (BOOL0[k] && !o[k])) delete o[k]; if(Object.keys(o).length) W.st[i] = o; else delete W.st[i]; };
+    const lwOpts = () => [['0', 'Dùng bề rộng nét đối tượng']].concat(lwTable(W).filter(v => v > 0).map(v => [String(Math.round(v * 100)), (+v).toFixed(2) + ' mm']));
+    const rng = (n, a) => { const o = [['0', 'Tự động']]; for(let i = a || 1; i <= n; i++) o.push([String(i), String(i)]); return o; };
+    // mô tả thuộc tính: nhãn, danh sách chọn (opts), lấy / đặt giá trị
+    const F = {
+      dt: { t: 'Bật dither', opts: () => [['1', 'Bật'], ['0', 'Tắt']], get: s => s.nd ? '0' : '1', set: (o, v) => { o.nd = v === '0' ? 1 : 0; } },
+      g: { t: 'Chuyển xám', opts: () => [['0', 'Tắt'], ['1', 'Bật']], get: s => s.g ? '1' : '0', set: (o, v) => { o.g = v === '1' ? 1 : 0; } },
+      pn: { t: 'Số bút', opts: () => rng(32), get: s => String(s.pn | 0), set: (o, v) => { o.pn = +v | 0; } },
+      vp: { t: 'Bút ảo', opts: () => rng(255), get: s => String(s.vp | 0), set: (o, v) => { o.vp = +v | 0; } },
+      sc: { t: 'Độ đậm', inp: 1, get: s => String(s.sc != null ? s.sc : 100), set: (o, v) => { const n = num(v); if(n != null) o.sc = Math.max(0, Math.min(100, n)); } },
+      lt: { t: 'Kiểu nét', opts: () => [['', 'Dùng kiểu nét đối tượng']].concat(PSLT.map((p, i) => [String(i), p[0]])), get: s => s.lt != null ? String(s.lt) : '', set: (o, v) => { o.lt = v === '' ? null : +v; } },
+      ad: { t: 'Thích ứng', opts: () => [['1', 'Bật'], ['0', 'Tắt']], get: s => s.na ? '0' : '1', set: (o, v) => { o.na = v === '0' ? 1 : 0; } },
+      lw: { t: 'Bề rộng nét', opts: lwOpts, get: s => String(s.lw > 0 ? s.lw : 0), set: (o, v) => { o.lw = +v; } },
+      es: { t: 'Kiểu đầu nét', opts: () => [['', 'Dùng kiểu đầu nét đối tượng']].concat(PSES), get: s => s.es != null ? String(s.es) : '', set: (o, v) => { o.es = v === '' ? null : +v; } },
+      js: { t: 'Kiểu nối nét', opts: () => [['', 'Dùng kiểu nối nét đối tượng']].concat(PSJS), get: s => s.js != null ? String(s.js) : '', set: (o, v) => { o.js = v === '' ? null : +v; } },
+      fs: { t: 'Kiểu tô', opts: () => [['', 'Dùng kiểu tô đối tượng']].concat(PSFS), get: s => s.fs != null ? String(s.fs) : '', set: (o, v) => { o.fs = v === '' ? null : +v; } },
+      d: { t: 'Mô tả', inp: 1, get: s => s.d || '', set: (o, v) => { o.d = String(v).trim(); } } };
+    const txtOf = (k, s) => { const f = F[k], v = f.get(s); if(f.inp) return v; const o = f.opts().find(x => x[0] === v); return o ? o[1] : v; };
     const nSt = Object.keys(W.st).length;
-    const lwOpts = [['0', 'Dùng bề rộng nét đối tượng']].concat(LWS.slice(1).map(v => [String(v), (v / 100).toFixed(2) + ' mm']));
-    const dis = (l, v) => K.row(l, '<select disabled><option>' + v + '</option></select>');
+    const fsel = (k, w) => K.row(F[k].t + ':', K.sel('pf' + k, F[k].opts(), '') );
     const html = '<div class="acw" style="width:720px">' + K.tabs('pse', [['gen', 'Tổng quát'], ['tbl', 'Dạng bảng'], ['frm', 'Dạng biểu mẫu']], tab) +
       K.pane('pse', 'gen', tab, K.row('Tên tệp bảng kiểu in:', '<b>' + esc(name) + '.ctb</b>') + K.vrow('Mô tả', '<textarea id="peD" rows="4" style="width:100%;box-sizing:border-box">' + esc(W.desc || '') + '</textarea>') +
         K.grp('Thông tin tệp', '<div style="line-height:1.8">Số kiểu: 255<br>Đường dẫn: (lưu trong DVDCAD — xuất .ctb bằng "Lưu thành…")<br>Phiên bản: 1.0<br>Nguồn: ' + (W.src === 'ctb' ? 'nhập từ tệp .ctb' : W.src === 'preset' ? 'mẫu DVDCAD' : 'tạo trong DVDCAD') + '<br>Kiểu khác mặc định: <span id="peN">' + nSt + '</span></div>') +
-        K.chk('peAf', 'Áp hệ số tỉ lệ chung cho kiểu nét không theo ISO', 0, { dis: 1 })) +
-      K.pane('pse', 'tbl', tab, '<div class="pse-tv" id="peTV"></div><div class="acw-note" style="margin-top:4px">Bấm vào ô để sửa. Thuộc tính mờ chưa hỗ trợ khi in bằng DVDCAD.</div>') +
+        K.chk('peAf', 'Áp hệ số tỉ lệ chung cho kiểu nét không theo ISO', W.af, {}) + K.row('Hệ số tỉ lệ:', K.num('peSf', W.sf || 1, { min: 0 }))) +
+      K.pane('pse', 'tbl', tab, '<div class="pse-tv" id="peTV"></div><div class="acw-note" style="margin-top:4px">Bấm vào ô để sửa.</div>') +
       K.pane('pse', 'frm', tab, '<div class="acw-cols"><div class="c1" style="flex:0 0 190px"><div class="acw-lab">Kiểu in:</div><div class="acw-list pse-pl" id="pePL" tabindex="0" style="height:330px"></div></div>' +
         '<div class="c1 pse-fm" style="flex:1 1 auto">' + K.grp('Thuộc tính', K.row('Màu:', '<span style="display:flex;gap:4px;flex:1">' + K.sel('peC', PSC, 'o') + '<input type="color" id="peCx" value="#000000" style="width:40px;display:none"></span>') +
-          dis('Dither:', 'Bật') + K.row('Chuyển xám:', K.sel('peG', [['0', 'Tắt'], ['1', 'Bật']], '0')) + dis('Số bút:', 'Tự động') + dis('Bút ảo:', 'Tự động') + K.row('Độ đậm:', K.num('peS', 100, { min: 0, max: 100 })) +
-          dis('Kiểu nét:', 'Dùng kiểu nét đối tượng') + dis('Thích ứng:', 'Bật') + K.row('Bề rộng nét:', K.sel('peW', lwOpts, '0')) + dis('Kiểu đầu nét:', 'Dùng kiểu đầu nét đối tượng') + dis('Kiểu nối nét:', 'Dùng kiểu nối nét đối tượng') + dis('Kiểu tô:', 'Dùng kiểu tô đối tượng')) +
-          K.vrow('Mô tả:', '<textarea id="peSd" rows="2" style="width:100%;box-sizing:border-box"></textarea>') + '<div class="acw-row">' + K.btn('peLw', 'Sửa bề rộng nét…', { dis: 1 }) + K.btn('peSa', 'Lưu thành…') + '</div></div></div>') + '</div>';
-    const d = A.dialog({ title: 'Trình sửa bảng kiểu in - ' + name + '.ctb', cls: 'acw-free', help: 'STYLESMANAGER', html, okText: 'Lưu & đóng', ok: r => { W.desc = r.querySelector('#peD').value; CT.put(name, W); plotOptsRefresh(); try{ forceRedraw(); }catch(_){} log('Đã lưu bảng kiểu in "' + name + '.ctb"'); } });
+          fsel('dt') + fsel('g') + fsel('pn') + fsel('vp') + K.row('Độ đậm:', K.num('pfsc', 100, { min: 0, max: 100 })) + fsel('lt') + fsel('ad') + fsel('lw') + fsel('es') + fsel('js') + fsel('fs')) +
+          K.vrow('Mô tả:', '<textarea id="pfd" rows="2" style="width:100%;box-sizing:border-box"></textarea>') + '<div class="acw-row">' + K.btn('peLw', 'Sửa bề rộng nét…') + K.btn('peSa', 'Lưu thành…') + '</div></div></div>') + '</div>';
+    const d = A.dialog({ title: 'Trình sửa bảng kiểu in - ' + name + '.ctb', cls: 'acw-free', help: 'STYLESMANAGER', html, okText: 'Lưu & đóng', ok: r => { W.desc = r.querySelector('#peD').value; W.af = K.on(r, 'peAf') ? 1 : 0; if(!W.af) delete W.af; const sf = num(K.val(r, 'peSf')); if(sf > 0 && sf !== 1) W.sf = sf; else delete W.sf; CT.put(name, W); plotOptsRefresh(); try{ forceRedraw(); }catch(_){} log('Đã lưu bảng kiểu in "' + name + '.ctb"'); } });
     const root = d.root, $ = id => root.querySelector('#' + id);
     K.bindTabs(root, k => { tab = k; if(k === 'tbl') renderTV(); if(k === 'frm'){ renderPL(); loadForm(); } });
     function renderPL(){ let h = ''; for(let i = 1; i <= 255; i++){ const s = stOf(i); h += '<div class="it' + (sel.has(i) ? ' on' : '') + '" data-v="' + i + '"><span class="sw" style="background:' + (typeof aciHex === 'function' ? aciHex(i) : '#888') + '"></span>Color_' + i + (Object.keys(s).length ? ' •' : '') + '</div>'; } $('pePL').innerHTML = h; }
-    function loadForm(){ const L = [...sel], s0 = stOf(L[0]); const same = k => L.every(i => (stOf(i)[k] || null) === (s0[k] || null));
-      const c = s0.c || 'o', known = PSC.some(x => x[0] === c); $('peC').value = !same('c') ? '' : known ? c : 'x'; $('peCx').style.display = $('peC').value === 'x' ? '' : 'none'; if(s0.c) $('peCx').value = s0.c;
-      $('peG').value = same('g') ? (s0.g ? '1' : '0') : ''; $('peS').value = same('sc') ? (s0.sc != null ? s0.sc : 100) : ''; $('peW').value = same('lw') ? String(s0.lw > 0 ? s0.lw : 0) : ''; $('peSd').value = same('d') ? s0.d || '' : ''; }
+    function fillSel(el, opts){ const v = el.value; el.innerHTML = opts.map(([a, b]) => '<option value="' + esc(a) + '">' + esc(b) + '</option>').join(''); el.value = v; }
+    function loadForm(){ const L = [...sel], s0 = stOf(L[0]); const same = f => L.every(i => f(stOf(i)) === f(s0));
+      const c = s0.c || 'o', known = PSC.some(x => x[0] === c); if(same(s => s.c || 'o')){ $('peC').value = known ? c : 'x'; } else $('peC').selectedIndex = -1; $('peCx').style.display = $('peC').value === 'x' ? '' : 'none'; if(s0.c) $('peCx').value = s0.c;
+      fillSel($('pflw'), lwOpts());
+      for(const k of Object.keys(F)){ const el = $('pf' + k); if(!el) continue; const g = F[k].get; if(same(g)) el.value = g(s0); else if(el.tagName === 'SELECT') el.selectedIndex = -1; else el.value = ''; } }
     const apply = f => { for(const i of sel) setSt(i, f); $('peN').textContent = Object.keys(W.st).length; };
     $('pePL').addEventListener('click', e => { const it = e.target.closest('.it'); if(!it) return; const i = +it.dataset.v;
       if(e.shiftKey){ sel = new Set(); const [a, b] = anchor < i ? [anchor, i] : [i, anchor]; for(let k = a; k <= b; k++) sel.add(k); } else if(e.ctrlKey || e.metaKey){ if(sel.has(i) && sel.size > 1) sel.delete(i); else sel.add(i); anchor = i; } else { sel = new Set([i]); anchor = i; }
       $('pePL').querySelectorAll('.it').forEach(x => x.classList.toggle('on', sel.has(+x.dataset.v))); loadForm(); });
     $('peC').onchange = () => { const v = $('peC').value; $('peCx').style.display = v === 'x' ? '' : 'none'; if(!v) return; apply(o => { o.c = v === 'o' ? null : v === 'x' ? $('peCx').value : v; }); };
     $('peCx').oninput = () => apply(o => { o.c = $('peCx').value; });
-    $('peG').onchange = () => { const v = $('peG').value; if(v) apply(o => { o.g = v === '1' ? 1 : 0; }); };
-    $('peS').onchange = () => { const v = num($('peS').value); if(v != null) apply(o => { o.sc = Math.max(0, Math.min(100, v)); }); };
-    $('peW').onchange = () => { const v = $('peW').value; if(v !== '') apply(o => { o.lw = +v; }); };
-    $('peSd').onchange = () => apply(o => { o.d = $('peSd').value.trim(); });
+    for(const k of Object.keys(F)){ const el = $('pf' + k); if(!el) continue; el.addEventListener('change', () => { if(el.tagName === 'SELECT' && el.selectedIndex < 0) return; const v = el.value; if(k === 'sc' && num(v) == null) return; apply(o => F[k].set(o, v)); }); }
+    $('peLw').onclick = async () => { if(await editLwDlg(W)){ loadForm(); if(tab === 'tbl') renderTV(); } };
     $('peSa').onclick = async () => { W.desc = $('peD').value; try{ const u = await CT.build(W); shareOrDownload(new Blob([u], { type: 'application/octet-stream' }), name + '.ctb', 'application/octet-stream'); log('Đã xuất ' + name + '.ctb (chép vào thư mục Plot Styles của AutoCAD để dùng).'); }catch(err){ say('Không xuất được .ctb: ' + (err.message || err)); } };
     // dạng bảng: mỗi cột một kiểu in, bấm ô để sửa
-    const ROWS = [['n', 'Tên'], ['d', 'Mô tả'], ['c', 'Màu'], ['dt', 'Bật dither'], ['g', 'Chuyển xám'], ['pn', 'Số bút'], ['vp', 'Bút ảo'], ['sc', 'Độ đậm'], ['lt', 'Kiểu nét'], ['ad', 'Thích ứng'], ['lw', 'Bề rộng nét'], ['es', 'Kiểu đầu nét'], ['js', 'Kiểu nối nét'], ['fs', 'Kiểu tô']];
-    const cellT = (k, i) => { const s = stOf(i); return k === 'n' ? 'Color_' + i : k === 'd' ? s.d || '' : k === 'c' ? colT(s.c) : k === 'g' ? (s.g ? 'Bật' : 'Tắt') : k === 'sc' ? String(s.sc != null ? s.sc : 100) : k === 'lw' ? lwT(s.lw) : k === 'dt' || k === 'ad' ? 'Bật' : k === 'pn' || k === 'vp' ? 'Tự động' : 'Dùng của đối tượng'; };
-    const EDK = new Set(['d', 'c', 'g', 'sc', 'lw']);
+    const ROWS = [['d', 'Mô tả'], ['c', 'Màu'], ['dt'], ['g'], ['pn'], ['vp'], ['sc'], ['lt'], ['ad'], ['lw'], ['es'], ['js'], ['fs']];
+    const cellT = (k, i) => k === 'c' ? colT(stOf(i).c) : txtOf(k, stOf(i));
     function renderTV(){ let h = '<table><thead><tr><th class="k" style="position:sticky;left:0;z-index:3">Tên</th>'; for(let i = 1; i <= 255; i++) h += '<th><span class="sw" style="display:inline-block;width:9px;height:9px;margin-right:4px;background:' + (typeof aciHex === 'function' ? aciHex(i) : '#888') + '"></span>Color_' + i + '</th>'; h += '</tr></thead><tbody>';
-      for(const [k, t] of ROWS.slice(1)){ h += '<tr><td class="k">' + t + '</td>'; for(let i = 1; i <= 255; i++) h += '<td' + (EDK.has(k) ? ' class="ed"' : ' style="opacity:.55"') + ' data-k="' + k + '" data-i="' + i + '">' + esc(cellT(k, i)) + '</td>'; h += '</tr>'; }
+      for(const [k, t] of ROWS){ h += '<tr><td class="k">' + esc(t || F[k].t) + '</td>'; for(let i = 1; i <= 255; i++) h += '<td class="ed" data-k="' + k + '" data-i="' + i + '">' + esc(cellT(k, i)) + '</td>'; h += '</tr>'; }
       $('peTV').innerHTML = h + '</tbody></table>'; }
     $('peTV').addEventListener('click', e => { const td = e.target.closest('td.ed'); if(!td || td.querySelector('select,input')) return; const k = td.dataset.k, i = +td.dataset.i, s = stOf(i);
       let ctl; if(k === 'c'){ ctl = document.createElement('select'); ctl.innerHTML = PSC.filter(x => x[0] !== 'x').map(([v, t]) => '<option value="' + v + '"' + ((s.c || 'o') === v ? ' selected' : '') + '>' + t + '</option>').join('') + (s.c && !PSC.some(x => x[0] === s.c) ? '<option value="' + s.c + '" selected>' + s.c + '</option>' : ''); }
-      else if(k === 'g'){ ctl = document.createElement('select'); ctl.innerHTML = '<option value="0">Tắt</option><option value="1"' + (s.g ? ' selected' : '') + '>Bật</option>'; }
-      else if(k === 'lw'){ ctl = document.createElement('select'); ctl.innerHTML = lwOpts.map(([v, t]) => '<option value="' + v + '"' + (String(s.lw > 0 ? s.lw : 0) === v ? ' selected' : '') + '>' + t + '</option>').join(''); }
-      else { ctl = document.createElement('input'); ctl.value = k === 'sc' ? (s.sc != null ? s.sc : 100) : s.d || ''; if(k === 'sc') ctl.type = 'number'; }
+      else if(F[k].inp){ ctl = document.createElement('input'); ctl.value = F[k].get(s); if(k === 'sc') ctl.type = 'number'; }
+      else { ctl = document.createElement('select'); ctl.innerHTML = F[k].opts().map(([v, t]) => '<option value="' + esc(v) + '">' + esc(t) + '</option>').join(''); ctl.value = F[k].get(s); }
       td.textContent = ''; td.appendChild(ctl); ctl.focus();
-      const done = () => { const v = ctl.value; setSt(i, o => { if(k === 'c') o.c = v === 'o' ? null : v; else if(k === 'g') o.g = v === '1' ? 1 : 0; else if(k === 'lw') o.lw = +v; else if(k === 'sc'){ const n = num(v); if(n != null) o.sc = Math.max(0, Math.min(100, n)); } else o.d = String(v).trim(); }); td.textContent = cellT(k, i); $('peN').textContent = Object.keys(W.st).length; };
+      const done = () => { const v = ctl.value; setSt(i, o => { if(k === 'c') o.c = v === 'o' ? null : v; else if(!(k === 'sc' && num(v) == null)) F[k].set(o, v); }); td.textContent = cellT(k, i); $('peN').textContent = Object.keys(W.st).length; };
       ctl.addEventListener('change', () => ctl.blur()); ctl.addEventListener('blur', done, { once: true }); ctl.addEventListener('keydown', ev => { ev.stopPropagation(); if(ev.key === 'Enter'){ ev.preventDefault(); ctl.blur(); } }); });
     renderPL(); loadForm(); return d; }
   A.plotStyleEditor = plotStyleEditor; A.ctbEditor = n => n ? plotStyleEditor(n) : stylesManager();
@@ -1819,9 +1865,16 @@
     ['real', 'Thực tế', 'Tô bóng mượt, vật liệu, bóng đổ'], ['shade', 'Tô bóng', 'Tô bóng mượt, không cạnh'], ['shedge', 'Tô bóng + cạnh', 'Tô bóng mượt kèm cạnh'], ['xray', 'Xuyên thấu (X-quang)', 'Mặt trong suốt một phần (độ mờ 50%)']];
   const VSU = 'dvd:vsuser';
   const vsUser = () => lsGet(VSU, {});
-  const vsCur = () => { try{ if(!A.view3D) return '2d'; const s = A.view3D.ov.querySelector('select[data-a="style"]'); return s ? s.value : (localStorage.getItem('dvd:3dstyle') || 'shedge'); }catch(_){ return '2d'; } };
-  async function vsApply(k){ const U = vsUser(); if(U[k]) k = U[k].base; if(k === '2d'){ if(A.view3D && A.close3D) A.close3D(); log('VSCURRENT: 2D khung dây.'); return; }
-    try{ localStorage.setItem('dvd:3dstyle', k); }catch(_){} if(!A.view3D && A.open3D) await A.open3D(); if(A.view3D && A.view3D.setStyle) A.view3D.setStyle(k); log('VSCURRENT: ' + ((VSL.find(x => x[0] === k) || [, k])[1])); }
+  const vsCur = () => { try{ if(!A.view3D) return '2d'; const u = localStorage.getItem('dvd:vscur'); if(u && vsUser()[u] && A.view3D.vs) return u; const s = A.view3D.ov.querySelector('select[data-a="style"]'); return s ? s.value : (localStorage.getItem('dvd:3dstyle') || 'shedge'); }catch(_){ return '2d'; } };
+  // thuộc tính ghi đè của kiểu riêng (null = theo kiểu gốc)
+  const VSPROPS = ['face', 'edges', 'edgeCol', 'opacity', 'shadow', 'bg'];
+  const vsOver = U => { const o = {}; for(const k of VSPROPS) if(U[k] != null && U[k] !== '') o[k] = U[k]; return Object.keys(o).length ? o : null; };
+  async function vsApply(k){ const U = vsUser(), user = U[k] ? k : null; if(user) k = U[user].base; try{ if(user) localStorage.setItem('dvd:vscur', user); else localStorage.removeItem('dvd:vscur'); }catch(_){}
+    if(k === '2d'){ if(A.view3D && A.close3D) A.close3D(); log('VSCURRENT: 2D khung dây.'); return; }
+    try{ localStorage.setItem('dvd:3dstyle', k); }catch(_){} if(!A.view3D && A.open3D) await A.open3D(); if(A.view3D && A.view3D.setStyle) A.view3D.setStyle(k); if(A.view3D && A.view3D.setVS) A.view3D.setVS(user ? vsOver(U[user]) : null);
+    log('VSCURRENT: ' + (user || ((VSL.find(x => x[0] === k) || [, k])[1]))); }
+  // mở 3D lại thì giữ kiểu riêng đang dùng
+  { const _o3 = A.open3D; if(typeof _o3 === 'function') A.open3D = async function(){ const r = await _o3.apply(this, arguments); try{ const u = localStorage.getItem('dvd:vscur'), U = vsUser(); if(u && U[u] && A.view3D && A.view3D.setVS) A.view3D.setVS(vsOver(U[u])); }catch(_){} return r; }; }
   A.vsApply = vsApply;
   function vsThumb(c, k){ const g = c.getContext('2d'), W = c.width, H = c.height; g.clearRect(0, 0, W, H); const x = W / 2, y = H / 2 + 2, r = Math.min(W, H) * 0.34;
     if(k === '2d' || k === 'wire' || k === 'hidden'){ g.strokeStyle = '#cfd6e0'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI); g.stroke();
@@ -1836,17 +1889,29 @@
   function vsManager(){ let cur = vsCur(); const U0 = vsUser(); if(!VSL.some(x => x[0] === cur) && !U0[cur]) cur = '2d';
     const html = '<div class="acw" style="width:470px"><div class="acw-lab">Kiểu hiển thị có trong bản vẽ</div><div class="tile-v" id="vsV" style="height:200px"></div>' +
       '<div class="acw-row" style="margin-top:4px">' + K.btn('vsNew', 'Tạo kiểu mới…') + K.btn('vsApp', 'Áp dụng cho khung nhìn hiện hành', { def: 1 }) + K.btn('vsDel', 'Xoá kiểu') + '</div>' +
-      '<div class="acw-lab" id="vsN" style="margin-top:6px"></div><div class="lm-grid" style="height:120px"><table class="acw-cmp"><thead><tr><th>Thuộc tính</th><th>Giá trị</th></tr></thead><tbody id="vsP"></tbody></table></div><div class="acw-note" id="vsD" style="margin-top:4px"></div></div>';
+      '<div class="acw-lab" id="vsN" style="margin-top:6px"></div><div class="lm-grid" style="height:200px"><table class="acw-cmp"><thead><tr><th>Thuộc tính</th><th>Giá trị</th></tr></thead><tbody id="vsP"></tbody></table></div><div class="acw-note" id="vsD" style="margin-top:4px"></div></div>';
     const d = A.dialog({ title: 'Trình quản lý kiểu hiển thị', cls: 'acw-free', help: 'VISUALSTYLES', html, modeless: true, noCancel: true, okText: 'Đóng' });
     const root = d.root, $ = id => root.querySelector('#' + id);
     function render(){ const U = vsUser(), L = VSL.map(x => ({ k: x[0], t: x[1], d: x[2], base: x[0] })).concat(Object.keys(U).map(n => ({ k: n, t: n, d: 'Kiểu riêng dựa trên ' + ((VSL.find(x => x[0] === U[n].base) || [, U[n].base])[1]), base: U[n].base, user: 1 })));
       $('vsV').innerHTML = L.map(s => '<div class="tl' + (s.k === cur ? ' on' : '') + '" data-k="' + esc(s.k) + '" title="' + esc(s.d) + '"><canvas width="80" height="60" data-b="' + s.base + '"></canvas>' + esc(s.t) + '</div>').join('');
       $('vsV').querySelectorAll('canvas').forEach(c => vsThumb(c, c.dataset.b)); const s = L.find(x => x.k === cur) || L[0];
-      $('vsN').textContent = 'Thuộc tính: ' + s.t + (s.k === vsCur() ? ' (đang dùng)' : ''); $('vsP').innerHTML = (VSP[s.base] || []).map(([a, b]) => '<tr><td>' + esc(a) + '</td><td>' + esc(b) + '</td></tr>').join(''); $('vsD').textContent = s.d; $('vsDel').disabled = !s.user; }
+      $('vsN').textContent = 'Thuộc tính: ' + s.t + (s.k === vsCur() ? ' (đang dùng)' : ''); $('vsD').textContent = s.d; $('vsDel').disabled = !s.user;
+      if(!s.user){ $('vsP').innerHTML = (VSP[s.base] || []).map(([a, b]) => '<tr><td>' + esc(a) + '</td><td>' + esc(b) + '</td></tr>').join(''); return; }
+      const u = U[s.k], sel = (id, opts, v) => '<select data-p="' + id + '">' + opts.map(([a, b]) => '<option value="' + a + '"' + (String(v == null ? '' : v) === a ? ' selected' : '') + '>' + esc(b) + '</option>').join('') + '</select>';
+      const col = (id, v) => '<label class="acw-ck" style="display:inline-flex"><input type="checkbox" data-pc="' + id + '"' + (v ? ' checked' : '') + '><span>Riêng</span></label> <input type="color" data-p="' + id + '" value="' + (v || '#202530') + '"' + (v ? '' : ' disabled') + '>';
+      $('vsP').innerHTML = [['Kiểu gốc', sel('base', VSL.filter(x => x[0] !== '2d').map(x => [x[0], x[1]]), u.base)], ['Kiểu mặt', sel('face', [['', 'Theo kiểu gốc'], ['none', 'Không tô mặt']], u.face)],
+        ['Hiện cạnh', sel('edges', [['', 'Theo kiểu gốc'], ['none', 'Không'], ['facet', 'Cạnh mặt'], ['iso', 'Đường đẳng tham số']], u.edges)], ['Màu cạnh', col('edgeCol', u.edgeCol)],
+        ['Độ mờ (%)', '<input data-p="opacity" type="number" min="5" max="100" placeholder="theo kiểu gốc" value="' + (u.opacity != null ? u.opacity : '') + '" style="width:110px">'],
+        ['Bóng đổ', sel('shadow', [['', 'Theo kiểu gốc'], ['off', 'Tắt'], ['ground', 'Bóng trên nền'], ['full', 'Bóng đổ đầy đủ']], u.shadow)], ['Màu nền', col('bg', u.bg)]].map(([a, b]) => '<tr><td>' + esc(a) + '</td><td>' + b + '</td></tr>').join(''); }
+    $('vsP').addEventListener('change', e => { const U = vsUser(), u = U[cur]; if(!u) return; const t = e.target, k = t.dataset.p || t.dataset.pc;
+      if(t.dataset.pc){ const c = $('vsP').querySelector('input[type=color][data-p="' + k + '"]'); c.disabled = !t.checked; u[k] = t.checked ? c.value : null; }
+      else if(k === 'opacity'){ const n = num(t.value); u.opacity = n == null ? null : Math.max(5, Math.min(100, n)); } else if(k) u[k] = t.value || null;
+      for(const q of Object.keys(u)) if(u[q] == null) delete u[q]; lsSet(VSU, U); if(vsCur() === cur && A.view3D){ if(k === 'base' && A.view3D.setStyle) A.view3D.setStyle(u.base); if(A.view3D.setVS) A.view3D.setVS(vsOver(u)); } if(k === 'base') render(); });
+    $('vsP').addEventListener('keydown', e => e.stopPropagation());
     $('vsV').addEventListener('click', e => { const t = e.target.closest('.tl'); if(!t) return; cur = t.dataset.k; render(); });
     $('vsV').addEventListener('dblclick', e => { const t = e.target.closest('.tl'); if(t) vsApply(t.dataset.k).then(render); });
     $('vsApp').onclick = () => vsApply(cur).then(render);
-    $('vsNew').onclick = async () => { const n = await askStr('Tạo kiểu hiển thị mới', 'Tên:', 'Kiểu ' + (Object.keys(vsUser()).length + 1)); if(!n) return; if(VSL.some(x => x[1] === n)){ say('Trùng tên kiểu có sẵn.'); return; } const U = vsUser(); const b = VSL.some(x => x[0] === cur) ? cur : (U[cur] && U[cur].base) || 'shedge'; U[n] = { base: b }; lsSet(VSU, U); cur = n; render(); };
+    $('vsNew').onclick = async () => { const n = await askStr('Tạo kiểu hiển thị mới', 'Tên:', 'Kiểu ' + (Object.keys(vsUser()).length + 1)); if(!n) return; if(VSL.some(x => x[1] === n)){ say('Trùng tên kiểu có sẵn.'); return; } const U = vsUser(); let b = VSL.some(x => x[0] === cur) ? cur : (U[cur] && U[cur].base) || 'shedge'; if(b === '2d') b = 'shedge'; U[n] = U[cur] ? Object.assign({}, U[cur], { base: b }) : { base: b }; lsSet(VSU, U); cur = n; render(); };
     $('vsDel').onclick = () => { const U = vsUser(); if(!U[cur]) return; delete U[cur]; lsSet(VSU, U); cur = '2d'; render(); };
     render(); return d; }
   plain(['VISUALSTYLES'], 'Trình quản lý kiểu hiển thị (Visual Styles Manager): 2D khung dây, khung dây, khuất nét, thực tế, tô bóng, tô bóng + cạnh, X-quang, kiểu riêng', () => { if(document.querySelector('.dvd-dlg[data-cmd="VISUALSTYLES"]')) return; vsManager(); });
@@ -1855,7 +1920,7 @@
     const cur = vsCur(); const r = await A.getKw('Nhập tuỳ chọn', { kw, def: (VSL.find(x => x[0] === cur) || VSL[0])[1] }); const m = { 2: '2d', W: 'wire', H: 'hidden', R: 'real', S: 'shade', E: 'shedge', X: 'xray' };
     if(r.kw === 'O'){ const s = await A.getStr('Tên kiểu hiển thị (' + Object.keys(U).join(', ') + ')'); if(s.str && U[s.str]) await vsApply(s.str); else if(s.str) log('Không có kiểu "' + s.str + '".'); return; }
     if(r.kw && m[r.kw]) await vsApply(m[r.kw]); });
-  ecmd(['VSSAVE'], 'Lưu kiểu hiển thị hiện hành thành kiểu có tên (Save Visual Style)', async () => { const s = await A.getStr('Lưu kiểu hiển thị với tên'); const n = String(s.str || '').trim(); if(!n) return; if(VSL.some(x => x[1] === n)){ log('Trùng tên kiểu có sẵn.'); return; } const U = vsUser(); U[n] = { base: vsCur() }; lsSet(VSU, U); log('VSSAVE: đã lưu kiểu "' + n + '".'); });
+  ecmd(['VSSAVE'], 'Lưu kiểu hiển thị hiện hành thành kiểu có tên (Save Visual Style)', async () => { const s = await A.getStr('Lưu kiểu hiển thị với tên'); const n = String(s.str || '').trim(); if(!n) return; if(VSL.some(x => x[1] === n)){ log('Trùng tên kiểu có sẵn.'); return; } const U = vsUser(), c0 = vsCur(); U[n] = U[c0] ? Object.assign({}, U[c0]) : { base: c0 === '2d' ? 'shedge' : c0 }; lsSet(VSU, U); log('VSSAVE: đã lưu kiểu "' + n + '".'); });
 
   /* ---------- ATTACH — chọn tệp tham chiếu rồi mở lệnh gắn tương ứng ---------- */
   let pendFile = null;

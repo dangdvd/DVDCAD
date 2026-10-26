@@ -1,4 +1,4 @@
-# DVDCAD v5p — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5q — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -27,6 +27,30 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v5q)
+- **Không gian giấy (paper space)** trong layout do bạn tạo (lệnh LAYOUT): mọi lệnh vẽ / sửa đều ghi lên giấy (ghi chú, khung, ký hiệu…), có hoàn tác / làm lại, lưu cùng layout.
+  - Khung nhìn sửa như đối tượng: **dời / kéo giãn** (giữ tỉ lệ và vùng nhìn), **xoá**, **sao chép** khung nhìn.
+  - Bảng Thuộc tính sửa được đối tượng trên giấy. **PSOBJ** chọn mọi đối tượng giấy của layout.
+- **CHSPACE** (Change Space): chuyển đối tượng **giấy → Model** (qua khung nhìn chứa nó) hoặc **Model → giấy** (tuỳ chọn M: chọn khung nhìn, chọn đối tượng trong Model), đổi cỡ đúng theo tỉ lệ khung nhìn, một bước hoàn tác.
+- **STANDARDS / LAYTRANS** đọc được tệp chuẩn **DWS / DWG / DWT nhị phân** (qua LibreDWG), ngoài DXF.
+- **Kiểu in (.ctb)** đủ thuộc tính trong Trình sửa bảng kiểu in (Dạng bảng và Dạng biểu mẫu):
+  - Có tác dụng khi in: màu, chuyển xám, độ đậm, **kiểu nét** (31 kiểu nét in cố định như AutoCAD), **kiểu đầu nét**, **kiểu nối nét**, **kiểu tô** (ô cờ, lưới ô vuông, hình thoi, sọc ngang / dọc, xiên trái / phải, chấm vuông), bề rộng nét, hệ số tỉ lệ chung cho kiểu nét không theo ISO.
+  - Lưu và ghi vào .ctb cho AutoCAD: dither, số bút, bút ảo, thích ứng, mô tả.
+  - **Sửa bề rộng nét…**: sửa bảng bề rộng nét tuỳ chỉnh (mm / inch, sắp xếp); kiểu đang dùng giá trị cũ đổi theo.
+- **EXPORTLAYOUT** cắt mọi đối tượng theo khung nhìn (chữ nhật, đa giác VPCLIP, XCLIP): đường, đa tuyến cong, cung, đường tròn, elip, spline (thành từng đoạn), hatch, vùng đặc; chữ / điểm giữ khi điểm đặt nằm trong khung.
+- **Visual Styles Manager**: kiểu riêng có thuộc tính sửa được — kiểu gốc, kiểu mặt (không tô), hiện cạnh (không / cạnh mặt / đường đẳng tham số), màu cạnh, độ mờ (%), bóng đổ (tắt / trên nền / đầy đủ), màu nền; áp dụng ngay vào khung nhìn 3D và giữ khi mở lại 3D.
+- **GEOGRAPHICLOCATION** (hộp Vị trí địa lý): vĩ độ / kinh độ (độ thập phân hoặc độ-phút-giây, Bắc / Nam, Đông / Tây), chọn nhanh thành phố, cao độ, hệ toạ độ, **điểm thiết kế** (Chọn điểm <), hướng bắc (la bàn xem trước), múi giờ.
+  - Lưu theo bản vẽ, dùng cho mặt trời / bóng đổ 3D, ghi $LATITUDE / $LONGITUDE / $NORTHDIRECTION / $TIMEZONE vào DXF và đọc lại khi mở.
+  - Điểm mốc đỏ trên bản vẽ (**GEOMARKERVISIBILITY**). **GEOREMOVE** xoá vị trí. Biến LATITUDE, LONGITUDE, NORTHDIRECTION, TIMEZONE.
+- **MSLIDE / VSLIDE**: tạo tệp slide **.sld** đúng định dạng AutoCAD (vector theo điểm ảnh, màu ACI; chữ và vùng tô quét thành nét), xem .sld (cả định dạng cũ) và slide trong thư viện **.slb**; REDRAW / Esc để trở lại. **SLIDELIB** gộp nhiều .sld thành .slb.
+- **CUI** (Customize User Interface) — cũng mở bằng CUSTOMIZE, TOOLBAR, MENU:
+  - **Lệnh tự tạo** bằng macro kiểu AutoCAD (`^C^C`, `;` / dấu cách = Enter, `\` chờ người dùng nhập, `_`, `'`), mô tả, biểu tượng, Chạy thử.
+  - **Thanh truy cập nhanh**: thêm / bỏ / sắp xếp lệnh. **QUICKCUI** mở thẳng phần này.
+  - **Tab ribbon riêng**: tên tab, tên bảng, nút lớn / nhỏ, nhãn nút, hiện trong mọi không gian làm việc.
+  - **Phím tắt**: gán tổ hợp Ctrl / Alt / F1–F12 cho lệnh (kèm danh sách phím tắt có sẵn).
+  - **Thao tác nhấp đúp** theo loại đối tượng (đường, đa tuyến, chữ, hatch, khối, kích thước, bảng…).
+  - Tab **Chuyển (Transfer)**: xuất / nhập tệp **.dvdcui**, đặt lại mặc định, tệp tuỳ biến bổ sung. Lệnh **CUIEXPORT**, **CUIIMPORT**, **CUILOAD**, **CUIUNLOAD**, **CUIAPPLY**.
+
 ## Lệnh mới và hộp thoại như AutoCAD 2027 (v5p)
 - **HATCH / HATCHEDIT** (hộp Hatch and Gradient) đủ các mục trước đây còn mờ:
   - Loại **Định sẵn / Tự định nghĩa (_USER)**: khoảng cách nét và **Hai chiều** (lưới ô vuông) cho mẫu tự định nghĩa.
@@ -51,7 +75,6 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   - **CENTERDISASSOCIATE**, **CENTERREASSOCIATE**, **CENTERRESET**; biến **CENTEREXE**, **CENTERLTYPE**, **CENTERLAYER**.
 - Hộp thoại làm lại theo bố cục AutoCAD: **PTYPE** (Point Style), **ATTACH** (chọn tệp DWG / DXF / ảnh / PDF rồi mở lệnh gắn tương ứng), **REINIT** (Re-initialization: nạp lại acad.pgp), **TEXTSCR / HISTORY** (Cửa sổ văn bản: sao chép, dán vào dòng lệnh, tìm), **DBLIST** (liệt kê mọi đối tượng vào cửa sổ văn bản), **DWGSERVER**, **ABOUT**, **SPELLBROWSER**.
 - Lệnh nhỏ: **BSAVEAS** (lưu khối đang sửa thành khối mới, có thể lưu ra .dxf), **EXPORTLAYOUT** (xuất layout ra không gian mô hình của bản vẽ mới, nét trong khung nhìn cắt theo khung), **TREESTAT**, **COMPARECLOSE**.
-- Chưa làm: **CHSPACE** — layout của DVDCAD được dựng từ khung nhìn (không có đối tượng riêng ở không gian giấy để chuyển qua lại).
 
 ## Lệnh mới và hộp thoại như AutoCAD 2027 (v5o)
 - **TABLESTYLE** (hộp Table Style): danh sách kiểu, xem trước, Đặt hiện hành / Mới… / Sửa… / Xoá (không xoá được kiểu đang dùng).

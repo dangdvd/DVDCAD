@@ -243,10 +243,15 @@
     return out;
   }
   function vpScaleText(D){ const v = (D.vps || [])[0]; return v ? '1:' + (+v.n.toPrecision(4)) : ''; }
+  // đối tượng vẽ trên giấy (paper space) của layout: D.ps — giữ nguyên tham chiếu qua các lần dựng lại layout (cho chọn / hoàn tác)
+  const PSLIVE = new Map();
+  const psSer = L => JSON.stringify((L || []).map(e => { const o = Object.assign({}, e); delete o.userAdded; return o; }));
+  function psOf(D){ const key = bkey() + '::' + D.name, live = PSLIVE.get(key), cur = Array.isArray(D.ps) ? D.ps : [];
+    if(live && live !== cur && psSer(live) === psSer(cur)){ D.ps = live; return live; } for(const e of cur) if(e) e.userAdded = true; PSLIVE.set(key, cur); D.ps = cur; return cur; }
   function toLayout(D){
     const k = n => mmU() / n;   // mm giấy trên 1 đơn vị bản vẽ
     const vps = (D.vps || []).map(v => ({ vcx: v.x + v.w / 2, vcy: v.y + v.h / 2, w: v.w, h: v.h, dcx: v.cx, dcy: v.cy, vh: v.h / k(v.n) }));
-    return { name: D.name, tabOrder: 100 + (D.ord || 0), isModel: false, user: true, def: D, paper: { paperPrims: sheetPrims(D), viewports: vps } };
+    return { name: D.name, tabOrder: 100 + (D.ord || 0), isModel: false, user: true, def: D, paper: { paperPrims: sheetPrims(D).concat(psOf(D)), viewports: vps } };
   }
   function installLayouts(){
     // gỡ layout người dùng cũ rồi gắn lại theo định nghĩa đã lưu
@@ -330,6 +335,9 @@
     A.menu(x, y - items.length * 30 - 10, items);
   }
   A.layoutMenu = layoutMenu; A.saveLayoutDef = saveDef; A.proIdbGet = idbGet; A.xrefList = xrefs; A.refreshLayout = refreshLayout;
+  A.sheetPrims = sheetPrims;
+  // lưu định nghĩa layout mà không dựng lại (đối tượng giấy giữ nguyên tham chiếu)
+  A.saveLayoutQuiet = D => { const L = ulays(); const o = JSON.parse(JSON.stringify(D, (k, v) => k === 'userAdded' ? undefined : v)); const i = L.findIndex(x => x.name === D.name); if(i >= 0) L[i] = o; else L.push(o); usave(L); };
   const _ofl = A.onLoad; void _ofl;
   try{ DVDCmd.refresh && DVDCmd.refresh(); }catch(_){}
 })();

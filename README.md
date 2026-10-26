@@ -6,6 +6,20 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5q: không gian giấy + CHSPACE, DWS nhị phân, kiểu in đủ thuộc tính, cắt EXPORTLAYOUT, kiểu hiển thị riêng, vị trí địa lý, slide, CUI
+- Tệp mới `dvd-acad-dlg3.js` (nạp sau `dvd-acad-dlg2.js`).
+- Không gian giấy: layout tự tạo giữ `def.ps` (đối tượng giấy, giữ tham chiếu qua các lần dựng lại nhờ `PSLIVE` trong `dvd-acad-pro.js`; `A.sheetPrims`, `A.saveLayoutQuiet`).
+  - `A.commit` trong layout tự tạo đổi tạm `modelEntities` sang danh sách giấy (`A.withPaper`), bước hoàn tác mang `psLay`; `applyEdit` áp lại vào đúng layout. Sửa khung nhìn (`vpf` + `vpi`) đổi `def.vps`.
+  - `A.canEdit()` / `A.editList()` cho bảng Thuộc tính (`dvd-cmd.js`). CHSPACE dùng `scaleEnt` / `translateEnt` theo tỉ lệ khung nhìn, một bước hoàn tác kiểu `fn`.
+- `A.dwgStdTables(buf)` đọc bảng LAYER / LTYPE / STYLE / DIMSTYLE từ DWG qua LibreDWG; `A.stdTablesOf(file)` chọn DXF hay DWG.
+- .ctb: thêm `lt` (kiểu nét in 0–30), `es` / `js` (đầu / nối nét), `fs` (kiểu tô 64–72), `nd` (tắt dither), `pn` / `vp` (số bút / bút ảo), `na` (tắt thích ứng), `lwt` (bảng bề rộng nét tuỳ chỉnh), `af` / `sf` (hệ số tỉ lệ chung).
+  - Khi in: `ltDash` trả mẫu nét in, nhóm nét mang `cj` (lineCap / lineJoin, `window._plotCJ`), `drawEntity` / `drawHatch` đặt mẫu tô (CanvasPattern) qua `CanvasRenderingContext2D.prototype.fill`.
+- EXPORTLAYOUT: cắt đường cong bằng `G.curveOf(e).sub(a, b)` theo đa giác khung nhìn (lấy mẫu + chia đôi), hatch / vùng đặc bằng Sutherland–Hodgman (`A.clipToRegion`).
+- 3D: `view3D.setVS(P)` ghi đè kiểu hiển thị (face, edges, edgeCol, opacity, shadow, bg); kiểu riêng lưu ở `dvd:vsuser`, kiểu đang dùng ở `dvd:vscur`.
+- Vị trí địa lý: `dvd:geo::<bản vẽ>`, cập nhật `dvd:sun`; DXF thêm chú thích `999 DVDCAD-GEO {…}` và $LATITUDE / $LONGITUDE / $NORTHDIRECTION / $TIMEZONE.
+- Slide: `A.slideMake()` / `A.slideParse()` / `A.slbParse()` / `A.slbBuild()` (định dạng slide cấp 2, byte thấp trước).
+- CUI: `dvd:cui` = `{ cmds, qat, keys, dbl, tabs, partial }`; `A.cuiApply()` đăng ký lệnh macro (`A.runMacro`), dựng thanh truy cập nhanh, tab ribbon `cui_*` (qua `A.ribbon.RIB` / `WS`), phím tắt và nhấp đúp (`A.onDblEnt`).
+
 ## v5p: hatch đủ tuỳ chọn, TINSERT, PLOTSTAMP, STANDARDS / CHECKSTANDARDS, Plot Style Table Editor, dấu tâm liên kết
 - Hatch: `PATS._USER` (mẫu tự định nghĩa: `e.usp` khoảng cách, `e.udbl` hai chiều), gốc mẫu `e.porg` (`A.hatchOrigin`, HATCHSETORIGIN), `e.hanno` chú thích, `e.nassoc` không liên kết, thứ tự vẽ (`A.hatchDrawOrder`). DXF ghi đúng mã 76 / 41 / 77 cho mẫu _USER.
 - Bảng: viền `{ dbl, sp }` (viền đôi) trong kiểu ô; khối trong ô `tbld.cb['r,c'] = { name, src, sc, fit, rot, al }` (TINSERT), dựng lại cùng bảng (`_keep`).

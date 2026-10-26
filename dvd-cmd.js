@@ -603,9 +603,9 @@
     if(pal.contains(document.activeElement) && !force) return;
     let s = selection();
     const A = ACAD(); const ln = A && A.LS ? A.LS : null;
-    const sig = s.length + '|' + s.slice(0, 50).map(uid).join(',') + '|' + (s.length === 1 ? JSON.stringify(s[0]) : '') + '|' + isModelView() + '|' + (ln ? ln.cur + ln.color + ln.lt + ln.lw + ln.celts + '|' + (typeof LTSCALE !== 'undefined' ? LTSCALE : '') : '');
+    const sig = s.length + '|' + s.slice(0, 50).map(uid).join(',') + '|' + (s.length === 1 ? JSON.stringify(s[0]) : '') + '|' + canEdit() + '|' + (ln ? ln.cur + ln.color + ln.lt + ln.lw + ln.celts + '|' + (typeof LTSCALE !== 'undefined' ? LTSCALE : '') : '');
     if(sig === palSig && !force) return; palSig = sig;
-    const editable = isModelView();
+    const editable = canEdit();
     const ro = editable ? '' : ' readonly';
     const F = (label, key, val, rdo) => '<div class="r"><label>' + label + '</label><input' + (rdo ? ' readonly' : ro) + ' data-f="' + (key || '') + '" value="' + esc(typeof val === 'number' ? fmt(val) : val) + '"></div>';
     let h = '';
@@ -708,9 +708,12 @@
     const b3 = palBody.querySelector('[data-a="view3d"]'); if(b3) b3.addEventListener('click', () => { const A2 = ACAD(); if(!A2 || !A2.open3D) return; if(e.cam3) A2.open3D({ cam: { pos: [e.x, e.y, e.cam3.z], target: [e.x + e.cam3.dx, e.y + e.cam3.dy, e.cam3.tz] } }); else A2.open3D(); });
   }
   function pickColor(cb, cur){ const AC = ACAD(); if(AC && AC.selectColor && AC.deskUI && AC.deskUI()){ AC.selectColor(cur, c => { if(c && c !== 'BYBLOCK') cb(c); }, { byLayer: true }); return; } const i = document.createElement('input'); i.type = 'color'; i.value = /^#[0-9a-f]{6}$/i.test(cur || '') ? cur : '#ffffff'; i.style.cssText = 'position:fixed;left:-100px;top:0;opacity:0'; document.body.appendChild(i); i.addEventListener('change', () => { cb(i.value); i.remove(); }); i.addEventListener('blur', () => setTimeout(() => i.remove(), 400)); i.click(); }
+  // sửa được: Model, hoặc layout do người dùng tạo (đối tượng không gian giấy)
+  function canEdit(){ const A = ACAD(); return A && A.canEdit ? A.canEdit() : isModelView(); }
+  function editList(){ const A = ACAD(); return A && A.editList ? A.editList() : modelEntities; }
   function commitSingle(e, fn){
-    if(!isModelView()) return;
-    if(modelEntities.indexOf(e) < 0){ palSig = ''; return; }
+    if(!canEdit()) return;
+    if(editList().indexOf(e) < 0){ palSig = ''; return; }
     const work = _deepEnt(e); delete work.userAdded; fn(work);
     if(JSON.stringify(work) === JSON.stringify(Object.assign({}, e, { userAdded: undefined }))) return;
     const A = ACAD();
@@ -775,7 +778,7 @@
   }
   function bindMulti(s){
     const A = ACAD();
-    const run = fn => { if(!isModelView()) return; if(A && A.commit){ const rep = s.filter(e => modelEntities.indexOf(e) >= 0).map(e => { const w = _deepEnt(e); delete w.userAdded; fn(w); return [e, w]; }); A.commit({ rep }); selEnts.clear(); for(const [, w] of rep) selEnts.add(w); try{ refreshPanSel(); }catch(_){} palSig = ''; refreshPalette(true); say('Đã cập nhật ' + rep.length + ' đối tượng'); } };
+    const run = fn => { if(!canEdit()) return; if(A && A.commit){ const L = editList(); const rep = s.filter(e => L.indexOf(e) >= 0).map(e => { const w = _deepEnt(e); delete w.userAdded; fn(w); return [e, w]; }); A.commit({ rep }); selEnts.clear(); for(const [, w] of rep) selEnts.add(w); try{ refreshPanSel(); }catch(_){} palSig = ''; refreshPalette(true); say('Đã cập nhật ' + rep.length + ' đối tượng'); } };
     palBody.querySelectorAll('input[data-m]').forEach(el => el.addEventListener('keydown', ev => { ev.stopPropagation(); if(ev.key === 'Enter'){ ev.preventDefault(); el.blur(); } }));
     palBody.querySelectorAll('[data-m]').forEach(el => el.addEventListener('change', () => {
       if(el.dataset.m === 'layer'){ if(el.value === '*') return; run(w => { const wasBL = w.bl; w.layer = el.value; if(wasBL && A) w.col = A.layerHex(w.layer); }); }

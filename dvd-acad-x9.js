@@ -56,22 +56,27 @@
     for(const m of blocks){ const idx = +m[1]; if(idx > 254) continue; const aci = idx + 1; const b = m[2]; const num = k => { const r = new RegExp('\\b' + k + '\\s*=\\s*(-?[\\d.]+)').exec(b); return r ? parseFloat(r[1]) : null; };
       const o = {}; const c = num('color'); if(c != null){ const u = c >>> 0; if((u >>> 24) !== 0xC3) o.c = '#' + (u & 0xFFFFFF).toString(16).padStart(6, '0'); }
       const li = num('lineweight'); if(li != null && li !== 255 && li < 255){ const mm = lwt[li] != null ? lwt[li] : null; if(mm != null) o.lw = Math.round(mm * 100); }
-      const sc = num('screen'); if(sc != null && sc < 100) o.sc = Math.max(0, sc); const cp = num('color_policy'); if(cp != null && (cp & 2)) o.g = 1; const ds = /\bdescription="?([^\r\n]*)/.exec(b); if(ds && ds[1].replace(/"$/, '').trim()) o.d = ds[1].replace(/"$/, '').trim();
+      const sc = num('screen'); if(sc != null && sc < 100) o.sc = Math.max(0, sc); const cp = num('color_policy'); if(cp != null && (cp & 2)) o.g = 1; if(cp != null && !(cp & 1)) o.nd = 1;
+      const pn = num('physical_pen_number'); if(pn > 0) o.pn = pn | 0; const vp = num('virtual_pen_number'); if(vp > 0) o.vp = vp | 0;
+      const ltp = num('linetype'); if(ltp != null && ltp >= 0 && ltp < 31) o.lt = ltp | 0; if(/\badaptive_linetype\s*=\s*FALSE/i.test(b)) o.na = 1;
+      const fs = num('fill_style'); if(fs != null && fs >= 64 && fs < 73) o.fs = fs | 0; const es = num('end_style'); if(es != null && es >= 0 && es < 4) o.es = es | 0; const js = num('join_style'); if(js != null && js >= 0 && js < 5 && js !== 4) o.js = js | 0; const ds = /\bdescription="?([^\r\n]*)/.exec(b); if(ds && ds[1].replace(/"$/, '').trim()) o.d = ds[1].replace(/"$/, '').trim();
       if(Object.keys(o).length) st[aci] = o; }
-    return { st, desc: desc.replace(/^"|"$/g, ''), src: 'ctb' };
+    const T = { st, desc: desc.replace(/^"|"$/g, ''), src: 'ctb' }; { const sf = /\bscale_factor\s*=\s*([\d.]+)/.exec(text.slice(0, 2000)); if(sf && +sf[1] > 0 && +sf[1] !== 1) T.sf = +sf[1]; if(/\bapply_factor\s*=\s*TRUE/i.test(text.slice(0, 2000))) T.af = 1; } if(lwt.length >= 27 && lwt.some((v, k) => Math.abs(v - LWMM[k]) > 1e-6)) T.lwt = lwt.slice(0, 27).map(v => +v || 0);
+    return T;
   }
   // ghi file .ctb mà AutoCAD đọc được (cùng định dạng: văn bản cấu hình nén zlib + đầu tệp PIAFILEVERSION)
   const LWMM = [0.00, 0.05, 0.09, 0.10, 0.13, 0.15, 0.18, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.53, 0.60, 0.65, 0.70, 0.80, 0.90, 1.00, 1.06, 1.20, 1.40, 1.58, 2.00, 2.11];
   function adler32(u8){ let a = 1, b = 0; for(let i = 0; i < u8.length; i++){ a = (a + u8[i]) % 65521; b = (b + a) % 65521; } return ((b << 16) | a) >>> 0; }
   async function deflate(u8){ if(typeof CompressionStream === 'undefined') throw new Error('Trình duyệt không hỗ trợ nén'); const cs = new CompressionStream('deflate'); const w = cs.writable.getWriter(); w.write(u8); w.close(); return new Uint8Array(await new Response(cs.readable).arrayBuffer()); }
   function ctbText(T){
-    const L = ['description="' + String(T.desc || '').replace(/[\r\n"]/g, ' '), 'aci_table_available=TRUE', 'scale_factor=1.0', 'apply_factor=FALSE', 'custom_lineweight_display_units=0', 'aci_table{'];
+    const L = ['description="' + String(T.desc || '').replace(/[\r\n"]/g, ' '), 'aci_table_available=TRUE', 'scale_factor=' + (T.sf > 0 ? (+T.sf).toFixed(4) : '1.0'), 'apply_factor=' + (T.af ? 'TRUE' : 'FALSE'), 'custom_lineweight_display_units=0', 'aci_table{'];
     for(let i = 0; i < 255; i++) L.push(' ' + i + '="Color_' + (i + 1));
     L.push('}', 'plot_style{');
+    const LWT = Array.isArray(T.lwt) && T.lwt.length >= 27 ? T.lwt : LWMM;   // bảng bề rộng nét tuỳ chỉnh (Edit Lineweights)
     for(let i = 0; i < 255; i++){ const st = T.st[i + 1] || {}; let col = -1006632961; if(st.c){ const n = parseInt(st.c.slice(1), 16) & 0xFFFFFF; col = (0xC2000000 | n) | 0; }
-      let li = 255; if(st.lw > 0){ let bi = 0, bd = Infinity; LWMM.forEach((mm, k) => { const d = Math.abs(mm * 100 - st.lw); if(d < bd){ bd = d; bi = k; } }); li = bi; }
-      L.push(' ' + i + '{', '  name="Color_' + (i + 1), '  localized_name="Color_' + (i + 1), '  description="' + String(st.d || '').replace(/[\r\n"]/g, ' '), '  color=' + col, '  mode_color=' + col, '  color_policy=' + (1 | (st.g ? 2 : 0)), '  physical_pen_number=0', '  virtual_pen_number=0', '  screen=' + Math.round(st.sc != null ? st.sc : 100), '  linepattern_size=0.5', '  linetype=31', '  adaptive_linetype=TRUE', '  lineweight=' + li, '  fill_style=73', '  end_style=4', '  join_style=5', ' }'); }
-    L.push('}', 'custom_lineweight_table{'); LWMM.forEach((mm, k) => L.push(' ' + k + '=' + mm.toFixed(2))); L.push('}');
+      let li = 255; if(st.lw > 0){ let bi = 0, bd = Infinity; LWT.forEach((mm, k) => { const d = Math.abs(mm * 100 - st.lw); if(d < bd){ bd = d; bi = k; } }); li = bi; }
+      L.push(' ' + i + '{', '  name="Color_' + (i + 1), '  localized_name="Color_' + (i + 1), '  description="' + String(st.d || '').replace(/[\r\n"]/g, ' '), '  color=' + col, '  mode_color=' + col, '  color_policy=' + ((st.nd ? 0 : 1) | (st.g ? 2 : 0)), '  physical_pen_number=' + (st.pn | 0), '  virtual_pen_number=' + (st.vp | 0), '  screen=' + Math.round(st.sc != null ? st.sc : 100), '  linepattern_size=0.5', '  linetype=' + (st.lt != null ? st.lt : 31), '  adaptive_linetype=' + (st.na ? 'FALSE' : 'TRUE'), '  lineweight=' + li, '  fill_style=' + (st.fs != null ? st.fs : 73), '  end_style=' + (st.es != null ? st.es : 4), '  join_style=' + (st.js != null ? st.js : 5), ' }'); }
+    L.push('}', 'custom_lineweight_table{'); LWT.forEach((mm, k) => L.push(' ' + k + '=' + (+mm).toFixed(4).replace(/0{1,2}$/, ''))); L.push('}');
     return L.join('\n') + '\n';
   }
   async function ctbBuild(T){
@@ -79,7 +84,7 @@
     const comp = await deflate(body); const head = new TextEncoder().encode('PIAFILEVERSION_2.0,CTBVER1,compress\r\npmzlibcodec');
     const out = new Uint8Array(head.length + 12 + comp.length); out.set(head, 0); const dv = new DataView(out.buffer); dv.setUint32(head.length, adler32(comp), true); dv.setUint32(head.length + 4, body.length, true); dv.setUint32(head.length + 8, comp.length, true); out.set(comp, head.length + 12); return out;
   }
-  A.ctb = { all: ctbAll, build: ctbBuild, text: ctbText, get: ctbGet, put: ctbPut, parse: ctbParse, presets: PRESETS, del: n => { const a = ctbAll(); delete a[n]; ctbSave(a); } };
+  A.ctb = { LWMM, all: ctbAll, build: ctbBuild, text: ctbText, get: ctbGet, put: ctbPut, parse: ctbParse, presets: PRESETS, del: n => { const a = ctbAll(); delete a[n]; ctbSave(a); } };
   // màu hex → ACI gần nhất (có bộ nhớ đệm)
   const aciMemo = new Map();
   function aciOf(hex){

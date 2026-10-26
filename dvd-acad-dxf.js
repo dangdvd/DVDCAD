@@ -98,6 +98,7 @@
     P(9, '$LTSCALE'); P(40, LTSCALE || 1); P(9, '$CELTSCALE'); P(40, A.LS.celts || 1); P(9, '$CLAYER'); P(8, dxfStr(A.LS.cur || '0'));
     P(9, '$CELWEIGHT'); P(370, -1); P(9, '$LWDISPLAY'); P(290, 1); P(9, '$MEASUREMENT'); P(70, (typeof unitToMM === 'function' && (unitToMM() === 25.4 || unitToMM() === 304.8)) ? 0 : 1);
     if(typeof insunits !== 'undefined' && insunits){ P(9, '$INSUNITS'); P(70, insunits); }
+    if(A.geoHeader && A.geoGet && A.geoGet()){ A.geoHeader(P); }
     P(9, '$PSLTSCALE'); P(70, 1); P(9, '$HANDSEED'); const seedAt = L.length + 1; P(5, 'FFFF');
     P(0, 'ENDSEC');
     P(0, 'SECTION'); P(2, 'CLASSES');
