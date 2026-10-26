@@ -168,7 +168,7 @@
   const DEF = 'N2018';
   const DWG_VERS = ['N2018', 'N2013', 'N2010', 'N2004', 'ACAD2000N', 'ACAD2007', 'ACAD2018', 'ACAD2013', 'ACAD2010', 'ACAD2004', 'ACAD2000'];
   const VYR = v => NAT[v] ? NAT[v].slice(1) : v.replace('ACAD', '');
-  const VLAB = v => NAT[v] ? 'DWG ' + VYR(v) + ' — bộ ghi sẵn có (không cần ODA)' : 'DWG ' + VYR(v) + ' — chuyển qua ODA File Converter';
+  const VLAB = v => NAT[v] ? 'DWG ' + VYR(v) + ' — bộ ghi sẵn có (không cần ODA)' : 'DWG ' + VYR(v) + ' — chuyển qua ODA File Converter' + (VYR(v) === '2007' ? ' (không có ODA: ghi DWG 2004)' : '');
   const cfg = () => { try{ return Object.assign({ url: '', ver: DEF }, JSON.parse(localStorage.getItem('dvd:dwgsrv') || '{}')); }catch(_){ return { url: '', ver: DEF }; } };
   const cfgSave = o => { try{ localStorage.setItem('dvd:dwgsrv', JSON.stringify(o)); }catch(_){} };
   const DK = () => window.dvdDesktop || null;
@@ -186,11 +186,14 @@
     if(!res.ok) throw new Error('Máy chủ trả lỗi ' + res.status + ': ' + (await res.text()).slice(0, 200));
     return new Uint8Array(await res.arrayBuffer());
   }
-  // trả { data, ver }: ODA không chuyển được thì tự ghi bằng bộ ghi sẵn có (cùng năm nếu có, không thì DWG 2018)
+  // trả { data, ver }: ODA không chuyển được thì tự ghi bằng bộ ghi sẵn có — cùng năm nếu có, không thì bản mới nhất mà AutoCAD năm đó mở được
+  // (DWG 2007 → DWG 2004: AutoCAD 2007 / 2008 / 2009 mở thẳng; DWG 2018 thì AutoCAD 2017 trở về trước không mở được)
+  const fallbackOf = ver => Object.keys(NAT).find(k => VYR(k) === VYR(ver)) || Object.keys(NAT).filter(k => +VYR(k) <= +VYR(ver)).sort((a, b) => VYR(b) - VYR(a))[0] || DEF;
+  A.dwgFallback = ver => fallbackOf(ver);
   async function toDWG(){
     const ver = cfg().ver;
     if(!NAT[ver]){ try{ return { data: await viaODA(ver), ver }; }catch(err){
-      const fb = Object.keys(NAT).find(k => VYR(k) === VYR(ver)) || DEF; log('ODA: ' + (err.message || err) + ' → ghi DWG ' + VYR(fb) + ' bằng bộ ghi sẵn có.'); return { data: native(fb), ver: fb }; } }
+      const fb = fallbackOf(ver); log('ODA: ' + (err.message || err) + ' → ghi DWG ' + VYR(fb) + ' bằng bộ ghi sẵn có' + (VYR(fb) !== VYR(ver) ? ' (AutoCAD ' + VYR(ver) + ' mở được)' : '') + '.'); return { data: native(fb), ver: fb }; } }
     return { data: native(ver), ver };
   }
   A.dwgBytes = async () => (await toDWG()).data;
@@ -214,7 +217,7 @@
     const c = cfg(), dk = DK(), K = A.acw; let oda = null; if(dk && dk.odaInfo){ try{ oda = await dk.odaInfo(); }catch(_){} }
     // bố cục hộp thoại kiểu AutoCAD: nhóm "Định dạng lưu", "Bộ chuyển đổi trên máy", "Máy chủ chuyển đổi"
     const html = '<div class="acw" style="width:500px">' +
-      K.grp('Định dạng lưu', K.row('Phiên bản DWG:', K.sel('dwV', DWG_VERS.map(v => [v, VLAB(v)]), c.ver)) + '<div class="acw-note" style="white-space:normal">DWG 2018, 2013, 2010, 2004 và 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (DWG 2018 = định dạng của AutoCAD 2018 → 2027). DWG 2007 cần ODA File Converter (hoặc máy chủ) — nếu không có, DVDCAD tự ghi bằng bộ ghi sẵn có.</div>') +
+      K.grp('Định dạng lưu', K.row('Phiên bản DWG:', K.sel('dwV', DWG_VERS.map(v => [v, VLAB(v)]), c.ver)) + '<div class="acw-note" style="white-space:normal">DWG 2018, 2013, 2010, 2004 và 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (DWG 2018 = định dạng của AutoCAD 2018 → 2027). DWG 2007 cần ODA File Converter (hoặc máy chủ) — nếu không có, DVDCAD ghi DWG 2004 bằng bộ ghi sẵn có (AutoCAD 2007, 2008, 2009 mở thẳng được).</div>') +
       (dk ? K.grp('ODA File Converter trên máy', '<div class="acw-row">' + K.txt('dwO', oda && oda.path || '', { dis: 1, ph: 'Chưa tìm thấy — bấm Chọn…' }) + K.btn('dwOp', 'Chọn…') + '</div><div class="acw-note" style="white-space:normal">Bản Windows tự chuyển DXF → DWG bằng ODA File Converter (miễn phí, tải tại opendesign.com). Không cần mạng.</div>') : '') +
       K.grp('Máy chủ chuyển đổi (tuỳ chọn)', K.row('Địa chỉ:', K.txt('dwU', c.url, { ph: 'http://localhost:8787/convert' })) + '<div class="acw-row">' + K.btn('dwT', 'Thử kết nối') + '<span id="dwS" style="margin-left:6px"></span></div><div class="acw-note" style="white-space:normal">Máy chủ: chạy node server-dwg.js trên máy có ODA File Converter (xem hướng dẫn trong file).</div>') + '</div>';
     A.dialog({ title: 'Lưu DWG', cls: 'acw-free', help: 'DWGSERVER', html, okText: 'Lưu cài đặt',

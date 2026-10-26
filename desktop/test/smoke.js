@@ -178,11 +178,11 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
     await app.evaluate(({ dialog }, p) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [p] }); }, acadImg);
     await win.evaluate(() => DVDDesktop.openDialog());
     check(await until(() => win.evaluate(() => { const e = modelEntities.find(x => x.type === 'IMAGE'), im = e && window.DVDImg && DVDImg.get(e.img); return currentName === 'anh-acad.dxf' && !!im && im.naturalWidth === 6 && Math.abs(e.w - 3) < 1e-9; }), 30000), 'mở DXF của AutoCAD có IMAGE: thành ảnh, đọc tệp ảnh (.\\pic.png) trong thư mục bản vẽ');
-    // DWG 2007 qua ODA File Converter (Linux/macOS: ODA giả ghi AC1032; Windows chưa cài ODA → tự ghi bằng bộ ghi gốc)
+    // DWG 2007 qua ODA File Converter (Linux/macOS: ODA giả ghi AC1032; Windows chưa cài ODA → tự ghi DWG 2004 bằng bộ ghi gốc)
     const dwgOda = path.join(tmp, 'luu-oda.dwg'); await stubSave(dwgOda);
     await win.evaluate(() => { localStorage.setItem('dvd:dwgsrv', JSON.stringify({ url: '', ver: 'ACAD2007' })); DVDCmd.run('SAVEDWG'); });
     if(process.platform !== 'win32') check(await until(() => head(dwgOda) === 'AC1032'), 'DWG 2007 qua ODA File Converter trên máy');
-    else check(await until(() => /^AC10(21|32)$/.test(head(dwgOda)), 60000), 'DWG 2007: qua ODA nếu máy đã cài, chưa cài → tự ghi DWG 2018 gốc (' + head(dwgOda) + ')');
+    else check(await until(() => /^AC10(21|18)$/.test(head(dwgOda)), 60000), 'DWG 2007: qua ODA nếu máy đã cài, chưa cài → tự ghi DWG 2004 gốc, AutoCAD 2007 mở được (' + head(dwgOda) + ')');
     await win.evaluate(() => localStorage.removeItem('dvd:dwgsrv'));
   }
 
