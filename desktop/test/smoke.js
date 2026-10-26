@@ -110,16 +110,23 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
     const outDir = process.env.DVD_DWG_OUT || '';   // CI: thư mục chép file DWG để ODA File Converter kiểm tra lại
     const keep = (p, name) => { if(outDir){ fs.mkdirSync(outDir, { recursive: true }); fs.copyFileSync(p, path.join(outDir, name)); } };
     const n0 = await win.evaluate(() => modelEntities.length);
-    // mặc định: DWG 2000 gốc (dvd-dwg.js), không cần ODA
+    // mặc định: DWG 2018 gốc (dvd-dwg.js), không cần ODA
     const dwgNat = path.join(tmp, 'luu-goc.dwg'); await stubSave(dwgNat);
     await win.evaluate(() => { localStorage.removeItem('dvd:dwgsrv'); DVDCmd.run('SAVEDWG'); });
-    check(await until(() => head(dwgNat) === 'AC1015', 60000), 'SAVEDWG mặc định ghi DWG 2000 gốc (AC1015), không cần ODA File Converter');
-    keep(dwgNat, 'mat-bang-tang-1.dwg');
-    check(await reopen(dwgNat) === n0, 'mở lại DWG vừa ghi: đủ ' + n0 + ' đối tượng');
+    check(await until(() => head(dwgNat) === 'AC1032', 60000), 'SAVEDWG mặc định ghi DWG 2018 gốc (AC1032), không cần ODA File Converter');
+    keep(dwgNat, 'mat-bang-tang-1-R2018.dwg');
+    check(await reopen(dwgNat) === n0, 'mở lại DWG 2018 vừa ghi: đủ ' + n0 + ' đối tượng');
+    // các phiên bản khác của bộ ghi gốc: 2013 / 2010 / 2004 / 2000 → mở lại đủ đối tượng
+    for(const [v, ac] of [['R2013', 'AC1027'], ['R2010', 'AC1024'], ['R2004', 'AC1018'], ['R2000', 'AC1015']]){
+      const r = await win.evaluate(async v => { const ents = modelEntities.slice(), d = DVDAcad.dwgNative(ents, { version: v }); let s = ''; for(let i = 0; i < d.length; i += 0x8000) s += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000));
+        await loadDWG(d.slice().buffer, 'kiem-tra-' + v + '.dwg'); await new Promise(q => setTimeout(q, 300)); const n = modelEntities.length; return { b64: btoa(s), n }; }, v);
+      const pv = path.join(tmp, 'luu-' + v + '.dwg'); fs.writeFileSync(pv, Buffer.from(r.b64, 'base64'));
+      check(head(pv) === ac && r.n === n0, 'DWG ' + v.slice(1) + ' gốc (' + ac + '): mở lại đủ ' + n0 + ' đối tượng (' + r.n + ')'); keep(pv, 'mat-bang-tang-1-' + v + '.dwg');
+    }
     // Lưu thành (SAVEAS) chọn đuôi .dwg → DWG
     const dwgAs = path.join(tmp, 'luu-thanh.dwg'); await stubSave(dwgAs);
     await win.evaluate(() => DVDCmd.run('SAVEAS'));
-    check(await until(() => head(dwgAs) === 'AC1015', 60000), 'SAVEAS chọn *.dwg → ghi DWG');
+    check(await until(() => head(dwgAs) === 'AC1032', 60000), 'SAVEAS chọn *.dwg → ghi DWG 2018');
     // bản vẽ tổng hợp: kích thước, hatch, chữ tiếng Việt, khối 3D, vùng che… → DWG → mở lại
     const syn = await win.evaluate(async () => { const A = DVDAcad, w = ms => new Promise(r => setTimeout(r, ms));
       A.newDrawing(); await w(600); try{ A.hideStart && A.hideStart(); }catch(_){}
@@ -132,16 +139,19 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
         { type: 'TEXT', x: 0, y: -30, h: 5, text: 'Chữ tiếng Việt: ĐƯỜNG ỐNG Ø100', rot: 15 }, { type: 'TEXT', x: 0, y: -60, h: 3.5, text: 'Dòng một\nDòng hai', mt: 1 }, { type: 'ELLIPSE', cx: 400, cy: 0, mx: 30, my: 0, ratio: 0.5, p1: 0, p2: Math.PI }]);
       for(const s of ['BOX\n700,0\n740,40\n25\n', 'WIPEOUT\n100,500\n140,500\n140,540\n100,540\n\n']){ await A.runScript(s); await w(300); for(let i = 0; i < 5 && A.busy(); i++){ A.cancel(); await w(60); } }
       const sig = () => modelEntities.map(e => e.type + (e.blk ? '*' : '') + (e.wipe ? 'W' : '') + '|' + (e.layer || '0') + '|' + (e.lt || '') + '|' + (e.text || '')).sort().join('\n');
-      const s0 = sig(), dwg = A.dwgNative(); await loadDWG(dwg.slice().buffer, 'tong-hop.dwg'); await w(300);
-      let bin = ''; for(let i = 0; i < dwg.length; i += 0x8000) bin += String.fromCharCode.apply(null, dwg.subarray(i, i + 0x8000));
-      return { same: sig() === s0, n: modelEntities.length, s3d: modelEntities.some(e => e.type === 'SOLID3D'), wipe: modelEntities.some(e => e.wipe), b64: btoa(bin) }; });
-    check(syn.same && syn.s3d && syn.wipe, 'bản vẽ tổng hợp (kích thước, hatch, chữ Việt, kiểu nét chữ/hình, khối 3D, vùng che) → DWG → mở lại giống hệt (' + syn.n + ' đối tượng)');
-    if(outDir){ fs.mkdirSync(outDir, { recursive: true }); fs.writeFileSync(path.join(outDir, 'tong-hop.dwg'), Buffer.from(syn.b64, 'base64')); }
-    // phiên bản mới hơn qua ODA File Converter (Linux/macOS: ODA giả ghi AC1032; Windows chưa cài ODA → tự ghi DWG 2000)
+      const s0 = sig(), ents = modelEntities.slice(), res = {};
+      for(const v of ['R2018', 'R2013', 'R2010', 'R2004', 'R2000']){ const dwg = A.dwgNative(ents, { version: v }); await loadDWG(dwg.slice().buffer, 'tong-hop.dwg'); await w(300);
+        let bin = ''; for(let i = 0; i < dwg.length; i += 0x8000) bin += String.fromCharCode.apply(null, dwg.subarray(i, i + 0x8000));
+        res[v] = { same: sig() === s0, n: modelEntities.length, s3d: modelEntities.some(e => e.type === 'SOLID3D'), wipe: modelEntities.some(e => e.wipe), b64: btoa(bin) }; }
+      return res; });
+    for(const v of Object.keys(syn)){ const q = syn[v];
+      check(q.same && q.s3d && q.wipe, 'bản vẽ tổng hợp (kích thước, hatch, chữ Việt, kiểu nét chữ/hình, khối 3D, vùng che) → DWG ' + v.slice(1) + ' → mở lại giống hệt (' + q.n + ' đối tượng)');
+      if(outDir){ fs.mkdirSync(outDir, { recursive: true }); fs.writeFileSync(path.join(outDir, 'tong-hop-' + v + '.dwg'), Buffer.from(q.b64, 'base64')); } }
+    // DWG 2007 qua ODA File Converter (Linux/macOS: ODA giả ghi AC1032; Windows chưa cài ODA → tự ghi bằng bộ ghi gốc)
     const dwgOda = path.join(tmp, 'luu-oda.dwg'); await stubSave(dwgOda);
-    await win.evaluate(() => { localStorage.setItem('dvd:dwgsrv', JSON.stringify({ url: '', ver: 'ACAD2018' })); DVDCmd.run('SAVEDWG'); });
-    if(process.platform !== 'win32') check(await until(() => head(dwgOda) === 'AC1032'), 'DWG 2018 qua ODA File Converter trên máy');
-    else check(await until(() => /^AC10(15|32)$/.test(head(dwgOda)), 60000), 'DWG 2018: qua ODA nếu máy đã cài, chưa cài → tự ghi DWG 2000 gốc (' + head(dwgOda) + ')');
+    await win.evaluate(() => { localStorage.setItem('dvd:dwgsrv', JSON.stringify({ url: '', ver: 'ACAD2007' })); DVDCmd.run('SAVEDWG'); });
+    if(process.platform !== 'win32') check(await until(() => head(dwgOda) === 'AC1032'), 'DWG 2007 qua ODA File Converter trên máy');
+    else check(await until(() => /^AC10(21|32)$/.test(head(dwgOda)), 60000), 'DWG 2007: qua ODA nếu máy đã cài, chưa cài → tự ghi DWG 2018 gốc (' + head(dwgOda) + ')');
     await win.evaluate(() => localStorage.removeItem('dvd:dwgsrv'));
   }
 

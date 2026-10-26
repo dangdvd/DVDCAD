@@ -1,15 +1,24 @@
 /* DVDCAD v5k — GHI DWG GỐC: AutoCAD 2000 (AC1015), không cần ODA File Converter
-   Đầu vào là DXF R2000 do chính DVDCAD tạo (A.dxfR2000): đọc lại từng bản ghi rồi mã hoá thành đối tượng DWG,
-   nên DWG giữ đúng những gì bản DXF 2000 giữ (lớp, kiểu nét, kiểu chữ, khối + thuộc tính, kích thước, hatch…).
-   Định dạng theo tài liệu mở "Open Design Specification for .dwg files" (Open Design Alliance) và mã nguồn LibreDWG
-   (GPL-3.0, cùng giấy phép với DVDCAD): mã hoá bit (B/BB/BS/BL/BD/DD/BT/BE/H/MC/MS), CRC-16, thứ tự trường của
-   từng đối tượng, bố cục section. Bố cục file giống AutoCAD 2000: header → AuxHeader → ảnh xem trước → biến hệ
+   v5t: thêm DWG 2004 (AC1018), 2010 (AC1024), 2013 (AC1027), 2018 (AC1032) — opt.version = 'R2004' | 'R2010' | 'R2013' | 'R2018'.
+   Đầu vào là DXF do chính DVDCAD tạo (A.dxfR2000): đọc lại từng bản ghi rồi mã hoá thành đối tượng DWG,
+   nên DWG giữ đúng những gì bản DXF giữ (lớp, kiểu nét, kiểu chữ, khối + thuộc tính, kích thước, hatch…).
+   Định dạng theo tài liệu mở "Open Design Specification for .dwg files" (Open Design Alliance), mã nguồn LibreDWG
+   (GPL-3.0, cùng giấy phép với DVDCAD) và ACadSharp (MIT): mã hoá bit (B/BB/BS/BL/BD/DD/BT/BE/H/MC/MS), CRC-16, thứ tự
+   trường của từng đối tượng theo phiên bản, bố cục section. DWG 2000: header → AuxHeader → ảnh xem trước → biến hệ
    thống → lớp (class) → đối tượng → bản đồ handle → ObjFreeSpace → header phụ → Template.
+   DWG 2004+: header 0x100 byte (phần mã hoá XOR + CRC-32) rồi các trang 0x20 byte căn lề — trang dữ liệu (đầu trang mã
+   hoá theo địa chỉ, nén LZ77 kiểu AutoCAD, checksum Adler biến thể), bản đồ section (tên, id, trang), bản đồ trang.
+   R2007+: chuỗi Unicode (TU) nằm trong luồng chuỗi riêng ở cuối mỗi đối tượng / biến hệ thống / lớp; R2010+: kiểu đối
+   tượng BOT, cỡ luồng handle (UMC) ở đầu đối tượng.
    Dùng được cả trong trình duyệt (A.dwgFromDxf) lẫn Node (module.exports) để kiểm thử. */
 (function(root){
   'use strict';
   const D2R = Math.PI / 180;
   const fin = v => { v = +v; return isFinite(v) ? v : 0; };
+  // phiên bản đang ghi (đặt ở đầu dwgFromDxf): 15 = AC1015 (2000), 18 = AC1018 (2004), 24 = AC1024 (2010), 27 = AC1027 (2013), 32 = AC1032 (2018)
+  let VER = 15;
+  const VCODE = { R2000: 15, R2004: 18, R2010: 24, R2013: 27, R2018: 32 };
+  const ACV = { 15: 'AC1015', 18: 'AC1018', 24: 'AC1024', 27: 'AC1027', 32: 'AC1032' };
 
   /* ---------------- CRC-16 (đa thức 0xA001; table[1] = 0xC0C1) ---------------- */
   const CRCT = (() => { const t = new Uint16Array(256); for(let i = 0; i < 256; i++){ let c = i; for(let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xA001 : c >>> 1; t[i] = c; } return t; })();
@@ -24,7 +33,7 @@
       else { const e = '\\U+' + (c > 0xffff ? 0x3f : c).toString(16).toUpperCase().padStart(4, '0'); for(let k = 0; k < e.length; k++) b.push(e.charCodeAt(k)); } }
     return b; }
   class BW {
-    constructor(n){ this.u = new Uint8Array(Math.max(16, n | 0)); this.p = 0; }
+    constructor(n){ this.u = new Uint8Array(Math.max(16, n | 0)); this.p = 0; this.v = VER; }
     need(bits){ const nb = ((this.p + bits) >> 3) + 2; if(nb > this.u.length){ let n = this.u.length * 2; while(n < nb) n *= 2; const v = new Uint8Array(n); v.set(this.u); this.u = v; } }
     B(b){ this.need(1); if(b) this.u[this.p >> 3] |= 0x80 >> (this.p & 7); this.p++; }
     BB(v){ this.B(v & 2); this.B(v & 1); }
@@ -42,8 +51,20 @@
     RD2(p){ this.RD(p[0]); this.RD(p[1]); }
     BD2(p){ this.BD(p[0]); this.BD(p[1]); }
     BD3(p){ this.BD(p[0]); this.BD(p[1]); this.BD(p[2]); }
-    CMC(i){ this.BS(i); }
+    // màu (CMC): R2004+ = BS 0 + BL (0xC0 BYLAYER, 0xC1 BYBLOCK, 0xC2 RGB, 0xC3 số màu ACI) + RC cờ tên
+    CMC(i, rgb){ if(this.v < 18){ this.BS(i); return; }
+      this.BS(0); this.BL(rgb != null ? (0xC2000000 | (rgb & 0xffffff)) >>> 0 : i === 256 ? 0xC0000000 : i === 0 ? 0xC1000000 : (0xC3000000 | (Math.abs(i) & 0xff)) >>> 0); this.RC(0); }
+    // màu thực thể (ENC, R2004+): BS cờ (0x8000 RGB, 0x2000 độ trong suốt) | số màu, rồi BL RGB, BL trong suốt
+    ENC(i, rgb, alpha){ if(this.v < 18){ this.BS(i & 0xffff); return; }
+      this.BS((i & 0x1ff) | (rgb != null ? 0x8000 : 0) | (alpha != null ? 0x2000 : 0));
+      if(rgb != null) this.BL((0xC2000000 | (rgb & 0xffffff)) >>> 0); if(alpha != null) this.BL(alpha >>> 0); }
     TV(s){ const b = tvBytes(s); this.BS(b.length); for(const x of b) this.RC(x); }
+    // TU (R2007+): BS số ký tự gồm cả ký tự 0 kết thúc + UTF-16LE; chuỗi rỗng = BS 0
+    TU(s){ s = s == null ? '' : String(s); if(!s.length){ this.BS(0); return; } this.BS(s.length + 1); for(let i = 0; i < s.length; i++) this.RS(s.charCodeAt(i)); this.RS(0); }
+    // kiểu đối tượng R2010+ (BOT): 00 + RC, 01 + RC (+0x1F0), 10 + RS
+    BOT(t){ if(t <= 255){ this.BB(0); this.RC(t); } else if(t >= 0x1f0 && t <= 0x2ef){ this.BB(1); this.RC(t - 0x1f0); } else { this.BB(2); this.RS(t); } }
+    // BLL: 3 bit số byte + các byte (little-endian)
+    BLL(v){ v = Math.max(0, Math.floor(+v || 0)); const b = []; while(v > 0 && b.length < 7){ b.push(v % 256); v = Math.floor(v / 256); } this.B(b.length & 4); this.B(b.length & 2); this.B(b.length & 1); for(const x of b) this.RC(x); }
     // handle: byte (mã << 4 | số byte) + giá trị big-endian
     H(code, v){ v = Math.max(0, Math.floor(+v || 0)); if(!v){ this.RC(code << 4); return; } const b = []; while(v > 0){ b.unshift(v % 256); v = Math.floor(v / 256); } this.RC((code << 4) | b.length); for(const x of b) this.RC(x); }
     MS(v){ if(v > 0x7fff){ this.RS((v & 0x7fff) | 0x8000); this.RS(v >>> 15); } else this.RS(v); }
@@ -66,6 +87,45 @@
     VAR_BEGIN: 'CF7B1F23FDDE38A95F7C68B84E6D335F', VAR_END: '3084E0DC0221C756A0839747B192CCA0', CLASS_BEGIN: '8DA1C4B8C4A9F8C5C0DCF45FE7CFB68A',
     CLASS_END: '725E3B473B56073A3F230BA018304975', H2_BEGIN: 'D47B21CE28939FBF53244009123CAA01', H2_END: '2B84DE31D76C6040ACDBBFF6EDC355FE' };
   const sentinel = (w, hex) => { for(let i = 0; i < 32; i += 2) w.RC(parseInt(hex.substr(i, 2), 16)); };
+
+  /* ---------------- DWG 2004+: dãy XOR, checksum trang, CRC-32, nén LZ77 ---------------- */
+  // dãy giả ngẫu nhiên (hạt 1, LCG 0x343FD/0x269EC3) dùng mã hoá header 0x6C byte và lấp chỗ trống
+  const MAGIC = (() => { const m = new Uint8Array(256); let s = 1; for(let i = 0; i < 256; i++){ s = (Math.imul(s, 0x343FD) + 0x269EC3) >>> 0; m[i] = (s >>> 16) & 0xff; } return m; })();
+  // checksum trang (biến thể Adler-32, khối 0x15B0)
+  function pageSum(seed, u, from, to){ let s1 = seed & 0xffff, s2 = seed >>> 16, i = from, n = to - from;
+    while(n > 0){ const c = Math.min(0x15b0, n); n -= c; for(let k = 0; k < c; k++){ s1 += u[i++]; s2 += s1; } s1 %= 0xfff1; s2 %= 0xfff1; }
+    return ((s2 << 16) | (s1 & 0xffff)) >>> 0; }
+  const CRC32T = (() => { const t = new Uint32Array(256); for(let i = 0; i < 256; i++){ let c = i; for(let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xEDB88320 : c >>> 1; t[i] = c >>> 0; } return t; })();
+  function crc32(u){ let c = 0xffffffff; for(let i = 0; i < u.length; i++) c = (CRC32T[(c ^ u[i]) & 0xff] ^ (c >>> 8)) >>> 0; return (~c) >>> 0; }
+  // nén LZ77 kiểu AutoCAD R2004 (theo ACadSharp DwgLZ77AC18Compressor, MIT): bảng băm 0x8000 ô, khớp ≥ 3 byte, khoảng lùi ≤ 0xBFFF
+  function lz77(src){
+    const total = src.length, out = []; if(total < 0x18){ litRun(out, src, 0, total); out.push(0x11, 0, 0); return Uint8Array.from(out); }
+    const block = new Int32Array(0x8000).fill(-1); let curOff = 0, pos = 4, co = 0, mpos = 0;
+    const writeLen = len => { while(len > 0xff){ len -= 0xff; out.push(0); } out.push(len); };
+    const opcode = (op, c, v) => { if(c <= v){ out.push(op | (c - 2)); } else { out.push(op); writeLen(c - v); } };
+    const literal = n => { if(n <= 0) return; if(n > 3) opcode(0, n - 1, 0x11); for(let i = 0; i < n; i++) out.push(src[curOff + i]); };
+    const mask = (mp, c, m) => { let a, b;
+      if(c >= 0x0f || mp > 0x400){ if(mp <= 0x4000){ mp--; opcode(0x20, c, 0x21); } else { mp -= 0x4000; opcode(0x10 | ((mp >> 11) & 8), c, 0x09); } a = (mp & 0xff) << 2; b = mp >> 6; }
+      else { mp--; a = ((c + 1) << 4) | ((mp & 3) << 2); b = mp >> 2; }
+      if(m < 4) a |= m; out.push(a & 0xff, b & 0xff); };
+    const chunk = () => {
+      const v1 = src[pos + 3] << 6, v2 = v1 ^ src[pos + 2], v3 = (v2 << 5) ^ src[pos + 1], v4 = (v3 << 5) ^ src[pos];
+      let vi = (v4 + (v4 >> 5)) & 0x7fff, val = block[vi], mp = pos - val, len = 0;
+      if(val >= 0 && mp <= 0xbfff){
+        if(mp > 0x400 && src[pos + 3] !== src[val + 3]){ vi = (vi & 0x7ff) ^ 0x401f; val = block[vi]; mp = pos - val;
+          if(val < 0 || mp > 0xbfff || (mp > 0x400 && src[pos + 3] !== src[val + 3])){ block[vi] = pos; return null; } }
+        if(src[pos] === src[val] && src[pos + 1] === src[val + 1] && src[pos + 2] === src[val + 2]){ len = 3; let a = val + 3, b = pos + 3; while(b < total && src[a++] === src[b++]) len++; }
+      }
+      block[vi] = pos; return len >= 3 ? [len, mp] : null; };
+    while(pos < total - 0x13){ const m = chunk(); if(!m){ pos++; continue; }
+      const lit = pos - curOff; if(co) mask(mpos, co, lit); literal(lit); pos += m[0]; curOff = pos; co = m[0]; mpos = m[1]; }
+    const lit = total - curOff; if(co) mask(mpos, co, lit); literal(lit); out.push(0x11, 0, 0);
+    return Uint8Array.from(out);
+  }
+  // chuỗi byte nguyên (không nén) cho dữ liệu rất ngắn: mã độ dài + byte
+  function litRun(out, src, from, n){ if(n <= 0) return; if(n < 4){ const t = new Uint8Array(4); t.set(src.subarray(from, from + n)); src = t; from = 0; n = 4; }
+    if(n <= 0x12) out.push(n - 3); else { out.push(0); let r = n - 0x12; while(r > 0xff){ r -= 0xff; out.push(0); } out.push(r); }
+    for(let i = 0; i < n; i++) out.push(src[from + i]); }
 
   /* ---------------- đọc DXF thành các bản ghi (mã nhóm, giá trị) ---------------- */
   class Rec {
@@ -107,10 +167,13 @@
     DIMSTYLE_CONTROL: 68, DIMSTYLE: 69, VX_CONTROL: 70, MLINESTYLE: 73, LWPOLYLINE: 77, HATCH: 78, XRECORD: 79,
     DICTWDFLT: 500, PLACEHOLDER: 501, LAYOUT: 502 };
   const ODBX = 'ObjectDBX Classes';
-  const CLASSES = [[500, 'ACDBDICTIONARYWDFLT', 'AcDbDictionaryWithDefault', ODBX, 0, 0], [501, 'ACDBPLACEHOLDER', 'AcDbPlaceHolder', ODBX, 0, 0], [502, 'LAYOUT', 'AcDbLayout', ODBX, 0, 0]];
-  // vùng che (như AutoCAD): thực thể WIPEOUT (cùng bố cục IMAGE) + đối tượng WIPEOUTVARIABLES
-  const WIPE_CLASSES = [[503, 'WIPEOUT', 'AcDbWipeout', 'WipeOut|Product Desc: Object Enabler for WipeOut entity | Company: Autodesk, Inc. | WEB Address: www.autodesk.com', 2175, 1],
-    [504, 'WIPEOUTVARIABLES', 'AcDbWipeoutVariables', 'WipeOut|Product Desc:     WipeOut Dbx Application|Company:          Autodesk, Inc.|WEB Address:      www.autodesk.com', 0, 0]];
+  // lớp (class) dùng được: tên DXF → [lớp C++, ứng dụng, cờ proxy, là thực thể]; số lớp (500, 501…) cấp theo thứ tự dùng
+  const CLASSDEF = { ACDBDICTIONARYWDFLT: ['AcDbDictionaryWithDefault', ODBX, 0, 0], ACDBPLACEHOLDER: ['AcDbPlaceHolder', ODBX, 0, 0], LAYOUT: ['AcDbLayout', ODBX, 0, 0],
+    // vùng che (như AutoCAD): thực thể WIPEOUT (cùng bố cục IMAGE) + đối tượng WIPEOUTVARIABLES
+    WIPEOUT: ['AcDbWipeout', 'WipeOut|Product Desc: Object Enabler for WipeOut entity | Company: Autodesk, Inc. | WEB Address: www.autodesk.com', 2175, 1],
+    WIPEOUTVARIABLES: ['AcDbWipeoutVariables', 'WipeOut|Product Desc:     WipeOut Dbx Application|Company:          Autodesk, Inc.|WEB Address:      www.autodesk.com', 0, 0],
+    // vị trí địa lý (GEOGRAPHICLOCATION, R2010+)
+    GEODATA: ['AcDbGeoData', ODBX, 4095, 0] };
   const LWV = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211];
   const lwIndex = v => { if(v == null || !isFinite(v)) return 29; v = Math.round(v); if(v === -1) return 29; if(v === -2) return 30; if(v === -3) return 31; let b = 0, bd = Infinity; LWV.forEach((w, i) => { const d = Math.abs(w - v); if(d < bd){ bd = d; b = i; } }); return b; };
   const up = s => String(s == null ? '' : s).toUpperCase();
@@ -120,12 +183,20 @@
      ===================================================================== */
   function dwgFromDxf(text, opt){
     opt = opt || {};
+    VER = VCODE[opt.version] || (ACV[opt.version] ? +opt.version : 15);
+    const R04 = VER >= 18, R07 = VER >= 21, R10 = VER >= 24, R13 = VER >= 27, R18 = VER >= 32;
+    // biến thể 2010/2013 có ghi bản bảo trì > 3 → section header/lớp thêm RL cao của cỡ (như AutoCAD)
+    const MAINT = { 15: 6, 18: 0x68, 24: 0x6d, 27: 0x7d, 32: 0x1d }[VER], DWGV = { 15: 0x17, 18: 0x19, 24: 0x1d, 27: 0x1f, 32: 0x21 }[VER], HI32 = VER >= 32 || (VER >= 24 && MAINT > 3);
+    // số lớp: cấp theo thứ tự dùng (500, 501…); R2004+ LAYOUT là kiểu cố định 82
+    const clsUsed = [];
+    const cls = n => { if(n === 'LAYOUT' && R04) return 82; let i = clsUsed.indexOf(n); if(i < 0){ clsUsed.push(n); i = clsUsed.length - 1; } return 500 + i; };
     const S = parseDxf(text);
     const HV = headerVars((S.HEADER || [])[0]);
     const hv = (k, c, d) => { const r = HV.get(k); return r ? r.num(c, d) : d; };
     const hvs = (k, c, d) => { const r = HV.get(k); return r ? r.get(c, d) : d; };
     const metric = hv('$MEASUREMENT', 70, 1) !== 0;
     const hasWipe = [...(S.ENTITIES || []), ...(S.BLOCKS || [])].some(r => r.type === 'WIPEOUT');
+    for(const n of ['ACDBDICTIONARYWDFLT', 'ACDBPLACEHOLDER', 'LAYOUT'].concat(hasWipe ? ['WIPEOUT', 'WIPEOUTVARIABLES'] : [])) cls(n);
 
     /* ---------- handle: giữ handle của DXF; bảng điều khiển / từ điển gốc đổi về số chuẩn như AutoCAD ---------- */
     const hmap = new Map(); let maxH = 0x20;
@@ -164,18 +235,25 @@
       for(const [c, v] of (r ? r.g : [])){
         if(c === 1001){ const h = APPIDS.get(up(v)); cur = h ? { h, w: new BW(64) } : null; if(cur) L.push(cur); continue; }
         if(!cur || c < 1000) continue; const w = cur.w;
-        if(c === 1000){ const b = tvBytes(v).slice(0, 255); w.RC(c - 1000); w.RC(b.length); w.RC(0); w.RC(30); w.TF(b); }
+        if(c === 1000 && R07){ const s = String(v).slice(0, 255); w.RC(0); w.RS(s.length); for(let i = 0; i < s.length; i++) w.RS(s.charCodeAt(i)); }   // R2007+: RS số ký tự + UTF-16
+        else if(c === 1000){ const b = tvBytes(v).slice(0, 255); w.RC(c - 1000); w.RC(b.length); w.RC(0); w.RC(30); w.TF(b); }
         else if(c === 1002){ w.RC(2); w.RC(String(v).trim() === '}' ? 1 : 0); }
         else if(c === 1070){ w.RC(70); w.RS(parseInt(v, 10) || 0); }
         else if(c === 1071){ w.RC(71); w.RL(parseInt(v, 10) || 0); }
         else if(c >= 1040 && c <= 1042){ w.RC(c - 1000); w.RD(parseFloat(v) || 0); }
       }
       return L.filter(x => x.w.p); }
-    const obj = (type, h, src) => { const o = { type, h, d: new BW(64), hd: new BW(32) }; o.d.H(0, h);
+    // mỗi đối tượng: d = dữ liệu, s = luồng chuỗi (R2007+), hd = luồng handle; o.T(chuỗi) ghi vào đúng luồng theo phiên bản
+    const obj = (type, h, src) => { const o = { type, h, d: new BW(64), s: new BW(32), hd: new BW(32) }; o.d.H(0, h);
+      o.T = str => { if(R07) o.s.TU(str); else o.d.TV(str); };
       for(const x of eedOf(src)){ o.d.BS(x.w.byte); o.d.H(5, x.h); o.d.append(x.w); }
       o.d.BS(0); out.push(o); return o; };
-    const objCommon = (o, owner, reactors, xdic) => { o.d.BL(reactors.length); o.hd.H(4, owner); for(const r of reactors) o.hd.H(4, r); o.hd.H(3, xdic || 0); };
-    const tableRec = (o, owner, name) => { objCommon(o, owner, []); o.d.TV(name); o.d.B(1); o.d.BS(0); o.d.B(0); o.hd.H(5, 0); };
+    // phần chung của đối tượng: số reactor, (R2004+) bit "không có từ điển mở rộng", (R2013+) bit dữ liệu DS
+    const objCommon = (o, owner, reactors, xdic) => { o.d.BL(reactors.length); if(R04) o.d.B(xdic ? 0 : 1); if(R13) o.d.B(0);
+      o.hd.H(4, owner); for(const r of reactors) o.hd.H(4, r); if(!R04 || xdic) o.hd.H(3, xdic || 0); };
+    // bản ghi bảng: tên + cờ xref (R2007+: một BS, 256 = phụ thuộc xref)
+    const tableRec = (o, owner, name, xdic) => { objCommon(o, owner, [], xdic); o.T(name); if(R07) o.d.BS(0); else { o.d.B(1); o.d.BS(0); o.d.B(0); } o.hd.H(5, 0); };
+    const rgbOf = r => r.has(420) ? (r.int(420) & 0xffffff) : null;
     const reactorsOf = r => r.group102('ACAD_REACTORS').map(ref).filter(Boolean);
 
     // ---- đối tượng điều khiển bảng ----
@@ -192,19 +270,19 @@
     ctrl(T.APPID_CONTROL, 9, false, recsOf('APPID').map(r => ref(r.get(5))));
     { const dsH = (tables.DIMSTYLE ? tables.DIMSTYLE.head.after('AcDbDimStyleTable').all(340) : []).map(ref).filter(Boolean);
       ctrl(T.DIMSTYLE_CONTROL, 0xA, false, recsOf('DIMSTYLE').map(r => ref(r.get(105))), { pre(o){ o.d.RC(dsH.length); }, post(o){ for(const h of dsH) o.hd.H(5, h); } }); }
-    ctrl(T.VX_CONTROL, H_VX, false, []);
+    if(!R04) ctrl(T.VX_CONTROL, H_VX, false, []);   // R2004+ bỏ bảng VX
 
     // ---- bản ghi bảng ----
     for(const r of recsOf('LAYER')){
       const o = obj(T.LAYER, ref(r.get(5))); tableRec(o, 2, r.get(2, '0'));
       const fl = r.int(70), c = r.int(62, 7), off = c < 0, lw = lwIndex(r.has(370) ? r.int(370) : -3);
       o.d.BS((fl & 1 ? 1 : 0) | (off ? 2 : 0) | (fl & 2 ? 4 : 0) | (fl & 4 ? 8 : 0) | (r.int(290, 1) ? 16 : 0) | ((lw & 0x1f) << 5));
-      o.d.CMC(off ? (-Math.abs(c)) & 0xffff : Math.abs(c) || 7);
-      o.hd.H(5, ref(r.get(390))); o.hd.H(5, LTYPES.get(up(r.get(6, 'Continuous'))) || hLtCont);
+      if(R04) o.d.CMC(Math.abs(c) || 7, rgbOf(r)); else o.d.CMC(off ? (-Math.abs(c)) & 0xffff : Math.abs(c) || 7);
+      o.hd.H(5, ref(r.get(390))); if(R07) o.hd.H(5, 0); o.hd.H(5, LTYPES.get(up(r.get(6, 'Continuous'))) || hLtCont); if(R13) o.hd.H(5, 0);   // kiểu in, (R2007+) vật liệu, kiểu nét, (R2013+) handle rỗng
     }
     for(const r of recsOf('STYLE')){
       const o = obj(T.STYLE, ref(r.get(5))); tableRec(o, 3, r.get(2, '')); const fl = r.int(70);
-      o.d.B(fl & 1); o.d.B(fl & 4); o.d.BD(r.num(40)); o.d.BD(r.num(41, 1)); o.d.BD(r.num(50) * D2R); o.d.RC(r.int(71)); o.d.BD(r.num(42, 2.5)); o.d.TV(r.get(3, '')); o.d.TV(r.get(4, ''));
+      o.d.B(fl & 1); o.d.B(fl & 4); o.d.BD(r.num(40)); o.d.BD(r.num(41, 1)); o.d.BD(r.num(50) * D2R); o.d.RC(r.int(71)); o.d.BD(r.num(42, 2.5)); o.T(r.get(3, '')); o.T(r.get(4, ''));
     }
     for(const r of recsOf('LTYPE')){
       const o = obj(T.LTYPE, ref(r.get(5))); tableRec(o, 5, r.get(2, ''));
@@ -213,38 +291,48 @@
       for(const x of r.g){ const c = x[0], v = x[1];
         if(c === 49){ d = { len: parseFloat(v) || 0, fl: 0, sh: 0, st: 0, sc: 1, rot: 0, x: 0, y: 0, txt: '' }; dashes.push(d); }
         else if(d){ if(c === 74) d.fl = parseInt(v, 10) || 0; else if(c === 75) d.sh = parseInt(v, 10) || 0; else if(c === 340) d.st = ref(v); else if(c === 46) d.sc = parseFloat(v) || 1; else if(c === 50) d.rot = (parseFloat(v) || 0) * D2R; else if(c === 44) d.x = parseFloat(v) || 0; else if(c === 45) d.y = parseFloat(v) || 0; else if(c === 9) d.txt = v; } }
-      const area = new Uint8Array(256); let ap = 0;
-      for(const q of dashes) if(q.fl & 2){ q.sh = ap; const b = tvBytes(q.txt); for(const x of b){ if(ap < 255) area[ap++] = x; } if(ap < 256) area[ap++] = 0; }
-      o.d.TV(r.get(3, '')); o.d.BD(r.num(40, dashes.reduce((a, q) => a + Math.abs(q.len), 0))); o.d.RC(r.int(72, 65)); o.d.RC(dashes.length);
+      // vùng chữ của nét: R2004 trở về trước 256 byte (ANSI); R2007+ chỉ khi có nét chữ, 512 byte UTF-16
+      const hasTxt = dashes.some(q => q.fl & 2), AN = R07 ? 512 : 256, area = new Uint8Array(AN); let ap = 0;
+      for(const q of dashes) if(q.fl & 2){ q.sh = ap;
+        if(R07){ const s = String(q.txt); for(let i = 0; i < s.length && ap + 3 < AN; i++){ const c = s.charCodeAt(i); area[ap++] = c & 255; area[ap++] = c >> 8; } ap += 2; }
+        else { const b = tvBytes(q.txt); for(const x of b){ if(ap < 255) area[ap++] = x; } if(ap < 256) area[ap++] = 0; } }
+      o.T(r.get(3, '')); o.d.BD(r.num(40, dashes.reduce((a, q) => a + Math.abs(q.len), 0))); o.d.RC(r.int(72, 65)); o.d.RC(dashes.length);
       for(const q of dashes){ o.d.BD(q.len); o.d.BS(q.sh); o.hd.H(5, q.st); o.d.RD(q.x); o.d.RD(q.y); o.d.BD(q.sc); o.d.BD(q.rot); o.d.BS(q.fl); }
-      o.d.TF(area);
+      if(!R07 || hasTxt) o.d.TF(area);
     }
     for(const r of recsOf('VPORT')){
       const o = obj(T.VPORT, ref(r.get(5))); tableRec(o, 8, r.get(2, '*Active'));
       const vs = r.num(40, 100), ar = r.num(41, 1.6);
       o.d.BD(vs); o.d.BD(vs * ar); o.d.RD2([r.num(12), r.num(22)]); o.d.BD3(r.pt(17)); o.d.BD3([r.num(16), r.num(26), r.num(36, 1)]);
       o.d.BD(r.num(51) * D2R); o.d.BD(r.num(42, 50)); o.d.BD(r.num(43)); o.d.BD(r.num(44)); o.d.B4(r.int(71)); o.d.RC(r.int(281));
+      if(R07){ o.d.B(1); o.d.RC(1); o.d.BD(0); o.d.BD(0); o.d.CMC(250); }   // đèn mặc định, kiểu chiếu sáng, độ sáng, tương phản, màu môi trường
       o.d.RD2([r.num(10), r.num(20)]); o.d.RD2([r.num(11, 1), r.num(21, 1)]); o.d.B(r.int(71) & 8); o.d.BS(r.int(72, 1000)); o.d.B(r.int(73, 1)); o.d.BB(r.int(74, 3));
       o.d.B(r.int(76)); o.d.RD2([r.num(15, 10), r.num(25, 10)]); o.d.B(r.int(75)); o.d.B(r.int(77)); o.d.BS(r.int(78)); o.d.BD(r.num(50) * D2R); o.d.RD2([r.num(13), r.num(23)]); o.d.RD2([r.num(14, 10), r.num(24, 10)]);
       o.d.B(0); o.d.B(r.int(65, 1)); o.d.BD3(r.pt(110)); o.d.BD3([r.num(111, 1), r.num(121), r.num(131)]); o.d.BD3([r.num(112), r.num(122, 1), r.num(132)]); o.d.BD(r.num(146)); o.d.BS(r.int(79));
+      if(R07){ o.d.BS(r.int(60, 7)); o.d.BS(r.int(61, 5)); o.hd.H(4, 0); o.hd.H(5, 0); o.hd.H(3, 0); }   // lưới (cờ, mỗi bao nhiêu ô có đường chính); nền, kiểu hiển thị, mặt trời
       o.hd.H(5, 0); o.hd.H(5, 0);
     }
     for(const r of recsOf('APPID')){ const o = obj(T.APPID, ref(r.get(5))); tableRec(o, 9, r.get(2, '')); o.d.RC(0); }
     for(const r of recsOf('DIMSTYLE')){
       const o = obj(T.DIMSTYLE, ref(r.get(105))); tableRec(o, 0xA, r.get(2, 'Standard'));
       const dt = r.num(140, metric ? 2.5 : 0.18), N = (c, d) => r.num(c, d), I = (c, d) => r.int(c, d);
-      o.d.TV(r.get(3, '')); o.d.TV(r.get(4, ''));
+      o.T(r.get(3, '')); o.T(r.get(4, ''));
       for(const [c, d] of [[40, 1], [41, metric ? 2.5 : 0.18], [42, metric ? 0.625 : 0.0625], [43, metric ? 3.75 : 0.38], [44, metric ? 1.25 : 0.18], [45, 0], [46, 0], [47, 0], [48, 0]]) o.d.BD(N(c, d));
+      if(R07){ o.d.BD(N(49, 1)); o.d.BD(N(50, 45) * D2R); o.d.BS(I(69, 0)); o.d.CMC(I(70, 0)); }   // DIMFXL, DIMJOGANG, DIMTFILL, DIMTFILLCLR
       for(const [c, d] of [[71, 0], [72, 0], [73, metric ? 0 : 1], [74, metric ? 0 : 1], [75, 0], [76, 0]]) o.d.B(I(c, d));
       o.d.BS(I(77, metric ? 1 : 0)); o.d.BS(I(78, metric ? 8 : 0)); o.d.BS(I(79, 0));
+      if(R07) o.d.BS(I(90, 0));   // DIMARCSYM
       o.d.BD(dt); o.d.BD(N(141, metric ? 2.5 : 0.09)); o.d.BD(N(142, 0)); o.d.BD(N(143, 25.4)); o.d.BD(N(144, 1)); o.d.BD(N(145, 0)); o.d.BD(N(146, 1)); o.d.BD(N(147, metric ? 0.625 : 0.09)); o.d.BD(N(148, 0));
       o.d.B(I(170, 0)); o.d.BS(I(171, 2)); o.d.B(I(172, metric ? 1 : 0)); o.d.B(I(173, 0)); o.d.B(I(174, 0)); o.d.B(I(175, 0));
       o.d.CMC(I(176, 0)); o.d.CMC(I(177, 0)); o.d.CMC(I(178, 0));
       o.d.BS(I(179, 0)); o.d.BS(I(271, metric ? 2 : 4)); o.d.BS(I(272, metric ? 2 : 4)); o.d.BS(I(273, 2)); o.d.BS(I(274, 2)); o.d.BS(I(275, 0)); o.d.BS(I(276, 0)); o.d.BS(I(277, 2)); o.d.BS(I(278, metric ? 44 : 46)); o.d.BS(I(279, 0)); o.d.BS(I(280, 0));
       o.d.B(I(281, 0)); o.d.B(I(282, 0)); o.d.BS(I(283, 1)); o.d.BS(I(284, metric ? 8 : 0)); o.d.BS(I(285, 0)); o.d.BS(I(286, 0)); o.d.B(I(288, 0)); o.d.BS(I(289, 3));
+      if(R07) o.d.B(I(290, 0));   // DIMFXLON
+      if(R10){ o.d.B(I(295, 0)); o.d.BD(0); o.T(''); o.d.BD(0); o.T(''); }   // DIMTXTDIRECTION, DIMALTMZF/S, DIMMZF/S
       o.hd.H(5, ref(r.get(340)) || hStd);
       o.d.BS(I(371, -2) & 0xffff); o.d.BS(I(372, -2) & 0xffff); o.d.B(0);
       o.hd.H(5, 0); o.hd.H(5, 0); o.hd.H(5, 0); o.hd.H(5, 0);
+      if(R07){ o.hd.H(5, 0); o.hd.H(5, 0); o.hd.H(5, 0); }   // DIMLTYPE, DIMLTEX1, DIMLTEX2
     }
 
     /* ---------- thực thể: gom theo khối ---------- */
@@ -274,19 +362,35 @@
       blockInfo.set(br, { main, attOf });
     }
 
+    // ---- đối tượng OBJECTS được giữ (bỏ loại chưa hỗ trợ và những gì thuộc chúng / thuộc thực thể) ----
+    const outObjH = new Set([H_NOD]); const keep = [];
+    { const dropped = new Set(); let changed = true; const isEnt = h => entH.has(h);
+      const cand = objsDxf.filter(r => ['DICTIONARY', 'ACDBDICTIONARYWDFLT', 'ACDBPLACEHOLDER', 'MLINESTYLE', 'LAYOUT', 'XRECORD'].includes(r.type) || (hasWipe && r.type === 'WIPEOUTVARIABLES') || (R10 && r.type === 'GEODATA'));
+      for(const r of objsDxf) if(!cand.includes(r)) dropped.add(ref(r.get(5)));
+      while(changed){ changed = false; for(const r of cand){ const h = ref(r.get(5)); if(dropped.has(h)) continue; const ow = ref(r.plain().get(330)); if(h !== H_NOD && (isEnt(ow) || dropped.has(ow))){ dropped.add(h); changed = true; } } }
+      for(const r of cand){ const h = ref(r.get(5)); if(!dropped.has(h)){ keep.push(r); outObjH.add(h); } } }
+    // từ điển mở rộng (102 {ACAD_XDICTIONARY) của bản ghi khối — chỉ khi từ điển đó được giữ
+    const xdicOf = new Map(); for(const r of blockRecs){ const x = r.group102('ACAD_XDICTIONARY').map(ref).find(v => outObjH.has(v)); if(x) xdicOf.set(ref(r.get(5)), x); }
+
     // ---- BLOCK_HEADER + BLOCK/ENDBLK ----
     const blkOfBr = new Map(); for(const b of blocks) blkOfBr.set(b.br, b);
     for(const r of blockRecs){
       const h = ref(r.get(5)), name = r.get(2, ''), b = blkOfBr.get(h), info = blockInfo.get(h) || { main: [] };
       const fl = b ? b.blk.int(70) : 0; const base = b ? b.blk.pt(10) : [0, 0, 0];
       let hB = b ? ref(b.blk.get(5)) : 0, hE = b && b.end ? ref(b.end.get(5)) : 0; if(!hB) hB = newH(); if(!hE) hE = newH();
-      const o = obj(T.BLOCK_HEADER, h); tableRec(o, 1, name);
-      o.d.B(fl & 1); o.d.B(fl & 2); o.d.B(fl & 4); o.d.B(fl & 8); o.d.B(0); o.d.BD3(base); o.d.TV(b ? b.blk.get(1, '') : ''); o.d.RC(0); o.d.TV(b ? b.blk.get(4, '') : ''); o.d.BL(0);
-      const first = info.main.length ? ref(info.main[0].get(5)) : 0, last = info.main.length ? ref(info.main[info.main.length - 1].get(5)) : 0;
-      o.hd.H(3, hB); o.hd.H(4, first); o.hd.H(4, last); o.hd.H(3, hE); o.hd.H(5, ref(r.get(340)));
+      const xdh = xdicOf.get(h) || 0;   // từ điển mở rộng của bản ghi khối (vd ACAD_GEOGRAPHICDATA của *Model_Space)
+      const o = obj(T.BLOCK_HEADER, h); tableRec(o, 1, name, xdh);
+      o.d.B(fl & 1); o.d.B(fl & 2); o.d.B(fl & 4); o.d.B(fl & 8); o.d.B(0);
+      if(R04 && !(fl & 4)) o.d.BL(info.main.length);   // R2004+: số thực thể sở hữu (thay cho handle đầu/cuối)
+      o.d.BD3(base); o.T(b ? b.blk.get(1, '') : ''); o.d.RC(0); o.T(b ? b.blk.get(4, '') : ''); o.d.BL(0);
+      if(R07){ o.d.BS(r.int(70, 0)); o.d.B(r.has(280) ? r.int(280) : 1); o.d.RC(r.int(281, 0)); }   // đơn vị chèn, cho phép nổ, co giãn đều
+      o.hd.H(3, hB);
+      if(R04){ if(!(fl & 4)) for(const e of info.main) o.hd.H(3, ref(e.get(5))); }
+      else { const first = info.main.length ? ref(info.main[0].get(5)) : 0, last = info.main.length ? ref(info.main[info.main.length - 1].get(5)) : 0; o.hd.H(4, first); o.hd.H(4, last); }
+      o.hd.H(3, hE); o.hd.H(5, ref(r.get(340)));
       const mode = h === hMS ? 2 : h === hPS ? 1 : 0;
       const ly = b ? (LAYERS.get(up(b.blk.get(8, '0'))) || hLayer0) : hLayer0;
-      const eb = obj(T.BLOCK, hB); entCommon(eb, { mode, owner: h, layer: ly }); eb.d.TV(name);
+      const eb = obj(T.BLOCK, hB); entCommon(eb, { mode, owner: h, layer: ly }); eb.T(name);
       const ee = obj(T.ENDBLK, hE); entCommon(ee, { mode, owner: h, layer: b && b.end ? (LAYERS.get(up(b.end.get(8, '0'))) || hLayer0) : hLayer0 });
       // thực thể của khối, nối trước / sau
       info.main.forEach((e, i) => { const pv = i ? ref(info.main[i - 1].get(5)) : 0, nx = i + 1 < info.main.length ? ref(info.main[i + 1].get(5)) : 0;
@@ -296,11 +400,18 @@
     /* ---------- thuộc tính chung của thực thể ---------- */
     function entProps(r){ const p = r.plain(); const lt = p.get(6);
       let ltf = 0, lth = 0; if(lt != null){ const u = up(lt); if(u === 'BYLAYER') ltf = 0; else if(u === 'BYBLOCK') ltf = 1; else if(u === 'CONTINUOUS') ltf = 2; else { lth = LTYPES.get(u) || 0; ltf = lth ? 3 : 0; } }
-      return { layer: LAYERS.get(up(p.get(8, '0'))) || hLayer0, color: p.has(62) ? p.int(62) : 256, ltf, lth, lts: p.num(48, 1), lw: lwIndex(p.has(370) ? p.int(370) : -1), inv: p.int(60) }; }
+      return { layer: LAYERS.get(up(p.get(8, '0'))) || hLayer0, color: p.has(62) ? p.int(62) : 256, ltf, lth, lts: p.num(48, 1), lw: lwIndex(p.has(370) ? p.int(370) : -1), inv: p.int(60),
+        rgb: rgbOf(p), alpha: p.has(440) ? p.int(440) >>> 0 : null }; }
     function entCommon(o, c){
       const P = c.props || { layer: c.layer || hLayer0, color: 256, ltf: 0, lth: 0, lts: 1, lw: 29, inv: 0 };
-      o.d.B(0); o.d.BB(c.mode); o.d.BL(0); o.d.B(0); o.d.CMC(P.color & 0xffff); o.d.BD(P.lts); o.d.BB(P.ltf); o.d.BB(0); o.d.BS(P.inv); o.d.RC(P.lw);
-      if(c.mode === 0) o.hd.H(4, c.owner); o.hd.H(3, 0); o.hd.H(4, c.prev || 0); o.hd.H(4, c.next || 0); o.hd.H(5, P.layer); if(P.ltf === 3) o.hd.H(5, P.lth);
+      o.d.B(0); o.d.BB(c.mode); o.d.BL(0);
+      if(R04) o.d.B(1); if(R13) o.d.B(0); if(!R04) o.d.B(0);   // R2004+: không có từ điển mở rộng; R2013+: không có dữ liệu DS; R2000: nolinks = 0 (có handle trước/sau)
+      if(R04) o.d.ENC(P.color, P.rgb, P.alpha); else o.d.CMC(P.color & 0xffff);
+      o.d.BD(P.lts); o.d.BB(P.ltf);
+      if(R07){ o.d.BB(0); o.d.BB(0); o.d.RC(0); } else o.d.BB(0);   // (R2007+ vật liệu, ) kiểu in, (R2007+ bóng đổ) — đều theo lớp
+      if(R10){ o.d.B(0); o.d.B(0); o.d.B(0); }   // không gán kiểu hiển thị riêng
+      o.d.BS(P.inv); o.d.RC(P.lw);
+      if(c.mode === 0) o.hd.H(4, c.owner); if(!R04){ o.hd.H(3, 0); o.hd.H(4, c.prev || 0); o.hd.H(4, c.next || 0); } o.hd.H(5, P.layer); if(P.ltf === 3) o.hd.H(5, P.lth);
     }
     function styleH(r){ return STYLES.get(up(r.get(7, 'Standard'))) || hStd; }
     function textData(o, r, sub2){   // TEXT / ATTRIB / ATTDEF (R2000: dataflags)
@@ -309,8 +420,10 @@
       o.d.RC(df); if(!(df & 1)) o.d.RD(ins[2]); o.d.RD2(ins); if(!(df & 2)){ o.d.DD(al[0], ins[0]); o.d.DD(al[1], ins[1]); }
       o.d.BE([r.num(210), r.num(220), r.num(230, 1)]); o.d.BT(r.num(39));
       if(!(df & 4)) o.d.RD(ob); if(!(df & 8)) o.d.RD(rot); o.d.RD(r.num(40, 2.5)); if(!(df & 0x10)) o.d.RD(wf);
-      o.d.TV(r.get(1, '')); if(!(df & 0x20)) o.d.BS(gen); if(!(df & 0x40)) o.d.BS(hj); if(!(df & 0x80)) o.d.BS(vj);
+      o.T(r.get(1, '')); if(!(df & 0x20)) o.d.BS(gen); if(!(df & 0x40)) o.d.BS(hj); if(!(df & 0x80)) o.d.BS(vj);
     }
+    // phần chung ATTRIB / ATTDEF sau dữ liệu chữ: (R2010+) phiên bản, (R2018+) kiểu một dòng, thẻ, độ dài trường, cờ, (R2007+) khoá vị trí
+    function attData(o, s2){ if(R10) o.d.RC(0); if(R18) o.d.RC(1); o.T(s2.get(2, '')); o.d.BS(s2.int(73)); o.d.RC(s2.int(70)); if(R07) o.d.B(0); }
 
     // dữ liệu riêng DVDCAD (XDATA "DVDCAD" từng đối tượng) — DVDCAD đọc lại từ khối DVDCADX1 (bộ đọc DWG trong trình duyệt không đọc được EED R2000)
     function keepX(r, h){ let on = false; const it = []; for(const [c, v] of r.g){ if(c === 1001){ on = up(v) === 'DVDCAD'; continue; } if(on && c >= 1000) it.push([c, v]); } if(it.length) PRIV[h.toString(16).toUpperCase()] = it; }
@@ -330,18 +443,22 @@
         o.d.BL(V.length); if(hasB) o.d.BL(V.length); if(hasW) o.d.BL(V.length);
         V.forEach((q, i) => { if(!i) o.d.RD2([q.x, q.y]); else { o.d.DD(q.x, V[i - 1].x); o.d.DD(q.y, V[i - 1].y); } });
         if(hasB) for(const q of V) o.d.BD(q.b); if(hasW) for(const q of V){ o.d.BD(q.sw); o.d.BD(q.ew); } }
-      else if(t === 'WIPEOUT'){ o = obj(503, h, r); entCommon(o, c);   // như IMAGE: gốc, vector u/v của 1 điểm ảnh, cỡ ảnh, khung cắt (toạ độ điểm ảnh)
+      else if(t === 'WIPEOUT'){ o = obj(cls('WIPEOUT'), h, r); entCommon(o, c);   // như IMAGE: gốc, vector u/v của 1 điểm ảnh, cỡ ảnh, khung cắt (toạ độ điểm ảnh)
         const V = []; let k = null; for(const x of r.g){ if(x[0] === 14) k = [parseFloat(x[1]) || 0, 0]; else if(x[0] === 24 && k){ k[1] = parseFloat(x[1]) || 0; V.push(k); k = null; } }
         o.d.BL(r.int(90)); o.d.BD3(r.pt(10)); o.d.BD3(r.pt(11)); o.d.BD3(r.pt(12)); o.d.RD2([r.num(13, 1), r.num(23, 1)]);
         o.d.BS(r.int(70, 7)); o.d.B(r.int(280, 1)); o.d.RC(r.int(281, 50)); o.d.RC(r.int(282, 50)); o.d.RC(r.int(283, 0));
+        if(R10) o.d.B(r.int(290));   // R2010+: cắt phía trong/ngoài
         const ct = V.length === 2 ? 1 : 2; o.d.BS(ct); if(ct === 2) o.d.BL(V.length); for(const q of V) o.d.RD2(q);
         o.hd.H(5, 0); o.hd.H(3, 0); }
       else if(t === 'TEXT'){ o = obj(T.TEXT, h, r); entCommon(o, c); textData(o, r, r); o.hd.H(5, styleH(r)); }
       else if(t === 'ATTDEF'){ o = obj(T.ATTDEF, h, r); entCommon(o, c); const s2 = r.after('AcDbAttributeDefinition'); textData(o, r, s2);
-        o.d.TV(s2.get(2, '')); o.d.BS(s2.int(73)); o.d.RC(s2.int(70)); o.d.TV(s2.get(3, '')); o.hd.H(5, styleH(r)); }
+        attData(o, s2); if(R10) o.d.RC(0); o.T(s2.get(3, '')); o.hd.H(5, styleH(r)); }
       else if(t === 'MTEXT'){ o = obj(T.MTEXT, h, r); entCommon(o, c); const txt = r.all(3).join('') + r.get(1, ''); const ht = r.num(40, 2.5), lines = txt.split('\\P').length;
-        o.d.BD3(r.pt(10)); o.d.BD3([r.num(210), r.num(220), r.num(230, 1)]); o.d.BD3(r.has(11) ? r.pt(11) : [1, 0, 0]); o.d.BD(r.num(41)); o.d.BD(ht); o.d.BS(r.int(71, 1)); o.d.BS(r.int(72, 1));
-        o.d.BD(ht * (lines * 1.6667 - 0.6667)); o.d.BD(Math.max(...txt.split('\\P').map(s => s.length), 1) * ht * 0.7); o.d.TV(txt); o.hd.H(5, styleH(r)); o.d.BS(r.int(73, 1)); o.d.BD(r.num(44, 1)); o.d.B(0); }
+        const ins = r.pt(10), xd = r.has(11) ? r.pt(11) : [1, 0, 0], rw = r.num(41), rh = r.num(46), eh = ht * (lines * 1.6667 - 0.6667), ew = Math.max(...txt.split('\\P').map(s => s.length), 1) * ht * 0.7;
+        o.d.BD3(ins); o.d.BD3([r.num(210), r.num(220), r.num(230, 1)]); o.d.BD3(xd); o.d.BD(rw); if(R07) o.d.BD(rh); o.d.BD(ht); o.d.BS(r.int(71, 1)); o.d.BS(r.int(72, 1));
+        o.d.BD(eh); o.d.BD(ew); o.T(txt); o.hd.H(5, styleH(r)); o.d.BS(r.int(73, 1)); o.d.BD(r.num(44, 1)); o.d.B(0);
+        if(R04){ const bg = r.int(90); o.d.BL(bg); if(bg & 1){ o.d.BD(r.num(45, 1.5)); o.d.CMC(r.int(63, 256), r.has(421) ? r.int(421) & 0xffffff : null); o.d.BL(r.int(441)); } }   // nền chữ
+        if(R18){ o.d.B(1); o.d.BS(4); o.d.B(1); o.hd.H(5, 0); o.d.BL(r.int(71, 1)); o.d.BD3(xd); o.d.BD3(ins); o.d.BD(rw); o.d.BD(rh); o.d.BD(ew); o.d.BD(eh); o.d.BS(0); } }   // R2018+: không chú thích (annotative) → các trường nhắc lại, không chia cột
       else if(t === 'SOLID'){ o = obj(T.SOLID, h, r); entCommon(o, c); o.d.BT(r.num(39)); o.d.BD(r.num(30)); for(const k of [10, 11, 12, 13]) o.d.RD2([r.num(k), r.num(k + 10)]); o.d.BE([r.num(210), r.num(220), r.num(230, 1)]); }
       else if(t === '3DFACE'){ o = obj(T.FACE3D, h, r); entCommon(o, c); const q = [10, 11, 12, 13].map(k => r.pt(k)); const inv = r.int(70);
         o.d.B(inv ? 0 : 1); const zz = q[0][2] === 0; o.d.B(zz); o.d.RD(q[0][0]); o.d.RD(q[0][1]); if(!zz) o.d.RD(q[0][2]);
@@ -352,9 +469,14 @@
         o.d.BD3(r.pt(10)); o.d.BD(r.num(40)); o.d.BD(r.num(41));
         o.d.BD3(r.pt(17)); o.d.BD3([r.num(16), r.num(26), r.num(36, 1)]); o.d.BD(r.num(51) * D2R); o.d.BD(r.num(45, 1)); o.d.BD(r.num(42, 50)); o.d.BD(r.num(43)); o.d.BD(r.num(44)); o.d.BD(r.num(50) * D2R);
         o.d.RD2([r.num(12), r.num(22)]); o.d.RD2([r.num(13), r.num(23)]); o.d.RD2([r.num(14, 10), r.num(24, 10)]); o.d.RD2([r.num(15, 10), r.num(25, 10)]); o.d.BS(r.int(72, 1000));
+        if(R07) o.d.BS(r.int(61, 5));   // lưới chính
         const frz = r.g.filter(x => x[0] === 331 || x[0] === 341).map(x => ref(x[1])).filter(Boolean), clip = ref(r.get(340));   // lớp đóng băng riêng (VPLAYER), đường cắt (VPCLIP)
-        o.d.BL(frz.length); o.d.BL(r.int(90, 32864)); o.d.TV(r.get(1, '')); o.d.RC(r.int(281)); o.d.B(r.int(74)); o.d.B(r.int(71)); o.d.BD3(r.pt(110)); o.d.BD3([r.num(111, 1), r.num(121), r.num(131)]); o.d.BD3([r.num(112), r.num(122, 1), r.num(132)]); o.d.BD(r.num(146)); o.d.BS(r.int(79));
-        for(const h of frz) o.hd.H(5, h); o.hd.H(5, clip && entH.has(clip) ? clip : 0); o.hd.H(5, 0); o.hd.H(5, 0); o.hd.H(5, 0); }   // lớp đóng băng, đường cắt (340), đầu VX (R2000), UCS tên (345), UCS gốc (346)
+        o.d.BL(frz.length); o.d.BL(r.int(90, 32864)); o.T(r.get(1, '')); o.d.RC(r.int(281)); o.d.B(r.int(74)); o.d.B(r.int(71)); o.d.BD3(r.pt(110)); o.d.BD3([r.num(111, 1), r.num(121), r.num(131)]); o.d.BD3([r.num(112), r.num(122, 1), r.num(132)]); o.d.BD(r.num(146)); o.d.BS(r.int(79));
+        if(R04) o.d.BS(r.int(170));   // kiểu in tô bóng
+        if(R07){ o.d.B(1); o.d.RC(1); o.d.BD(0); o.d.BD(0); o.d.CMC(250); }   // đèn mặc định, kiểu chiếu sáng, độ sáng, tương phản, màu môi trường
+        // lớp đóng băng (R2000 hard pointer, R2004+ soft pointer), đường cắt (340), đầu VX (chỉ R2000), UCS tên (345), UCS gốc (346); R2007+: nền, kiểu hiển thị, tô bóng, mặt trời
+        for(const h of frz) o.hd.H(R04 ? 4 : 5, h); o.hd.H(5, clip && entH.has(clip) ? clip : 0); if(!R04) o.hd.H(5, 0); o.hd.H(5, 0); o.hd.H(5, 0);
+        if(R07){ o.hd.H(4, 0); o.hd.H(5, 0); o.hd.H(4, 0); o.hd.H(3, 0); } }
       else if(t === 'HATCH'){ o = obj(T.HATCH, h, r); entCommon(o, c); hatch(o, r.after('AcDbHatch')); }
       else if(t === 'INSERT'){ o = obj(T.INSERT, h, r); entCommon(o, c);
         const s = [r.num(41, 1), r.num(42, 1), r.num(43, 1)]; o.d.BD3(r.pt(10));
@@ -363,11 +485,12 @@
         else if(s[0] === 1){ o.d.BB(1); o.d.DD(s[1], 1); o.d.DD(s[2], 1); }
         else { o.d.BB(0); o.d.RD(s[0]); o.d.DD(s[1], s[0]); o.d.DD(s[2], s[0]); }
         o.d.BD(r.num(50) * D2R); o.d.BD3([r.num(210), r.num(220), r.num(230, 1)]); const A = att && att.atts.length ? att : null; o.d.B(A ? 1 : 0);
+        if(R04 && A) o.d.BL(A.atts.length);   // R2004+: số ATTRIB sở hữu
         o.hd.H(5, BLOCKREC.get(up(r.get(2))) || 0);
         if(A){ const hs = A.atts.map(a => ref(a.get(5))); let hq = A.seq ? ref(A.seq.get(5)) : 0; if(!hq) hq = newH();
-          o.hd.H(4, hs[0]); o.hd.H(4, hs[hs.length - 1]); o.hd.H(3, hq);
+          if(R04) for(const x of hs) o.hd.H(4, x); else { o.hd.H(4, hs[0]); o.hd.H(4, hs[hs.length - 1]); } o.hd.H(3, hq);
           A.atts.forEach((a, i) => { const oa = obj(T.ATTRIB, hs[i]); entCommon(oa, { props: entProps(a), mode: 0, owner: h, prev: i ? hs[i - 1] : 0, next: i + 1 < hs.length ? hs[i + 1] : 0 });
-            const s2 = a.after('AcDbAttribute'); textData(oa, a, s2); oa.d.TV(s2.get(2, '')); oa.d.BS(s2.int(73)); oa.d.RC(s2.int(70)); oa.hd.H(5, styleH(a)); });
+            const s2 = a.after('AcDbAttribute'); textData(oa, a, s2); attData(oa, s2); if(R10) oa.d.RC(0); oa.hd.H(5, styleH(a)); });
           const os = obj(T.SEQEND, hq); entCommon(os, { props: A.seq ? entProps(A.seq) : P, mode: 0, owner: h }); } }
       else if(t === 'DIMENSION'){ dimension(r, h, c); return; }
       return o;
@@ -376,7 +499,8 @@
       const g = r.g; let i = 0; const nx = c => { while(i < g.length && g[i][0] !== c) i++; return i < g.length ? g[i++][1] : null; };
       const num = v => parseFloat(v) || 0, int = v => parseInt(v, 10) || 0;
       const solid = r.int(70) === 1;
-      o.d.BD(r.num(30)); o.d.BD3([r.num(210), r.num(220), r.num(230, 1)]); o.d.TV(r.get(2, 'SOLID')); o.d.B(solid); o.d.B(r.int(71));
+      if(R04){ o.d.BL(0); o.d.BL(0); o.d.BD(0); o.d.BD(0); o.d.BL(0); o.d.BD(0); o.d.BL(0); o.T(''); }   // R2004+: tô chuyển màu (không dùng)
+      o.d.BD(r.num(30)); o.d.BD3([r.num(210), r.num(220), r.num(230, 1)]); o.T(r.get(2, 'SOLID')); o.d.B(solid); o.d.B(r.int(71));
       const np = int(nx(91)); o.d.BL(np); let derived = false; const bh = [];
       for(let p = 0; p < np; p++){
         const fl = int(nx(92)); o.d.BL(fl); if(fl & 4) derived = true;
@@ -410,9 +534,12 @@
       else if(D === T.DIM_RAD) meas = dist(def, p15);
       else if(D === T.DIM_DIA) meas = dist(def, p15);
       else { let a = Math.atan2(p14[1] - p15[1], p14[0] - p15[0]) - Math.atan2(p13[1] - p15[1], p13[0] - p15[0]); a = Math.abs(a) % (Math.PI * 2); meas = a > Math.PI ? Math.PI * 2 - a : a; }
+      if(R10) o.d.RC(0);   // R2010+: phiên bản lớp
       o.d.BD3([r.num(210), r.num(220), r.num(230, 1)]); o.d.RD2(t11); o.d.BD(t11[2]); o.d.RC((r.int(70) & 128 ? 0 : 1) | 2);
-      o.d.TV(r.get(1, '')); o.d.BD(r.num(53) * D2R); o.d.BD(r.num(51) * D2R); o.d.BD3([1, 1, 1]); o.d.BD(r.num(54) * D2R);
-      o.d.BS(r.int(71, 5)); o.d.BS(r.int(72, 1)); o.d.BD(r.num(41, 1)); o.d.BD(r.num(42, meas)); o.d.RD2([r.num(12), r.num(22)]);
+      o.T(r.get(1, '')); o.d.BD(r.num(53) * D2R); o.d.BD(r.num(51) * D2R); o.d.BD3([1, 1, 1]); o.d.BD(r.num(54) * D2R);
+      o.d.BS(r.int(71, 5)); o.d.BS(r.int(72, 1)); o.d.BD(r.num(41, 1)); o.d.BD(r.num(42, meas));
+      if(R07){ o.d.B(0); o.d.B(r.int(74)); o.d.B(r.int(75)); }   // R2007+: (không rõ), lật mũi tên 1, 2
+      o.d.RD2([r.num(12), r.num(22)]);
       if(D === T.DIM_LIN || D === T.DIM_ALI){ o.d.BD3(p13); o.d.BD3(p14); o.d.BD3(def); o.d.BD(s.num(52) * D2R); if(D === T.DIM_LIN) o.d.BD(rot); }
       else if(D === T.DIM_ANG3){ o.d.BD3(def); o.d.BD3(p13); o.d.BD3(p14); o.d.BD3(p15); }
       else if(D === T.DIM_RAD){ o.d.BD3(def); o.d.BD3(p15); o.d.BD(s.num(40)); }
@@ -421,41 +548,57 @@
     }
 
     /* ---------- OBJECTS: từ điển, layout, kiểu đa tuyến, XRECORD… ---------- */
-    const outObjH = new Set([H_NOD]); const keep = [];
-    { const dropped = new Set(); let changed = true; const isEnt = h => entH.has(h);
-      const cand = objsDxf.filter(r => ['DICTIONARY', 'ACDBDICTIONARYWDFLT', 'ACDBPLACEHOLDER', 'MLINESTYLE', 'LAYOUT', 'XRECORD'].includes(r.type) || (hasWipe && r.type === 'WIPEOUTVARIABLES'));
-      for(const r of objsDxf) if(!cand.includes(r)) dropped.add(ref(r.get(5)));
-      while(changed){ changed = false; for(const r of cand){ const h = ref(r.get(5)); if(dropped.has(h)) continue; const ow = ref(r.plain().get(330)); if(h !== H_NOD && (isEnt(ow) || dropped.has(ow))){ dropped.add(h); changed = true; } } }
-      for(const r of cand){ const h = ref(r.get(5)); if(!dropped.has(h)){ keep.push(r); outObjH.add(h); } } }
+    // GEODATA (R2010+, lớp AcDbGeoData bản 2/3): khối chủ, kiểu toạ độ, điểm thiết kế / tham chiếu, đơn vị, hướng lên, hướng bắc, hệ toạ độ (XML)
+    function geodata(r, h, owner, rx){ const s = r.after('AcDbGeoData'), o = obj(cls('GEODATA'), h); objCommon(o, owner, rx);
+      o.d.BL(R13 ? 3 : 2); o.hd.H(4, ref(s.get(330)) || hMS); o.d.BS(s.int(70, 3)); o.d.BD3(s.pt(10)); o.d.BD3(s.pt(11));
+      o.d.BD(s.num(40, 1)); o.d.BL(s.int(91, 6)); o.d.BD(s.num(41, 1)); o.d.BL(s.int(92, 6)); o.d.BD3([s.num(210), s.num(220), s.num(230, 1)]); o.d.RD2([s.num(12), s.num(22, 1)]);
+      o.d.BL(s.int(95, 1)); o.d.BD(s.num(141, 1)); o.d.B(s.int(294)); o.d.BD(s.num(142)); o.d.BD(s.num(143, 6378137));
+      o.T(s.all(303).join('') + s.get(301, '')); o.T(s.get(302, '')); o.T(s.get(305, '')); o.T(s.get(306, '')); o.T(s.get(307, ''));
+      o.d.BL(0); o.d.BL(0); }   // không có lưới nắn
     for(const r of keep){
       const h = ref(r.get(5)), p = r.plain(), owner = h === H_NOD ? 0 : ref(p.get(330)), rx = h === H_NOD ? [] : reactorsOf(r);
       if(r.type === 'DICTIONARY' || r.type === 'ACDBDICTIONARYWDFLT'){
-        const o = obj(r.type === 'DICTIONARY' ? T.DICT : T.DICTWDFLT, h); objCommon(o, owner, rx);
+        const o = obj(r.type === 'DICTIONARY' ? T.DICT : cls('ACDBDICTIONARYWDFLT'), h); objCommon(o, owner, rx);
         const items = []; let k = null; for(const x of p.g){ if(x[0] === 3) k = x[1]; else if((x[0] === 350 || x[0] === 360) && k != null){ const v = ref(x[1]); if(outObjH.has(v) || entH.has(v)) items.push([k, v]); k = null; } }
-        o.d.BL(items.length); o.d.BS(p.int(281, 1)); o.d.RC(p.int(280, 0)); for(const [n] of items) o.d.TV(n); for(const [, v] of items) o.hd.H(2, v);
+        o.d.BL(items.length); o.d.BS(p.int(281, 1)); o.d.RC(p.int(280, 0)); for(const [n] of items) o.T(n); for(const [, v] of items) o.hd.H(2, v);
         if(r.type === 'ACDBDICTIONARYWDFLT') o.hd.H(5, ref(r.after('AcDbDictionaryWithDefault').get(340)));
       }
-      else if(r.type === 'ACDBPLACEHOLDER'){ const o = obj(T.PLACEHOLDER, h); objCommon(o, owner, rx); }
-      else if(r.type === 'WIPEOUTVARIABLES'){ const o = obj(504, h); objCommon(o, owner, rx); o.d.BS(r.after('AcDbWipeoutVariables').int(70, 1)); }
+      else if(r.type === 'ACDBPLACEHOLDER'){ const o = obj(cls('ACDBPLACEHOLDER'), h); objCommon(o, owner, rx); }
+      else if(r.type === 'WIPEOUTVARIABLES'){ const o = obj(cls('WIPEOUTVARIABLES'), h); objCommon(o, owner, rx); o.d.BS(r.after('AcDbWipeoutVariables').int(70, 1)); }
+      else if(r.type === 'GEODATA') geodata(r, h, owner, rx);
       else if(r.type === 'MLINESTYLE'){ const o = obj(T.MLINESTYLE, h); objCommon(o, owner, rx); const s = r.after('AcDbMlineStyle');
-        o.d.TV(s.get(2, 'Standard')); o.d.TV(s.get(3, '')); o.d.BS(s.int(70)); o.d.CMC(s.int(62, 256)); o.d.BD(s.num(51, 90) * D2R); o.d.BD(s.num(52, 90) * D2R);
+        o.T(s.get(2, 'Standard')); o.T(s.get(3, '')); o.d.BS(s.int(70)); o.d.CMC(s.int(62, 256)); o.d.BD(s.num(51, 90) * D2R); o.d.BD(s.num(52, 90) * D2R);
         const ls = []; let L = null; for(const x of s.g){ if(x[0] === 49){ L = { off: parseFloat(x[1]) || 0, col: 256, lt: 'BYLAYER' }; ls.push(L); } else if(L && x[0] === 62) L.col = parseInt(x[1], 10) || 0; else if(L && x[0] === 6) L.lt = x[1]; }
-        o.d.RC(ls.length); for(const q of ls){ o.d.BD(q.off); o.d.CMC(q.col & 0xffff); const u = up(q.lt); o.d.BS(u === 'BYBLOCK' ? 32766 : u === 'BYLAYER' ? 32767 : 0); } }
-      else if(r.type === 'LAYOUT'){ const o = obj(T.LAYOUT, h); objCommon(o, owner, rx); const s = r.after('AcDbPlotSettings'), l = r.after('AcDbLayout');
-        o.d.TV(s.get(1, '')); o.d.TV(s.get(2, '')); o.d.BS(s.int(70)); for(const k of [40, 41, 42, 43, 44, 45]) o.d.BD(s.num(k)); o.d.TV(s.get(4, ''));
-        o.d.BD2([s.num(46), s.num(47)]); o.d.BS(s.int(72)); o.d.BS(s.int(73)); o.d.BS(s.int(74)); o.d.BD2([s.num(48), s.num(49)]); o.d.BD2([s.num(140), s.num(141)]); o.d.TV(s.get(6, ''));
-        o.d.BD(s.num(142, 1)); o.d.BD(s.num(143, 1)); o.d.TV(s.get(7, '')); o.d.BS(s.int(75)); o.d.BD(s.num(147, 1)); o.d.BD2([s.num(148), s.num(149)]);
-        o.d.TV(l.get(1, '')); o.d.BS(l.int(71)); o.d.BS(l.int(70)); o.d.BD3(l.pt(12)); o.d.RD2([l.num(10), l.num(20)]); o.d.RD2([l.num(11), l.num(21)]);
+        o.d.RC(ls.length); for(const q of ls){ o.d.BD(q.off); o.d.CMC(q.col & 0xffff); const u = up(q.lt);
+          if(R18) o.hd.H(5, LTYPES.get(u) || hLtByLayer); else o.d.BS(u === 'BYBLOCK' ? 32766 : u === 'BYLAYER' ? 32767 : 0); } }   // R2018+: handle kiểu nét thay cho số
+      else if(r.type === 'LAYOUT'){ const o = obj(cls('LAYOUT'), h); objCommon(o, owner, rx); const s = r.after('AcDbPlotSettings'), l = r.after('AcDbLayout');
+        o.T(s.get(1, '')); o.T(s.get(2, '')); o.d.BS(s.int(70)); for(const k of [40, 41, 42, 43, 44, 45]) o.d.BD(s.num(k)); o.T(s.get(4, ''));
+        o.d.BD2([s.num(46), s.num(47)]); o.d.BS(s.int(72)); o.d.BS(s.int(73)); o.d.BS(s.int(74)); o.d.BD2([s.num(48), s.num(49)]); o.d.BD2([s.num(140), s.num(141)]);
+        if(R04) o.hd.H(4, 0); else o.T(s.get(6, ''));   // khung nhìn in: R2004+ là handle VIEW
+        o.d.BD(s.num(142, 1)); o.d.BD(s.num(143, 1)); o.T(s.get(7, '')); o.d.BS(s.int(75)); o.d.BD(s.num(147, 1)); o.d.BD2([s.num(148), s.num(149)]);
+        if(R04){ o.d.BS(s.int(76)); o.d.BS(s.int(77, 2)); o.d.BS(s.int(78, 300)); } if(R07) o.hd.H(4, 0);   // in tô bóng: kiểu, độ phân giải, DPI; (R2007+) kiểu hiển thị khi in
+        o.T(l.get(1, '')); o.d.BS(l.int(71)); o.d.BS(l.int(70)); o.d.BD3(l.pt(12)); o.d.RD2([l.num(10), l.num(20)]); o.d.RD2([l.num(11), l.num(21)]);
         o.d.BD3(l.pt(13)); o.d.BD3([l.num(16, 1), l.num(26), l.num(36)]); o.d.BD3([l.num(17), l.num(27, 1), l.num(37)]); o.d.BD(l.num(146)); o.d.BS(l.int(76)); o.d.BD3(l.pt(14)); o.d.BD3(l.pt(15));
-        const av = ref(l.get(331)); o.hd.H(4, ref(l.get(330))); o.hd.H(4, entH.has(av) ? av : 0); o.hd.H(5, 0); o.hd.H(5, 0); }
+        const lbr = ref(l.get(330)), vps = R04 ? ((blockInfo.get(lbr) || { main: [] }).main.filter(e => e.type === 'VIEWPORT').map(e => ref(e.get(5)))) : [];
+        if(R04) o.d.BL(vps.length);   // R2004+: danh sách khung nhìn của layout
+        const av = ref(l.get(331)); o.hd.H(4, lbr); o.hd.H(4, entH.has(av) ? av : 0); o.hd.H(5, 0); o.hd.H(5, 0); for(const v of vps) o.hd.H(4, v); }
       else if(r.type === 'XRECORD'){ const o = obj(T.XRECORD, h); objCommon(o, owner, rx); const s = r.after('AcDbXrecord'); const items = s.g.filter(x => x[0] !== 280);
-        const xd = new BW(256); for(const [c, v] of items){ xd.RS(c); if((c >= 0 && c <= 9) || (c >= 300 && c <= 309) || c === 1000){ const b = tvBytes(v); xd.RS(b.length); xd.RC(30); xd.TF(b); } else if(c >= 280 && c <= 289){ xd.RC(parseInt(v, 10) || 0); } else if(c >= 90 && c <= 99){ xd.RL(parseInt(v, 10) || 0); } else if(c >= 60 && c <= 79){ xd.RS(parseInt(v, 10) || 0); } else xd.RD(parseFloat(v) || 0); }
+        const xd = new BW(256); for(const [c, v] of items){ xd.RS(c);
+          if((c >= 0 && c <= 9) || (c >= 300 && c <= 309) || c === 1000){ if(R07){ const t = String(v); xd.RS(t.length); for(let i = 0; i < t.length; i++) xd.RS(t.charCodeAt(i)); } else { const b = tvBytes(v); xd.RS(b.length); xd.RC(30); xd.TF(b); } }   // R2007+: RS số ký tự + UTF-16
+          else if(c >= 280 && c <= 289){ xd.RC(parseInt(v, 10) || 0); } else if(c >= 90 && c <= 99){ xd.RL(parseInt(v, 10) || 0); } else if(c >= 60 && c <= 79){ xd.RS(parseInt(v, 10) || 0); } else xd.RD(parseFloat(v) || 0); }
         o.d.BL(xd.byte); o.d.append(xd); o.d.BS(s.int(280, 1)); }
     }
 
-    /* ---------- mã hoá từng đối tượng: MS cỡ + [BS kiểu, RL bitsize, dữ liệu, handle] + CRC ---------- */
-    const enc = o => { const w = new BW(((o.d.p + o.hd.p) >> 3) + 16); w.BS(o.type); w.RL(w.p + 32 + o.d.p); w.append(o.d); w.append(o.hd); w.pad();
-      const n = w.p >> 3, f = new BW(n + 8); f.MS(n); f.append(w); f.crc(0); return f.bytes(); };
+    /* ---------- mã hoá từng đối tượng ----------
+       R2000/R2004: MS cỡ + [BS kiểu, RL bitsize, dữ liệu, handle] + CRC
+       R2010+:      MS cỡ + UMC số bit luồng handle + [BOT kiểu, dữ liệu, luồng chuỗi + RS cỡ + bit có chuỗi, handle] + CRC */
+    const enc = o => {
+      if(!R10){ const w = new BW(((o.d.p + o.hd.p) >> 3) + 16); w.BS(o.type); w.RL(w.p + 32 + o.d.p); w.append(o.d); w.append(o.hd); w.pad();
+        const n = w.p >> 3, f = new BW(n + 8); f.MS(n); f.append(w); f.crc(0); return f.bytes(); }
+      const w = new BW(((o.d.p + o.s.p + o.hd.p) >> 3) + 24); w.BOT(o.type); w.append(o.d);
+      if(o.s.p){ const n = o.s.p; w.append(o.s); if(n >= 0x8000){ w.RS((n >> 15) & 0xffff); w.RS((n & 0x7fff) | 0x8000); } else w.RS(n); w.B(1); } else w.B(0);
+      const hs = w.p; w.append(o.hd); w.pad();
+      const n = w.p >> 3, f = new BW(n + 12); f.MS(n); f.UMC(w.p - hs); f.append(w); f.crc(0); return f.bytes(); };
     out.sort((a, b) => a.h - b.h);
     for(let i = 1; i < out.length; i++) if(out[i].h === out[i - 1].h) throw new Error('DWG: trùng handle ' + out[i].h.toString(16));
     seed = Math.max(seed, out.length ? out[out.length - 1].h + 1 : 1);
@@ -468,39 +611,171 @@
     const dsRec = recsOf('DIMSTYLE').find(r => up(r.get(2)) === 'STANDARD');
     const DS = (c, d) => dsRec ? dsRec.num(c, d) : d;
     const guid = () => { const b = []; for(let i = 0; i < 16; i++) b.push(Math.floor(Math.random() * 256)); b[6] = (b[6] & 15) | 0x40; b[8] = (b[8] & 0x3f) | 0x80; const x = b.map(v => v.toString(16).toUpperCase().padStart(2, '0')).join(''); return '{' + x.slice(0, 8) + '-' + x.slice(8, 12) + '-' + x.slice(12, 16) + '-' + x.slice(16, 20) + '-' + x.slice(20) + '}'; };
-    function headerData(w){
+    // ws = luồng chuỗi, wh = luồng handle (R2007+; trước đó mọi thứ nằm trong w)
+    function headerData(w, ws, wh){
       const z3 = [0, 0, 0];
-      w.BD(412148564080.0); w.BD(1); w.BD(1); w.BD(1); w.TV('m'); w.TV(''); w.TV(''); w.TV(''); w.BL(0); w.BL(0); w.H(5, 0);
-      for(const b of [1, 1, 0, 0, 1, 1, 0, hv('$PSLTSCALE', 70, 1), hv('$LIMCHECK', 70, 0), 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0]) w.B(b);   // DIMASO … PELLIPSE
-      for(const s of [1, 3020, 2, 4, 0, 0, 1, 0, 0, 0, 0, 0, 0, 8, 6, 6, 6, 6, 6, 6, 3, 70, 0, 64, 4, 0, 50]) w.BS(s);   // PROXYGRAPHICS … TEXTQLTY
+      const T = s => { if(R07) ws.TU(s); else w.TV(s); }, H = (c, v) => (R07 ? wh : w).H(c, v);
+      if(R13) w.BLL(0);   // REQUIREDVERSIONS
+      w.BD(412148564080.0); w.BD(1); w.BD(1); w.BD(1); T('m'); T(''); T(''); T(''); w.BL(0); w.BL(0); if(!R04) H(5, 0);   // (R2000) đầu VX hiện hành
+      const bits = [1, 1, 0, 0, 1, 1, 0, hv('$PSLTSCALE', 70, 1), hv('$LIMCHECK', 70, 0), 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0]; if(R04) bits.splice(9, 0, 0);
+      for(const b of bits) w.B(b);   // DIMASO … PELLIPSE (R2004+: thêm 1 bit sau LIMCHECK)
+      const shorts = [1, 3020, 2, 4, 0, 0, 1, 0, 0, 0, 0, 0, 0, 8, 6, 6, 6, 6, 6, 6, 3, 70, 0, 64, 4, 0, 50];
+      shorts.forEach((s, i) => { if(R04 && i === 8){ w.BL(0); w.BL(0); w.BL(0); } w.BS(s); });   // PROXYGRAPHICS … TEXTQLTY (R2004+: 3 BL trước USERI1)
       w.BD(hv('$LTSCALE', 40, 1)); w.BD(metric ? 2.5 : 0.2); w.BD(metric ? 1 : 0.05); w.BD(metric ? 1 : 0.1); for(let i = 0; i < 10; i++) w.BD(0);   // TEXTSIZE … USERR5
       for(let i = 0; i < 4; i++) w.BD(0); w.BD(0.5); w.BD(metric ? 20 : 1); w.BD(hv('$CELTSCALE', 40, 1));   // CHAMFERA … CELTSCALE
-      w.TV('acad'); w.BL(jd[0]); w.BL(jd[1]); w.BL(jd[0]); w.BL(jd[1]); w.BL(0); w.BL(0); w.BL(0); w.BL(0);
-      w.CMC(256); w.H(0, seed);
-      w.H(5, LAYERS.get(up(hvs('$CLAYER', 8, '0'))) || hLayer0); w.H(5, hStd); w.H(5, hLtByLayer); w.H(5, hDimStd); w.H(5, hMlStd);
+      T('acad'); w.BL(jd[0]); w.BL(jd[1]); w.BL(jd[0]); w.BL(jd[1]); if(R04){ w.BL(0); w.BL(0); w.BL(0); } w.BL(0); w.BL(0); w.BL(0); w.BL(0);
+      w.CMC(256); w.H(0, seed);   // HANDSEED luôn ở luồng chính
+      H(5, LAYERS.get(up(hvs('$CLAYER', 8, '0'))) || hLayer0); H(5, hStd); H(5, hLtByLayer); if(R07) H(5, 0); H(5, hDimStd); H(5, hMlStd);
       w.BD(0); w.BD3(z3); w.BD3([1e20, 1e20, 1e20]); w.BD3([-1e20, -1e20, -1e20]); w.RD2([0, 0]); w.RD2(metric ? [420, 297] : [12, 9]); w.BD(0);
-      w.BD3(z3); w.BD3([1, 0, 0]); w.BD3([0, 1, 0]); w.H(5, 0); w.H(5, 0); w.BS(0); w.H(5, 0); for(let i = 0; i < 6; i++) w.BD3(z3);
+      w.BD3(z3); w.BD3([1, 0, 0]); w.BD3([0, 1, 0]); H(5, 0); H(5, 0); w.BS(0); H(5, 0); for(let i = 0; i < 6; i++) w.BD3(z3);
       w.BD3([hv('$INSBASE', 10, 0), hv('$INSBASE', 20, 0), hv('$INSBASE', 30, 0)]); w.BD3(ext0); w.BD3(ext1); w.RD2(lim0); w.RD2(lim1); w.BD(0);
-      w.BD3(z3); w.BD3([1, 0, 0]); w.BD3([0, 1, 0]); w.H(5, 0); w.H(5, 0); w.BS(0); w.H(5, 0); for(let i = 0; i < 6; i++) w.BD3(z3);
-      w.TV(''); w.TV('');
+      w.BD3(z3); w.BD3([1, 0, 0]); w.BD3([0, 1, 0]); H(5, 0); H(5, 0); w.BS(0); H(5, 0); for(let i = 0; i < 6; i++) w.BD3(z3);
+      T(''); T('');
       const dt = DS(140, metric ? 2.5 : 0.18);
       w.BD(DS(40, 1)); w.BD(DS(41, metric ? 2.5 : 0.18)); w.BD(DS(42, metric ? 0.625 : 0.0625)); w.BD(DS(43, metric ? 3.75 : 0.38)); w.BD(DS(44, metric ? 1.25 : 0.18)); w.BD(0); w.BD(0); w.BD(0); w.BD(0);
+      if(R07){ w.BD(1); w.BD(45 * D2R); w.BS(0); w.CMC(0); }   // DIMFXL, DIMJOGANG, DIMTFILL, DIMTFILLCLR
       for(const b of [0, 0, metric ? 0 : 1, metric ? 0 : 1, 0, 0]) w.B(b); w.BS(DS(77, metric ? 1 : 0)); w.BS(metric ? 8 : 0); w.BS(0);
+      if(R07) w.BS(0);   // DIMARCSYM
       w.BD(dt); w.BD(metric ? 2.5 : 0.09); w.BD(0); w.BD(25.4); w.BD(1); w.BD(0); w.BD(1); w.BD(DS(147, metric ? 0.625 : 0.09)); w.BD(0);
       w.B(0); w.BS(2); w.B(metric ? 1 : 0); w.B(0); w.B(0); w.B(0); w.CMC(0); w.CMC(0); w.CMC(0);
       for(const s of [0, DS(271, metric ? 2 : 4), metric ? 2 : 4, 2, 2, 0, 0, 2, metric ? 44 : 46, 0, 0]) w.BS(s); w.B(0); w.B(0); w.BS(1); w.BS(metric ? 8 : 0); w.BS(0); w.BS(0); w.B(0); w.BS(3);
-      w.H(5, hStd); w.H(5, 0); w.H(5, 0); w.H(5, 0); w.H(5, 0); w.BS(0xfffe); w.BS(0xfffe);
-      for(const c of [1, 2, 3, 5, 6, 7, 8, 9, 0xA, H_VX]) w.H(3, c);
-      w.H(5, nodItems.get('ACAD_GROUP') || 0); w.H(5, nodItems.get('ACAD_MLINESTYLE') || 0); w.H(3, H_NOD);
-      w.BS(1); w.BS(70); w.TV(''); w.TV('');
-      w.H(5, nodItems.get('ACAD_LAYOUT') || 0); w.H(5, nodItems.get('ACAD_PLOTSETTINGS') || 0); w.H(5, nodItems.get('ACAD_PLOTSTYLENAME') || 0);
+      if(R07) w.B(0);   // DIMFXLON
+      if(R10){ w.B(0); w.BD(0); T(''); w.BD(0); T(''); }   // DIMTXTDIRECTION, DIMALTMZF/S, DIMMZF/S
+      H(5, hStd); H(5, 0); H(5, 0); H(5, 0); H(5, 0); if(R07){ H(5, 0); H(5, 0); H(5, 0); } w.BS(0xfffe); w.BS(0xfffe);
+      for(const c of [1, 2, 3, 5, 6, 7, 8, 9, 0xA].concat(R04 ? [] : [H_VX])) H(3, c);
+      H(5, nodItems.get('ACAD_GROUP') || 0); H(5, nodItems.get('ACAD_MLINESTYLE') || 0); H(3, H_NOD);
+      w.BS(1); w.BS(70); T(''); T('');
+      H(5, nodItems.get('ACAD_LAYOUT') || 0); H(5, nodItems.get('ACAD_PLOTSETTINGS') || 0); H(5, nodItems.get('ACAD_PLOTSTYLENAME') || 0);
+      if(R04){ H(5, nodItems.get('ACAD_MATERIAL') || 0); H(5, nodItems.get('ACAD_COLOR') || 0); } if(R07) H(5, nodItems.get('ACAD_VISUALSTYLE') || 0); if(R13) H(5, 0);
       w.BL(lwIndex(hv('$CELWEIGHT', 370, -1)) | (hv('$LWDISPLAY', 290, 0) ? 0 : 0x200) | 0x800 | 0x2000);
-      w.BS(hv('$INSUNITS', 70, metric ? 4 : 1)); w.BS(0); w.TV(guid()); w.TV(guid());
-      w.H(5, hPS); w.H(5, hMS); w.H(5, hLtByLayer); w.H(5, hLtByBlock); w.H(5, hLtCont);
+      w.BS(hv('$INSUNITS', 70, metric ? 4 : 1)); w.BS(0); T(guid()); T(guid());
+      if(R04){ w.RC(127); w.RC(0); w.RC(1); w.RC(R10 ? 2 : 0); w.RC(2); w.RC(0); w.BS(257); w.BS(257); w.RC(0); w.RC(0); T(''); }   // SORTENTS … PROJECTNAME
+      H(5, hPS); H(5, hMS); H(5, hLtByLayer); H(5, hLtByBlock); H(5, hLtCont);
+      if(R07){ w.B(0); w.BL(0); w.BL(0); w.BD(0); w.BD(2); w.BD(metric ? 50 : 6); w.BD(2); w.BD(50); w.BD(0); w.RC(1); w.RC(1); w.BD(metric ? 5 : 0.25); w.BD(metric ? 80 : 4);   // CAMERADISPLAY … PSOLHEIGHT
+        w.BD(Math.PI / 2); w.BD(Math.PI / 2); w.BD(0); w.BD(0); w.BS(7); w.RC(1);   // LOFT*
+        w.BD(hv('$LATITUDE', 40, 37.795)); w.BD(hv('$LONGITUDE', 40, -122.394)); w.BD(hv('$NORTHDIRECTION', 40, 0)); w.BL(hv('$TIMEZONE', 70, -8000) | 0);
+        w.RC(1); w.RC(1); w.RC(2); w.RC(0); w.B(1); w.CMC(1); H(5, 0); H(5, 0); H(5, 0); w.RC(0); w.BD(0); }   // đèn, khung DWF/DGN, tỉ lệ thực, màu giao, kiểu hiển thị, bóng
       w.BS(0); w.BS(0); w.BS(0); w.BS(0);
+      if(R04){ w.BL(0); w.BL(0); w.B(0); }
     }
 
-    /* ---------- ghép file ---------- */
+    // khối dữ liệu riêng DVDCAD ("DVDCADX1" + RL cỡ + JSON) — mọi trình đọc DWG bỏ qua; DVDCAD mở lại đủ khối 3D, vùng, thứ tự vẽ, ràng buộc, khối động…
+    const privBlock = () => { const xr = objsDxf.find(r => r.type === 'XRECORD' && r.g.some(x => x[0] === 1 && x[1] === 'DVDCAD1'));
+      const d = xr ? xr.all(300).join('') : ''; if(!Object.keys(PRIV).length && !d) return null;
+      const js = JSON.stringify({ v: 1, x: PRIV, d }); const b = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(js) : Uint8Array.from(Buffer.from(js, 'utf8'));
+      const u = new Uint8Array(12 + b.length); for(let i = 0; i < 8; i++) u[i] = 'DVDCADX1'.charCodeAt(i); new DataView(u.buffer).setUint32(8, b.length, true); u.set(b, 12); return u; };
+
+    /* ---------- ghép file DWG 2004+ ---------- */
+    if(R04) return fileR2004();
+    function fileR2004(){
+      const cat = parts => { let n = 0; for(const p of parts) n += p.length; const u = new Uint8Array(n); let o = 0; for(const p of parts){ u.set(p, o); o += p.length; } return u; };
+      const le = (u, at, v) => new DataView(u.buffer, u.byteOffset).setUint32(at, v >>> 0, true);
+      // đuôi luồng chuỗi (R2007+): dữ liệu chuỗi + RS cỡ (bit) + bit "có chuỗi"
+      const strTail = (w, ws) => { if(ws.p){ const n = ws.p; w.append(ws); if(n >= 0x8000){ w.RS((n >> 15) & 0xffff); w.RS((n & 0x7fff) | 0x8000); } else w.RS(n); w.B(1); } else w.B(0); };
+      // section có mốc: mốc đầu + RL cỡ (+ RL cao, R2010+) + dữ liệu + CRC-16 + mốc cuối (+ byte 0 thêm)
+      const wrap = (b0, b1, data, tail) => { const F = new BW(data.length + 64); sentinel(F, b0); const st = F.byte; F.RL(data.length); if(HI32) F.RL(0);
+        F.need(data.length * 8); F.u.set(data, F.byte); F.p += data.length * 8; F.crc(st); sentinel(F, b1); for(let i = 0; i < (tail || 0); i++) F.RC(0); return F.bytes(); };
+      const T16 = (w, s) => { s = String(s == null ? '' : s); if(R07){ w.RS(s.length + 1); for(let i = 0; i < s.length; i++) w.RS(s.charCodeAt(i)); w.RS(0); } else { const b = tvBytes(s); w.RS(b.length + 1); w.TF(b); w.RC(0); } };
+      const U16 = (w, s) => { w.RS(s.length + 1); for(let i = 0; i < s.length; i++) w.RS(s.charCodeAt(i)); w.RS(0); };
+      // --- biến hệ thống ---
+      const secHeader = (() => { const w = new BW(4096), ws = new BW(256), wh = new BW(512); if(R07) w.RL(0); headerData(w, ws, wh);
+        if(R07){ strTail(w, ws); w.setRL(0, w.p); w.append(wh); } w.pad(); return wrap(SENT.VAR_BEGIN, SENT.VAR_END, w.bytes()); })();
+      // --- lớp ---
+      const cnt = {}; for(const o of out) cnt[o.type] = (cnt[o.type] || 0) + 1;
+      const secClasses = (() => { const w = new BW(2048), ws = new BW(1024); if(R07) w.RL(0); const T = s => { if(R07) ws.TU(s); else w.TV(s); };
+        w.BS(500 + clsUsed.length - 1); w.RC(0); w.RC(0); w.B(1);
+        clsUsed.forEach((dxf, i) => { const [cpp, app, px, ent] = CLASSDEF[dxf]; w.BS(500 + i); w.BS(px); T(app); T(cpp); T(dxf); w.B(0); w.BS(ent ? 0x1f2 : 0x1f3); w.BL(cnt[500 + i] || 0); w.BL(DWGV); w.BL(MAINT); w.BL(0); w.BL(0); });
+        if(R07){ strTail(w, ws); w.setRL(0, w.p); } w.pad(); return wrap(SENT.CLASS_BEGIN, SENT.CLASS_END, w.bytes(), 8); })();
+      // --- đối tượng (bắt đầu bằng RL 0x0DCA; địa chỉ trong bản đồ handle tính từ đầu section) ---
+      const parts = [Uint8Array.of(0xca, 0x0d, 0, 0)], map = []; let off = 4;
+      for(const o of out){ const b = enc(o); map.push([o.h, off]); parts.push(b); off += b.length; }
+      const secObjects = cat(parts);
+      // --- bản đồ handle: trang ≤ 2032 byte, CRC big-endian ---
+      const secHandles = (() => { const F = new BW(map.length * 8 + 64); let ps = 0; F.RS(0); let lh = 0, la = 0;
+        const close = () => { const n = F.byte - ps; F.u[ps] = n >> 8; F.u[ps + 1] = n & 255; F.crc(ps, true); };
+        for(const [h, a] of map){ F.UMC(h - lh); F.MC(a - la); lh = h; la = a; if(F.byte - ps > 2030){ close(); ps = F.byte; F.RS(0); lh = 0; la = 0; } }
+        close(); ps = F.byte; F.RC(0); F.RC(2); F.crc(ps, true); return F.bytes(); })();
+      // --- ObjFreeSpace (R2007+: các số 64 bit / 128 bit) ---
+      const secFree = (() => { const F = new BW(96);
+        if(R07){ F.RL(0); F.RL(0); F.RL(out.length); F.RL(0); F.RL(jd[0]); F.RL(jd[1]); F.RC(4); for(const v of [0x32, 0x64, 0x200, 0xffffffff]){ F.RL(v); F.RL(0); F.RL(0); F.RL(0); } }
+        else { F.RL(0); F.RL(out.length); F.RL(jd[0]); F.RL(jd[1]); F.RL(0); F.RC(4); for(const v of [0x32, 0x64, 0x200, 0xffffffff]){ F.RL(v); F.RL(0); } }
+        return F.bytes(); })();
+      const secTemplate = R07 ? Uint8Array.of(1, 0, 0, 0, metric ? 1 : 0, 0) : Uint8Array.of(0, 0, metric ? 1 : 0, 0);
+      // --- AuxHeader ---
+      const secAux = (() => { const F = new BW(160);
+        F.RC(0xff); F.RC(0x77); F.RC(0x01); F.RS(DWGV); F.RS(MAINT); F.RL(1); F.RL(0xffffffff); F.RS(1); F.RS(0); F.RL(0); F.RS(DWGV); F.RS(MAINT); F.RS(DWGV); F.RS(MAINT);
+        for(const v of [4, 0x565, 0, 0, 2, 1]) F.RS(v); for(const v of [0, 0, 0, 256, 393218]) F.RL(v);
+        F.RL(jd[0]); F.RL(jd[1]); F.RL(jd[0]); F.RL(jd[1]); F.RL(seed); F.RL(0); F.RS(0); F.RS(1); F.RL(0); F.RL(0); F.RL(0); F.RL(1); F.RL(0); F.RL(0); F.RL(0); F.RL(0);
+        if(R18){ F.RS(0); F.RS(0); F.RS(0); } return F.bytes(); })();
+      // --- SummaryInfo, AppInfo, RevHistory (không nén) ---
+      const secSummary = (() => { const F = new BW(256); for(const s of ['', '', '', '', '', 'DVDCAD', '', '']) T16(F, s);
+        F.RL(0); F.RL(0); F.RL(jd[0]); F.RL(jd[1]); F.RL(jd[0]); F.RL(jd[1]); F.RS(0); F.RL(0); F.RL(0); return F.bytes(); })();
+      const secAppInfo = (() => { const F = new BW(1024), z16 = () => { for(let i = 0; i < 16; i++) F.RC(0); };
+        F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.13.0'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
+        U16(F, '<ProductInformation name ="DVDCAD" build_version="5.13.0" registry_version="5.13" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
+      const secRev = Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0);
+      const up32 = (n, q) => Math.max(q, Math.ceil(n / q) * q);
+      // --- trang dữ liệu: đầu 32 byte (mã hoá XOR theo địa chỉ) + dữ liệu (nén / nguyên) + lấp dãy MAGIC tới bội 0x20 ---
+      const pages = [], fileParts = [], descs = []; let pos = 0x100;
+      const addSec = (name, id, data, comp, max) => { const d = { name, id, size: data.length, comp: comp ? 2 : 1, max, pages: [] }; descs.push(d);
+        const nP = Math.max(1, Math.ceil(data.length / max));
+        for(let k = 0; k < nP; k++){ const o0 = k * max; const chunk = new Uint8Array(max); chunk.set(data.subarray(o0, Math.min(data.length, o0 + max)));
+          if(k && chunk.every(x => !x)) continue;   // như AutoCAD: trang toàn 0 không ghi
+          const body = comp ? lz77(chunk) : chunk, psz = (32 + body.length + 31) & ~31, n = pages.length + 1, addr = pos;
+          const pg = new Uint8Array(psz); pg.set(body, 32); for(let i = 32 + body.length, j = 0; i < psz; i++, j++) pg[i] = MAGIC[j & 255];
+          le(pg, 0, 0x4163043b); le(pg, 4, id); le(pg, 8, body.length); le(pg, 12, psz); le(pg, 16, o0); le(pg, 20, 0);
+          const dck = pageSum(0, body, 0, body.length); le(pg, 28, dck); le(pg, 24, 0); le(pg, 24, pageSum(dck, pg, 0, 32));
+          const mk = (0x4164536B ^ addr) >>> 0; for(let i = 0; i < 32; i += 4){ const v = new DataView(pg.buffer).getUint32(i, true); le(pg, i, v ^ mk); }
+          pages.push({ n, addr, size: psz }); fileParts.push(pg); pos += psz; d.pages.push({ n, csz: body.length, off: o0 }); }
+        return d; };
+      // thứ tự trang như AutoCAD: SummaryInfo, Preview, AppInfo, RevHistory, AcDbObjects…, ObjFreeSpace, Template, Handles, Classes, AuxHeader, Header
+      const sumMax = up32(secSummary.length, 0x80), pvData0 = 0x100 + 32 + sumMax + 32;   // vị trí tuyệt đối của dữ liệu ảnh xem trước
+      const secPreview = (() => { const bmp = opt.bmp && opt.bmp.length ? opt.bmp : null; const F = new BW(64 + (bmp ? bmp.length : 0)); sentinel(F, SENT.THUMB_BEGIN);
+        if(bmp){ F.RL(1 + 9 + bmp.length); F.RC(1); F.RC(2); F.RL(pvData0 + 16 + 4 + 1 + 9); F.RL(bmp.length); F.need(bmp.length * 8); F.u.set(bmp, F.byte); F.p += bmp.length * 8; }
+        else { F.RL(1); F.RC(0); } sentinel(F, SENT.THUMB_END); return F.bytes(); })();
+      const dSum = addSec('AcDb:SummaryInfo', 9, secSummary, false, sumMax);
+      const dPrev = addSec('AcDb:Preview', 10, secPreview, false, up32(secPreview.length, 0x400));
+      const dApp = addSec('AcDb:AppInfo', 11, secAppInfo, false, up32(secAppInfo.length, 0x80));
+      addSec('AcDb:RevHistory', 8, secRev, true, 0x7400);
+      addSec('AcDb:AcDbObjects', 7, secObjects, true, 0x7400);
+      addSec('AcDb:ObjFreeSpace', 6, secFree, true, 0x7400);
+      addSec('AcDb:Template', 5, secTemplate, true, 0x7400);
+      addSec('AcDb:Handles', 4, secHandles, true, 0x7400);
+      addSec('AcDb:Classes', 3, secClasses, true, 0x7400);
+      addSec('AcDb:AuxHeader', 2, secAux, true, 0x7400);
+      addSec('AcDb:Header', 1, secHeader, true, 0x7400);
+      // --- trang hệ thống: đầu 20 byte (kiểu, cỡ gốc, cỡ nén, 2, checksum) + dữ liệu nén ---
+      const sysPage = (type, data, minSize) => { const body = lz77(data); const psz = Math.max(minSize || 0, (20 + body.length + 31) & ~31); const pg = new Uint8Array(psz);
+        le(pg, 0, type); le(pg, 4, data.length); le(pg, 8, body.length); le(pg, 12, 2); le(pg, 16, 0); pg.set(body, 20);
+        le(pg, 16, pageSum(pageSum(0, pg, 0, 20), body, 0, body.length)); for(let i = 20 + body.length, j = 0; i < psz; i++, j++) pg[i] = MAGIC[j & 255]; return { pg, need: 20 + body.length }; };
+      // bản đồ section: section rỗng (id 0) rồi các section theo id giảm dần
+      const secMap = (() => { const all = [{ name: '', id: 0, size: 0, comp: 2, max: 0x7400, pages: [] }].concat(descs.slice().sort((a, b) => b.id - a.id));
+        const F = new BW(4096); F.RL(all.length); F.RL(2); F.RL(0x7400); F.RL(0); F.RL(all.length);
+        for(const d of all){ F.RL(d.size); F.RL(0); F.RL(d.pages.length); F.RL(d.max); F.RL(1); F.RL(d.comp); F.RL(d.id); F.RL(0);
+          const nm = new Uint8Array(64); for(let i = 0; i < d.name.length && i < 63; i++) nm[i] = d.name.charCodeAt(i); F.TF(nm);
+          for(const p of d.pages){ F.RL(p.n); F.RL(p.csz); F.RL(p.off); F.RL(0); } }
+        return F.bytes(); })();
+      const smN = pages.length + 1, smAddr = pos, sm = sysPage(0x4163003b, secMap); pages.push({ n: smN, addr: smAddr, size: sm.pg.length }); fileParts.push(sm.pg); pos += sm.pg.length;
+      // bản đồ trang (gồm cả chính nó): cỡ khai báo phải chứa vừa trang nén
+      const pmN = pages.length + 1, pmAddr = pos; let pmSize = (20 + (pmN * 8) + 16 + 31) & ~31, pm;
+      for(;;){ const F = new BW(pmN * 8 + 8); for(const p of pages){ F.RL(p.n); F.RL(p.size); } F.RL(pmN); F.RL(pmSize); pm = sysPage(0x41630e3b, F.bytes(), pmSize); if(pm.need <= pmSize) break; pmSize += 32; }
+      pages.push({ n: pmN, addr: pmAddr, size: pmSize }); fileParts.push(pm.pg); pos += pm.pg.length;
+      // --- header mã hoá 0x6C byte (ghi ở 0x80 và bản sao cuối file) ---
+      const secondAt = pos;
+      const eh = new Uint8Array(0x6c); for(let i = 0; i < 11; i++) eh[i] = 'AcFssFcAJMB'.charCodeAt(i);
+      le(eh, 0x0c, 0); le(eh, 0x10, 0x6c); le(eh, 0x14, 4); le(eh, 0x24, 1); le(eh, 0x28, pmN); le(eh, 0x2c, pmAddr + pmSize - 0x100); le(eh, 0x34, secondAt); le(eh, 0x40, pages.length);
+      le(eh, 0x44, 0x20); le(eh, 0x48, 0x80); le(eh, 0x4c, 0x40); le(eh, 0x50, pmN); le(eh, 0x54, pmAddr - 0x100); le(eh, 0x5c, smN); le(eh, 0x60, pages.length); le(eh, 0x68, 0);
+      le(eh, 0x68, crc32(eh)); for(let i = 0; i < 0x6c; i++) eh[i] ^= MAGIC[i];
+      // --- 0x100 byte đầu file ---
+      const H0 = new Uint8Array(0x100); const vs = ACV[VER]; for(let i = 0; i < 6; i++) H0[i] = vs.charCodeAt(i);
+      H0[0x0b] = MAINT; H0[0x0c] = 3; le(H0, 0x0d, dPrev.pages[0] ? pages[dPrev.pages[0].n - 1].addr + 0x20 : 0); H0[0x11] = DWGV; H0[0x12] = MAINT; H0[0x13] = 30; H0[0x14] = 0;
+      le(H0, 0x18, 0); le(H0, 0x1c, 0); le(H0, 0x20, pages[dSum.pages[0].n - 1].addr + 0x20); le(H0, 0x24, 0); le(H0, 0x28, 0x80); le(H0, 0x2c, pages[dApp.pages[0].n - 1].addr + 0x20);
+      H0.set(eh, 0x80); H0.set(MAGIC.subarray(236, 256), 0xec);
+      const pv = privBlock();
+      return cat([H0].concat(fileParts, [eh], pv ? [pv] : []));
+    }
+
+    /* ---------- ghép file DWG 2000 ---------- */
     const F = new BW(1 << 16);
     const sec = []; for(let i = 0; i < 6; i++) sec.push({ nr: i, addr: 0, size: 0 });
     for(const c of 'AC1015') F.RC(c.charCodeAt(0)); for(let i = 0; i < 5; i++) F.RC(0);
@@ -522,13 +797,10 @@
     { sec[0].addr = F.byte; sentinel(F, SENT.VAR_BEGIN); const sz = F.byte; F.RL(0); const w = new BW(2048); headerData(w); w.pad(); F.append(w); F.setRL(sz, F.byte - sz - 4); F.crc(sz); sentinel(F, SENT.VAR_END); sec[0].size = F.byte - sec[0].addr; }
     // lớp (class)
     { sec[1].addr = F.byte; sentinel(F, SENT.CLASS_BEGIN); const sz = F.byte; F.RL(0); const w = new BW(512);
-      for(const [n, dxf, cpp, app, px, ent] of CLASSES.concat(hasWipe ? WIPE_CLASSES : [])){ w.BS(n); w.BS(px); w.TV(app); w.TV(cpp); w.TV(dxf); w.B(0); w.BS(ent ? 0x1f2 : 0x1f3); }
+      clsUsed.forEach((dxf, i) => { const [cpp, app, px, ent] = CLASSDEF[dxf]; w.BS(500 + i); w.BS(px); w.TV(app); w.TV(cpp); w.TV(dxf); w.B(0); w.BS(ent ? 0x1f2 : 0x1f3); });
       w.pad(); F.append(w); F.setRL(sz, F.byte - sz - 4); F.crc(sz); sentinel(F, SENT.CLASS_END); sec[1].size = F.byte - sec[1].addr; }
-    // khối dữ liệu riêng DVDCAD nằm giữa các section (mọi trình đọc DWG bỏ qua; DVDCAD mở lại đủ khối 3D, vùng, thứ tự vẽ, ràng buộc, khối động…)
-    { const xr = objsDxf.find(r => r.type === 'XRECORD' && r.g.some(x => x[0] === 1 && x[1] === 'DVDCAD1'));
-      const d = xr ? xr.all(300).join('') : '';
-      if(Object.keys(PRIV).length || d){ const js = JSON.stringify({ v: 1, x: PRIV, d }); const b = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(js) : Uint8Array.from(Buffer.from(js, 'utf8'));
-        for(const c of 'DVDCADX1') F.RC(c.charCodeAt(0)); F.RL(b.length); F.need(b.length * 8); F.u.set(b, F.byte); F.p += b.length * 8; } }
+    // khối dữ liệu riêng DVDCAD nằm giữa các section (mọi trình đọc DWG bỏ qua)
+    { const pv = privBlock(); if(pv){ F.need(pv.length * 8); F.u.set(pv, F.byte); F.p += pv.length * 8; } }
     // đối tượng
     const objStart = F.byte; const map = [];
     for(const o of out){ const b = enc(o); map.push([o.h, F.byte]); F.need(b.length * 8); F.u.set(b, F.byte); F.p += b.length * 8; }
@@ -573,15 +845,18 @@
   if(typeof module !== 'undefined' && module.exports) module.exports = api;
   root.DVDDwg = api;
 
-  /* ---------------- trong DVDCAD: A.dwgNative(ents) → Uint8Array (DWG 2000) ---------------- */
+  /* ---------------- trong DVDCAD: A.dwgNative(ents, { version: 'R2000' | 'R2004' | 'R2010' | 'R2013' | 'R2018' }) → Uint8Array ---------------- */
   const A = root.DVDAcad;
   if(A && !A._dwgNative){
     A._dwgNative = true;
+    A.dwgVersions = ['R2018', 'R2013', 'R2010', 'R2004', 'R2000'];
     A.dwgNative = (ents, opt) => {
-      if(!A.dxfR2000) throw new Error('Thiếu bộ ghi DXF 2000.');
-      const pv = A.dxfVer, pl = A.lastDxfVer; A.dxfVer = 'R2000'; let dxf;
+      if(!A.dxfR2000) throw new Error('Thiếu bộ ghi DXF.');
+      const o = Object.assign({}, opt); if(!VCODE[o.version]) o.version = 'R2000';
+      // DXF trung gian cùng phiên bản (R2004+: màu RGB 420, độ trong suốt 440; R2007+: chuỗi Unicode)
+      const pv = A.dxfVer, pl = A.lastDxfVer; A.dxfVer = o.version; let dxf;
       try{ dxf = A.dxfR2000(ents || (typeof modelEntities !== 'undefined' ? modelEntities : [])); } finally { A.dxfVer = pv; A.lastDxfVer = pl; }
-      const o = Object.assign({}, opt); if(o.bmp === undefined) o.bmp = previewBmp(document.getElementById('cv'));
+      if(o.bmp === undefined) o.bmp = previewBmp(document.getElementById('cv'));
       return dwgFromDxf(dxf, o);
     };
   }

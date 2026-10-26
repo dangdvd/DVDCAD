@@ -2,8 +2,8 @@
    · DRAWORDER (DR): F lên trên cùng / B xuống dưới cùng / A trên đối tượng / U dưới đối tượng · TEXTTOFRONT · HATCHTOBACK
    · WIPEOUT (WO): bấm các điểm, D chọn đa tuyến kín có sẵn, F khung viền (bật / tắt / hiện nhưng không in)
    · CANNOSCALE (ô ▲ 1:N ở thanh trạng thái) · ANNOTATIVE: chữ / kích thước luôn cao đúng số mm trên giấy
-   · SAVEDWG (DWGOUT): mặc định ghi DWG 2000 gốc (dvd-dwg.js, không cần ODA); DWG 2004–2018 qua ODA File Converter trên máy
-     (bản Windows) hoặc máy chủ chuyển đổi (server-dwg.js) · DWGSERVER */
+   · SAVEDWG (DWGOUT): mặc định ghi DWG 2018 gốc (dvd-dwg.js, không cần ODA; v5t có thêm 2013 / 2010 / 2004 / 2000); DWG 2007 qua
+     ODA File Converter trên máy (bản Windows) hoặc máy chủ chuyển đổi (server-dwg.js) · DWGSERVER */
 (function(){
   'use strict';
   const A = window.DVDAcad; if(!A || A._x3 || !window.DVDCmd) return; A._x3 = true;
@@ -163,13 +163,17 @@
   /* =====================================================================
      4) LƯU DWG — mặc định DWG 2000 gốc (dvd-dwg.js); bản mới hơn: DXF 2018 → DWG bằng ODA File Converter / máy chủ
      ===================================================================== */
-  const NATIVE = 'ACAD2000N';   // bộ ghi gốc của DVDCAD
-  const DWG_VERS = [NATIVE, 'ACAD2018', 'ACAD2013', 'ACAD2010', 'ACAD2007', 'ACAD2004', 'ACAD2000'];
-  const VLAB = v => v === NATIVE ? 'DWG 2000 — bộ ghi sẵn có (không cần ODA)' : v.replace('ACAD', 'DWG ') + ' — chuyển qua ODA File Converter';
-  const cfg = () => { try{ return Object.assign({ url: '', ver: NATIVE }, JSON.parse(localStorage.getItem('dvd:dwgsrv') || '{}')); }catch(_){ return { url: '', ver: NATIVE }; } };
+  // bộ ghi gốc của DVDCAD (v5t: 2018 / 2013 / 2010 / 2004 / 2000); khoá cũ 'ACAD2000N' = DWG 2000 gốc
+  const NAT = { N2018: 'R2018', N2013: 'R2013', N2010: 'R2010', N2004: 'R2004', ACAD2000N: 'R2000' };
+  const DEF = 'N2018';
+  const DWG_VERS = ['N2018', 'N2013', 'N2010', 'N2004', 'ACAD2000N', 'ACAD2007', 'ACAD2018', 'ACAD2013', 'ACAD2010', 'ACAD2004', 'ACAD2000'];
+  const VYR = v => NAT[v] ? NAT[v].slice(1) : v.replace('ACAD', '');
+  const VLAB = v => NAT[v] ? 'DWG ' + VYR(v) + ' — bộ ghi sẵn có (không cần ODA)' : 'DWG ' + VYR(v) + ' — chuyển qua ODA File Converter';
+  const cfg = () => { try{ return Object.assign({ url: '', ver: DEF }, JSON.parse(localStorage.getItem('dvd:dwgsrv') || '{}')); }catch(_){ return { url: '', ver: DEF }; } };
   const cfgSave = o => { try{ localStorage.setItem('dvd:dwgsrv', JSON.stringify(o)); }catch(_){} };
   const DK = () => window.dvdDesktop || null;
-  const native = () => { if(!A.dwgNative) throw new Error('Thiếu bộ ghi DWG (dvd-dwg.js).'); return A.dwgNative(modelEntities); };
+  const native = ver => { if(!A.dwgNative) throw new Error('Thiếu bộ ghi DWG (dvd-dwg.js).'); return A.dwgNative(modelEntities, { version: NAT[ver] || 'R2018' }); };
+  A.dwgSaveVersion = () => { const v = cfg().ver; return { key: v, year: VYR(v), native: !!NAT[v] }; };
   async function viaODA(ver){
     const c = cfg(), dk = DK(); const dxf = entitiesToDXF(modelEntities);
     if(dk && dk.dwgConvert){
@@ -182,11 +186,12 @@
     if(!res.ok) throw new Error('Máy chủ trả lỗi ' + res.status + ': ' + (await res.text()).slice(0, 200));
     return new Uint8Array(await res.arrayBuffer());
   }
-  // trả { data, ver }: phiên bản ODA không chuyển được thì tự ghi DWG 2000 gốc
+  // trả { data, ver }: ODA không chuyển được thì tự ghi bằng bộ ghi sẵn có (cùng năm nếu có, không thì DWG 2018)
   async function toDWG(){
     const ver = cfg().ver;
-    if(ver !== NATIVE){ try{ return { data: await viaODA(ver), ver }; }catch(err){ log('ODA: ' + (err.message || err) + ' → ghi DWG 2000 bằng bộ ghi sẵn có.'); } }
-    return { data: native(), ver: NATIVE };
+    if(!NAT[ver]){ try{ return { data: await viaODA(ver), ver }; }catch(err){
+      const fb = Object.keys(NAT).find(k => VYR(k) === VYR(ver)) || DEF; log('ODA: ' + (err.message || err) + ' → ghi DWG ' + VYR(fb) + ' bằng bộ ghi sẵn có.'); return { data: native(fb), ver: fb }; } }
+    return { data: native(ver), ver };
   }
   A.dwgBytes = async () => (await toDWG()).data;
   async function saveDWG(){
@@ -195,7 +200,7 @@
     let r; try{ r = await toDWG(); }catch(err){ log('Không lưu được DWG: ' + (err.message || err)); say('Không lưu được DWG: ' + (err.message || err)); return; }
     const data = r.data;
     if(!data || data.length < 32 || String.fromCharCode(data[0], data[1]) !== 'AC'){ say('Kết quả chuyển đổi không phải file DWG.'); return; }
-    const name = docName().replace(/\.(dwg|dxf)$/i, '') + (r.ver === NATIVE ? '_DVDCAD' : '') + '.dwg', lab = r.ver === NATIVE ? 'DWG 2000' : r.ver;
+    const name = docName().replace(/\.(dwg|dxf)$/i, '') + (NAT[r.ver] ? '_DVDCAD' : '') + '.dwg', lab = 'DWG ' + VYR(r.ver);
     if(typeof window.showSaveFilePicker === 'function'){
       try{ const h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'Bản vẽ AutoCAD (*.dwg)', accept: { 'application/acad': ['.dwg'] } }] });
         const w = await h.createWritable(); await w.write(data); await w.close(); log('Đã lưu ' + h.name + ' (' + lab + ').'); say('Đã lưu ' + h.name); return; }
@@ -204,12 +209,12 @@
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/acad' })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
     log('Đã tải xuống ' + name + ' (' + lab + ').');
   }
-  plain(['SAVEDWG', 'DWGOUT'], 'Lưu ra file DWG: DWG 2000 gốc (không cần ODA) hoặc DWG 2004–2018 qua ODA File Converter', saveDWG);
-  plain(['DWGSERVER'], 'Cài đặt lưu DWG: DWG 2000 gốc hoặc phiên bản mới hơn qua ODA File Converter / máy chủ chuyển đổi', async () => {
+  plain(['SAVEDWG', 'DWGOUT'], 'Lưu ra file DWG: DWG 2018 / 2013 / 2010 / 2004 / 2000 bằng bộ ghi sẵn có (không cần ODA); DWG 2007 qua ODA File Converter', saveDWG);
+  plain(['DWGSERVER'], 'Cài đặt lưu DWG: phiên bản DWG (2018 → 2000 ghi sẵn có) hoặc qua ODA File Converter / máy chủ chuyển đổi', async () => {
     const c = cfg(), dk = DK(), K = A.acw; let oda = null; if(dk && dk.odaInfo){ try{ oda = await dk.odaInfo(); }catch(_){} }
     // bố cục hộp thoại kiểu AutoCAD: nhóm "Định dạng lưu", "Bộ chuyển đổi trên máy", "Máy chủ chuyển đổi"
     const html = '<div class="acw" style="width:500px">' +
-      K.grp('Định dạng lưu', K.row('Phiên bản DWG:', K.sel('dwV', DWG_VERS.map(v => [v, VLAB(v)]), c.ver)) + '<div class="acw-note" style="white-space:normal">DWG 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (AutoCAD 2000 trở lên đều mở được). Phiên bản mới hơn cần ODA File Converter (hoặc máy chủ) — nếu không có, DVDCAD tự ghi DWG 2000.</div>') +
+      K.grp('Định dạng lưu', K.row('Phiên bản DWG:', K.sel('dwV', DWG_VERS.map(v => [v, VLAB(v)]), c.ver)) + '<div class="acw-note" style="white-space:normal">DWG 2018, 2013, 2010, 2004 và 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (DWG 2018 = định dạng của AutoCAD 2018 → 2027). DWG 2007 cần ODA File Converter (hoặc máy chủ) — nếu không có, DVDCAD tự ghi bằng bộ ghi sẵn có.</div>') +
       (dk ? K.grp('ODA File Converter trên máy', '<div class="acw-row">' + K.txt('dwO', oda && oda.path || '', { dis: 1, ph: 'Chưa tìm thấy — bấm Chọn…' }) + K.btn('dwOp', 'Chọn…') + '</div><div class="acw-note" style="white-space:normal">Bản Windows tự chuyển DXF → DWG bằng ODA File Converter (miễn phí, tải tại opendesign.com). Không cần mạng.</div>') : '') +
       K.grp('Máy chủ chuyển đổi (tuỳ chọn)', K.row('Địa chỉ:', K.txt('dwU', c.url, { ph: 'http://localhost:8787/convert' })) + '<div class="acw-row">' + K.btn('dwT', 'Thử kết nối') + '<span id="dwS" style="margin-left:6px"></span></div><div class="acw-note" style="white-space:normal">Máy chủ: chạy node server-dwg.js trên máy có ODA File Converter (xem hướng dẫn trong file).</div>') + '</div>';
     A.dialog({ title: 'Lưu DWG', cls: 'acw-free', help: 'DWGSERVER', html, okText: 'Lưu cài đặt',
