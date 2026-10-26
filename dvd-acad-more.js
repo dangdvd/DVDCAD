@@ -232,7 +232,7 @@
     const pxPerMM = dpi / 25.4; let pxW = Math.round(Wmm * pxPerMM), pxH = Math.round(Hmm * pxPerMM);
     const MAX = forPreview ? 400000 : 30000000; let sc = 1; if(pxW * pxH > MAX){ sc = Math.sqrt(MAX / (pxW * pxH)); pxW = Math.round(pxW * sc); pxH = Math.round(pxH * sc); }
     const realPxPerMM = pxW / Wmm, CSS_PER_MM = 96 / 25.4, dpr = realPxPerMM / CSS_PER_MM;
-    const out = document.createElement('canvas'); out.width = pxW; out.height = pxH; const octx = out.getContext('2d');
+    const out = document.createElement('canvas'); out.width = pxW; out.height = pxH; const octx = out.getContext('2d'); let mask = null;
     const aw = area.x1 - area.x0, ah = area.y1 - area.y0;
     // vị trí vùng in trên giấy (mm, gốc trên-trái)
     let ox = mg, oy = mg; if(PS.center || PS.fit){ ox = (Wmm - aw * k) / 2; oy = (Hmm - ah * k) / 2; } else { oy = Hmm - mg - ah * k; }
@@ -244,18 +244,23 @@
     try{
       Object.defineProperty(window, 'devicePixelRatio', { value: dpr, configurable: true });
       view.scale = k * CSS_PER_MM; view.offsetX = ox * CSS_PER_MM - area.x0 * view.scale; view.offsetY = (oy + ah * k) * CSS_PER_MM + area.y0 * view.scale;
+      window.__plotClear = !!(A.plotDepth && A.plotDepth(PS.dev) !== 'tc');   // giảm màu: vẽ lên nền trong suốt (alpha = độ phủ, bỏ khử răng cưa như máy vẽ)
       bbDirty = true; buildBBoxCache(); draw();
       // cắt bỏ phần ngoài vùng in (như AutoCAD)
       octx.setTransform(1, 0, 0, 1, 0, 0); octx.fillStyle = '#ffffff';
       const X0 = ox * realPxPerMM - 2, Y0 = oy * realPxPerMM - 2, X1 = (ox + aw * k) * realPxPerMM + 2, Y1 = (oy + ah * k) * realPxPerMM + 2;
       octx.fillRect(0, 0, pxW, Math.max(0, Y0)); octx.fillRect(0, Y1, pxW, pxH - Y1); octx.fillRect(0, 0, Math.max(0, X0), pxH); octx.fillRect(X1, 0, pxW - X1, pxH);
+      // giảm màu (256 màu / đen trắng) với bảng .ctb có màu tắt dither: vẽ thêm lượt mặt nạ cho biết điểm ảnh nào không dither
+      const MK = A.plotDitherMask && A.plotDitherMask();
+      if(MK){ mask = document.createElement('canvas'); mask.width = pxW; mask.height = pxH; ctx = mask.getContext('2d'); MK.begin(); try{ bbDirty = true; draw(); } finally { MK.end(); } }
     } finally {
-      OBJ_HIDE = _oh; ctx = sv.ctx; _RTW = sv.rtw; _RTH = sv.rth; _exporting = false; plotMode = sv.plot; showLW = sv.lw; _plotStyle = sv.style; _plotCssPerMM = sv.cpm;
+      window.__plotClear = false; OBJ_HIDE = _oh; ctx = sv.ctx; _RTW = sv.rtw; _RTH = sv.rth; _exporting = false; plotMode = sv.plot; showLW = sv.lw; _plotStyle = sv.style; _plotCssPerMM = sv.cpm;
       view.scale = sv.v.scale; view.offsetX = sv.v.offsetX; view.offsetY = sv.v.offsetY; view.rot = sv.v.rot; window.drawGrid = sv.grid; window.drawScaleBar = sv.sb;
       Object.defineProperty(window, 'devicePixelRatio', { value: sv.dpr, configurable: true }); bbDirty = true;
     }
     const R = { canvas: out, pagePt: [Wmm * 72 / 25.4, Hmm * 72 / 25.4], k, area, Wmm, Hmm, ox, oy };
     try{ if(A.plotPost) A.plotPost(R, forPreview); }catch(err){ console.warn('plotPost', err); }   // dấu in (PLOTSTAMP), in lộn ngược
+    try{ if(A.plotQuantize) A.plotQuantize(R, mask); }catch(err){ console.warn('plotQuantize', err); }   // độ sâu màu của máy vẽ + dither theo kiểu in
     return R;
   }
   A.plotRender = plotRender; A.PS = PS;
@@ -279,7 +284,7 @@
       const r = plotRender(fmt === 'png' ? 200 : 300, false);
       const name = (typeof exportFilename === 'function') ? exportFilename(fmt === 'png' ? 'png' : 'pdf') : 'banve.' + fmt;
       if(fmt === 'pdf'){ const blob = await canvasToPDFPaper(r.canvas, r.pagePt); await shareOrDownload(blob, name, 'application/pdf'); }
-      else if(fmt === 'png'){ const blob = await new Promise(res => r.canvas.toBlob(res, 'image/png')); await shareOrDownload(blob, name, 'image/png'); }
+      else if(fmt === 'png'){ const blob = r.q && A.pngIndexed ? await A.pngIndexed(r.q, r.canvas.width / r.Wmm * 25.4) : await new Promise(res => r.canvas.toBlob(res, 'image/png')); await shareOrDownload(blob, name, 'image/png'); }
       else printCanvas(r.canvas, r.Wmm, r.Hmm);
       log('Đã in: khổ ' + PS.paper + (PS.land ? ' ngang' : ' dọc') + ', tỉ lệ ' + (PS.fit ? 'khít giấy (≈1:' + (+(mmPerUnit() / r.k).toPrecision(4)) + ')' : '1:' + PS.scale));
     }catch(err){ console.error(err); say('Không tạo được bản in.'); }
@@ -293,7 +298,7 @@
     const html = '<div class="pl-wrap"><div class="pl-left">' +
       F('Thiết lập trang', R('Tên:', '<select disabled><option>&lt;Không&gt;</option></select> <button type="button" class="acw-btn" disabled>Thêm…</button>')) +
       F('Máy in / máy vẽ', R('Tên:', '<select id="plDev">' + opt('pdf', 'DWG To PDF.pc3', dev === 'pdf') + opt('print', 'Máy in Windows (hệ thống)', dev === 'print') + opt('png', 'PublishToWeb PNG.pc3', dev === 'png') + opt('plt', 'HP DesignJet (HPGL/2).pc3', dev === 'plt') + '</select>') +
-        '<div class="acw-note" id="plDevN" style="margin:0 0 2px"></div><label class="acw-ck dis"><input type="checkbox" disabled checked><span>In ra file</span></label>') +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px"><div class="acw-note" id="plDevN" style="margin:0 0 2px"></div><button type="button" class="acw-btn" id="plDevP" title="Trình sửa cấu hình máy vẽ: độ sâu màu">Thuộc tính…</button></div><label class="acw-ck dis"><input type="checkbox" disabled checked><span>In ra file</span></label>') +
       '<div style="display:flex;gap:8px">' + F('Khổ giấy', '<select id="plPaper" style="width:100%">' + Object.keys(PAPERS).map(k => opt(k, 'ISO ' + k + ' (' + PAPERS[k][0] + '.00 x ' + PAPERS[k][1] + '.00 MM)', k === PS.paper)).join('') + '</select>', 'flex:1') +
         F('Số bản', '<input type="number" value="1" disabled style="width:60px">', 'flex:0 0 auto') + '</div>' +
       '<div style="display:flex;gap:8px">' + F('Vùng in', R('In gì:', '<select id="plArea">' + opt('extents', 'Phạm vi (Extents)', PS.area === 'extents') + opt('display', 'Màn hình (Display)', PS.area === 'display') + opt('window', 'Khung (Window)', PS.area === 'window') + '</select>') +
@@ -313,8 +318,10 @@
       ok: () => { read(); if(PS.area === 'window' && !PS.win){ say('Chưa chọn khung in.'); return false; } const f = g('plDev').value; setTimeout(() => doPlot(f), 0); } });
     const root = d.root; root.querySelector('.modal').classList.add('pl-modal');
     const g = id => root.querySelector('#' + id);
-    const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; g('plDevN').textContent = PS.dev === 'pdf' ? 'Xuất file PDF vector' : PS.dev === 'png' ? 'Xuất ảnh PNG' : PS.dev === 'plt' ? 'Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in' : 'Mở hộp in của hệ điều hành'; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit; psSave(); };
+    const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; const dep = A.plotDepth ? A.plotDepth(PS.dev) : 'tc', depT = dep === 'tc' ? '' : ' · ' + ((A.PLOT_DEPTHS || []).find(x => x[0] === dep) || ['', dep])[1]; g('plDevP').disabled = !(PS.dev === 'png' || PS.dev === 'pdf');
+      g('plDevN').textContent = PS.dev === 'pdf' ? 'Xuất file PDF' + depT : PS.dev === 'png' ? 'Xuất ảnh PNG' + depT : PS.dev === 'plt' ? 'Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in' : 'Mở hộp in của hệ điều hành'; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit; psSave(); };
     g('plStampB').onclick = () => { try{ DVDCmd.run('PLOTSTAMP'); }catch(_){} };
+    g('plDevP').onclick = () => { read(); if(A.plotterProps) A.plotterProps(PS.dev, () => { psSave(); preview(); }); };
     let pvT = 0;
     const preview = () => { clearTimeout(pvT); pvT = setTimeout(() => {
       read(); const c = g('plPrev'); if(!c) return; const [Wmm, Hmm] = paperMM(); const box = 300; const s = Math.min(box / Wmm, (box * 0.78) / Hmm);

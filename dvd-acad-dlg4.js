@@ -290,5 +290,85 @@
     return { data: out.join('\n') + '\n', pens: pens.size, ents: n }; }
   A.hpglPlot = hpglPlot;
 
+  /* ==================================================================
+     ĐỘ SÂU MÀU KHI IN + DITHER (như Custom Properties của PublishToWeb PNG.pc3 / DWG To PDF.pc3):
+     24-bit (mặc định), 256 màu (bảng ACI 8-bit), đen trắng (1-bit). Khi giảm màu, "Bật dither" của kiểu in quyết định:
+     bật → khuếch tán sai số Floyd–Steinberg (giả màu bằng chấm), tắt → lấy màu gần nhất (nét đặc, không chấm).
+     Kiểu in .ctb có màu tắt dither: vẽ thêm một lượt mặt nạ (đỏ = tắt dither) để biết điểm ảnh nào thuộc màu đó.
+     PNG ghi đúng ảnh bảng màu (color type 3, 8 / 1 bit), PDF nhúng ảnh đã giảm màu.
+     ================================================================== */
+  const DEPTHS = [['tc', '24-bit (True color)'], ['8', '256 màu (8-bit, bảng màu AutoCAD)'], ['1', 'Đen trắng (1-bit)']];
+  const PC3 = { png: 'PublishToWeb PNG.pc3', pdf: 'DWG To PDF.pc3' };
+  const depthOf = dev => { const m = (A.PS || {}).cdep || {}; return PC3[dev] && m[dev] && m[dev] !== 'tc' ? String(m[dev]) : 'tc'; };
+  A.plotDepth = depthOf; A.PLOT_DEPTHS = DEPTHS;
+  const ctbOn = () => { const P = A.PS || {}; return typeof P.style === 'string' && P.style.startsWith('ctb:') && A.ctb ? A.ctb.get(P.style.slice(4)) : null; };
+  let maskOn = false;
+  { const _pc = window.plotColor; if(_pc) window.plotColor = function(hex){ if(maskOn){ const T = ctbOn(), st = T && T.st && T.st[A.aciOf ? A.aciOf(hex) : 7]; return st && st.nd ? '#ff0000' : '#000000'; } return _pc.apply(this, arguments); }; }
+  // plotRender gọi: có cần lượt mặt nạ không (chỉ khi giảm màu và bảng .ctb có màu tắt dither)
+  A.plotDitherMask = () => { if(depthOf((A.PS || {}).dev) === 'tc') return null; const T = ctbOn(); if(!T || !T.st || !Object.values(T.st).some(x => x && x.nd)) return null;
+    return { begin: () => { maskOn = true; }, end: () => { maskOn = false; } }; };
+  let LUT8 = null, PAL8 = null;
+  const pal8 = () => PAL8 || (PAL8 = Array.from({ length: 256 }, (_, i) => { let v = 0; try{ v = ACI_RGB[i] >>> 0; }catch(_){} return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; }));
+  // tra màu gần nhất theo khối 32×32×32 (khoảng cách có trọng số 2:4:3)
+  function lut8(P){ if(LUT8) return LUT8; const L = new Uint8Array(32768);
+    for(let r = 0; r < 32; r++) for(let g = 0; g < 32; g++) for(let b = 0; b < 32; b++){ const R = r * 8 + 4, G = g * 8 + 4, B = b * 8 + 4; let bi = 0, bd = Infinity;
+      for(let i = 0; i < 256; i++){ const p = P[i], dr = R - p[0], dg = G - p[1], db = B - p[2], d = 2 * dr * dr + 4 * dg * dg + 3 * db * db; if(d < bd){ bd = d; bi = i; } }
+      L[(r << 10) | (g << 5) | b] = bi; }
+    return (LUT8 = L); }
+  const cl = v => v < 0 ? 0 : v > 255 ? 255 : v;
+  // giảm màu R.canvas tại chỗ; R.q = chỉ số bảng màu cho bộ ghi PNG
+  function plotQuantize(R, maskCv){
+    const dep = depthOf((A.PS || {}).dev); if(dep === 'tc' || !R || !R.canvas) return;
+    const c = R.canvas, W = c.width, H = c.height, g = c.getContext('2d'), im = g.getImageData(0, 0, W, H), d = im.data;
+    const mk = maskCv ? maskCv.getContext('2d').getImageData(0, 0, W, H).data : null;
+    const one = dep === '1', P = one ? [[0, 0, 0], [255, 255, 255]] : pal8(), L = one ? null : lut8(P), nc = one ? 1 : 3;
+    const idx = new Uint8Array(W * H); let e0 = new Float32Array((W + 2) * nc), e1 = new Float32Array((W + 2) * nc);
+    const er = new Float32Array(3), AL = new Uint8Array(W * H); for(let i = 0; i < AL.length; i++) AL[i] = d[i * 4 + 3];
+    const dA = (p, q) => Math.abs(AL[p] - AL[q]) > 24;
+    for(let y = 0; y < H; y++){ const rev = y & 1, dir = rev ? -1 : 1; e1.fill(0);
+      for(let k = 0; k < W; k++){ const x = rev ? W - 1 - k : k, p = y * W + x, o = p * 4, a8 = AL[p];
+        const nod = mk && mk[o + 3] > 0 && mk[o] > 160 && mk[o + 1] < 100 && mk[o + 2] < 100, ei = (x + 1) * nc;
+        // màu nền giấy: điểm ảnh ở mép nét (độ phủ khác điểm kề) → làm tròn độ phủ (≥ 50% = màu thật của nét, < 50% = giấy) như máy vẽ không khử răng cưa;
+        // trong vùng (độ trong đều) → trộn với giấy trắng
+        let r = d[o], gg = d[o + 1], b = d[o + 2];
+        if(a8 < 255){ const edge = (x > 0 && dA(p, p - 1)) || (x < W - 1 && dA(p, p + 1)) || (y > 0 && dA(p, p - W)) || (y < H - 1 && dA(p, p + W));
+          if(edge){ if(a8 < 128) r = gg = b = 255; } else { const a = a8 / 255, ia = 255 * (1 - a); r = r * a + ia; gg = gg * a + ia; b = b * a + ia; } }
+        let q;
+        if(one){ let l = 0.299 * r + 0.587 * gg + 0.114 * b; if(!nod) l = cl(l + e0[ei]); q = l < 128 ? 0 : 1; er[0] = nod ? 0 : l - (q ? 255 : 0); }
+        else { if(!nod){ r = cl(r + e0[ei]); gg = cl(gg + e0[ei + 1]); b = cl(b + e0[ei + 2]); }
+          q = L[((r >> 3) << 10) | ((gg >> 3) << 5) | (b >> 3)]; const pc = P[q]; if(nod) er[0] = er[1] = er[2] = 0; else { er[0] = r - pc[0]; er[1] = gg - pc[1]; er[2] = b - pc[2]; } }
+        idx[p] = q; const pc = P[q]; d[o] = pc[0]; d[o + 1] = pc[1]; d[o + 2] = pc[2]; d[o + 3] = 255;
+        if(nod) continue;
+        // Floyd–Steinberg (quét rắn bò): 7/16 kế bên, 3/16 · 5/16 · 1/16 hàng dưới
+        const xa = x + dir, xb = x - dir;
+        for(let ch = 0; ch < nc; ch++){ const v = er[ch]; if(!v) continue;
+          if(xa >= 0 && xa < W) e0[(xa + 1) * nc + ch] += v * 0.4375;
+          if(xb >= 0 && xb < W) e1[(xb + 1) * nc + ch] += v * 0.1875;
+          e1[ei + ch] += v * 0.3125;
+          if(xa >= 0 && xa < W) e1[(xa + 1) * nc + ch] += v * 0.0625; } }
+      const t = e0; e0 = e1; e1 = t; }
+    g.putImageData(im, 0, 0); R.q = { w: W, h: H, idx, pal: P, bits: one ? 1 : 8 }; }
+  A.plotQuantize = plotQuantize;
+  // PNG bảng màu (IHDR color type 3) — đúng 8 bit / 1 bit như PublishToWeb PNG của AutoCAD
+  const CRCT = (() => { const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = u => { let c = 0xFFFFFFFF; for(let i = 0; i < u.length; i++) c = CRCT[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  async function zlib(u8){ const cs = new CompressionStream('deflate'), w = cs.writable.getWriter(); w.write(u8); w.close(); return new Uint8Array(await new Response(cs.readable).arrayBuffer()); }
+  async function pngIndexed(q, dpi){ const { w, h, idx, pal, bits } = q, rb = bits === 1 ? Math.ceil(w / 8) : w, raw = new Uint8Array((rb + 1) * h);
+    for(let y = 0; y < h; y++){ const o = y * (rb + 1) + 1, s0 = y * w; if(bits === 8) raw.set(idx.subarray(s0, s0 + w), o); else for(let x = 0; x < w; x++) if(idx[s0 + x]) raw[o + (x >> 3)] |= 0x80 >> (x & 7); }
+    const parts = [Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10)];
+    const chunk = (type, data) => { const b = new Uint8Array(12 + data.length), v = new DataView(b.buffer); v.setUint32(0, data.length); for(let i = 0; i < 4; i++) b[4 + i] = type.charCodeAt(i); b.set(data, 8); v.setUint32(8 + data.length, crc32(b.subarray(4, 8 + data.length))); parts.push(b); };
+    const ih = new Uint8Array(13), iv = new DataView(ih.buffer); iv.setUint32(0, w); iv.setUint32(4, h); ih[8] = bits; ih[9] = 3; chunk('IHDR', ih);
+    const pl = new Uint8Array(pal.length * 3); pal.forEach((c, i) => pl.set(c, i * 3)); chunk('PLTE', pl);
+    if(dpi > 0){ const ph = new Uint8Array(9), pv = new DataView(ph.buffer), ppm = Math.round(dpi / 0.0254); pv.setUint32(0, ppm); pv.setUint32(4, ppm); ph[8] = 1; chunk('pHYs', ph); }
+    chunk('IDAT', await zlib(raw)); chunk('IEND', new Uint8Array(0));
+    return new Blob(parts, { type: 'image/png' }); }
+  A.pngIndexed = pngIndexed;
+  // nút "Thuộc tính…" cạnh máy in trong hộp PLOT: Trình sửa cấu hình máy vẽ (chỉ mục Độ sâu màu)
+  A.plotterProps = (dev, done) => { const name = PC3[dev]; if(!name){ say('Thiết bị này không có thuộc tính tuỳ chỉnh.'); return; }
+    const P = A.PS || {}, K = A.acw, cur = depthOf(dev);
+    const html = '<div class="acw" style="width:420px">' + K.row('Máy vẽ:', '<b>' + esc(name) + '</b>') + K.grp('Thuộc tính tuỳ chỉnh — Độ sâu màu', DEPTHS.map(([v, t]) => K.rad('ppD', v, t, v === cur)).join('<br>')) +
+      '<div class="acw-note">Khi giảm màu, mục "Bật dither" của từng màu trong bảng kiểu in (.ctb) có tác dụng: bật — giả màu bằng chấm (Floyd–Steinberg), tắt — lấy màu gần nhất, nét đặc.</div></div>';
+    A.dialog({ title: 'Trình sửa cấu hình máy vẽ — ' + name, cls: 'acw-free', help: 'PLOT', html, ok: r => { P.cdep = Object.assign({}, P.cdep || {}, { [dev]: K.radio(r, 'ppD') || 'tc' }); if(done) done(); } }); };
+
   try{ DVDCmd.refresh && DVDCmd.refresh(); }catch(_){}
 })();

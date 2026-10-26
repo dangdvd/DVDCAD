@@ -2168,7 +2168,7 @@ function drawEntityBody(e,col){
       break;
     case 'SOLID3D': drawSolid3DPlan(e,col); break;
     case 'SOLID':{const pts=e.pts;if(e.face&&pts.length>=3){ ctx.beginPath(); const a=toScreen(pts[0].x,pts[0].y); ctx.moveTo(a.x,a.y); for(let k=1;k<pts.length;k++){const q=toScreen(pts[k].x,pts[k].y);ctx.lineTo(q.x,q.y);} ctx.closePath(); ctx.stroke(); break; }
-      if(pts.length>=3){const o=pts.length===4?[pts[0],pts[1],pts[3],pts[2]]:pts;ctx.fillStyle=hexA(col,.2);ctx.beginPath();const a=toScreen(o[0].x,o[0].y);ctx.moveTo(a.x,a.y);for(let k=1;k<o.length;k++){const q=toScreen(o[k].x,o[k].y);ctx.lineTo(q.x,q.y);}ctx.closePath();if(FILLMODE)ctx.fill();ctx.stroke();}break;}
+      if(pts.length>=3){const o=pts.length===4?[pts[0],pts[1],pts[3],pts[2]]:pts;ctx.fillStyle=plotMode?col:hexA(col,.2);ctx.beginPath();const a=toScreen(o[0].x,o[0].y);ctx.moveTo(a.x,a.y);for(let k=1;k<o.length;k++){const q=toScreen(o[k].x,o[k].y);ctx.lineTo(q.x,q.y);}ctx.closePath();if(FILLMODE)ctx.fill();ctx.stroke();}break;}
     case 'POINT':{const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;if(PDMODE&&!e.light&&!e.cam3){drawPointStyle(p,col);}else{ctx.beginPath();ctx.arc(p.x,p.y,2,0,2*Math.PI);ctx.fill();}
       if(e.light){ ctx.strokeStyle=col; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(p.x,p.y,7,0,2*Math.PI); ctx.stroke(); for(let k=0;k<8;k++){ const a=k*Math.PI/4; ctx.moveTo(p.x+Math.cos(a)*10,p.y+Math.sin(a)*10); ctx.lineTo(p.x+Math.cos(a)*14,p.y+Math.sin(a)*14); } ctx.stroke(); }
       if(e.cam3){ const t=toScreen(e.x+e.cam3.dx,e.y+e.cam3.dy); ctx.strokeStyle=col; ctx.lineWidth=1.2; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(t.x,t.y); ctx.stroke(); ctx.setLineDash([]); const an=Math.atan2(t.y-p.y,t.x-p.x); ctx.translate(p.x,p.y); ctx.rotate(an); ctx.strokeRect(-9,-6,12,12); ctx.beginPath(); ctx.moveTo(3,-3); ctx.lineTo(10,-7); ctx.lineTo(10,7); ctx.lineTo(3,3); ctx.stroke(); }
@@ -2631,7 +2631,8 @@ function draw(){
   if(compareOn && cmpA && cmpB){ drawCompare(); return; }
   const dpr=window.devicePixelRatio||1;
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.fillStyle=plotMode?'#ffffff':(getCSS('--bg-canvas')||'#0a0c11'); ctx.fillRect(0,0,W(),H());   // nền đặc (giấy trắng / nền tối)
+  if(plotMode&&window.__plotClear) ctx.clearRect(0,0,W(),H());   // in giảm màu: nền trong suốt để biết độ phủ từng điểm ảnh
+  else { ctx.fillStyle=plotMode?'#ffffff':(getCSS('--bg-canvas')||'#0a0c11'); ctx.fillRect(0,0,W(),H()); }   // nền đặc (giấy trắng / nền tối)
   if(!entities.length){ _lastDrawn=0; if(window.__dvdNewDoc){ drawGrid(); drawOverlays(); } return; }
   if(_fastBlit(dpr)){ drawOverlays(); return; }
   const _t0=performance.now();
