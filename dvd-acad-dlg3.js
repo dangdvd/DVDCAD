@@ -261,7 +261,7 @@
   { const _draw = window.draw; if(typeof _draw === 'function') window.draw = function(){ const r = _draw.apply(this, arguments); try{ const g = (!(typeof _exporting !== 'undefined' && _exporting) && !plotMode && isModelView() && GEOMK) ? geoGet() : null;
         if(g){ const q = toScreen(g.dx || 0, g.dy || 0), c = ctx; c.save(); const dpr = window.devicePixelRatio || 1; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#e8453c'; c.strokeStyle = '#fff'; c.lineWidth = 1.2;
           c.beginPath(); c.moveTo(q.x, q.y); c.bezierCurveTo(q.x - 9, q.y - 12, q.x - 8, q.y - 24, q.x, q.y - 24); c.bezierCurveTo(q.x + 8, q.y - 24, q.x + 9, q.y - 12, q.x, q.y); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.beginPath(); c.arc(q.x, q.y - 16, 3, 0, 7); c.fill(); c.restore(); } }catch(_){} return r; }; }
-  // DXF: ghi $LATITUDE / $LONGITUDE / $NORTHDIRECTION / $TIMEZONE; đọc lại khi mở tệp có GEODATA
+  // DXF: ghi $LATITUDE / $LONGITUDE / $NORTHDIRECTION / $TIMEZONE (+ v5t: đối tượng GEODATA ở DXF/DWG 2010+); đọc lại khi mở tệp có GEODATA
   A.geoHeader = P => { const g = geoGet(); if(!g) return; P(999, 'DVDCAD-GEO ' + JSON.stringify({ lat: g.lat, lon: g.lon, elev: g.elev || 0, cs: g.cs || 'WGS84', dx: g.dx || 0, dy: g.dy || 0, north: g.north || 0, tz: g.tz })); P(9, '$LATITUDE'); P(40, g.lat); P(9, '$LONGITUDE'); P(40, g.lon); P(9, '$NORTHDIRECTION'); P(40, (g.north || 0) * Math.PI / 180); P(9, '$TIMEZONE'); P(70, Math.round((g.tz || 0) * 1000)); };
   let geoPend = null;
   { const _pd = window.parseDXF; if(typeof _pd === 'function') window.parseDXF = function(text){ try{ geoPend = null; const t = String(text);
@@ -269,7 +269,8 @@
         const dv = /\n\s*999\s*\r?\nDVDCAD-GEO (\{[^\r\n]*\})/.exec(t); if(dv){ try{ const o = JSON.parse(dv[1]); if(isFinite(o.lat) && isFinite(o.lon)) geoPend = o; }catch(_){} }
         if(!geoPend && A.geodataParse){ try{ const gd = A.geodataParse(t); if(gd) geoPend = Object.assign({ tz: (() => { const tz = hv('$TIMEZONE', 70); return tz != null ? tz / 1000 : 7; })() }, gd); }catch(_){} }   // GEODATA của AutoCAD: điểm thiết kế, điểm tham chiếu, hệ toạ độ (địa lý / UTM), hướng bắc
         if(!geoPend && /\n\s*0\s*\r?\n\s*GEODATA\s*\r?\n/.test(t)){ const la = hv('$LATITUDE', 40), lo = hv('$LONGITUDE', 40); if(la != null && lo != null){ const nd = hv('$NORTHDIRECTION', 40), tz = hv('$TIMEZONE', 70); geoPend = { lat: la, lon: lo, north: nd != null ? r6(nd * 180 / Math.PI) : 0, tz: tz != null ? tz / 1000 : 7, elev: 0, cs: 'WGS84', dx: 0, dy: 0 }; } } }catch(_){} return _pd.apply(this, arguments); }; }
-  A.onLoad = (function(prev){ return function(){ if(prev) prev.apply(this, arguments); try{ geoMemo = null; if(geoPend && !geoGet()){ lsSet(GEOK(), geoPend); geoMemo = null; } geoPend = null; geoSun(); }catch(_){} }; })(A.onLoad);
+  A.onLoad = (function(prev){ return function(){ if(prev) prev.apply(this, arguments); try{ geoMemo = null; const gf = A._geoFromFile; A._geoFromFile = null; const g1 = gf && isFinite(gf.lat) && isFinite(gf.lon) ? gf : geoPend;   // dữ liệu riêng DVDCAD (DXF/DWG) đủ nhất, rồi GEODATA / $LATITUDE
+    if(g1 && !geoGet()){ lsSet(GEOK(), g1); geoMemo = null; } geoPend = null; geoSun(); }catch(_){} }; })(A.onLoad);
 
   /* ==================================================================
      MSLIDE / VSLIDE — tệp slide .sld của AutoCAD (định dạng mới, cấp 2): nét vẽ là vector theo điểm ảnh màn hình,

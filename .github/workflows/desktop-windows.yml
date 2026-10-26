@@ -116,7 +116,7 @@ jobs:
               Console.WriteLine($"{(err > 0 ? "✗" : "✓")} {Path.GetFileName(f)} [{doc.Header.Version}] {doc.Entities.Count()} đối tượng, {doc.Layers.Count} lớp, {doc.BlockRecords.Count} khối, {doc.Layouts.Count()} layout; lỗi {err}, cảnh báo {warn}: {by}");
               foreach (var m in msgs.Distinct().Take(12)) Console.WriteLine("    " + m);
               if (err > 0) bad++;
-            } catch (Exception ex) { bad++; Console.WriteLine($"✗ {Path.GetFileName(f)}: {ex.GetType().Name}: {ex.Message}"); }
+            } catch (Exception ex) { bad++; Console.WriteLine($"✗ {Path.GetFileName(f)}: " + string.Join("\n      ", ex.ToString().Split('\n').Take(6))); }
           }
           return bad;
           '@ | Set-Content -Encoding utf8 Program.cs

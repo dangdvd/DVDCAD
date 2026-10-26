@@ -704,8 +704,10 @@
       // --- AuxHeader ---
       const secAux = (() => { const F = new BW(160);
         F.RC(0xff); F.RC(0x77); F.RC(0x01); F.RS(DWGV); F.RS(MAINT); F.RL(1); F.RL(0xffffffff); F.RS(1); F.RS(0); F.RL(0); F.RS(DWGV); F.RS(MAINT); F.RS(DWGV); F.RS(MAINT);
-        for(const v of [4, 0x565, 0, 0, 2, 1]) F.RS(v); for(const v of [0, 0, 0, 256, 393218]) F.RL(v);
-        F.RL(jd[0]); F.RL(jd[1]); F.RL(jd[0]); F.RL(jd[1]); F.RL(seed); F.RL(0); F.RS(0); F.RS(1); F.RL(0); F.RL(0); F.RL(0); F.RL(1); F.RL(0); F.RL(0); F.RL(0); F.RL(0);
+        for(const v of R18 ? [5, 0x893, 5, 0x893, 0, 1] : [4, 0x565, 0, 0, 2, 1]) F.RS(v); for(const v of R18 ? [0, 0, 0, 0, 0] : [0, 0, 0, 256, 393218]) F.RL(v);
+        // AC1032: ACadSharp đọc 3 số maint dạng RL (AutoCAD ghi RS) nên lệch 6 byte và lấy byte thứ 2 của mili-giây TDUPDATE làm dấu —
+        // xoá bit 15 (lệch ≤ 33 giây, chỉ ở AuxHeader) để bộ đọc đó không ném lỗi DateTime
+        F.RL(jd[0]); F.RL(jd[1]); F.RL(jd[0]); F.RL(R18 ? jd[1] & ~0x8000 : jd[1]); F.RL(seed); F.RL(0); F.RS(0); F.RS(1); F.RL(0); F.RL(0); F.RL(0); F.RL(1); F.RL(0); F.RL(0); F.RL(0); F.RL(0);
         if(R18){ F.RS(0); F.RS(0); F.RS(0); } return F.bytes(); })();
       // --- SummaryInfo, AppInfo, RevHistory (không nén) ---
       const secSummary = (() => { const F = new BW(256); for(const s of ['', '', '', '', '', 'DVDCAD', '', '']) T16(F, s);

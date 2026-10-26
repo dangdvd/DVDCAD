@@ -72,6 +72,12 @@
   const IMG = new Map(), IMG_LOADING = new Set();
   window.DVDImg = { get(id){ if(!id) return null; const im = IMG.get(id); if(im) return im; if(!IMG_LOADING.has(id)){ IMG_LOADING.add(id); idbGet('img:' + id).then(b => { if(!b) return; const u = URL.createObjectURL(b); const el = new Image(); el.onload = () => { try{ draw(); }catch(_){} }; el.src = u; IMG.set(id, el); }).catch(() => {}); } return null; } };
   A.imgAdd = async (blob, name) => { const id = uid('I'); await idbPut('img:' + id, blob); const u = URL.createObjectURL(blob); const el = new Image(); await new Promise(r => { el.onload = r; el.onerror = r; el.src = u; }); IMG.set(id, el); return { id, el, name }; };
+  // ghi ảnh với id có sẵn (mở lại ảnh nhúng trong tệp DVDCAD)
+  A.imgPut = async (id, blob) => { if(!id || !blob) return null; await idbPut('img:' + id, blob); const u = URL.createObjectURL(blob); const el = new Image(); await new Promise(r => { el.onload = r; el.onerror = r; el.src = u; }); IMG.set(id, el); return el; };
+  // dữ liệu ảnh (data URL JPEG) của một ảnh đã nạp — để nhúng vào DXF / DWG khi lưu
+  A.imgDataURL = (id, maxPx) => { const im = window.DVDImg ? DVDImg.get(id) : null; if(!im || !im.complete || !im.naturalWidth) return null;
+    try{ const s = Math.min(1, (maxPx || 4096) / Math.max(im.naturalWidth, im.naturalHeight)); const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * s)); c.height = Math.max(1, Math.round(im.naturalHeight * s));
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.9); }catch(_){ return null; } };
   cmd(['IMAGEATTACH', 'IAT', 'IMAGE', 'IM'], 'Chèn ảnh nền (ảnh chụp, bản scan) vào bản vẽ', async () => {
     const f = await pickFile('image/*'); if(!f){ return; }
     const id = uid('I'); await idbPut('img:' + id, f);

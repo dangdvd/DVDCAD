@@ -189,6 +189,54 @@
     if(mode === 'aerial' && !GEOMAPURL){ const r = await A.getStr('URL mẫu dịch vụ ảnh vệ tinh ({z}/{x}/{y})', { def: '' }); const u = String(r.str || '').trim(); if(!/\{z\}/.test(u) || !/\{x\}/.test(u) || !/\{y\}/.test(u)){ log('Cần URL có {z}, {x}, {y} (đặt bằng biến GEOMAPURL).'); return; } GEOMAPURL = u; try{ localStorage.setItem(GMK, u); }catch(_){} }
     const g2 = Object.assign({}, g); if(mode) g2.map = mode; else delete g2.map; A.geoSet(g2); try{ draw(); }catch(_){}
     log(mode ? 'GEOMAP: bản đồ ' + (mode === 'road' ? 'đường (OpenStreetMap)' : 'ảnh vệ tinh') + ' hiện dưới bản vẽ (Model).' : 'GEOMAP: tắt bản đồ nền.'); });
+  /* ---- GEOMAPIMAGE: chụp một vùng bản đồ nền thành ảnh trong bản vẽ (như AutoCAD) — in được, lưu kèm DXF / DWG ---- */
+  const GMI_RES = { C: 1024, O: 2048, F: 3072, V: 4096 };   // cạnh dài tối đa (điểm ảnh): Thô / Tối ưu / Mịn / Rất mịn
+  const loadTile = url => new Promise(res => { const im0 = TILE.get(url); if(im0 && im0.complete && im0.naturalWidth && !im0._bad) return res(im0);
+    const im = new Image(); let done = false; const fin = v => { if(!done){ done = true; res(v); } }; im.crossOrigin = 'anonymous'; im.onload = () => { TILE.set(url, im); fin(im); }; im.onerror = () => fin(null); im.src = url; setTimeout(() => fin(im.complete && im.naturalWidth ? im : null), 20000); });
+  async function mapImage(g, box, mode, maxPx){
+    const F = frame(g), wU = box.x1 - box.x0, hU = box.y1 - box.y0; if(!(wU > 0 && hU > 0)) return null;
+    const C = [{ x: box.x0, y: box.y0 }, { x: box.x1, y: box.y0 }, { x: box.x1, y: box.y1 }, { x: box.x0, y: box.y1 }].map(p => toLL(F, p));
+    const la0 = Math.min(...C.map(c => c.lat)), la1 = Math.max(...C.map(c => c.lat)), lo0 = Math.min(...C.map(c => c.lon)), lo1 = Math.max(...C.map(c => c.lon)); if(!(la1 > -85 && la0 < 85)) return null;
+    const mpp0 = 156543.03392 * Math.cos(g.lat * Math.PI / 180), wm = Math.max(wU, hU) * F.u;
+    let z = Math.max(1, Math.min(19, Math.floor(Math.log2(mpp0 * maxPx / Math.max(1e-6, wm))))), x0, x1, y0, y1;
+    for(;;){ x0 = Math.floor(lon2t(lo0, z)); x1 = Math.floor(lon2t(lo1, z)); y0 = Math.floor(lat2t(Math.min(85, la1), z)); y1 = Math.floor(lat2t(Math.max(-85, la0), z)); if((x1 - x0 + 1) * (y1 - y0 + 1) <= 160 || z <= 1) break; z--; }
+    const mppZ = mpp0 / 2 ** z, W = Math.max(16, Math.min(8192, Math.round(wU * F.u / mppZ))), H = Math.max(16, Math.min(8192, Math.round(hU * F.u / mppZ)));
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'); c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H);
+    const toC = p => ({ x: (p.x - box.x0) / wU * W, y: (box.y1 - p.y) / hU * H }), n = 2 ** z, list = [];
+    for(let ty = y0; ty <= y1; ty++) for(let tx = x0; tx <= x1; tx++) if(ty >= 0 && ty < n) list.push([tx, ty]);
+    let ok = 0, i = 0; const worker = async () => { while(i < list.length){ const [tx, ty] = list[i++]; const im = await loadTile(tileUrl(mode, z, ((tx % n) + n) % n, ty)); if(!im) continue; ok++;
+      const P = (ix, iy) => toC(fromLL(F, t2lat(iy, z), t2lon(ix, z))), a = P(tx, ty), b = P(tx + 1, ty), d = P(tx, ty + 1);
+      c.setTransform((b.x - a.x) / 256, (b.y - a.y) / 256, (d.x - a.x) / 256, (d.y - a.y) / 256, a.x, a.y); try{ c.drawImage(im, 0, 0, 256, 256); }catch(_){} } };
+    await Promise.all([0, 1, 2, 3, 4, 5].map(worker)); c.setTransform(1, 0, 0, 1, 0, 0);
+    const txt = mode === 'road' ? '© OpenStreetMap contributors' : (GEOMAPURL.replace(/^https?:\/\//, '').split('/')[0] || 'map'); c.font = Math.max(10, Math.round(H / 70)) + 'px system-ui,sans-serif'; const tw = c.measureText(txt).width + 8, th = Math.max(12, Math.round(H / 55));
+    c.fillStyle = 'rgba(255,255,255,.8)'; c.fillRect(W - tw - 2, H - th - 2, tw, th); c.fillStyle = '#333'; c.fillText(txt, W - tw + 2, H - 5);
+    return { cv, z, W, H, ok, total: list.length };
+  }
+  async function mapImageEnt(g, box, mode, res){ const r = await mapImage(g, box, mode, GMI_RES[res] || 2048); if(!r || !r.ok) return null;
+    const blob = await new Promise(q => r.cv.toBlob(q, 'image/jpeg', 0.9)); const im = await A.imgAdd(blob, 'GeoMapImage.jpg'); return { id: im.id, r }; }
+  const gmiMode = g => g.map || 'road';
+  ecmd(['GEOMAPIMAGE'], 'Chụp một vùng bản đồ nền thành ảnh trong bản vẽ (in được, lưu kèm DXF / DWG): 2 góc hoặc Khung nhìn, độ phân giải', async () => {
+    const g = A.geoGet ? A.geoGet() : null; if(!g){ log('Bản vẽ chưa có vị trí địa lý — dùng GEOGRAPHICLOCATION trước.'); return; }
+    const mode = gmiMode(g); if(mode !== 'road' && !GEOMAPURL){ log('Chưa có dịch vụ ảnh vệ tinh (đặt biến GEOMAPURL) — dùng GEOMAP để chọn bản đồ.'); return; }
+    const a = await A.getPoint('Chỉ định góc thứ nhất hoặc [Khung nhìn] <Khung nhìn>', { kw: [{ k: 'V', t: 'Khung nhìn' }], allowNone: true }); if(a.cancel) return;
+    let box;
+    if(a.pt){ const b = await A.getPoint('Chỉ định góc đối diện', { base: a.pt, rubber: false, preview: (q, p) => q.poly([a.pt, { x: p.x, y: a.pt.y }, p, { x: a.pt.x, y: p.y }], true) }); if(!b.pt) return;
+      box = { x0: Math.min(a.pt.x, b.pt.x), y0: Math.min(a.pt.y, b.pt.y), x1: Math.max(a.pt.x, b.pt.x), y1: Math.max(a.pt.y, b.pt.y) }; }
+    else { const bb = viewWorldAABB(); box = { x0: bb.minX, y0: bb.minY, x1: bb.maxX, y1: bb.maxY }; }
+    if(!(box.x1 - box.x0 > 0 && box.y1 - box.y0 > 0)){ log('Vùng chụp không hợp lệ.'); return; }
+    const k = await A.getKw('Độ phân giải [Thô/Tối ưu/Mịn/Rất mịn] <Tối ưu>', { kw: [{ k: 'C', t: 'Thô' }, { k: 'O', t: 'Tối ưu' }, { k: 'F', t: 'Mịn' }, { k: 'V', t: 'Rất mịn' }], def: 'Tối ưu' }); if(k.cancel) return;
+    const res = k.kw || 'O'; log('GEOMAPIMAGE: đang tải ô bản đồ…');
+    const m = await mapImageEnt(g, box, mode, res); if(!m){ log('GEOMAPIMAGE: không tải được bản đồ (cần mạng / dịch vụ ô bản đồ).'); return; }
+    const lo = Math.min(0, ...modelEntities.map(x => x.dord | 0));
+    const e = A.newProps({ type: 'IMAGE', x: box.x0, y: box.y0, w: box.x1 - box.x0, h: box.y1 - box.y0, rot: 0, img: m.id, name: 'GeoMapImage', op: 1, gmi: { mode, res, z: m.r.z }, dord: lo - 1 }); delete e.lt;
+    A.commit({ add: [e] }, 'GEOMAPIMAGE: đã chụp bản đồ ' + m.r.W + '×' + m.r.H + ' điểm ảnh (mức ' + m.r.z + ', ' + m.r.ok + '/' + m.r.total + ' ô) — in được, lưu kèm bản vẽ.');
+  });
+  ecmd(['GEOMAPIMAGEUPDATE'], 'Tải lại ảnh bản đồ (GEOMAPIMAGE) theo bản đồ nền hiện tại', async () => {
+    const g = A.geoGet ? A.geoGet() : null; if(!g){ log('Bản vẽ chưa có vị trí địa lý.'); return; }
+    const s = await A.getSel('Chọn ảnh bản đồ', { filter: e => e.type === 'IMAGE' && !!e.gmi }); const sel = (s.sel || []).filter(e => e.type === 'IMAGE' && e.gmi); if(!sel.length){ log('Không có ảnh bản đồ nào được chọn.'); return; }
+    const rep = []; for(const e of sel){ const mode = g.map || e.gmi.mode || 'road'; const box = { x0: e.x, y0: e.y, x1: e.x + e.w, y1: e.y + e.h };
+      const m = await mapImageEnt(g, box, mode, e.gmi.res); if(!m) continue; const w = JSON.parse(JSON.stringify(e)); w.img = m.id; w.gmi = { mode, res: e.gmi.res, z: m.r.z }; rep.push([e, w]); }
+    if(rep.length) A.commit({ rep }, 'GEOMAPIMAGEUPDATE: đã cập nhật ' + rep.length + ' ảnh bản đồ.'); else log('GEOMAPIMAGEUPDATE: không tải được bản đồ.'); });
   if(A.sysvar && A.sysvar.def){ A.sysvar.def('GEOMAPMODE', { d: 'Bản đồ nền: 0 tắt, 1 ảnh vệ tinh, 2 đường', get: () => { const m = mapMode(); return m === 'road' ? 2 : m ? 1 : 0; }, set: v => { const g = A.geoGet && A.geoGet(); if(!g) return; const g2 = Object.assign({}, g); const n = +v; if(n === 2) g2.map = 'road'; else if(n === 1) g2.map = 'aerial'; else delete g2.map; A.geoSet(g2); } });
     A.sysvar.def('GEOMAPURL', { d: 'URL mẫu ô bản đồ ảnh vệ tinh / riêng ({z}/{x}/{y}) cho GEOMAP', s: 1, get: () => GEOMAPURL, set: v => { GEOMAPURL = String(v || '').trim(); try{ localStorage.setItem(GMK, GEOMAPURL); }catch(_){} try{ draw(); }catch(_){} } }); }
 
