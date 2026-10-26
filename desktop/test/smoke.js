@@ -138,14 +138,21 @@ async function until(fn, ms = 20000){ const t = Date.now(); while(Date.now() - t
       add([{ type: 'HATCH', loops: [[{ x: 0, y: 200 }, { x: 50, y: 200 }, { x: 50, y: 250 }, { x: 0, y: 250 }]], pat: 'ANSI31', psc: 1, pang: 0 }, { type: 'HATCH', loops: [[{ x: 60, y: 200 }, { x: 110, y: 200 }, { x: 85, y: 250 }]], pat: 'SOLID', solid: true },
         { type: 'TEXT', x: 0, y: -30, h: 5, text: 'Chữ tiếng Việt: ĐƯỜNG ỐNG Ø100', rot: 15 }, { type: 'TEXT', x: 0, y: -60, h: 3.5, text: 'Dòng một\nDòng hai', mt: 1 }, { type: 'ELLIPSE', cx: 400, cy: 0, mx: 30, my: 0, ratio: 0.5, p1: 0, p2: Math.PI }]);
       for(const s of ['BOX\n700,0\n740,40\n25\n', 'WIPEOUT\n100,500\n140,500\n140,540\n100,540\n\n']){ await A.runScript(s); await w(300); for(let i = 0; i < 5 && A.busy(); i++){ A.cancel(); await w(60); } }
+      // khối động: 2 trạng thái hiển thị + kéo giãn + lật; bản chèn đang ở trạng thái "Dong", dài 150
+      { const L = (x1, y1, x2, y2) => A.newProps({ type: 'LINE', x1, y1, x2, y2 }); A.commit({ add: [L(900, 0, 1000, 0), L(1000, 0, 1000, 50), L(900, 0, 900, 50), L(900, 0, 950, 50)] });
+        A.makeBlock(modelEntities.slice(-4), { x: 900, y: 0 }, 'CUA_DONG', 'convert');
+        const mem = modelEntities.filter(e => e.bm && e.bm.name === 'CUA_DONG'); A.dynDefs().CUA_DONG = { vis: { states: ['Mo', 'Dong'], def: 'Mo' }, lin: [{ name: 'Dai', b: { x: 0, y: 0 }, d: { x: 1, y: 0 }, L0: 100 }], flip: true };
+        A.commit({ rep: mem.map((e, i) => { const q = JSON.parse(JSON.stringify(e)); q.dyn = { st: 'Mo', L: { Dai: 100 }, fx: 0, fy: 0 }; if(i === 2) q.dvs = ['Mo']; if(i === 3){ q.dvs = ['Dong']; q.vh = 1; } return [e, q]; }) });
+        A.dynSetState(mem[0].grp, { st: 'Dong', L: { Dai: 150 } }); }
+      const dsig = () => modelEntities.filter(e => e.bm && e.bm.name === 'CUA_DONG').map(e => (e.vh ? 'h' : 'v') + ((e.dyn || {}).st || '') + ((e.dyn && e.dyn.L) || {}).Dai + (e.dvs || []).join('/')).sort().join(',');
       const sig = () => modelEntities.map(e => e.type + (e.blk ? '*' : '') + (e.wipe ? 'W' : '') + '|' + (e.layer || '0') + '|' + (e.lt || '') + '|' + (e.text || '')).sort().join('\n');
-      const s0 = sig(), ents = modelEntities.slice(), res = {};
+      const s0 = sig(), d0 = dsig(), ents = modelEntities.slice(), res = {};
       for(const v of ['R2018', 'R2013', 'R2010', 'R2004', 'R2000']){ const dwg = A.dwgNative(ents, { version: v }); await loadDWG(dwg.slice().buffer, 'tong-hop.dwg'); await w(300);
         let bin = ''; for(let i = 0; i < dwg.length; i += 0x8000) bin += String.fromCharCode.apply(null, dwg.subarray(i, i + 0x8000));
-        res[v] = { same: sig() === s0, n: modelEntities.length, s3d: modelEntities.some(e => e.type === 'SOLID3D'), wipe: modelEntities.some(e => e.wipe), b64: btoa(bin) }; }
+        res[v] = { same: sig() === s0, dyn: d0.length > 0 && dsig() === d0, n: modelEntities.length, s3d: modelEntities.some(e => e.type === 'SOLID3D'), wipe: modelEntities.some(e => e.wipe), b64: btoa(bin) }; }
       return res; });
     for(const v of Object.keys(syn)){ const q = syn[v];
-      check(q.same && q.s3d && q.wipe, 'bản vẽ tổng hợp (kích thước, hatch, chữ Việt, kiểu nét chữ/hình, khối 3D, vùng che) → DWG ' + v.slice(1) + ' → mở lại giống hệt (' + q.n + ' đối tượng)');
+      check(q.same && q.s3d && q.wipe && q.dyn, 'bản vẽ tổng hợp (kích thước, hatch, chữ Việt, kiểu nét chữ/hình, khối 3D, vùng che, khối động) → DWG ' + v.slice(1) + ' → mở lại giống hệt (' + q.n + ' đối tượng)');
       if(outDir){ fs.mkdirSync(outDir, { recursive: true }); fs.writeFileSync(path.join(outDir, 'tong-hop-' + v + '.dwg'), Buffer.from(q.b64, 'base64')); } }
     // DWG 2007 qua ODA File Converter (Linux/macOS: ODA giả ghi AC1032; Windows chưa cài ODA → tự ghi bằng bộ ghi gốc)
     const dwgOda = path.join(tmp, 'luu-oda.dwg'); await stubSave(dwgOda);

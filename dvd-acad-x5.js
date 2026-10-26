@@ -66,6 +66,11 @@
       rep.push([e, w]); }
     return rep;
   }
+  // bản sao các nét ở một trạng thái (không ghi lịch sử) — 'default' = trạng thái hiển thị mặc định, độ dài gốc, không lật (khối gốc khi lưu DXF / DWG)
+  A.dynStateCopy = (list, target) => { const d = defOf(nameOf(list[0])); if(!d) return list.map(copy);
+    const T = target === 'default' ? { st: (d.vis && d.vis.def) || null, L: Object.fromEntries((d.lin || []).map(p => [p.name, p.L0])), fx: 0, fy: 0 } : target;
+    return applyState(list, T).map(r => r[1]); };
+  A.dynIsDyn = isDyn;
   A.dynSetState = (gid, target, msg) => { const list = members(gid); const rep = applyState(list, target); if(rep.length) A.commit({ rep }, msg || 'Đã đổi trạng thái khối động'); return rep.length > 0; };
 
   /* ---------------- BPARAMETER ---------------- */
@@ -159,5 +164,7 @@
 
   /* ---------------- mở bản vẽ: dựng lại cờ ẩn (vh) theo trạng thái ---------------- */
   A.onLoad = (prev => function(){ if(prev) prev.apply(this, arguments);
+    try{ const F = window._dxfDynVis; window._dxfDynVis = null;   // trạng thái hiển thị của khối động AutoCAD (BLOCKVISIBILITYPARAMETER) đọc từ tệp
+      if(F){ let n = 0; for(const [nm, v] of Object.entries(F)) if(!DYN[nm] && v && v.states && v.states.length){ DYN[nm] = { vis: { states: v.states.slice(), def: v.def || v.states[0] }, acad: 1 }; n++; } if(n) saveDefs(); } }catch(_){}
     try{ for(const e of modelEntities){ if(!e.dvs || !e.dyn) continue; const v = e.dvs.includes(e.dyn.st); if(v) delete e.vh; else e.vh = 1; } }catch(_){} })(A.onLoad);
 })();

@@ -1145,6 +1145,8 @@ function parseDXF(text){
   function entExtra(e,g,rt){
     if(num(g,67)===1){ e._ps=1; const h=str(g,5); if(h) e._h=h.toUpperCase(); }   // thuộc không gian giấy (layout); handle để tìm đường cắt khung nhìn
     { const tc=num(g,420); if(tc!=null&&isFinite(tc)&&e.rgb==null) e.rgb=tc; }   // màu RGB (DXF R2004+)
+    if(num(g,60)===1) e.inv=1;   // cờ ẩn (nét ngoài trạng thái hiển thị của khối động)
+    { const xi=g.findIndex(it=>it.code===1001&&String(it.value).trim()==='AcDbBlockRepETag'); if(xi>=0){ for(let k=xi+1;k<g.length&&g[k].code!==1001;k++) if(g[k].code===1071){ e._et=parseInt(g[k].value,10); break; } const h=str(g,5); if(h) e._h=h.toUpperCase(); } }   // số thứ tự nét trong khối động
     { const xi=g.findIndex(it=>it.code===1001&&String(it.value).trim()==='DVDCAD'); if(xi>=0){ let js=''; for(let k=xi+1;k<g.length&&g[k].code!==1001;k++){ if(g[k].code!==1000) continue; const v=String(g[k].value); if(v.startsWith('P:')) js=v.slice(2); else if(v.startsWith('P+')) js+=v.slice(2); } if(js){ try{ e._x=JSON.parse(js); }catch(_){} } } }
     if(e.type==='TEXT'){ const isT=(rt==='TEXT'||rt==='ATTRIB'); const xw=isT?num(g,41):undefined; const sn=str(g,7);
       if(sn){ e.style=sn; const S=styleMap[sn]; if(S){ if(S.ff) e.ff=S.ff; if(isT&&!(xw>0)&&S.wf&&Math.abs(S.wf-1)>1e-3&&e.xs==null) e.xs=S.wf; } }
@@ -1201,7 +1203,7 @@ function parseDXF(text){
           return o; }
         return {type:'SOLID',layer,pts};
       }
-      case 'INSERT':{ const o={type:'INSERT',layer,name:str(g,2)||'',ix:num(g,10)||0,iy:num(g,20)||0,sx:(num(g,41)??1),sy:(num(g,42)??1),rot:num(g,50)||0,cols:num(g,70)||1,rows:num(g,71)||1,csp:num(g,44)||0,rsp:num(g,45)||0}; const xc=xclOf(g); if(xc) o.xc=xc; return o; }
+      case 'INSERT':{ const o={type:'INSERT',layer,name:str(g,2)||'',ix:num(g,10)||0,iy:num(g,20)||0,sx:(num(g,41)??1),sy:(num(g,42)??1),rot:num(g,50)||0,cols:num(g,70)||1,rows:num(g,71)||1,csp:num(g,44)||0,rsp:num(g,45)||0}; const xc=xclOf(g); if(xc) o.xc=xc; const xd=str(g,360); if(xd) o._xd=xd.toUpperCase(); return o; }
       case 'DIMENSION':{ const nm=str(g,2)||''; if(!nm) return null; const P=(a,b)=>{const x=num(g,a),y=num(g,b); return (isFinite(x)&&isFinite(y))?{x,y}:null;};
         return {type:'INSERT',layer,name:nm,ix:0,iy:0,sx:1,sy:1,rot:0,cols:1,rows:1,csp:0,rsp:0,_dim:true,_dd:{t:(num(g,70)||0)&7,p1:P(13,23),p2:P(14,24),L:P(10,20),ov:str(g,1)||'',meas:num(g,42)}}; }
       case 'SPLINE':{
@@ -1309,9 +1311,39 @@ function parseDXF(text){
     }
   }
 
+  // khối động AutoCAD: *U (AcDbBlockRepBTag) → tên khối gốc; BLOCKVISIBILITYPARAMETER trong ACAD_ENHANCEDBLOCK của khối gốc → trạng thái hiển thị
+  let _insStates=null;   // INSERT khối động AutoCAD: từ điển mở rộng → giá trị tham số hiện tại (XRECORD của ACAD_ENHANCEDBLOCKDATA)
+  { const RH=new Map(), RX=new Map(), BT=new Map(); let i=0;
+    for(;i<pairs.length-1;i++) if(pairs[i].code===2&&pairs[i].value.trim()==='BLOCK_RECORD'&&i>0&&pairs[i-1].code===0&&pairs[i-1].value.trim()==='TABLE') break;
+    for(let j=i+1;j<pairs.length;j++){ if(pairs[j].code!==0) continue; const t=pairs[j].value.trim(); if(t==='ENDTAB') break; if(t!=='BLOCK_RECORD') continue;
+      const g=[]; let k=j+1; for(;k<pairs.length&&pairs[k].code!==0;k++) g.push(pairs[k]); j=k-1; const h=(str(g,5)||'').toUpperCase(), n=str(g,2); if(!h||!n) continue; RH.set(h,n);
+      { const x=g.find(it=>it.code===360); if(x) RX.set(n,x.value.trim().toUpperCase()); }   // từ điển mở rộng (mã 360 duy nhất của BLOCK_RECORD; dòng 102 đã bị bỏ khi đọc)
+      const bi=g.findIndex(it=>it.code===1001&&it.value.trim()==='AcDbBlockRepBTag'); if(bi>=0) for(let q=bi+1;q<g.length&&g[q].code!==1001;q++) if(g[q].code===1005){ BT.set(n,g[q].value.trim().toUpperCase()); break; } }
+    for(const [n,b] of BT) if(blocks[n]&&RH.has(b)&&RH.get(b)!==n) blocks[n].trueName=RH.get(b);
+    if(RX.size){ const DI=new Map(), EG=new Map(), VP=new Map(), XR=new Map(); let s0=-1;
+      for(let q=0;q<pairs.length-1;q++) if(pairs[q].code===0&&pairs[q].value.trim()==='SECTION'&&pairs[q+1].code===2&&pairs[q+1].value.trim()==='OBJECTS'){ s0=q+2; break; }
+      if(s0>=0) for(let q=s0;q<pairs.length;q++){ if(pairs[q].code!==0) continue; const t=pairs[q].value.trim(); if(t==='ENDSEC') break; if(t!=='DICTIONARY'&&t!=='ACAD_EVALUATION_GRAPH'&&t!=='BLOCKVISIBILITYPARAMETER'&&t!=='XRECORD') continue;
+        const g=[]; let k=q+1; for(;k<pairs.length&&pairs[k].code!==0;k++) g.push(pairs[k]); q=k-1; const h=(str(g,5)||'').toUpperCase(); if(!h) continue;
+        if(t==='DICTIONARY'){ const en={}; let nm=null; for(const it of g){ if(it.code===3) nm=it.value.trim(); else if((it.code===350||it.code===360)&&nm!=null){ en[nm]=it.value.trim().toUpperCase(); nm=null; } } DI.set(h,en); }
+        else if(t==='ACAD_EVALUATION_GRAPH') EG.set(h,g.filter(it=>it.code===360).map(it=>it.value.trim().toUpperCase()));
+        else if(t==='XRECORD'){ const v=str(g,1); if(v!=null) XR.set(h,decodeCAD(v)); }
+        else { const si=g.findIndex(it=>it.code===100&&it.value.trim()==='AcDbBlockVisibilityParameter'); const o={ents:[],states:[],id:String(num(g,90)??1)}; let cur=null;
+          for(const it of g.slice(si+1)){ if(it.code===331) o.ents.push(it.value.trim().toUpperCase()); else if(it.code===303){ cur={n:decodeCAD(it.value.trim()),hs:[]}; o.states.push(cur); } else if(it.code===332&&cur) cur.hs.push(it.value.trim().toUpperCase()); }
+          VP.set(h,o); } }
+      for(const [n,xd] of RX){ const B=blocks[n], D=DI.get(xd), G=D&&EG.get(D.ACAD_ENHANCEDBLOCK); if(!B||!G) continue; const vp=G.map(h=>VP.get(h)).find(Boolean); if(!vp||!vp.states.length) continue;
+        const ix=new Map(); for(const e of B.entities) if(e&&e._h&&e._et!=null) ix.set(e._h,e._et);
+        const by=new Map(); for(const h of vp.ents){ const v=ix.get(h); if(v!=null) by.set(v,[]); } for(const st of vp.states) for(const h of st.hs){ const v=ix.get(h); if(v!=null&&by.has(v)&&!by.get(v).includes(st.n)) by.get(v).push(st.n); }
+        const shown=new Set(B.entities.filter(e=>e&&!e.inv&&e._et!=null&&by.has(e._et)).map(e=>e._et));
+        const match=S=>vp.states.find(st=>{ const a=new Set(st.hs.map(h=>ix.get(h)).filter(v=>v!=null)); return a.size===S.size&&[...a].every(v=>S.has(v)); });
+        const def=(match(shown)||vp.states[0]).n; B.dynVis={ name:n, id:vp.id, states:vp.states.map(st=>st.n), def, by, stateOf:list=>{ const S=new Set(list.filter(e=>e&&!e.inv&&e._et!=null&&by.has(e._et)).map(e=>e._et)); const m=vp.states.find(st=>{ const a=new Set(st.hs.map(h=>ix.get(h)).filter(v=>v!=null)); return a.size===S.size&&[...a].every(v=>S.has(v)); }); return m?m.n:def; } };
+        (window._dxfDynVis=window._dxfDynVis||{})[n]={states:B.dynVis.states,def}; }
+      _insStates=xd=>{ const D1=DI.get(xd), D2=D1&&DI.get(D1.AcDbBlockRepresentation), D3=D2&&DI.get(D2.AppDataCache), D4=D3&&DI.get(D3.ACAD_ENHANCEDBLOCKDATA); if(!D4) return null;
+        const o={}; for(const [k,h] of Object.entries(D4)){ const v=XR.get(h); if(v!=null) o[k]=v; } return o; }; } }
+
   // ENTITIES (model space)
   const [es,ee]=sectionRange('ENTITIES');
   let entities = es>=0 ? readEntities(es,ee) : readEntities(0,pairs.length);
+  if(_insStates) for(const e of entities) if(e&&e.type==='INSERT'&&e._xd){ const m=_insStates(e._xd); if(m) e._dst=m; }
   // layout đang mở: đối tượng giấy nằm chung trong ENTITIES (mã 67 = 1) → tách khỏi Model
   const paper={ents:[], vports:(entities.vports||[]).filter(v=>v.ps)};
   if(entities.some(e=>e&&e._ps)){ const ad=entities.attdefs; paper.ents=entities.filter(e=>e&&e._ps); entities=entities.filter(e=>!(e&&e._ps)); if(ad) entities.attdefs=ad; }
@@ -1513,21 +1545,25 @@ function explodeInto(list,blocks,M,out,depth,ctxAci,ix){
     const effL=(ix && ix.layer && (e.layer||'0')==='0') ? ix.layer : e.layer;
     if(HIDDEN_LAYERS.has(effL)) continue;                   // layer tắt/đóng băng -> ẩn như AutoCAD
     if(e.type==='INSERT'){
+      if(e.inv) continue;   // INSERT ẩn: không vẽ
       const blk=blocks[e.name]; if(!blk){ if(e.attribs) for(const at of e.attribs){ const tt=transformPrim(at,M); if(tt){ tt.col=resolveColor(at.aci,at.layer,ctxAci); tt.att=at.att; out.push(tt); } } continue; }
       // màu kế thừa cho con BYBLOCK = màu của chính INSERT
       const insAci=(e.aci>=1&&e.aci<=255)?e.aci:(e.aci===0?(ctxAci!=null?ctxAci:7):layerAci(effL));
       const insLt=e.lt==='BYBLOCK'?((ix&&ix.lt)||'CONTINUOUS'):(e.lt||LAYER_LT[effL]||'CONTINUOUS');
       const insLw=e.lw>0?e.lw:(e.lwb?((ix&&ix.lw)||0):(LAYER_LW[effL]||0));
-      const nx={layer:effL, lt:insLt, lw:insLw, lts:(e.lts||1)*((ix&&ix.lts)||1), grp:ix&&ix.grp, blk:ix&&ix.blk, bip:ix&&ix.bip, bm:ix&&ix.bm};
+      const nx={layer:effL, lt:insLt, lw:insLw, lts:(e.lts||1)*((ix&&ix.lts)||1), grp:ix&&ix.grp, blk:ix&&ix.blk, bip:ix&&ix.bip, bm:ix&&ix.bm, dv:ix&&ix.dv, dyn:ix&&ix.dyn};
+      // khối động: bản chèn trỏ khối ẩn danh *U → tên khối gốc (DVDCAD: XDATA dbn; AutoCAD: AcDbBlockRepBTag), trạng thái hiển thị theo các nét đang hiện
+      const _tn=depth===0?((e._x&&e._x.dbn)||blk.trueName||null):null, _tb=_tn&&blocks[_tn];
+      if(depth===0&&_tb&&_tb.dynVis&&!(e._x&&e._x.dbn)){ nx.dv=_tb.dynVis; const ds=e._dst&&e._dst[_tb.dynVis.id]; nx.dyn={st:ds&&_tb.dynVis.states.includes(ds)?ds:_tb.dynVis.stateOf(blk.entities),L:{},fx:0,fy:0}; }
       const t=(e.rot||0)*Math.PI/180, cosT=Math.cos(t), sinT=Math.sin(t);
       const cols=Math.max(1,e.cols||1), rows=Math.max(1,e.rows||1);
       const _attOut=()=>{ if(!e.attribs) return; for(const at of e.attribs){ if(HIDDEN_LAYERS.has(at.layer)) continue; const tt=transformPrim(at,M); if(!tt) continue; const x=Object.assign({},tt,{col:resolveColor(at.aci,at.layer,ctxAci)}); x.att=at.att; if(at.ff) x.ff=at.ff; if(nx.grp){ x.grp=nx.grp; x.blk=nx.blk; if(nx.bip) x.bip=nx.bip; if(nx.bm) x.bm=nx.bm; } out.push(x); } };
       for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-        if(depth===0 && _groupBlocks){ nx.grp='F'+(++_blkGid).toString(36); nx.blk=e._dim?'*DIM':e.name; }   // khối/dim của file: chọn cả cụm như AutoCAD
+        if(depth===0 && _groupBlocks){ nx.grp='F'+(++_blkGid).toString(36); nx.blk=e._dim?'*DIM':(_tn||e.name); }   // khối/dim của file: chọn cả cụm như AutoCAD
         const ox=c*(e.csp||0), oy=r*(e.rsp||0);
         const cell=Object.assign({},e,{ix:(e.ix||0)+(cosT*ox - sinT*oy), iy:(e.iy||0)+(sinT*ox + cosT*oy)});
         const Mi=mMul(M, insertMatrix(cell, blk.base));
-        if(depth===0 && _groupBlocks && !e._dim){ nx.bip={x:cell.ix, y:cell.iy}; nx.bm={name:e.name, lay:effL, a:Mi.a, b:Mi.b, c:Mi.c, d:Mi.d, e:Mi.e, f:Mi.f}; }
+        if(depth===0 && _groupBlocks && !e._dim){ nx.bip={x:cell.ix, y:cell.iy}; nx.bm={name:_tn||e.name, lay:effL, a:Mi.a, b:Mi.b, c:Mi.c, d:Mi.d, e:Mi.e, f:Mi.f}; }
         const _o0=out.length;
         explodeInto(blk.entities, blocks, Mi, out, depth+1, insAci, nx);
         if(r===0&&c===0) _attOut();
@@ -1544,7 +1580,11 @@ function explodeInto(list,blocks,M,out,depth,ctxAci,ix){
         else if(e.lt) x.lt=e.lt;
         const ls=(e.lts||1)*(ix&&e.lt==='BYBLOCK'?(ix.lts||1):1); if(Math.abs(ls-1)>1e-9) x.lts=ls;
         if(ix&&ix.grp){ x.grp=ix.grp; x.blk=ix.blk; if(ix.bip) x.bip=ix.bip; if(ix.bm){ x.bm=ix.bm; if(effL!==(e.layer||'0')) x.l0=1; } }
-        if(e.style!=null)x.style=e.style; { const xx=e._x; delete x._x; if(xx&&depth===0) Object.assign(x, xx); } out.push(x); }
+        if(e.style!=null)x.style=e.style; { const xx=e._x; delete x._x; if(xx&&depth===0) Object.assign(x, xx); else if(xx&&depth===1&&ix&&ix.grp){ if(xx.dvs) x.dvs=xx.dvs; if(xx.dyn) x.dyn=xx.dyn; } }
+        if(depth===1&&ix&&ix.dv&&e._et!=null&&!x.dvs){ const d=ix.dv.by.get(e._et); if(d) x.dvs=d.slice(); if(ix.dyn) x.dyn=Object.assign({},ix.dyn); }   // khối động AutoCAD
+        delete x._et; delete x._h; delete x.inv;
+        if(e.inv){ if(!x.dvs) continue; x.vh=1; }   // nét ẩn: chỉ giữ khi thuộc khối động (đổi trạng thái được), còn lại không vẽ như AutoCAD
+        out.push(x); }
     }
   }
 }
@@ -4608,7 +4648,7 @@ function dwgList(arr){
     if(e.type==='ATTRIB'&&e.handle!=null&&owned.has(String(e.handle))) continue;
     try{
     if(e.type==='MLINE'){ for(const m of dwgMline(e)){ m.aci=e.colorIndex; if(typeof e.color==='number' && e.color>0 && e.color!==16777215) m.rgb=e.color; o.push(m); } continue; }
-    const c=dwgEntity(e);
+    const c=dwgEntity(e); if(c&&e.isVisible===false) c.inv=1;
     if(c&&X&&e.handle!=null){ const it=X[String(e.handle).toUpperCase()]; if(it) dvdApplyX(c,it); }
     if(c){
       c.aci=e.colorIndex;

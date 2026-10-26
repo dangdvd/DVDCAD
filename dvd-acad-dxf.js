@@ -50,7 +50,7 @@
       if(prev) prev(); }; })(A.onLoad);
   function writeR2000(ents, opt){
     const full = !!(opt && opt.layouts) || (typeof modelEntities !== 'undefined' && ents === modelEntities);   // lưu cả bản vẽ → ghi kèm các layout giấy
-    ents = ents.filter(e => e && !e.xr && !e.vh);
+    ents = ents.filter(e => e && !e.xr && (!e.vh || e.dvs));   // nét ẩn của khối động (trạng thái hiển thị khác) vẫn ghi — cờ ẩn 60
     ents = ents.map((e, i) => [e, i]).sort((a, b) => ((a[0].dord | 0) - (b[0].dord | 0)) || (a[1] - b[1])).map(x => x[0]);   // thứ tự vẽ (DRAWORDER) = thứ tự trong file
     const needTC = ents.some(e => e.col && !e.bl && !isAciColor(e.col) && String(e.col).toLowerCase() !== String(A.layerHex(e.layer || '0')).toLowerCase()) || [...new Set(ents.map(e => e.layer || '0'))].some(l => !isAciColor(A.layerHex(l)));
     const VR = ACV[A.dxfVer] ? A.dxfVer : (A.dxfVer === 'AUTO' && needTC) ? 'R2004' : A.dxfVer === 'AUTO' ? 'R2000' : 'R2018';
@@ -98,9 +98,29 @@
     const inv = m => { const det = m.a * m.d - m.b * m.c; if(Math.abs(det) < 1e-300) return null; return { a: m.d / det, b: -m.b / det, c: -m.c / det, d: m.a / det, e: (m.c * m.f - m.d * m.e) / det, f: (m.b * m.e - m.a * m.f) / det }; };
     const clone = o => JSON.parse(JSON.stringify(o));
     const blockDefs = new Map(), blockFam = new Map(), inserts = new Map(), dims = new Map(); const done = new Set();
+    // khối động (như AutoCAD): khối gốc ở trạng thái mặc định chứa mọi nét (nét ngoài trạng thái mặc định có cờ ẩn), mỗi bản chèn trỏ tới khối ẩn danh *U
+    // là bản sao đủ nét theo trạng thái của nó; R2007+: liên kết AcDbBlockRepETag / BTag + AcDbRepData, R2018: thêm đồ thị đánh giá + tham số hiển thị
+    const DYN = A.dynDefs ? A.dynDefs() : null, dynBase = new Map(); let nU = 0; const DYNX = yr >= 2007, DYNG = yr >= 2018;
+    const bnm = n => String(n).replace(/[<>\\/":;?*|=`]/g, '_').slice(0, 250);
+    const guidOf = n => { const t = [0, 1, 2, 3].map(r => { let h = (0x811c9dc5 ^ Math.imul(r + 1, 0x9e3779b9)) >>> 0; for(const c of String(n)){ h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h.toString(16).toUpperCase().padStart(8, '0'); }).join('');
+      return '{' + t.slice(0, 8) + '-' + t.slice(8, 12) + '-' + t.slice(12, 16) + '-' + t.slice(16, 20) + '-' + t.slice(20, 32) + '}'; };   // GUID ổn định theo tên khối
     if(ents.length < 200000) for(const [gid] of byGrp){
       const mem = grpAll(gid); if(!mem || !mem.length) continue; const f = mem[0];
       const xR = (() => { const q = mem.find(x => x.xcl); return q && typeof XCLIPS !== 'undefined' ? XCLIPS.get(q.xcl) : null; })();   // XCLIP: ghi đủ khối + SPATIAL_FILTER
+      if(f.bm && f.bm.name && DYN && A.dynStateCopy && A.dynIsDyn && A.dynIsDyn(f.bm.name) && !String(f.blk || '').startsWith('*') && !xR && !mem.some(x => x.type === 'SOLID3D' || x.type === 'IMAGE') && mem.every(x => x.bm && x.bm.name === f.bm.name)){
+        const Mi = inv(f.bm), nm = bnm(f.bm.name);
+        if(Mi && nm){ let B = dynBase.get(nm);
+          if(!B){ const d0 = A.dynStateCopy(mem, 'default'), M0 = d0.length && d0[0].bm ? inv(d0[0].bm) : null;
+            if(M0){ const loc0 = d0.map((x, i) => Object.assign(A.xformEnt(clone(x), M0), { _et: i }));
+              const bb0 = bbox(loc0.filter(x => !x.att)) || { x0: 0, y0: 0, x1: 0, y1: 0 }, vis = DYN[f.bm.name].vis;
+              B = { name: nm, ents: loc0, n: mem.length, bb: bb0, atts: loc0.filter(x => x.att), hBR: H(), hB: H(), hE: H(), dyn: DYN[f.bm.name], dynName: f.bm.name,
+                vis: DYNG && vis && vis.states && vis.states.length ? { states: vis.states.slice(), def: vis.def || vis.states[0], pt: { x: bb0.x0, y: bb0.y1 }, hXD: H(), hG: H(), hP: H(), hGr: H(), hLx: H(), hLy: H(), hPP: H() } : null };
+              blockDefs.set(nm, B); dynBase.set(nm, B); } }
+          if(B && B.n === mem.length){
+            const loc = mem.map((x, i) => Object.assign(A.xformEnt(clone(x), Mi), { _et: i }));
+            const U = { name: '*U' + (++nU), ents: loc, n: mem.length, bb: bbox(loc.filter(x => !x.att)) || { x0: 0, y0: 0, x1: 0, y1: 0 }, atts: loc.filter(x => x.att), hBR: H(), hB: H(), hE: H(), anon: 1, rep: B };
+            blockDefs.set(U.name, U);
+            inserts.set(gid, { D: U, m: f.bm, mem, xR: null, dyn: B, st: (mem.find(x => x.dyn) || {}).dyn || null }); for(const x of mem) done.add(x); continue; } } }
       if(f.bm && f.bm.name && !String(f.blk || '').startsWith('*') && !(xR && xR.inv) && !mem.some(x => x.vh || x.type === 'SOLID3D' || x.type === 'IMAGE')){
         const Mi = inv(f.bm); if(!Mi || mem.some(x => !x.bm || x.bm.name !== f.bm.name)) continue; const nm = String(f.bm.name).replace(/[<>\\/":;?*|=`]/g, '_').slice(0, 250); if(!nm) continue;
         const loc = mem.map(x => A.xformEnt(clone(x), Mi)); const bb = bbox(loc.filter(x => !x.att)) || { x0: 0, y0: 0, x1: 0, y1: 0 };
@@ -132,6 +152,9 @@
         ['CELLSTYLEMAP', 'AcDbCellStyleMap', ODBX, 1152], ['MENTALRAYRENDERSETTINGS', 'AcDbMentalRayRenderSettings', 'SCENEOE', 1024], ['ACDBDETAILVIEWSTYLE', 'AcDbDetailViewStyle', ODBX, 1025],
         ['ACDBSECTIONVIEWSTYLE', 'AcDbSectionViewStyle', ODBX, 1025], ['RASTERVARIABLES', 'AcDbRasterVariables', 'ISM', 0], ['ACDBPLACEHOLDER', 'AcDbPlaceHolder', ODBX, 0], ['LAYOUT', 'AcDbLayout', ODBX, 0]]) cls(c[0], c[1], c[2], c[3]); }
     if(geo) cls('GEODATA', 'AcDbGeoData', 'ObjectDBX Classes', 4095);
+    if(DYNX && dynBase.size){ const O = 'ObjectDBX Classes'; if([...dynBase.values()].some(B => B.vis)) for(const c of [['ACAD_EVALUATION_GRAPH', 'AcDbEvalGraph'], ['BLOCKVISIBILITYPARAMETER', 'AcDbBlockVisibilityParameter'], ['BLOCKVISIBILITYGRIP', 'AcDbBlockVisibilityGrip'],
+        ['BLOCKGRIPLOCATIONCOMPONENT', 'AcDbBlockGripExpr'], ['ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION', 'AcDbDynamicBlockPurgePreventer']]) cls(c[0], c[1], O, 1153);
+      cls('ACDB_BLOCKREPRESENTATION_DATA', 'AcDbBlockRepresentationData', O, 1153); }
     if(hasWipe){ cls('WIPEOUTVARIABLES', 'AcDbWipeoutVariables', 'WipeOut|AutoCAD Express Tool|expresstools@autodesk.com', 0);
       cls('WIPEOUT', 'AcDbWipeout', 'WipeOut|AutoCAD Express Tool|expresstools@autodesk.com', 127, true); }
     P(0, 'ENDSEC');
@@ -159,7 +182,9 @@
       for(const [n, o] of stUsed){ rec('STYLE', o.h, 'AcDbTextStyleTableRecord'); P(2, dxfStr(n)); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, o.f); P(4, ''); }
       if(hStShx){ rec('STYLE', hStShx, 'AcDbTextStyleTableRecord'); P(2, ''); P(70, 1); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'ltypeshp.shx'); P(4, ''); } });
     table('VIEW', 0, () => {}); table('UCS', 0, () => {});
-    table('APPID', 2, () => { rec('APPID', hApAcad, 'AcDbRegAppTableRecord'); P(2, 'ACAD'); P(70, 0); rec('APPID', hApDvd, 'AcDbRegAppTableRecord'); P(2, 'DVDCAD'); P(70, 0); });
+    const dynApps = DYNX && dynBase.size ? ['AcDbDynamicBlockTrueName', 'AcDbDynamicBlockGUID', 'AcDbBlockRepETag', 'AcDbBlockRepBTag'] : [];
+    table('APPID', 2 + dynApps.length, () => { rec('APPID', hApAcad, 'AcDbRegAppTableRecord'); P(2, 'ACAD'); P(70, 0); rec('APPID', hApDvd, 'AcDbRegAppTableRecord'); P(2, 'DVDCAD'); P(70, 0);
+      for(const n of dynApps){ rec('APPID', H(), 'AcDbRegAppTableRecord'); P(2, n); P(70, 0); } });
     const dt = A.dimTxt ? A.dimTxt() : 2.5;
     table('DIMSTYLE', 1, () => { rec('DIMSTYLE', hDsStd, 'AcDbDimStyleTableRecord', 105); P(2, 'Standard'); P(70, 0); P(40, 1); P(41, dt * ((A.DS && A.DS.asz) || 1)); P(42, dt * ((A.DS && A.DS.exo) || 0.6)); P(44, dt * ((A.DS && A.DS.exe) || 0.8)); P(140, dt); P(147, dt * ((A.DS && A.DS.gap) || 0.5)); P(77, 1); P(271, (A.DS && A.DS.dec) | 0); P(340, hStStd); },
       () => { P(100, 'AcDbDimStyleTable'); P(71, 1); P(340, hDsStd); });
@@ -168,7 +193,9 @@
       const brx = () => { if(V2007){ P(70, (typeof insunits !== 'undefined' && insunits) | 0); P(280, 1); P(281, 0); } };   // R2007+: đơn vị chèn, cho phép phá khối
       P(0, 'BLOCK_RECORD'); P(5, hBRmodel); if(geo){ P(102, '{ACAD_XDICTIONARY'); P(360, hGeoD); P(102, '}'); } P(330, hT.BLOCK_RECORD); P(100, 'AcDbSymbolTableRecord'); P(100, 'AcDbBlockTableRecord'); P(2, '*Model_Space'); P(340, hLayModel); brx();
       for(const Lp of lays){ rec('BLOCK_RECORD', Lp.hBR, 'AcDbBlockTableRecord'); P(2, Lp.bn); P(340, Lp.hLay); brx(); }
-      for(const D of blockDefs.values()){ rec('BLOCK_RECORD', D.hBR, 'AcDbBlockTableRecord'); P(2, dxfStr(D.name)); P(340, '0'); brx(); }
+      for(const D of blockDefs.values()){ P(0, 'BLOCK_RECORD'); P(5, D.hBR); if(D.vis){ P(102, '{ACAD_XDICTIONARY'); P(360, D.vis.hXD); P(102, '}'); } P(330, hT.BLOCK_RECORD); P(100, 'AcDbSymbolTableRecord'); P(100, 'AcDbBlockTableRecord'); P(2, dxfStr(D.name)); P(340, '0'); brx();
+        if(DYNX && D.dyn){ if(D.vis){ P(1001, 'AcDbDynamicBlockTrueName'); P(1000, dxfStr(D.name)); P(1001, 'AcDbDynamicBlockGUID'); P(1000, guidOf(D.name)); } P(1001, 'AcDbBlockRepETag'); P(1070, 1); P(1071, D.n); }
+        if(DYNX && D.anon){ P(1001, 'AcDbBlockRepBTag'); P(1070, 1); P(1005, D.rep.hBR); } }
       for(const d of dims.values()){ rec('BLOCK_RECORD', d.hBR, 'AcDbBlockTableRecord'); P(2, d.bn); P(340, '0'); brx(); } });
     P(0, 'ENDSEC');
     // ---------- đối tượng ----------
@@ -181,8 +208,11 @@
       const lw = e.lw > 0 ? lwStd(e.lw) : (e.lwb ? -2 : null);
       const tc = V2004 && aci !== 256 && !isAciColor(e.col) ? hexRGB(e.col) : null;
       let wrote = false;
-      const head = (t, sub, hh) => { wrote = true; const h = hh || H(); P(0, t); P(5, h); P(330, owner); P(100, 'AcDbEntity'); if(curPS) P(67, 1); P(8, ly); if(elt && t !== 'HATCH' && t !== 'TEXT' && t !== 'MTEXT') P(6, elt); if(aci !== 256) P(62, aci); if(tc != null) P(420, tc); if(lw != null) P(370, lw); if(e.tp > 0 && V2004) P(440, (0x02000000 | Math.round(255 * (1 - Math.min(90, e.tp) / 100))) >>> 0); if(e.lts && Math.abs(e.lts - 1) > 1e-9 && t !== 'TEXT' && t !== 'MTEXT') P(48, e.lts); if(sub) P(100, sub); return h; };
-      const xd = () => { if(o.inBlock || o.dimBlock) return; const pr = {}; for(const k of XKEYS) if(e[k] != null && e[k] !== '' && !(k === 'mt' && e.type !== 'TEXT')) pr[k] = e[k];
+      const head = (t, sub, hh) => { wrote = true; const h = hh || H(); if(o.hs) o.hs.push(h); P(0, t); P(5, h); P(330, owner); P(100, 'AcDbEntity'); if(curPS) P(67, 1); P(8, ly); if(e.vh) P(60, 1); if(elt && t !== 'HATCH' && t !== 'TEXT' && t !== 'MTEXT') P(6, elt); if(aci !== 256) P(62, aci); if(tc != null) P(420, tc); if(lw != null) P(370, lw); if(e.tp > 0 && V2004) P(440, (0x02000000 | Math.round(255 * (1 - Math.min(90, e.tp) / 100))) >>> 0); if(e.lts && Math.abs(e.lts - 1) > 1e-9 && t !== 'TEXT' && t !== 'MTEXT') P(48, e.lts); if(sub) P(100, sub); return h; };
+      const xd = () => { if(o.dimBlock) return;
+        if(o.inBlock){ if(!o.dyn) return; if(DYNX && e._et != null){ P(1001, 'AcDbBlockRepETag'); P(1070, 1); P(1071, e._et); }
+          const q = {}; if(e.dvs) q.dvs = e.dvs; if(o.dyn === 2 && e.dyn) q.dyn = e.dyn; if(Object.keys(q).length){ const js = JSON.stringify(q); P(1001, 'DVDCAD'); for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); } return; }
+        const pr = {}; for(const k of XKEYS) if(e[k] != null && e[k] !== '' && !(k === 'mt' && e.type !== 'TEXT')) pr[k] = e[k];
         if(e.type === 'IMAGE'){ const q = {}; for(const k of ['x', 'y', 'w', 'h', 'rot', 'op', 'name', 'frame', 'img', 'gmi', 'cpoly']) if(e[k] != null) q[k] = e[k]; pr.imgx = q; }   // ảnh: khung đa tuyến + thông số ảnh (dữ liệu ảnh ở DVDCAD_DATA)
         const js = Object.keys(pr).length ? JSON.stringify(pr) : null;
         if(!e.rgn && !js) return; P(1001, 'DVDCAD'); if(e.rgn) P(1000, 'RGN' + (e.grp && e.blk === '*REGION' ? ':' + e.grp : '')); if(js){ for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); } };
@@ -285,16 +315,17 @@
     const blk = (hB, hE, hBR, name, flags, body) => { P(0, 'BLOCK'); P(5, hB); P(330, hBR); P(100, 'AcDbEntity'); P(8, '0'); P(100, 'AcDbBlockBegin'); P(2, name); P(70, flags); P(10, 0); P(20, 0); P(30, 0); P(3, name); P(1, ''); if(body){ curOwner = hBR; body(); curOwner = hBRmodel; } P(0, 'ENDBLK'); P(5, hE); P(330, hBR); P(100, 'AcDbEntity'); P(8, '0'); P(100, 'AcDbBlockEnd'); };
     blk(hBlkModel, hEndModel, hBRmodel, '*Model_Space', 0, null);
     lays.forEach((Lp, i) => blk(Lp.hB, Lp.hE, Lp.hBR, Lp.bn, 0, i ? () => paperBody(Lp) : null));
-    for(const D of blockDefs.values()) blk(D.hB, D.hE, D.hBR, dxfStr(D.name), D.atts.length ? 2 : 0, () => { for(const x of D.ents) emit(x, D.hBR, { inBlock: true }); });
+    for(const D of blockDefs.values()) blk(D.hB, D.hE, D.hBR, dxfStr(D.name), (D.atts.length ? 2 : 0) | (D.anon ? 1 : 0), () => { for(const x of D.ents){ const o2 = { inBlock: true, dyn: D.dyn ? 1 : D.anon ? 2 : 0, hs: D.vis ? [] : null }; emit(x, D.hBR, o2); if(o2.hs) x._hs = o2.hs; } });
     for(const d of dims.values()) blk(d.hB, d.hE, d.hBR, d.bn, 1, () => { for(const x of d.mem) emit(x, d.hBR, { dimBlock: true }); });
     P(0, 'ENDSEC');
     // ---------- ENTITIES ----------
     P(0, 'SECTION'); P(2, 'ENTITIES');
     for(const e of ents){ if(done.has(e) || e.xh) continue; emit(e, hBRmodel); }
-    const xcl = [];
+    const xcl = [], dynIns = [];
     for(const ins of inserts.values()){ const m = ins.m; const sx = Math.hypot(m.a, m.b), det = m.a * m.d - m.b * m.c, sy = det / (sx || 1), rot = Math.atan2(m.b, m.a) * R2D; const f = ins.mem[0];
       const lyn = dxfStr(String(m.lay || f.layer || '0')); const atts = ins.mem.filter(x => x.att && x.type === 'TEXT'); const hI = H();
-      P(0, 'INSERT'); P(5, hI); if(ins.xR && window.xclipFor){ const X = { hI, hXD: H(), hFD: H(), hSF: H(), R: ins.xR, m }; xcl.push(X); P(102, '{ACAD_XDICTIONARY'); P(360, X.hXD); P(102, '}'); } P(330, hBRmodel); P(100, 'AcDbEntity'); P(8, lyn); P(100, 'AcDbBlockReference'); if(atts.length) P(66, 1); P(2, dxfStr(ins.D.name)); P(10, m.e); P(20, m.f); P(30, 0); if(Math.abs(sx - 1) > 1e-12) P(41, sx); if(Math.abs(sy - 1) > 1e-12) P(42, sy); if(Math.abs(sx - 1) > 1e-12 || Math.abs(sy - 1) > 1e-12) P(43, 1); if(Math.abs(rot) > 1e-12) P(50, rot);
+      P(0, 'INSERT'); P(5, hI); if(ins.dyn && DYNX){ ins.hI = hI; ins.hIX = H(); dynIns.push(ins); P(102, '{ACAD_XDICTIONARY'); P(360, ins.hIX); P(102, '}'); } if(ins.xR && window.xclipFor){ const X = { hI, hXD: H(), hFD: H(), hSF: H(), R: ins.xR, m }; xcl.push(X); P(102, '{ACAD_XDICTIONARY'); P(360, X.hXD); P(102, '}'); } P(330, hBRmodel); P(100, 'AcDbEntity'); P(8, lyn); P(100, 'AcDbBlockReference'); if(atts.length) P(66, 1); P(2, dxfStr(ins.D.name)); P(10, m.e); P(20, m.f); P(30, 0); if(Math.abs(sx - 1) > 1e-12) P(41, sx); if(Math.abs(sy - 1) > 1e-12) P(42, sy); if(Math.abs(sx - 1) > 1e-12 || Math.abs(sy - 1) > 1e-12) P(43, 1); if(Math.abs(rot) > 1e-12) P(50, rot);
+      if(ins.dyn){ const js = JSON.stringify({ dbn: ins.dyn.dynName }); P(1001, 'DVDCAD'); for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); }   // tên khối động gốc (DVDCAD đọc lại)
       if(atts.length){ for(const a of atts){ const al = a.layer || '0'; const byL2 = a.bl || String(a.col || '').toLowerCase() === String(A.layerHex(al)).toLowerCase(); const { hj, vj } = { hj: a.ha === 'center' ? 1 : (a.ha === 'right' || a.ha === 'end') ? 2 : 0, vj: a.va === 'bottom' ? 1 : a.va === 'middle' ? 2 : a.va === 'top' ? 3 : 0 };
           P(0, 'ATTRIB'); P(5, H()); P(330, hI); P(100, 'AcDbEntity'); P(8, dxfStr(al)); if(!byL2) P(62, A.aciNear(a.col || '#ffffff')); P(100, 'AcDbText'); P(10, a.x); P(20, a.y); P(30, 0); P(40, a.h || 2.5); P(1, dxfStr(a.text || '')); if(a.rot) P(50, a.rot); if(hj) P(72, hj); if(hj || vj){ P(11, a.x); P(21, a.y); P(31, 0); }
           P(100, 'AcDbAttribute'); P(2, dxfStr(a.att)); P(70, 0); if(vj) P(74, vj); }
@@ -339,6 +370,32 @@
       P(100, 'AcDbPlotSettings'); P(1, ''); P(2, 'none_device'); P(4, S ? 'Custom_' + Math.round(S.x1 - S.x0) + 'x' + Math.round(S.y1 - S.y0) + '_mm' : ''); P(6, ''); P(40, S ? -S.x0 : 0); P(41, S ? -S.y0 : 0); P(42, 0); P(43, 0); P(44, S ? S.x1 - S.x0 : 0); P(45, S ? S.y1 - S.y0 : 0); P(46, 0); P(47, 0); P(48, 0); P(49, 0); P(140, 0); P(141, 0); P(142, 1); P(143, 1); P(70, name === 'Model' ? 1712 : 688); P(72, 1); P(73, 0); P(74, 5); P(7, ''); P(75, 16); P(147, 1); P(148, 0); P(149, 0);
       const E = S || ext; P(100, 'AcDbLayout'); P(1, dxfStr(name)); P(70, flags); P(71, tab); P(10, S ? S.x0 : 0); P(20, S ? S.y0 : 0); P(11, S ? S.x1 : 420); P(21, S ? S.y1 : 297); P(12, 0); P(22, 0); P(32, 0); P(14, E.x0); P(24, E.y0); P(34, 0); P(15, E.x1); P(25, E.y1); P(35, 0); P(146, 0); P(13, 0); P(23, 0); P(33, 0); P(16, 1); P(26, 0); P(36, 0); P(17, 0); P(27, 1); P(37, 0); P(76, 0); P(330, br); if(hv) P(331, hv); };
     layout(hLayModel, 'Model', 1, 0, hBRmodel); for(const Lp of lays) layout(Lp.hLay, Lp.name, 1, Lp.tab, Lp.hBR, Lp.sheet, Lp.sheet ? Lp.hVp : null);
+    // khối động: từ điển mở rộng của khối gốc → ACAD_ENHANCEDBLOCK (đồ thị: tham số hiển thị ← grip, → 2 thành phần vị trí grip) + chống purge;
+    // bản chèn → AcDbBlockRepresentation → AcDbRepData (trỏ khối gốc) + AppDataCache → ACAD_ENHANCEDBLOCKDATA → "1" (XRECORD trạng thái hiện tại)
+    const own = (t, h, ow) => { P(0, t); P(5, h); P(102, '{ACAD_REACTORS'); P(330, ow); P(102, '}'); P(330, ow); };
+    const hdict = (h, ow, entries, rx) => { if(rx) own('DICTIONARY', h, ow); else { P(0, 'DICTIONARY'); P(5, h); P(330, ow); } P(100, 'AcDbDictionary'); P(280, 1); P(281, 1); for(const [k, v] of entries){ P(3, k); P(360, v); } };
+    const expr = (t, h, ow, id) => { P(0, t); P(5, h); P(330, ow); P(100, 'AcDbEvalExpr'); P(90, id); P(98, 33); P(99, 329); };
+    const elem = nm => { P(100, 'AcDbBlockElement'); P(300, nm); P(98, 33); P(99, 329); P(1071, 0); };
+    for(const B of dynBase.values()){ const V = B.vis; if(!V) continue; const hasV = B.ents.filter(x => Array.isArray(x.dvs)), eh = x => x._hs || [];
+      hdict(V.hXD, B.hBR, [['ACAD_ENHANCEDBLOCK', V.hG], ['AcDbDynamicBlockRoundTripPurgePreventer', V.hPP]]);
+      own('ACAD_EVALUATION_GRAPH', V.hG, V.hXD); P(100, 'AcDbEvalGraph'); P(96, 4); P(97, 4);
+      [[1, V.hP, [0, 0, 1, 2]], [2, V.hGr, [-1, -1, 0, 0]], [3, V.hLx, [1, 1, -1, -1]], [4, V.hLy, [2, 2, -1, -1]]].forEach(([id, h, d], i) => { P(91, i); P(93, 32); P(95, id); P(360, h); for(const v of d) P(92, v); });
+      [[1, 0, [-1, -1, -1, -1, -1]], [0, 2, [-1, -1, -1, 2, -1]], [0, 3, [-1, -1, 1, -1, -1]]].forEach(([a, b, d], i) => { P(92, i); P(93, 0); P(94, 1); P(91, a); P(91, b); for(const v of d) P(92, v); });
+      own('ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION', V.hPP, V.hXD); P(100, 'AcDbDynamicBlockPurgePreventer'); P(70, 1);
+      expr('BLOCKVISIBILITYPARAMETER', V.hP, V.hG, 1); elem('Visibility State'); P(100, 'AcDbBlockParameter'); P(280, 1); P(281, 0);
+      P(100, 'AcDbBlock1PtParameter'); P(1010, V.pt.x); P(1020, V.pt.y); P(1030, 0); P(93, 2); P(170, 0); P(171, 0);
+      P(100, 'AcDbBlockVisibilityParameter'); P(281, 1); P(301, 'Visibility1'); P(302, ''); P(91, 0);
+      const all = hasV.flatMap(eh); P(93, all.length); for(const h of all) P(331, h);
+      P(92, V.states.length); for(const st of V.states){ const hs = hasV.filter(x => x.dvs.includes(st)).flatMap(eh); P(303, dxfStr(st)); P(94, hs.length); for(const h of hs) P(332, h); P(95, 0); }
+      expr('BLOCKVISIBILITYGRIP', V.hGr, V.hG, 2); elem('Grip'); P(100, 'AcDbBlockGrip'); P(91, 3); P(92, 4); P(1010, V.pt.x); P(1020, V.pt.y); P(1030, 0); P(280, 0); P(93, -1); P(100, 'AcDbBlockVisibilityGrip');
+      [[V.hLx, 3, 'UpdatedX'], [V.hLy, 4, 'UpdatedY']].forEach(([h, id, nm]) => { expr('BLOCKGRIPLOCATIONCOMPONENT', h, V.hG, id); P(1, ''); P(70, 40); P(140, 0); P(100, 'AcDbBlockGripExpr'); P(91, 1); P(300, nm); }); }
+    for(const ins of dynIns){ const B = ins.dyn, V = B.vis, hRD = H(), hRep = H(), hAC = V ? H() : null, hEB = V ? H() : null, hXR = V ? H() : null;
+      hdict(ins.hIX, ins.hI, [['AcDbBlockRepresentation', hRD]]);
+      hdict(hRD, ins.hIX, [['AcDbRepData', hRep]].concat(V ? [['AppDataCache', hAC]] : []), true);
+      own('ACDB_BLOCKREPRESENTATION_DATA', hRep, hRD); P(100, 'AcDbBlockRepresentationData'); P(70, 1); P(340, B.hBR);
+      if(V){ const st = ins.st && V.states.includes(ins.st.st) ? ins.st.st : V.def;
+        hdict(hAC, hRD, [['ACAD_ENHANCEDBLOCKDATA', hEB]], true); hdict(hEB, hAC, [['1', hXR]], true);
+        own('XRECORD', hXR, hEB); P(100, 'AcDbXrecord'); P(280, 1); P(1071, 135625452); P(1071, 184556386); P(70, 25); P(70, 104); P(10, V.pt.x); P(20, V.pt.y); P(30, 0); P(1, dxfStr(st)); } }
     // XCLIP: xdict của INSERT → ACAD_FILTER → SPATIAL (đỉnh WCS + ma trận nghịch đảo của INSERT, như AutoCAD)
     for(const X of xcl){ const c = xclipFor(X.R, X.m); const Mi = inv(X.m); if(!Mi) continue;
       let V = c.poly || [{ x: c.x, y: c.y }, { x: c.x + c.w, y: c.y + c.h }];

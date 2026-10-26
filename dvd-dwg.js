@@ -169,6 +169,9 @@
   const ODBX = 'ObjectDBX Classes';
   // lớp (class) dùng được: tên DXF → [lớp C++, ứng dụng, cờ proxy, là thực thể]; số lớp (500, 501…) cấp theo thứ tự dùng
   const CLASSDEF = { ACDBDICTIONARYWDFLT: ['AcDbDictionaryWithDefault', ODBX, 0, 0], ACDBPLACEHOLDER: ['AcDbPlaceHolder', ODBX, 0, 0], LAYOUT: ['AcDbLayout', ODBX, 0, 0],
+    // khối động (như AutoCAD): đồ thị đánh giá, tham số hiển thị + grip, chống purge, dữ liệu biểu diễn của bản chèn
+    ACAD_EVALUATION_GRAPH: ['AcDbEvalGraph', ODBX, 1153, 0], BLOCKVISIBILITYPARAMETER: ['AcDbBlockVisibilityParameter', ODBX, 1153, 0], BLOCKVISIBILITYGRIP: ['AcDbBlockVisibilityGrip', ODBX, 1153, 0],
+    BLOCKGRIPLOCATIONCOMPONENT: ['AcDbBlockGripExpr', ODBX, 1153, 0], ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION: ['AcDbDynamicBlockPurgePreventer', ODBX, 1153, 0], ACDB_BLOCKREPRESENTATION_DATA: ['AcDbBlockRepresentationData', ODBX, 1153, 0],
     // vùng che (như AutoCAD): thực thể WIPEOUT (cùng bố cục IMAGE) + đối tượng WIPEOUTVARIABLES
     WIPEOUT: ['AcDbWipeout', 'WipeOut|Product Desc: Object Enabler for WipeOut entity | Company: Autodesk, Inc. | WEB Address: www.autodesk.com', 2175, 1],
     WIPEOUTVARIABLES: ['AcDbWipeoutVariables', 'WipeOut|Product Desc:     WipeOut Dbx Application|Company:          Autodesk, Inc.|WEB Address:      www.autodesk.com', 0, 0],
@@ -240,6 +243,7 @@
         else if(c === 1002){ w.RC(2); w.RC(String(v).trim() === '}' ? 1 : 0); }
         else if(c === 1070){ w.RC(70); w.RS(parseInt(v, 10) || 0); }
         else if(c === 1071){ w.RC(71); w.RL(parseInt(v, 10) || 0); }
+        else if(c === 1005){ w.RC(5); let n = BigInt('0x' + (String(v).trim() || '0')); for(let i = 7; i >= 0; i--) w.RC(Number((n >> BigInt(i * 8)) & 0xffn)); }   // handle: 8 byte big-endian
         else if(c >= 1040 && c <= 1042){ w.RC(c - 1000); w.RD(parseFloat(v) || 0); }
       }
       return L.filter(x => x.w.p); }
@@ -364,10 +368,13 @@
 
     // ---- đối tượng OBJECTS được giữ (bỏ loại chưa hỗ trợ và những gì thuộc chúng / thuộc thực thể) ----
     const outObjH = new Set([H_NOD]); const keep = [];
+    const DYNT = ['ACAD_EVALUATION_GRAPH', 'BLOCKVISIBILITYPARAMETER', 'BLOCKVISIBILITYGRIP', 'BLOCKGRIPLOCATIONCOMPONENT', 'ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION', 'ACDB_BLOCKREPRESENTATION_DATA'];
+    // từ điển mở rộng của thực thể (INSERT của khối động → AcDbBlockRepresentation) được giữ, các đối tượng khác thuộc thực thể thì bỏ
+    const entXd = new Set(); if(R07) for(const [, bi] of blockInfo) for(const r of bi.main) for(const v of r.group102('ACAD_XDICTIONARY')) entXd.add(ref(v));
     { const dropped = new Set(); let changed = true; const isEnt = h => entH.has(h);
-      const cand = objsDxf.filter(r => ['DICTIONARY', 'ACDBDICTIONARYWDFLT', 'ACDBPLACEHOLDER', 'MLINESTYLE', 'LAYOUT', 'XRECORD'].includes(r.type) || (hasWipe && r.type === 'WIPEOUTVARIABLES') || (R10 && r.type === 'GEODATA'));
+      const cand = objsDxf.filter(r => ['DICTIONARY', 'ACDBDICTIONARYWDFLT', 'ACDBPLACEHOLDER', 'MLINESTYLE', 'LAYOUT', 'XRECORD'].includes(r.type) || (hasWipe && r.type === 'WIPEOUTVARIABLES') || (R10 && r.type === 'GEODATA') || (R07 && DYNT.includes(r.type)));
       for(const r of objsDxf) if(!cand.includes(r)) dropped.add(ref(r.get(5)));
-      while(changed){ changed = false; for(const r of cand){ const h = ref(r.get(5)); if(dropped.has(h)) continue; const ow = ref(r.plain().get(330)); if(h !== H_NOD && (isEnt(ow) || dropped.has(ow))){ dropped.add(h); changed = true; } } }
+      while(changed){ changed = false; for(const r of cand){ const h = ref(r.get(5)); if(dropped.has(h)) continue; const ow = ref(r.plain().get(330)); if(h !== H_NOD && ((isEnt(ow) && !entXd.has(h)) || dropped.has(ow))){ dropped.add(h); changed = true; } } }
       for(const r of cand){ const h = ref(r.get(5)); if(!dropped.has(h)){ keep.push(r); outObjH.add(h); } } }
     // từ điển mở rộng (102 {ACAD_XDICTIONARY) của bản ghi khối — chỉ khi từ điển đó được giữ
     const xdicOf = new Map(); for(const r of blockRecs){ const x = r.group102('ACAD_XDICTIONARY').map(ref).find(v => outObjH.has(v)); if(x) xdicOf.set(ref(r.get(5)), x); }
@@ -379,7 +386,7 @@
       const fl = b ? b.blk.int(70) : 0; const base = b ? b.blk.pt(10) : [0, 0, 0];
       let hB = b ? ref(b.blk.get(5)) : 0, hE = b && b.end ? ref(b.end.get(5)) : 0; if(!hB) hB = newH(); if(!hE) hE = newH();
       const xdh = xdicOf.get(h) || 0;   // từ điển mở rộng của bản ghi khối (vd ACAD_GEOGRAPHICDATA của *Model_Space)
-      const o = obj(T.BLOCK_HEADER, h); tableRec(o, 1, name, xdh);
+      const o = obj(T.BLOCK_HEADER, h, r); tableRec(o, 1, name, xdh);
       o.d.B(fl & 1); o.d.B(fl & 2); o.d.B(fl & 4); o.d.B(fl & 8); o.d.B(0);
       if(R04 && !(fl & 4)) o.d.BL(info.main.length);   // R2004+: số thực thể sở hữu (thay cho handle đầu/cuối)
       o.d.BD3(base); o.T(b ? b.blk.get(1, '') : ''); o.d.RC(0); o.T(b ? b.blk.get(4, '') : ''); o.d.BL(0);
@@ -404,14 +411,15 @@
         rgb: rgbOf(p), alpha: p.has(440) ? p.int(440) >>> 0 : null }; }
     function entCommon(o, c){
       const P = c.props || { layer: c.layer || hLayer0, color: 256, ltf: 0, lth: 0, lts: 1, lw: 29, inv: 0 };
+      const xd = c.xdic || 0;
       o.d.B(0); o.d.BB(c.mode); o.d.BL(0);
-      if(R04) o.d.B(1); if(R13) o.d.B(0); if(!R04) o.d.B(0);   // R2004+: không có từ điển mở rộng; R2013+: không có dữ liệu DS; R2000: nolinks = 0 (có handle trước/sau)
+      if(R04) o.d.B(xd ? 0 : 1); if(R13) o.d.B(0); if(!R04) o.d.B(0);   // R2004+: có / không có từ điển mở rộng; R2013+: không có dữ liệu DS; R2000: nolinks = 0 (có handle trước/sau)
       if(R04) o.d.ENC(P.color, P.rgb, P.alpha); else o.d.CMC(P.color & 0xffff);
       o.d.BD(P.lts); o.d.BB(P.ltf);
       if(R07){ o.d.BB(0); o.d.BB(0); o.d.RC(0); } else o.d.BB(0);   // (R2007+ vật liệu, ) kiểu in, (R2007+ bóng đổ) — đều theo lớp
       if(R10){ o.d.B(0); o.d.B(0); o.d.B(0); }   // không gán kiểu hiển thị riêng
       o.d.BS(P.inv); o.d.RC(P.lw);
-      if(c.mode === 0) o.hd.H(4, c.owner); if(!R04){ o.hd.H(3, 0); o.hd.H(4, c.prev || 0); o.hd.H(4, c.next || 0); } o.hd.H(5, P.layer); if(P.ltf === 3) o.hd.H(5, P.lth);
+      if(c.mode === 0) o.hd.H(4, c.owner); if(!R04){ o.hd.H(3, xd); o.hd.H(4, c.prev || 0); o.hd.H(4, c.next || 0); } else if(xd) o.hd.H(3, xd); o.hd.H(5, P.layer); if(P.ltf === 3) o.hd.H(5, P.lth);
     }
     function styleH(r){ return STYLES.get(up(r.get(7, 'Standard'))) || hStd; }
     function textData(o, r, sub2){   // TEXT / ATTRIB / ATTDEF (R2000: dataflags)
@@ -429,6 +437,7 @@
     function keepX(r, h){ let on = false; const it = []; for(const [c, v] of r.g){ if(c === 1001){ on = up(v) === 'DVDCAD'; continue; } if(on && c >= 1000) it.push([c, v]); } if(it.length) PRIV[h.toString(16).toUpperCase()] = it; }
     function entity(r, link, att){
       const h = ref(r.get(5)), P = entProps(r), c = Object.assign({ props: P }, link); let o; keepX(r, h);
+      { const x = r.group102('ACAD_XDICTIONARY').map(ref).find(v => outObjH.has(v)); if(x) c.xdic = x; }
       const t = r.type;
       if(t === 'LINE'){ o = obj(T.LINE, h, r); entCommon(o, c); const a = r.pt(10), b = r.pt(11); const zz = a[2] === 0 && b[2] === 0;
         o.d.B(zz); o.d.RD(a[0]); o.d.DD(b[0], a[0]); o.d.RD(a[1]); o.d.DD(b[1], a[1]); if(!zz){ o.d.RD(a[2]); o.d.DD(b[2], a[2]); } o.d.BT(r.num(39)); o.d.BE([r.num(210), r.num(220), r.num(230, 1)]); }
@@ -555,8 +564,32 @@
       o.d.BL(s.int(95, 1)); o.d.BD(s.num(141, 1)); o.d.B(s.int(294)); o.d.BD(s.num(142)); o.d.BD(s.num(143, 6378137));
       o.T(s.all(303).join('') + s.get(301, '')); o.T(s.get(302, '')); o.T(s.get(305, '')); o.T(s.get(306, '')); o.T(s.get(307, ''));
       o.d.BL(0); o.d.BL(0); }   // không có lưới nắn
+    // khối động (R2007+, bố cục như AutoCAD 2018): biểu thức đánh giá = BL -1, BL 98, BL 99, BS mã giá trị (-9999 = không có) [+ giá trị], BL id
+    const brOfXd = new Map(); for(const [b, x] of xdicOf) brOfXd.set(x, b);
+    const evalExpr = (o, r) => { const s = r.after('AcDbEvalExpr'); o.d.BL(-1); o.d.BL(s.int(98, 33)); o.d.BL(s.int(99, 329));
+      if(s.has(70)){ const c = s.int(70); o.d.BS(c); if(c >= 40 && c <= 59) o.d.BD(s.num(140)); else if(c >= 90 && c <= 99) o.d.BL(s.int(140)); else o.d.BS(s.int(140)); } else o.d.BS(-9999);
+      o.d.BL(s.int(90)); };
+    const blockElem = (o, r) => { const s = r.after('AcDbBlockElement'); o.T(s.get(300, '')); o.d.BL(s.int(98, 33)); o.d.BL(s.int(99, 329)); o.d.BL(s.int(1071)); };
+    function dynObj(r, h, owner, rx){ const o = obj(cls(r.type), h); objCommon(o, owner, rx);
+      if(r.type === 'ACAD_EVALUATION_GRAPH'){ const g = r.after('AcDbEvalGraph').g; let i = 0; const nx = () => g[i++] || [0, '0'], iv = () => parseInt(nx()[1], 10) || 0;
+        while(i < g.length && (g[i][0] === 96 || g[i][0] === 97)) o.d.BL(iv());
+        const nodes = [], edges = []; while(i < g.length && g[i][0] === 91){ nodes.push([iv(), iv(), iv(), ref(nx()[1]), iv(), iv(), iv(), iv()]); }
+        while(i < g.length && g[i][0] === 92){ edges.push([iv(), iv(), iv(), iv(), iv(), iv(), iv(), iv(), iv(), iv()]); }
+        o.d.BL(nodes.length); for(const n of nodes){ o.d.BL(n[0]); o.d.BL(n[1]); o.d.BL(n[2]); o.hd.H(3, n[3]); for(let k = 4; k < 8; k++) o.d.BL(n[k]); }
+        o.d.BL(edges.length); for(const e of edges) for(const v of e) o.d.BL(v); }
+      else if(r.type === 'BLOCKVISIBILITYPARAMETER'){ evalExpr(o, r); blockElem(o, r); const bp = r.after('AcDbBlockParameter'), p1 = r.after('AcDbBlock1PtParameter'), v = r.after('AcDbBlockVisibilityParameter');
+        o.d.B(bp.int(280, 1)); o.d.B(bp.int(281)); o.d.BD3(p1.pt(1010)); o.d.BS(0); o.d.BS(0); o.d.BL(p1.int(93));
+        o.d.B(v.int(281, 1)); o.T(v.get(301, '')); o.T(v.get(302, '')); o.d.B(v.int(91));
+        const all = [], st = []; let cur = null; for(const [c, x] of v.g){ if(c === 331) all.push(ref(x)); else if(c === 303){ cur = { n: x, hs: [] }; st.push(cur); } else if(c === 332 && cur) cur.hs.push(ref(x)); }
+        o.d.BL(all.length); for(const x of all) o.hd.H(4, x);
+        o.d.BL(st.length); for(const q of st){ o.T(q.n); o.d.BL(q.hs.length); for(const x of q.hs) o.hd.H(4, x); o.d.BL(0); } }
+      else if(r.type === 'BLOCKVISIBILITYGRIP'){ evalExpr(o, r); blockElem(o, r); const g = r.after('AcDbBlockGrip'); o.d.BL(g.int(91)); o.d.BL(g.int(92)); o.d.BD3(g.pt(1010)); o.d.B(g.int(280)); o.d.BL(g.int(93, -1)); }
+      else if(r.type === 'BLOCKGRIPLOCATIONCOMPONENT'){ evalExpr(o, r); const g = r.after('AcDbBlockGripExpr'); o.d.BL(g.int(91)); o.T(g.get(300, '')); }
+      else if(r.type === 'ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION'){ o.d.BS(r.after('AcDbDynamicBlockPurgePreventer').int(70, 1)); o.hd.H(5, brOfXd.get(owner) || 0); }
+      else if(r.type === 'ACDB_BLOCKREPRESENTATION_DATA'){ const s = r.after('AcDbBlockRepresentationData'); o.d.BS(s.int(70, 1)); o.hd.H(5, ref(s.get(340))); } }
     for(const r of keep){
       const h = ref(r.get(5)), p = r.plain(), owner = h === H_NOD ? 0 : ref(p.get(330)), rx = h === H_NOD ? [] : reactorsOf(r);
+      if(DYNT.includes(r.type)){ dynObj(r, h, owner, rx); continue; }
       if(r.type === 'DICTIONARY' || r.type === 'ACDBDICTIONARYWDFLT'){
         const o = obj(r.type === 'DICTIONARY' ? T.DICT : cls('ACDBDICTIONARYWDFLT'), h); objCommon(o, owner, rx);
         const items = []; let k = null; for(const x of p.g){ if(x[0] === 3) k = x[1]; else if((x[0] === 350 || x[0] === 360) && k != null){ const v = ref(x[1]); if(outObjH.has(v) || entH.has(v)) items.push([k, v]); k = null; } }
@@ -583,7 +616,11 @@
         if(R04) o.d.BL(vps.length);   // R2004+: danh sách khung nhìn của layout
         const av = ref(l.get(331)); o.hd.H(4, lbr); o.hd.H(4, entH.has(av) ? av : 0); o.hd.H(5, 0); o.hd.H(5, 0); for(const v of vps) o.hd.H(4, v); }
       else if(r.type === 'XRECORD'){ const o = obj(T.XRECORD, h); objCommon(o, owner, rx); const s = r.after('AcDbXrecord'); const items = s.g.filter(x => x[0] !== 280);
-        const xd = new BW(256); for(const [c, v] of items){ xd.RS(c);
+        const xd = new BW(256); for(let q = 0; q < items.length; q++){ const [c, v] = items[q];
+          if((c >= 20 && c <= 39) || (c >= 1020 && c <= 1039)) continue;   // Y / Z đã ghi cùng X
+          xd.RS(c);
+          if((c >= 10 && c <= 19) || (c >= 1010 && c <= 1019)){ const fy = items.find((x, k) => k > q && x[0] === c + 10), fz = items.find((x, k) => k > q && x[0] === c + 20); xd.RD(parseFloat(v) || 0); xd.RD(fy ? parseFloat(fy[1]) || 0 : 0); xd.RD(fz ? parseFloat(fz[1]) || 0 : 0); continue; }
+          if(c === 1071 || (c >= 420 && c <= 459)){ xd.RL(parseInt(v, 10) || 0); continue; } if(c >= 1060 && c <= 1070){ xd.RS(parseInt(v, 10) || 0); continue; }
           if((c >= 0 && c <= 9) || (c >= 300 && c <= 309) || c === 1000){ if(R07){ const t = String(v); xd.RS(t.length); for(let i = 0; i < t.length; i++) xd.RS(t.charCodeAt(i)); } else { const b = tvBytes(v); xd.RS(b.length); xd.RC(30); xd.TF(b); } }   // R2007+: RS số ký tự + UTF-16
           else if(c >= 280 && c <= 289){ xd.RC(parseInt(v, 10) || 0); } else if(c >= 90 && c <= 99){ xd.RL(parseInt(v, 10) || 0); } else if(c >= 60 && c <= 79){ xd.RS(parseInt(v, 10) || 0); } else xd.RD(parseFloat(v) || 0); }
         o.d.BL(xd.byte); o.d.append(xd); o.d.BS(s.int(280, 1)); }
