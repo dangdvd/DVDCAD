@@ -1,4 +1,4 @@
-# DVDCAD v5t — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5u — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -27,9 +27,24 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v5u)
+- **Khối động: lật và kéo giãn là tham số thật của AutoCAD** (DXF / DWG 2018):
+  - Lật (`BPARAMETER` → F) ghi thành 2 **tham số lật** (*Flip state1* lật ngang, *Flip state2* lật dọc) + grip mũi tên + hành động FLIP; kéo giãn (L) ghi thành **tham số tuyến tính** (grip ở điểm cuối) + hành động STRETCH với khung kéo giãn như DVDCAD (nửa phía điểm cuối).
+  - Trong AutoCAD bấm vào bản chèn là có grip lật / kéo; bảng Properties hiện *Flip state1*, *Flip state2*, độ dài.
+  - Bản chèn đang lật: INSERT ghi không lật, hình đã lật nằm trong khối `*U` như AutoCAD. Mở lại trong DVDCAD vẫn bỏ lật / lật lại đúng chỗ.
+- **Mở DWG của AutoCAD có khối động**: bản chèn hiện tên khối gốc (thay cho `*U…`), đổi được trạng thái hiển thị (bảng Thuộc tính / `BDYN`), cả khối lồng trong từng trạng thái.
+- **Ảnh lưu thành IMAGE thật** (DXF / DWG 2000 → 2018): AutoCAD mở ra **thấy ảnh** (trước chỉ thấy khung).
+  - Mỗi ảnh có IMAGEDEF trỏ tới tệp `.\tên_xxxxxx.jpg` (ảnh PNG giữ PNG) **cạnh bản vẽ**; giữ góc xoay, độ đậm (→ *Fade*), khung cắt `IMAGECLIP`.
+  - **Bản Windows**: lưu bản vẽ (SAVE / SAVEAS / SAVEDWG) là ghi luôn tệp ảnh vào cùng thư mục. Bản web: dùng `ETRANSMIT` — gói .zip có bản vẽ và tệp ảnh cùng tên, giải nén ra là AutoCAD thấy ảnh.
+  - **Mở DXF / DWG của AutoCAD có ảnh**: IMAGE thành ảnh thật của DVDCAD (giữ khung cắt); bản Windows tự đọc tệp ảnh trong thư mục bản vẽ (như AutoCAD tìm ảnh).
+- **In**:
+  - **Máy in Windows** cũng có nút **Thuộc tính…** → *Độ sâu màu* (24-bit / 256 màu / đen trắng) + dither theo bảng .ctb như PNG / PDF.
+  - **Bản đồ nền đang hiện (GEOMAP)** được in luôn khi PLOT ra PDF / PNG / máy in (tải ô bản đồ cho đúng vùng in, ~200 dpi); xuất ảnh / in theo màn hình cũng có bản đồ. Không cần chụp bằng GEOMAPIMAGE trước.
+- **DWG 2007**: không có ODA File Converter thì ghi **DWG 2004** bằng bộ ghi sẵn có (AutoCAD 2007, 2008, 2009 mở thẳng) — trước đây ghi DWG 2018 nên AutoCAD 2007 không mở được.
+
 ## Bổ sung như AutoCAD 2027 (v5t)
 - **Lưu DWG gốc 2018 / 2013 / 2010 / 2004 / 2000** — không cần ODA File Converter.
-  - `SAVEDWG`, `SAVEAS` *.dwg* mặc định ghi **DWG 2018 (AC1032)**. Chọn phiên bản khác trong `DWGSERVER`; DWG 2007 vẫn qua ODA (không có ODA thì tự ghi DWG 2018).
+  - `SAVEDWG`, `SAVEAS` *.dwg* mặc định ghi **DWG 2018 (AC1032)**. Chọn phiên bản khác trong `DWGSERVER`; DWG 2007 vẫn qua ODA (không có ODA: v5t ghi DWG 2018, từ v5u ghi DWG 2004).
   - Bộ chứa R2004+ như AutoCAD: trang nén LZ77, checksum, bản đồ section / trang, header mã hoá; chữ Unicode (2007+); dữ liệu theo đúng từng phiên bản.
   - Kiểm tra: mở lại trong DVDCAD giống hệt; LibreDWG, ODA File Converter (audit) và ACadSharp đọc không lỗi.
 - **Vị trí địa lý lưu thành đối tượng GEODATA** (DXF / DWG 2010 trở lên) trong từ điển `ACAD_GEOGRAPHICDATA` của Model: điểm thiết kế, điểm tham chiếu, cao độ, hướng bắc, đơn vị. AutoCAD mở ra thấy đúng vị trí; DVDCAD mở lại lấy đủ cả múi giờ, hệ toạ độ.

@@ -6,6 +6,16 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5u: lật / kéo giãn là tham số AutoCAD, IMAGE + IMAGEDEF thật, in bản đồ nền + máy in có độ sâu màu, DWG 2007 → 2004
+- `dvd-acad-dxf.js` `dynGraph(B, d)`: đồ thị đánh giá tổng quát (nút `{ t, h, i, id }`, cạnh `[từ, tới, số liên kết]`, danh sách vào / ra tự tính) cho tham số hiển thị, tuyến tính (`BLOCKLINEARPARAMETER` + `BLOCKLINEARGRIP` + `UpdatedEndX/Y` + `BLOCKSTRETCHACTION`: khung t > L0/2, LINE / LWPOLYLINE dời theo đỉnh, nét khác chỉ khi nằm trọn trong khung) và 2 tham số lật (`BLOCKFLIPPARAMETER` + `BLOCKFLIPGRIP` + `UpdatedFlip` / `UpdatedBaseX/Y` + `BLOCKFLIPACTION` chọn mọi nét, tham số / grip khác và các STRETCH như khối Door của AutoCAD; FLIP → STRETCH).
+  - Bản chèn đang lật: INSERT = `bm · S` (không lật), *U = S · hình đã kéo; XDATA `dfl: [sx, sy]` → bộ đọc dựng `bm = Mi · S`.
+  - XRECORD từng nút trong `ACAD_ENHANCEDBLOCKDATA` (giá trị đã đánh giá: điểm tham số sau lật, trạng thái lật, góc STRETCH) với mã 1071 cố định theo loại như tệp AutoCAD.
+- `dvd-dwg.js`: mã hoá 6 lớp khối động mới (2 điểm: BS số liên kết + [BL id, TV tên] × 4, BL grip × 4, BS vị trí gốc; STRETCH: khung 2RD, nét + chỉ số điểm, BD hệ số, BD góc, RC cờ — theo IL của ACadSharp 3.8); `sub(r, lớp)` để biểu thức đánh giá không đọc nhầm mã 70 của AcDbBlockAction.
+- Ảnh: `A.imgFile(id, tên)` (dvd-acad-pro.js) → tên ổn định `tên_<id>.png|jpg`; DXF ghi IMAGE (u / v của 1 điểm ảnh, fade, khung cắt đa giác theo toạ độ điểm ảnh gốc trên trái), IMAGEDEF `.\tên`, IMAGEDEF_REACTOR, `ACAD_IMAGE_DICT`, RASTERVARIABLES; `A.lastImgFiles` cho bản Windows (`dvdDesktop.writeSide` / `readSide`: chỉ thư mục của bản vẽ đã cấp quyền, chỉ đuôi ảnh) và ETRANSMIT. Đọc: `acadImage(...)` trong `index.html` (DXF: IMAGEDEF ở OBJECTS; DWG: `db.objects.IMAGEDEF`), `_imgRefs` → `onLoad` đọc tệp ảnh. `libredwg-web.js`: khung cắt IMAGE đọc là điểm 2D.
+- In: `PC3.print` (máy in Windows) trong độ sâu màu; `A.geomapPlotPrep(box, px)` / `A.geomapPlotDraw()` (dvd-acad-dlg4.js) + `A.plotMapPrep()` (dvd-acad-more.js) — `drawGrid` của `plotRender` vẽ ảnh bản đồ của vùng in; `drawMap` cũng vẽ khi `renderExport`.
+- `dvd-acad-x3.js` `A.dwgFallback(ver)`: không có ODA thì bản gốc cùng năm, không có thì bản mới nhất ≤ năm đó (2007 → 2004).
+- Vỏ tệp DWG 2007 (AC1021): đã kiểm Reed-Solomon (255,239) đa thức 0x169 và (255,251) đa thức 0x11D, nghiệm α¹…α¹⁶ / α¹…α⁴, khớp tệp AutoCAD; CRC64 có seed và dữ liệu kiểm tra chưa khớp giả thuyết nào nên chưa ghi AC1021.
+
 ## v5t: DWG gốc 2004 → 2018, GEODATA, GEOMAPIMAGE, độ sâu màu + dither khi in, khối động như AutoCAD
 - `dvd-dwg.js`: một bộ ghi cho 5 phiên bản (`DVDDwg.dwgFromDxf(text, { version: 'R2018' | 'R2013' | 'R2010' | 'R2004' | 'R2000' })`, `A.dwgNative(ents, { version })`, `A.dwgVersions`).
   - Bộ chứa R2004+: header 0x100 byte (khối 0x6C byte XOR theo dãy LCG + CRC-32), trang dữ liệu căn 0x20 (đầu trang XOR theo địa chỉ, checksum kiểu Adler 0x15B0 / 0xFFF1), nén LZ77 kiểu AutoCAD, bản đồ section / trang, bản sao header cuối file; SummaryInfo, AppInfo, RevHistory, AuxHeader.
@@ -129,7 +139,7 @@ Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn 
   - Viết theo tài liệu mở của Open Design Alliance và mã nguồn LibreDWG (cùng GPL-3.0): mã hoá bit, CRC-16, thứ tự trường, bố cục section giống AutoCAD 2000 (header → AuxHeader → ảnh xem trước BMP → biến hệ thống → lớp → đối tượng → bản đồ handle → ObjFreeSpace → header phụ → Template).
   - Dữ liệu riêng DVDCAD (XDATA "DVDCAD": khối 3D tham số, vùng, thứ tự vẽ, chú thích theo tỉ lệ; DVDCAD_DATA: ràng buộc, khối động) ghi thành EED chuẩn và một khối `DVDCADX1` giữa các section, vì bộ đọc WASM chưa đọc được EED của DWG 2000.
   - API: `A.dwgNative(ents)` → `Uint8Array`; `DVDDwg.dwgFromDxf(text, { bmp })` (chạy được trong Node để kiểm thử).
-- `SAVEDWG` mặc định dùng bộ ghi gốc (từ v5t: DWG 2018, chọn 2013 / 2010 / 2004 / 2000 trong `DWGSERVER`; DWG 2007 qua ODA File Converter / máy chủ). `SAVEAS` / Ctrl+S chọn được `*.dwg`.
+- `SAVEDWG` mặc định dùng bộ ghi gốc (từ v5t: DWG 2018, chọn 2013 / 2010 / 2004 / 2000 trong `DWGSERVER`; DWG 2007 qua ODA File Converter / máy chủ, không có thì ghi DWG 2004). `SAVEAS` / Ctrl+S chọn được `*.dwg`.
 - Mở DWG: bỏ ATTRIB trùng (libredwg trả ATTRIB cả trong danh sách chung lẫn trong `INSERT.attribs`); đọc khối `DVDCADX1` của file do DVDCAD ghi.
 - Kiểm tra:
   - 36 file DWG mẫu của LibreDWG (2000 → 2018) + `sample.dwg` (10 nghìn đối tượng): mở → ghi DWG gốc → mở lại, **giống hệt từng đối tượng** so với mở lại bản DXF 2000; LibreDWG đọc mọi file không cảnh báo.

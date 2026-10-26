@@ -381,6 +381,9 @@
 "(không bám)": [
 "dvd-acad-x14.js"
 ],
+"(không có ODA: ghi DWG 2004)": [
+"dvd-acad-x3.js"
+],
 "(không có gợi ý)": [
 "dvd-acad-dlg2.js"
 ],
@@ -6176,13 +6179,13 @@
 "DWG / DXF làm tham chiếu ngoài": [
 "dvd-acad-x16.js"
 ],
-"DWG 2018, 2013, 2010, 2004 và 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (DWG 2018 = định dạng của AutoCAD 2018 → 2027). DWG 2007 cần ODA File Converter (hoặc máy chủ) — nếu không có, DVDCAD tự ghi bằng bộ ghi sẵn có.": [
+"DWG 2018, 2013, 2010, 2004 và 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (DWG 2018 = định dạng của AutoCAD 2018 → 2027). DWG 2007 cần ODA File Converter (hoặc máy chủ) — nếu không có, DVDCAD ghi DWG 2004 bằng bộ ghi sẵn có (AutoCAD 2007, 2008, 2009 mở thẳng được).": [
 "dvd-acad-x3.js"
 ],
 "DWG đọc được nhưng chưa có đối tượng 2D nào được hỗ trợ.": [
 "index.html"
 ],
-"DWG/DXF · bản màu · v5s": [
+"DWG/DXF · bản màu · v5t": [
 "index.html:html"
 ],
 "DWG: trùng handle": [
@@ -9330,6 +9333,9 @@
 ],
 "Không ghi đè được không gian có sẵn.": [
 "dvd-acad-dlg2.js"
+],
+"Không ghi được ảnh": [
+"dvd-desktop.js"
 ],
 "Không gian": [
 "dvd-acad-dlg.js"
@@ -18546,7 +18552,7 @@
 "bằng": [
 "dvd-acad-dlg2.js"
 ],
-"bằng bộ ghi sẵn có.": [
+"bằng bộ ghi sẵn có": [
 "dvd-acad-x3.js"
 ],
 "bỏ": [
@@ -19343,6 +19349,9 @@
 ],
 "mở khoá": [
 "dvd-acad-cmds.js"
+],
+"mở được)": [
+"dvd-acad-x3.js"
 ],
 "mục": [
 "dvd-cloud.js"
@@ -23781,6 +23790,9 @@
 ],
 "Ảnh vệ tinh": [
 "dvd-acad-dlg4.js"
+],
+"Ảnh:": [
+"dvd-acad-x16.js"
 ],
 "Ảnh…": [
 "dvd-acad-dlg4.js"
