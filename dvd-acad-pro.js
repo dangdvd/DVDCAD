@@ -218,11 +218,18 @@
   const mmU = () => { try{ return unitToMM() || 1; }catch(_){ return 1; } };
   function frameOf(D){ const [W, H] = D.size; const big = Math.max(W, H) > 420; const m = big ? 10 : 5; return { x0: 20, y0: m, x1: W - m, y1: H - m }; }
   function sheetPrims(D){
+    const out = sheetBase(D); const o = D.org;
+    if(o && (o[0] || o[1])) for(const e of out){ const [dx, dy] = o;   // gốc tờ giấy của layout lấy từ tệp
+      if(e.type === 'LINE'){ e.x1 += dx; e.y1 += dy; e.x2 += dx; e.y2 += dy; } else if(e.vertices) e.vertices = e.vertices.map(p => ({ x: p.x + dx, y: p.y + dy })); else if(e.x != null){ e.x += dx; e.y += dy; } }
+    (D.vps || []).forEach((v, vi) => { out.push({ type: 'POLYLINE', layer: 'VPORTS', vertices: [{ x: v.x, y: v.y }, { x: v.x + v.w, y: v.y }, { x: v.x + v.w, y: v.y + v.h }, { x: v.x, y: v.y + v.h }], closed: true, col: '#5fa8ff', vpf: 1, vpi: vi }); });
+    return out;
+  }
+  function sheetBase(D){
     const [W, H] = D.size; const F = frameOf(D); const out = []; const col = '#ffffff', c2 = '#c8ccd2';
     const L = (x1, y1, x2, y2, lw) => out.push({ type: 'LINE', layer: 'KHUNG', x1, y1, x2, y2, col, lw });
     const T = (x, y, h, text, ha, bold) => { if(text) out.push({ type: 'TEXT', layer: 'KHUNG', x, y, h, text, ha: ha || 'left', va: 'middle', rot: 0, col, ff: 'Arial' }); };
     out.push({ type: 'POLYLINE', layer: 'GIAY', vertices: [{ x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }], closed: true, col: '#6c7686', vpf: 1 });
-    out.push({ type: 'POLYLINE', layer: 'KHUNG', vertices: [{ x: F.x0, y: F.y0 }, { x: F.x1, y: F.y0 }, { x: F.x1, y: F.y1 }, { x: F.x0, y: F.y1 }], closed: true, col, lw: 70 });
+    if(D.frame !== false) out.push({ type: 'POLYLINE', layer: 'KHUNG', vertices: [{ x: F.x0, y: F.y0 }, { x: F.x1, y: F.y0 }, { x: F.x1, y: F.y1 }, { x: F.x0, y: F.y1 }], closed: true, col, lw: 70 });
     if(D.tb !== false){
       const tb = D.tbv || {}; const w = 180, h = 40, x0 = F.x1 - w, y0 = F.y0, x1 = F.x1, y1 = y0 + h;
       out.push({ type: 'POLYLINE', layer: 'KHUNG', vertices: [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }], closed: true, col, lw: 50 });
@@ -239,7 +246,6 @@
       T(x0 + 112, (r[3] + y1) / 2, 2.5, tb.dv || 'ĐƠN VỊ THIẾT KẾ', 'left');
       void c2;
     }
-    (D.vps || []).forEach((v, vi) => { out.push({ type: 'POLYLINE', layer: 'VPORTS', vertices: [{ x: v.x, y: v.y }, { x: v.x + v.w, y: v.y }, { x: v.x + v.w, y: v.y + v.h }, { x: v.x, y: v.y + v.h }], closed: true, col: '#5fa8ff', vpf: 1, vpi: vi }); });
     return out;
   }
   function vpScaleText(D){ const v = (D.vps || [])[0]; return v ? '1:' + (+v.n.toPrecision(4)) : ''; }
@@ -254,14 +260,49 @@
     return { name: D.name, tabOrder: 100 + (D.ord || 0), isModel: false, user: true, def: D, paper: { paperPrims: sheetPrims(D).concat(psOf(D)), viewports: vps } };
   }
   function installLayouts(){
-    // gỡ layout người dùng cũ rồi gắn lại theo định nghĩa đã lưu
-    for(let i = dwgLayouts.length - 1; i >= 0; i--) if(dwgLayouts[i].user) dwgLayouts.splice(i, 1);
-    const L = ulays(); if(!L.length){ if(dwgLayouts.length === 1 && dwgLayouts[0].isModel && dwgLayouts[0]._auto) dwgLayouts.length = 0; return; }
-    if(!dwgLayouts.length) dwgLayouts.push({ name: 'Model', tabOrder: 0, isModel: true, paper: null, _auto: true });
-    L.forEach((D, i) => { D.ord = i; dwgLayouts.push(toLayout(D)); });
-    if(currentLayout >= dwgLayouts.length) currentLayout = 0;
+    // dựng lại danh sách tab: layout của tệp (giữ thứ tự; layout đã chuyển thay đúng chỗ, đã xoá thì ẩn) + layout tự tạo theo định nghĩa đã lưu
+    const F = dwgLayouts._file || dwgLayouts.filter(x => !x.user && !x._auto);
+    const cur = dwgLayouts[currentLayout], curNm = cur ? (cur.isModel ? null : cur.name) : null;
+    const L = ulays(), out = [], fromF = new Map();
+    for(const D of L) if(D.from != null && F.some(X => !X.isModel && X.name === D.from)) fromF.set(D.from, D);
+    for(const X of F){ const D = X.isModel ? null : fromF.get(X.name); if(!D){ out.push(X); continue; } if(D.gone) continue;
+      const T = toLayout(D); T.tabOrder = X.tabOrder; T.fileL = X; out.push(T); }
+    L.forEach((D, i) => { D.ord = i; if(D.gone || (D.from != null && fromF.get(D.from) === D)) return; out.push(toLayout(D)); });
+    if(out.length && !out.some(x => x.isModel)) out.unshift({ name: 'Model', tabOrder: 0, isModel: true, paper: null, _auto: true });
+    dwgLayouts.length = 0; for(const x of out) dwgLayouts.push(x); dwgLayouts._file = F;
+    const k = curNm == null ? dwgLayouts.findIndex(x => x.isModel) : dwgLayouts.findIndex(x => x.name === curNm);
+    currentLayout = k >= 0 ? k : 0;
     try{ if(A.renderLT) A.renderLT(); }catch(_){}
   }
+  // layout đọc từ tệp (DWG/DXF) → layout DVDCAD sửa được: đối tượng giấy của tệp → D.ps (giữ nguyên đối tượng), khung nhìn → D.vps
+  function fileDef(L){
+    if(!L || L.user || L.isModel || !L.paper) return null;
+    const P = L.paper, ps = (P.paperPrims || []).filter(e => e && !e.vpf);
+    const vps = (P.viewports || []).map(v => ({ x: v.vcx - v.w / 2, y: v.vcy - v.h / 2, w: v.w, h: v.h, n: v.vh * mmU() / v.h, cx: v.dcx, cy: v.dcy }));
+    let b = P.lim ? { x0: P.lim.x0, y0: P.lim.y0, x1: P.lim.x1, y1: P.lim.y1 } : null;
+    if(!b){ let a = Infinity, c = Infinity, d = -Infinity, f = -Infinity; const add = bb => { if(!bb) return; if(bb.x0 < a) a = bb.x0; if(bb.y0 < c) c = bb.y0; if(bb.x1 > d) d = bb.x1; if(bb.y1 > f) f = bb.y1; };
+      for(const e of ps){ try{ add(entBBox(e)); }catch(_){} } for(const v of vps) add({ x0: v.x, y0: v.y, x1: v.x + v.w, y1: v.y + v.h });
+      if(isFinite(a)){ const m = Math.max(d - a, f - c) * 0.03; b = { x0: a - m, y0: c - m, x1: d + m, y1: f + m }; } else b = { x0: 0, y0: 0, x1: 420, y1: 297 }; }
+    const W = b.x1 - b.x0, H = b.y1 - b.y0; const pk = Object.keys(PAPERS).find(k => { const p = PAPERS[k]; return (Math.abs(p[0] - W) < 1 && Math.abs(p[1] - H) < 1) || (Math.abs(p[1] - W) < 1 && Math.abs(p[0] - H) < 1); });
+    return { name: L.name, from: L.name, paper: pk || 'custom', land: W >= H, size: [W, H], org: [b.x0, b.y0], tb: false, frame: false, tbv: {}, vps, ps };
+  }
+  // chuyển layout thứ i (của tệp) thành layout sửa được — giữ nguyên chỗ tab, đối tượng đang chọn vẫn là đối tượng giấy
+  function convertFile(i, quiet){
+    const L = dwgLayouts[i]; const D = fileDef(L); if(!D) return null;
+    const LL = ulays().filter(x => !(x.from === D.from)); LL.push(D);
+    try{ localStorage.setItem(LK(), JSON.stringify(LL)); }catch(err){ say('Không lưu được layout "' + D.name + '" (bộ nhớ trình duyệt đầy?).'); console.warn('layout', err); return null; }
+    PSLIVE.set(bkey() + '::' + D.name, D.ps); for(const e of D.ps) if(e) e.userAdded = true;
+    const cur = currentLayout === i; installLayouts(); const j = dwgLayouts.findIndex(x => x.user && x.name === D.name);
+    if(j >= 0 && cur){ currentLayout = j; entities = buildPaperEntities(dwgLayouts[j]); bbDirty = true; try{ invalidateSnap(); }catch(_){} try{ draw(); A.paint(); }catch(_){} }
+    try{ if(A.renderLT) A.renderLT(); }catch(_){}
+    if(!quiet) log('Layout "' + D.name + '" của tệp đã chuyển thành layout sửa được (' + D.ps.length + ' đối tượng giấy, ' + D.vps.length + ' khung nhìn).');
+    return j >= 0 ? dwgLayouts[j] : null;
+  }
+  A.layoutFromFile = convertFile; A.fileLayoutDef = fileDef;
+  A.userLayoutDefs = () => ulays();
+  // mở lại DXF/DWG do DVDCAD ghi: định nghĩa layout kèm trong tệp → thay layout cùng tên của tệp (khi máy chưa có bản riêng cho tệp này)
+  A.seedLayoutDefs = defs => { try{ if(ulays().length || !Array.isArray(defs)) return; usave(defs.filter(D => D && D.name && D.size).map(D => Object.assign({}, D, { from: D.name }))); }catch(err){ console.warn('layout', err); } };
+  A.isFileLayout = L => !!(L && !L.user && !L.isModel && L.paper);
   function curUser(){ try{ const L = dwgLayouts[currentLayout]; return L && L.user ? L : null; }catch(_){ return null; } }
   A.curUserLayout = curUser;
   function refreshLayout(nameKeep){
@@ -277,13 +318,14 @@
     const tb = D.tbv || {};
     A.dialog({ title, wide: true, html:
       '<label class="dvd-frow"><span>Tên layout</span><span class="v"><input id="lyN" value="' + esc(D.name) + '"></span></label>' +
-      '<label class="dvd-frow"><span>Khổ giấy</span><span class="v"><select id="lyP">' + Object.keys(PAPERS).map(k => '<option' + (k === D.paper ? ' selected' : '') + '>' + k + '</option>').join('') + '</select> <select id="lyO"><option value="1"' + (D.land ? ' selected' : '') + '>Ngang</option><option value="0"' + (!D.land ? ' selected' : '') + '>Dọc</option></select></span></label>' +
+      '<label class="dvd-frow"><span>Khổ giấy</span><span class="v"><select id="lyP">' + Object.keys(PAPERS).map(k => '<option' + (k === D.paper ? ' selected' : '') + '>' + k + '</option>').join('') + (PAPERS[D.paper] ? '' : '<option value="custom" selected>' + Math.round(Math.max(...D.size)) + ' × ' + Math.round(Math.min(...D.size)) + '</option>') + '</select> <select id="lyO"><option value="1"' + (D.land ? ' selected' : '') + '>Ngang</option><option value="0"' + (!D.land ? ' selected' : '') + '>Dọc</option></select></span></label>' +
+      '<label class="dvd-frow"><span>Khung viền</span><span class="v"><input type="checkbox" id="lyFr"' + (D.frame !== false ? ' checked' : '') + '></span></label>' +
       '<label class="dvd-frow"><span>Khung tên</span><span class="v"><input type="checkbox" id="lyTb"' + (D.tb !== false ? ' checked' : '') + '></span></label>' +
       '<label class="dvd-frow"><span>Công trình</span><span class="v"><input id="lyCt" value="' + esc(tb.cty || '') + '"></span></label><label class="dvd-frow"><span>Tên bản vẽ</span><span class="v"><input id="lyBv" value="' + esc(tb.bv || '') + '"></span></label>' +
       '<label class="dvd-frow"><span>Số bản vẽ</span><span class="v"><input id="lySo" value="' + esc(tb.so || '') + '"></span></label><label class="dvd-frow"><span>Thiết kế / Kiểm tra</span><span class="v"><input id="lyTk" value="' + esc(tb.tk || '') + '" style="width:48%"> <input id="lyKt" value="' + esc(tb.kt || '') + '" style="width:48%"></span></label>' +
       '<label class="dvd-frow"><span>Đơn vị thiết kế</span><span class="v"><input id="lyDv" value="' + esc(tb.dv || '') + '"></span></label>' +
       (D._new ? '<label class="dvd-frow"><span>Khung nhìn đầu tiên — tỉ lệ 1:</span><span class="v"><input id="lyS" placeholder="để trống = vừa khung" style="width:120px"></span></label>' : ''),
-      ok: r => { const g = id => r.querySelector('#' + id); const nm = g('lyN').value.trim() || D.name; D.name = nm; D.paper = g('lyP').value; D.land = g('lyO').value === '1'; const p = PAPERS[D.paper]; D.size = D.land ? [p[1], p[0]] : [p[0], p[1]]; D.tb = g('lyTb').checked;
+      ok: r => { const g = id => r.querySelector('#' + id); const nm = g('lyN').value.trim() || D.name; D.name = nm; D.paper = g('lyP').value; D.land = g('lyO').value === '1'; const p = PAPERS[D.paper]; if(p) D.size = D.land ? [p[1], p[0]] : [p[0], p[1]]; else { const a = Math.max(...D.size), b = Math.min(...D.size); D.size = D.land ? [a, b] : [b, a]; } D.tb = g('lyTb').checked; D.frame = g('lyFr').checked;
         D.tbv = { cty: g('lyCt').value, bv: g('lyBv').value, so: g('lySo').value, tk: g('lyTk').value, kt: g('lyKt').value, dv: g('lyDv').value }; const sc = D._new ? parseFloat(String(g('lyS').value).replace(',', '.')) : NaN; delete D._new; onOk(D, sc > 0 ? sc : null); } });
   }
   plain(['LAYOUT', 'LO', 'LAYOUTNEW'], 'Tạo layout in: khổ giấy, khung tên, khung nhìn theo tỉ lệ', () => {
@@ -301,7 +343,7 @@
       log('Đã tạo layout "' + nm + '" khổ ' + D2.paper + ', khung nhìn 1:' + n + '. MVIEW để thêm khung nhìn, VPEDIT để chỉnh tỉ lệ/tâm, PLOT để in.');
     });
   });
-  function needUser(){ const U = curUser(); if(!U){ log('Chuyển sang một layout do bạn tạo (lệnh LAYOUT) trước.'); return null; } return U; }
+  function needUser(){ const U = curUser() || (A.ensurePaperLayout ? A.ensurePaperLayout() : null); if(!U){ log('Chuyển sang một layout do bạn tạo (lệnh LAYOUT) trước.'); return null; } return U; }
   function saveDef(D){ const L = ulays(); const i = L.findIndex(x => x.name === D.name); if(i >= 0) L[i] = D; else L.push(D); usave(L); refreshLayout(D.name); }
   cmd(['MVIEW', 'MV'], 'Tạo khung nhìn (viewport) trên layout theo tỉ lệ', async () => {
     const U = needUser(); if(!U) return; const D = deep(U.def);
@@ -328,10 +370,17 @@
   function layoutMenu(i, x, y){
     const L = dwgLayouts[i]; if(!L || L.isModel) { A.menu(x, y - 60, [{ t: 'Layout mới…', ic: 'LAYOUT', fn: () => DVDCmd.run('LAYOUT') }]); return; }
     const items = [{ t: 'Layout mới…', ic: 'LAYOUT', fn: () => DVDCmd.run('LAYOUT') }];
+    const gone = nm => { const LL = ulays().filter(z => z.from !== nm && z.name !== nm); LL.push({ name: nm, from: nm, gone: true }); usave(LL); const mi = dwgLayouts.findIndex(z => z.isModel); if(mi >= 0) switchLayout(mi); installLayouts(); };
+    if(!L.user && L.paper){   // layout đọc từ tệp
+      items.push({ t: 'Chuyển thành layout sửa được', ic: 'LAYOUT', fn: () => convertFile(i) },
+        { t: 'In layout này…', ic: 'PLOT', fn: () => { if(i !== currentLayout) switchLayout(i); setTimeout(() => DVDCmd.run('PLOT'), 50); } },
+        { sep: 1 }, { t: 'Xoá layout', ic: 'ERASE', fn: () => { if(confirm('Xoá layout "' + L.name + '"?')) gone(L.name); } });
+      A.menu(x, y - items.length * 30 - 10, items); return; }
+    if(L.user && L.def && L.def.from != null) items.push({ t: 'Khôi phục layout gốc của tệp', ic: 'UNDO', fn: () => { if(!confirm('Bỏ mọi thay đổi trên layout "' + L.name + '" và lấy lại bản trong tệp?')) return; const nm = L.def.from; usave(ulays().filter(z => z.from !== nm)); installLayouts(); const j = dwgLayouts.findIndex(z => !z.user && z.name === nm); if(j >= 0){ currentLayout = -1; switchLayout(j); } } });
     if(L.user) items.push({ t: 'Khổ giấy & khung tên…', ic: 'SETTINGS', fn: () => { if(i !== currentLayout) switchLayout(i); const D = deep(L.def); const old = D.name; layoutDialog(D, 'Thiết lập layout', D2 => { const LL = ulays(); const k = LL.findIndex(x => x.name === old); if(k >= 0) LL[k] = D2; usave(LL); refreshLayout(D2.name); }); } },
       { t: 'Khung nhìn (tỉ lệ, tâm)…', ic: 'ZW', fn: () => { if(i !== currentLayout) switchLayout(i); setTimeout(vpEdit, 50); } },
       { t: 'In layout này…', ic: 'PLOT', fn: () => { if(i !== currentLayout) switchLayout(i); setTimeout(() => DVDCmd.run('PLOT'), 50); } },
-      { sep: 1 }, { t: 'Xoá layout', ic: 'ERASE', fn: () => { if(!confirm('Xoá layout "' + L.name + '"?')) return; const mi = dwgLayouts.findIndex(z => z.isModel); if(mi >= 0) switchLayout(mi); usave(ulays().filter(z => z.name !== L.name)); installLayouts(); } });
+      { sep: 1 }, { t: 'Xoá layout', ic: 'ERASE', fn: () => { if(!confirm('Xoá layout "' + L.name + '"?')) return; if(L.def && L.def.from != null){ gone(L.def.from); return; } const mi = dwgLayouts.findIndex(z => z.isModel); if(mi >= 0) switchLayout(mi); usave(ulays().filter(z => z.name !== L.name)); installLayouts(); } });
     A.menu(x, y - items.length * 30 - 10, items);
   }
   A.layoutMenu = layoutMenu; A.saveLayoutDef = saveDef; A.proIdbGet = idbGet; A.xrefList = xrefs; A.refreshLayout = refreshLayout;

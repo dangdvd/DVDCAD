@@ -1,41 +1,42 @@
-## DVDCAD 5.10.0 — hộp thoại như AutoCAD 2027, tự lưu DWG, dòng lệnh như AutoCAD 2027
+## DVDCAD 5.11.0 — layout sửa được và lưu đúng vào DWG / DXF, DIESEL, nhập CUIX, thêm nhiều lệnh và hộp thoại như AutoCAD 2027
 
 Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Windows. Tên lệnh, lệnh tắt và cách dùng giống AutoCAD để người dùng chuyển sang không bỡ ngỡ.
 
 ### Tải về
-- **DVDCAD-Setup-5.10.0.exe** — bộ cài.
+- **DVDCAD-Setup-5.11.0.exe** — bộ cài.
   - Cài cho tài khoản Windows đang dùng, không cần quyền quản trị.
   - Có lối tắt Desktop và Start Menu.
   - Nhấp đúp file .dwg / .dxf là mở bằng DVDCAD.
-- **DVDCAD-5.10.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
+- **DVDCAD-5.11.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
 
 Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More info → Run anyway**.
 
 ### Có gì mới
-- **Hộp thoại lệnh bố cục như AutoCAD 2027.**
-  - Khung chung: thanh tiêu đề kéo được, nút ? và ×, OK · Cancel · Help ở góc dưới phải.
-  - Dimension Style Manager có đủ 7 tab và ô xem trước; sửa kiểu thì kích thước trong bản vẽ đổi theo.
-  - Layer Properties Manager và bảng Blocks là bảng nổi, vẫn vẽ được khi đang mở.
-  - Block Definition, Attribute Definition, Text Style, Drafting Settings, Drawing Units, Options, Plot, Insert Table, Quick Select, Linetype Manager, Lineweight Settings, Point Style.
-  - HATCH hiện tab ngữ cảnh **Hatch Creation** trên ribbon; `HATCHSET` mở Hatch and Gradient.
-- **Ribbon không còn thanh cuộn ngang che tên bảng.**
-  - Bảng tự thu gọn theo bề ngang màn hình (kể cả khi Windows đặt tỉ lệ 125–150%).
-  - Bấm bảng đã thu gọn để mở đủ nút.
-- **Tự lưu DWG, không cần ODA File Converter.**
-  - `SAVEDWG` ghi thẳng file **DWG 2000 (AC1015)** — định dạng AutoCAD từ bản 2000 trở đi đều mở được.
-  - `SAVEAS` / **Ctrl+Shift+S** chọn được *Bản vẽ AutoCAD (\*.dwg)*; **Ctrl+S** sau đó ghi đè đúng file DWG đó.
-  - Giữ lớp, kiểu nét (cả kiểu nét có chữ / hình), kiểu chữ, khối + thuộc tính, kích thước, hatch đặc và hatch mẫu, đa tuyến có cung / độ rộng, MTEXT, vùng che, layout, ảnh xem trước.
-  - Mở lại trong DVDCAD còn nguyên khối 3D tham số, vùng, thứ tự vẽ, ràng buộc, khối động.
-  - Cần DWG 2004 → 2018 thì vẫn chọn được trong `DWGSERVER` (qua ODA File Converter); không có ODA thì DVDCAD tự ghi DWG 2000.
-- **Dòng lệnh như AutoCAD 2027.**
-  - Lời nhắc có tuỳ chọn bấm được, nhập động (x,y tương đối, `#` tuyệt đối, Tab khoá ô), khoá góc `<45`, bộ lọc điểm `.X`, `FROM`, `M2P`, `TT`.
-  - Lệnh trong suốt (`'ZOOM`, `'CAL`…), chuột phải bấm nhanh = Enter / giữ = menu, gợi ý khi gõ (AutoComplete, sửa lỗi gõ, đồng nghĩa, biến hệ thống, nội dung bản vẽ).
-  - Bản dòng lệnh cho script / LISP: `-LAYER`, `-INSERT`, `-BLOCK`, `-OSNAP`; `UNDO` BE/E/M/B; F1 mở trang cách dùng của lệnh đang chạy.
-- **Mở DWG:** thuộc tính khối (ATTRIB) không còn bị đọc trùng hai lần.
-- **Ký số bản dựng:** GitHub Actions tự ký bằng chứng thư .pfx hoặc Azure Trusted Signing khi repo có cấu hình (xem hướng dẫn).
+- **Layout và không gian giấy.**
+  - Vẽ / sửa thẳng trên giấy của layout (ghi chú, khung, ký hiệu); khung nhìn dời / kéo / xoá / sao chép như đối tượng; **CHSPACE** chuyển đối tượng giữa giấy và Model đúng tỉ lệ.
+  - Layout đọc từ tệp DWG / DXF giờ **sửa được**: chỉ cần vẽ hoặc sửa, layout tự chuyển và giữ nguyên đối tượng giấy, khung nhìn của tệp. Chuột phải vào tab: Chuyển thành layout sửa được, Khôi phục layout gốc, Xoá layout.
+  - Mở DXF có đủ các tab layout; đối tượng giấy không còn lẫn vào Model (cả DXF và DWG).
+  - **Lưu DXF / DWG ghi layout thật**: khổ giấy, khung nhìn VIEWPORT theo tỉ lệ, khung tên và mọi đối tượng giấy. AutoCAD mở ra thấy đúng các tab layout; DVDCAD mở lại vẫn sửa tiếp được.
+  - **EXPORTLAYOUT** xuất layout ra Model, cắt mọi đối tượng theo khung nhìn (kể cả ảnh và khối 3D).
+- **Tuỳ biến giao diện (CUI).**
+  - Lệnh tự tạo bằng macro, thanh truy cập nhanh, tab ribbon riêng, phím tắt, thao tác nhấp đúp.
+  - **Nhập .cuix / .cui của AutoCAD** (CUIIMPORT, CUILOAD): macro, thanh công cụ, phím tắt, nhấp đúp.
+  - **DIESEL** đủ hàm, **MODEMACRO** trên thanh trạng thái, macro `$M=`.
+- **In.**
+  - Bảng kiểu in .ctb đủ thuộc tính: kiểu nét in (có **thích ứng**), đầu / nối nét (có **hình thoi**), kiểu tô, chuyển xám, bảng bề rộng nét; Plot Style Table Editor và STYLESMANAGER như AutoCAD.
+  - **PLOTSTAMP** (dấu in), in lộn ngược.
+- **Lệnh và hộp thoại mới như AutoCAD 2027.**
+  - Chữ: soạn MTEXT / TEXT ngay trên bản vẽ với tab **Text Editor**, đậm / nghiêng / gạch chân theo phần chữ, **trường (FIELD)**, **cột**.
+  - Bảng: **TABLESTYLE**, Insert Table, viền đôi, **TINSERT** (khối trong ô).
+  - Hatch đủ tuỳ chọn (mẫu tự định nghĩa, gốc mẫu, liên kết, thứ tự vẽ, dựng lại biên), Gradient 9 kiểu.
+  - **STANDARDS / CHECKSTANDARDS** (đọc được cả .dws / .dwg nhị phân), LAYTRANS, LAYWALK.
+  - **COUNT**, **BREPLACE**, **ADDSELECTED**, Action Recorder, HYPERLINK, SYSVDLG, SCALELISTEDIT, UCSMAN, BATTMAN, MLSTYLE (.mln), Visual Styles Manager có kiểu riêng.
+  - **GEOGRAPHICLOCATION** (vị trí địa lý cho mặt trời / bóng đổ 3D), **MSLIDE / VSLIDE / SLIDELIB** (.sld / .slb như AutoCAD).
+  - Dấu tâm / đường tâm liên kết, mảng có tab **Array Creation**, hộp **Select Color**.
 
 ### Kiểm thử
-- 36 file DWG mẫu của LibreDWG (2000 → 2018) và một bản vẽ 10 nghìn đối tượng: mở → lưu DWG → mở lại, giống hệt từng đối tượng.
+- Bộ kiểm thử trình duyệt cho từng nhóm lệnh: layout giấy, layout của tệp, ghi / đọc layout DXF + DWG, CHSPACE, EXPORTLAYOUT, kiểu in, CUI / CUIX, DIESEL, hatch, bảng, chuẩn CAD, slide, vị trí địa lý.
+- DWG ghi ra được LibreDWG (dwgread) đọc lại không lỗi; vòng mở → lưu DWG → mở lại giống hệt từng đối tượng.
 - GitHub Actions trên Windows:
   1. Kiểm thử nhanh: mở DWG / DXF, hộp thoại Mở / Lưu, trang Start, lệnh tắt, dòng lệnh, lưu DWG gốc và mở lại.
   2. ODA File Converter đọc + audit lại các file DWG vừa ghi.
@@ -43,6 +44,9 @@ Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More in
 
 ### Giới hạn
 - Khối động lưu ra thành khối thường ở trạng thái đang hiện (AutoCAD chưa đổi được tham số khối động do DVDCAD tạo).
+- Lưu DWG gốc là DWG 2000; khung nhìn chưa ghi lớp đóng băng riêng (VPLAYER) và đường cắt đa giác (VPCLIP) vào tệp.
+- EXPORTLAYOUT giữ chữ nguyên (lấy theo điểm đặt), khối 3D xuất theo hình chiếu bằng.
+- Nhập CUIX lấy macro, thanh công cụ, phím tắt, nhấp đúp; chưa lấy menu, ribbon và hình nút của AutoCAD.
 - DVDCAD không phải sản phẩm của Autodesk và không dùng logo, biểu tượng hay mã của Autodesk. AutoCAD là thương hiệu của Autodesk, Inc.
 
 Hướng dẫn: [HUONG-DAN-WINDOWS.md](https://github.com/dangdvd/DVDCAD/blob/main/HUONG-DAN-WINDOWS.md) · Danh sách lệnh: [HUONG-DAN-LENH.md](https://github.com/dangdvd/DVDCAD/blob/main/HUONG-DAN-LENH.md)

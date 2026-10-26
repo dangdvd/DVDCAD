@@ -6,6 +6,18 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5r: layout của tệp sửa được, DXF / DWG ghi layout thật, DIESEL + MODEMACRO, nhập CUIX, nét in thích ứng, đầu nét thoi
+- Đọc DXF: `parseDXF` trả thêm `layouts` (LAYOUT trong OBJECTS; khối giấy qua mã 340 của BLOCK_RECORD vì 330 bị bỏ khi đọc) và `paper` (đối tượng mã 67 = 1 của ENTITIES, tách khỏi Model; VIEWPORT gom ở `list.vports`). `dxfLayouts(r)` dựng `dwgLayouts` giống `buildLayouts` của DWG; `paper.lim` = tờ giấy (khổ giấy thiết lập in, hoặc LIMMIN / LIMMAX), viền `vpf` không in.
+- Đọc DWG: LibreDWG gộp đối tượng `*Paper_Space*` vào `db.entities` → `dwgBuild` lọc theo handle để Model chỉ còn `*Model_Space`.
+- Layout của tệp → layout DVDCAD: `A.layoutFromFile(i)` (`fileDef`: `ps` = đối tượng giấy của tệp, `vps` với `n = vh × mmU / h`, `org` gốc tờ giấy, `frame: false`, `tb: false`, `from` = tên layout tệp). `installLayouts` dựng lại tab từ ảnh chụp `dwgLayouts._file`: định nghĩa có `from` thay đúng chỗ, `gone` = đã xoá.
+  - `A.commit` trong layout tệp tự chuyển (`A.ensurePaperLayout`); `A.canEdit` / `A.editList` coi layout tệp là sửa được.
+- Ghi DXF (`A.dxfR2000(ents, { layouts })`, tự bật khi `ents === modelEntities`): mỗi layout một LAYOUT (40–45 khổ giấy, 10/20–11/21 giới hạn, 331 khung nhìn tổng), BLOCK_RECORD `*Paper_Space` / `*Paper_SpaceN`, VIEWPORT (ID 1 = tờ giấy), đối tượng giấy có mã 67. XRECORD DVDCAD1 thêm `lay` (định nghĩa layout) → `A.seedLayoutDefs` khi mở lại.
+- DWG 2000 (`dvd-dwg.js`): thực thể VIEWPORT (kiểu 34) theo thứ tự trường của LibreDWG; LAYOUT ghi handle khung nhìn đang hoạt động.
+- DIESEL: `A.diesel(str)`; `MODEMACRO` (biến phiên, hiện ở `#acMM` trên thanh trạng thái); `A.runMacro` tính `$M=` trước khi tách lệnh; lệnh DIESEL.
+- CUIX: `A.cuiRead(file)` — giải nén zip bằng `DecompressionStream('deflate-raw')`, đọc `MenuGroup.cui` (MenuMacro, Toolbar, Accelerator, DoubleClickAction) → định dạng `.dvdcui`; `A.cuiImportFile` / `A.cuiLoadFile`.
+- In theo .ctb: kiểu nét thích ứng (`ltDash` co mẫu theo `A.entLen(e)`, khoá nhóm kèm hệ số), đầu / nối hình thoi (`window._plotCJc` đổi sang butt / bevel, `window._plotDiamond` tô mũi thoi).
+- EXPORTLAYOUT: ảnh giữ `clip` + `cpoly` (DXF ghi khung đã cắt), khối 3D → `A.solidPlan(e)` (cạnh lưới / biên dạng / đường tròn) rồi cắt như nét.
+
 ## v5q: không gian giấy + CHSPACE, DWS nhị phân, kiểu in đủ thuộc tính, cắt EXPORTLAYOUT, kiểu hiển thị riêng, vị trí địa lý, slide, CUI
 - Tệp mới `dvd-acad-dlg3.js` (nạp sau `dvd-acad-dlg2.js`).
 - Không gian giấy: layout tự tạo giữ `def.ps` (đối tượng giấy, giữ tham chiếu qua các lần dựng lại nhờ `PSLIVE` trong `dvd-acad-pro.js`; `A.sheetPrims`, `A.saveLayoutQuiet`).

@@ -156,7 +156,7 @@
     if(!ME().length){ say('Chưa có bản vẽ.'); return; }
     const nm = baseName(), files = [], rep = [], used = new Set();
     const uniq = n => { let s = n, k = 1; while(used.has(s.toLowerCase())) s = n.replace(/(\.[^.]*)?$/, m => '_' + (k++) + (m || '')); used.add(s.toLowerCase()); return s; };
-    let dxf; try{ dxf = entitiesToDXF(ME().filter(e => !e.xr)); }catch(err){ console.warn(err); log('Không tạo được DXF.'); return; }
+    let dxf; try{ dxf = entitiesToDXF(ME().filter(e => !e.xr), { layouts: true }); }catch(err){ console.warn(err); log('Không tạo được DXF.'); return; }
     files.push({ name: uniq(nm + '.dxf'), data: await toU8(dxf) }); rep.push('Bản vẽ: ' + nm + '.dxf (' + ME().filter(e => !e.xr).length + ' đối tượng)');
     const imgs = new Map(); for(const e of ME()) if(e.type === 'IMAGE' && e.img && !imgs.has(e.img)) imgs.set(e.img, e.name || e.img);
     for(const [id, n] of imgs){ let b = null; try{ b = A.proIdbGet ? await A.proIdbGet('img:' + id) : null; }catch(_){} if(b){ const fn = uniq('images/' + String(n).replace(/[\\/:*?"<>|]+/g, '_')); files.push({ name: fn, data: await toU8(b) }); rep.push('Ảnh: ' + fn); } else rep.push('Ảnh (thiếu dữ liệu): ' + n); }

@@ -27,8 +27,14 @@
   const layoutByName = n => { try{ return dwgLayouts.find(L => L.user && L.name === n) || null; }catch(_){ return null; } };
   const psOf = L => { const D = L.def; if(!Array.isArray(D.ps)) D.ps = []; return D.ps; };
   A.paperLayout = userLayout;
-  A.canEdit = () => { try{ return isModelView() || !!userLayout(); }catch(_){ return true; } };
-  A.editList = () => { const L = userLayout(); return L ? psOf(L) : modelEntities; };
+  // layout đọc từ tệp (DWG/DXF): sửa được — lần sửa đầu tiên tự chuyển thành layout DVDCAD (giữ đối tượng giấy + khung nhìn của tệp)
+  const fileLayout = () => { try{ if(isModelView()) return null; const L = dwgLayouts[currentLayout]; return A.isFileLayout && A.isFileLayout(L) ? L : null; }catch(_){ return null; } };
+  const ensureUser = () => { const U = userLayout(); if(U) return U; if(!fileLayout() || !A.layoutFromFile) return null; return A.layoutFromFile(currentLayout) || null; };
+  // thay đổi có chạm tới giấy của layout tệp không (thêm mới, hoặc sửa / xoá đối tượng giấy của tệp) — chỉ khi đó mới chuyển layout
+  const touchesPaper = ch => { const F = fileLayout(); if(!F || !ch) return false; if((ch.add || []).length) return true; const P = new Set(F.paper.paperPrims); return (ch.rep || []).some(x => x && P.has(x[0])) || (ch.del || []).some(e => P.has(e)); };
+  A.ensurePaperLayout = ensureUser;
+  A.canEdit = () => { try{ return isModelView() || !!userLayout() || !!fileLayout(); }catch(_){ return true; } };
+  A.editList = () => { const L = userLayout(); if(L) return psOf(L); const F = fileLayout(); return F ? F.paper.paperPrims.filter(e => e && !e.vpf) : modelEntities; };
   A.inPaper = () => !!userLayout();
   function psAfter(L){ try{ const D = L.def; L.paper.paperPrims = (A.sheetPrims ? A.sheetPrims(D) : L.paper.paperPrims.filter(e => !psOf(L).includes(e))).concat(psOf(L));
       if(dwgLayouts[currentLayout] === L){ entities = buildPaperEntities(L); bbDirty = true; try{ invalidateSnap(); }catch(_){} }
@@ -52,7 +58,7 @@
     pushUndo({ op: 'fn', undo: () => setVps(name, old), redo: () => setVps(name, fin) });
     const R = new Set(vrep.map(x => x[0])), Dl = new Set(vdel), Ad = new Set(vadd);
     return Object.assign({}, ch, { rep: (ch.rep || []).filter(x => !(x && R.has(x[0]))), del: (ch.del || []).filter(e => !Dl.has(e)), add: (ch.add || []).filter(e => !Ad.has(e)) }); }
-  { const _c = A.commit; A.commit = function(ch, msg){ if(PSMODE) return _c.apply(this, arguments); const L0 = userLayout(); if(!L0 || !ch) return _c.apply(this, arguments);
+  { const _c = A.commit; A.commit = function(ch, msg){ if(PSMODE) return _c.apply(this, arguments); const L0 = touchesPaper(ch) ? ensureUser() : userLayout(); if(!L0 || !ch) return _c.apply(this, arguments);
       const ch2 = vpEdits(L0, ch); const L = userLayout() || L0; const nothing = !(ch2.rep || []).length && !(ch2.del || []).length && !(ch2.add || []).length;
       if(nothing){ try{ draw(); }catch(_){} return ch2 !== ch; }
       const top0 = editUndoStack[editUndoStack.length - 1]; let r;
@@ -87,13 +93,38 @@
   const ctbTable = () => { if(!plotMode || typeof _plotStyle !== 'string' || !_plotStyle.startsWith('ctb:') || !A.ctb) return null; const now = Date.now(); if(now - ctbT > 1500){ CTBM.clear(); ctbT = now; } const n = _plotStyle.slice(4); if(!CTBM.has(n)) CTBM.set(n, A.ctb.get(n)); return CTBM.get(n); };
   const ctbSt = e => { const T = ctbTable(); if(!T || !T.st || !e) return null; return T.st[A.aciOf ? A.aciOf(e.col || A.layerHex(e.layer || '0')) : 7] || null; };
   A.ctbStyleOf = ctbSt;
-  const CAP = ['butt', 'square', 'round', 'square'], JOIN = ['miter', 'bevel', 'round', 'bevel'];
+  const CAP = ['butt', 'square', 'round', 'diamond'], JOIN = ['miter', 'bevel', 'round', 'diamond'];
   const capJoin = st => st && (st.es != null || st.js != null) ? (st.es != null ? CAP[st.es] || 'round' : 'round') + ',' + (st.js != null ? JOIN[st.js] || 'round' : 'round') : '';
   window._plotCJ = e => capJoin(ctbSt(e));
+  // canvas chưa có đầu / nối hình thoi: vẽ nét với butt / bevel rồi tô thêm mũi thoi ở hai đầu và ở mỗi đỉnh nối
+  const cjCanvas = cj => { const q = String(cj || '').split(','); return [q[0] === 'diamond' ? 'butt' : (q[0] || 'round'), q[1] === 'diamond' ? 'bevel' : (q[1] || 'round')]; };
+  window._plotCJc = cjCanvas;
+  function diamondDeco(e, w, cj){ const q = String(cj || '').split(','), cap = q[0] === 'diamond', join = q[1] === 'diamond'; if(!(cap || join) || !(w > 1.2)) return;
+    let P = null, closed = false;
+    if(e.type === 'LINE') P = [{ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }];
+    else if(e.type === 'POLYLINE'){ P = (e.vertices || []).slice(); closed = !!e.closed; }
+    else if(e.type === 'ARC'){ const r = e.r, a1 = e.a1 * Math.PI / 180, a2 = e.a2 * Math.PI / 180, d = 1e-3, pt = t => ({ x: e.cx + r * Math.cos(t), y: e.cy + r * Math.sin(t) }); P = [pt(a1), pt(a1 + d), pt(a2 - d), pt(a2)]; }
+    if(!P || P.length < 2) return; const S = P.map(p => toScreen(p.x, p.y)), h = w / 2, g = ctx; const sv = g.fillStyle; g.fillStyle = g.strokeStyle;
+    const unit = (a, b) => { const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1; return { x: dx / L, y: dy / L }; };
+    g.beginPath();
+    if(cap && !closed){ const ends = [[S[0], unit(S[1], S[0])], [S[S.length - 1], unit(S[S.length - 2], S[S.length - 1])]];
+      for(const [p, u] of ends){ const n = { x: -u.y, y: u.x }; g.moveTo(p.x + n.x * h, p.y + n.y * h); g.lineTo(p.x + u.x * h, p.y + u.y * h); g.lineTo(p.x - n.x * h, p.y - n.y * h); g.closePath(); } }
+    if(join && e.type !== 'ARC'){ const n = S.length; for(let i = closed ? 0 : 1; i < (closed ? n : n - 1); i++){ const a = S[(i - 1 + n) % n], v = S[i], b = S[(i + 1) % n]; const d1 = unit(a, v), d2 = unit(v, b); const cr = d1.x * d2.y - d1.y * d2.x; if(Math.abs(cr) < 1e-6) continue;
+        const sg = cr > 0 ? -1 : 1, n1 = { x: -d1.y * sg, y: d1.x * sg }, n2 = { x: -d2.y * sg, y: d2.x * sg }; let bx = n1.x + n2.x, by = n1.y + n2.y; const bl = Math.hypot(bx, by) || 1; bx /= bl; by /= bl;
+        g.moveTo(v.x, v.y); g.lineTo(v.x + n1.x * h, v.y + n1.y * h); g.lineTo(v.x + bx * h, v.y + by * h); g.lineTo(v.x + n2.x * h, v.y + n2.y * h); g.closePath(); } }
+    g.fill(); g.fillStyle = sv; }
+  window._plotDiamond = diamondDeco;
+  // kiểu nét thích ứng (adaptive): co giãn mẫu cho vừa số nguyên lần trên chiều dài đối tượng — đối tượng kết thúc bằng mẫu đủ
+  const entLen = e => { const t = e.type; if(t === 'LINE') return Math.hypot(e.x2 - e.x1, e.y2 - e.y1); if(t === 'CIRCLE') return 2 * Math.PI * e.r;
+    if(t === 'ARC'){ let sw = ((e.a2 - e.a1) % 360 + 360) % 360; if(sw < 1e-9) sw = 360; return e.r * sw * Math.PI / 180; }
+    if(t === 'POLYLINE'){ const V = e.vertices || []; let L = 0; for(let i = 1; i < V.length; i++) L += Math.hypot(V[i].x - V[i - 1].x, V[i].y - V[i - 1].y); if(e.closed && V.length > 2) L += Math.hypot(V[0].x - V[V.length - 1].x, V[0].y - V[V.length - 1].y); return L; }
+    return 0; };
+  A.entLen = entLen;
   // kiểu nét của bảng kiểu in: mẫu cố định theo mm giấy (ISO không theo hệ số tỉ lệ chung)
   { const _lt = window.ltDash; if(typeof _lt === 'function') window.ltDash = function(e){ const st = plotMode ? ctbSt(e) : null; if(st && st.lt != null && A.PSLT && A.PSLT[st.lt]){ const pat = A.PSLT[st.lt][1]; if(!pat.length) return null;
-        const T = ctbTable(), iso = st.lt >= 17, k = 96 / 25.4 * (T && T.af && !iso && T.sf > 0 ? T.sf : 1); const arr = pat.map(v => Math.max(0.4, Math.abs(v) || 0.3) * k), tot = arr.reduce((a, b) => a + b, 0);
-        return { arr, key: 'PS' + st.lt + '|' + k, per: tot / (view.scale || 1), off: 0 }; }
+        const T = ctbTable(), iso = st.lt >= 17, k = 96 / 25.4 * (T && T.af && !iso && T.sf > 0 ? T.sf : 1); let arr = pat.map(v => Math.max(0.4, Math.abs(v) || 0.3) * k), tot = arr.reduce((a, b) => a + b, 0), f = 1;
+        if(!st.na){ const Lw = entLen(e), per0 = tot / (view.scale || 1); if(Lw > 0 && per0 > 0){ const n = Math.max(1, Math.round(Lw / per0)); f = +(Lw / n / per0).toFixed(3); if(f > 0 && f !== 1){ arr = arr.map(v => v * f); tot *= f; } else f = 1; } }
+        return { arr, key: 'PS' + st.lt + '|' + k + '|' + f, per: tot / (view.scale || 1), off: 0, ad: f }; }
       return _lt.apply(this, arguments); }; }
   // kiểu tô: mẫu tô (pattern) cho vùng tô đặc khi in
   let FILLST = null; const PATM = new Map();
@@ -110,8 +141,8 @@
     q.stroke(); let p = null; try{ p = g.createPattern(c, 'repeat'); if(p && p.setTransform && typeof DOMMatrix === 'function') p.setTransform(new DOMMatrix().scale(0.5)); }catch(_){} PATM.set(key, p); if(PATM.size > 200) PATM.clear(); return p; }
   { const P = CanvasRenderingContext2D.prototype, _fill = P.fill; P.fill = function(){ if(FILLST != null && plotMode && FILLST !== 64 && FILLST !== 73 && typeof this.fillStyle === 'string'){ const pat = fillPat(this, FILLST, this.fillStyle); if(pat){ const sv = this.fillStyle; this.fillStyle = pat; try{ return _fill.apply(this, arguments); } finally { this.fillStyle = sv; } } } return _fill.apply(this, arguments); }; }
   const styled = fn => function(e){ if(!plotMode) return fn.apply(this, arguments); const st = ctbSt(e); if(!st || (st.es == null && st.js == null && st.fs == null)) return fn.apply(this, arguments);
-    const g = ctx, sc = g.lineCap, sj = g.lineJoin, sf = FILLST, cj = capJoin(st); if(cj){ const q = cj.split(','); g.lineCap = q[0]; g.lineJoin = q[1]; } FILLST = st.fs != null ? st.fs : null;
-    try{ return fn.apply(this, arguments); } finally { g.lineCap = sc; g.lineJoin = sj; FILLST = sf; } };
+    const g = ctx, sc = g.lineCap, sj = g.lineJoin, sf = FILLST, cj = capJoin(st); if(cj){ const q = cjCanvas(cj); g.lineCap = q[0]; g.lineJoin = q[1]; } FILLST = st.fs != null ? st.fs : null;
+    try{ const r = fn.apply(this, arguments); if(cj && cj.includes('diamond') && e && e.type !== 'HATCH') try{ diamondDeco(e, g.lineWidth, cj); }catch(_){} return r; } finally { g.lineCap = sc; g.lineJoin = sj; FILLST = sf; } };
   if(typeof window.drawEntity === 'function') window.drawEntity = styled(window.drawEntity);
   if(typeof window.drawHatch === 'function') window.drawHatch = styled(window.drawHatch);
 
@@ -142,9 +173,19 @@
     if(t === 'TEXT' || t === 'POINT' || t === 'MTEXT'){ return insideAll({ x: e.x, y: e.y }, Ps) ? [e] : []; }
     if(t === 'HATCH'){ const L = []; for(const lp of e.loops || []){ let q = lp; for(const P of Ps) q = shClip(q, P); if(q.length >= 3) L.push(q); } if(!L.length) return []; return [Object.assign({}, e, { loops: L })]; }
     if(t === 'SOLID'){ let q = (e.pts || []).length === 4 ? [e.pts[0], e.pts[1], e.pts[3], e.pts[2]] : (e.pts || []).slice(); for(const P of Ps) q = shClip(q, P); if(q.length < 3) return []; return [{ type: 'HATCH', solid: true, layer: e.layer, col: e.col, bl: e.bl, loops: [q] }]; }
+    if(t === 'IMAGE'){ const b = entBBox(e); if(!b) return []; let q = (typeof imgCorners === 'function') ? imgCorners(e) : null; if(!q) return [e]; for(const P of Ps) q = shClip(q, P); if(q.length < 3) return [];   // ảnh: giữ ảnh + đường cắt theo khung nhìn
+      return [Object.assign({}, e, { cpoly: q, _kc: 1 })]; }
+    if(t === 'SOLID3D'){ const L = solidPlan(e); if(L) return L.flatMap(x => clipEnt(x, Ps)); }   // khối 3D: hình chiếu bằng (cạnh / biên dạng) rồi cắt như nét
     if(t === 'IMAGE' || t === 'SOLID3D' || t === 'XLINE'){ const b = entBBox(e); if(!b) return []; const P = Ps[0]; const bb = { x0: Math.min(...P.map(p => p.x)), y0: Math.min(...P.map(p => p.y)), x1: Math.max(...P.map(p => p.x)), y1: Math.max(...P.map(p => p.y)) }; return (b.x1 < bb.x0 || b.x0 > bb.x1 || b.y1 < bb.y0 || b.y0 > bb.y1) ? [] : [e]; }
     const r = clipCurve(e, Ps); return r == null ? [e] : r; }
   A.clipToRegion = (e, clip) => clipEnt(e, clipPolys(clip));
+  // hình chiếu bằng của khối 3D như khi vẽ trong khung nhìn: lưới → cạnh nhìn thấy; đùn → biên dạng + lỗ; trụ / nón / cầu → đường tròn
+  function solidPlan(e){ const base = { layer: e.layer, col: e.col, bl: e.bl, lt: e.lt, lw: e.lw };
+    if(e.k === 'mesh' && A.planEdges){ const L = A.planEdges(e) || [], out = []; for(let i = 0; i + 3 < L.length; i += 4) out.push(Object.assign({ type: 'LINE', x1: L[i], y1: L[i + 1], x2: L[i + 2], y2: L[i + 3] }, base)); return out; }
+    if(e.k === 'ext' && e.pts && e.pts.length >= 3) return [e.pts].concat(e.holes || []).filter(l => l && l.length >= 3).map(l => Object.assign({ type: 'POLYLINE', closed: true, vertices: l.map(p => ({ x: p.x, y: p.y })) }, base));
+    if(e.cx != null && e.r > 0){ const o = [Object.assign({ type: 'CIRCLE', cx: e.cx, cy: e.cy, r: e.r }, base)]; if(e.k === 'cone' && e.r2 > 0 && Math.abs(e.r2 - e.r) > 1e-9) o.push(Object.assign({ type: 'CIRCLE', cx: e.cx, cy: e.cy, r: e.r2 }, base)); return o; }
+    return null; }
+  A.solidPlan = solidPlan;
   plain(['EXPORTLAYOUT'], 'Xuất layout hiện hành ra bản vẽ mới ở không gian mô hình (DXF): khung tên, đối tượng giấy, nội dung khung nhìn cắt đúng theo khung (chữ nhật / đa giác)', async () => {
     let L = null; try{ L = dwgLayouts[currentLayout]; }catch(_){} if(!L || L.isModel){ log('EXPORTLAYOUT chỉ dùng được khi đang ở một layout (không phải Model).'); return; }
     const out = [], vpo = []; let cut = 0, drop = 0;
@@ -153,7 +194,7 @@
       const P = clipPolys(c), b = entBBox(e); if(b){ const R = P[0], x0 = Math.min(...R.map(p => p.x)), x1 = Math.max(...R.map(p => p.x)), y0 = Math.min(...R.map(p => p.y)), y1 = Math.max(...R.map(p => p.y)); if(b.x1 < x0 || b.x0 > x1 || b.y1 < y0 || b.y0 > y1){ drop++; continue; }
         if(b.x0 >= x0 && b.x1 <= x1 && b.y0 >= y0 && b.y1 <= y1 && !c.poly && !c.sub){ const w = deep(e); delete w.userAdded; delete w.clip; out.push(w); continue; } }
       const src = deep(e); delete src.userAdded; delete src.clip; let r = []; try{ r = clipEnt(src, P); }catch(err){ console.warn('clip', err); r = [src]; }
-      if(r.length !== 1 || r[0] !== src) cut++; for(const w of r){ const x = deep(w); delete x.clip; out.push(x); vpo.push(x); } }
+      if(r.length !== 1 || r[0] !== src) cut++; for(const w of r){ const x = deep(w); if(x._kc){ x.clip = { x: Math.min(...x.cpoly.map(p => p.x)), y: Math.min(...x.cpoly.map(p => p.y)), w: 0, h: 0, poly: x.cpoly }; x.clip.w = Math.max(...x.cpoly.map(p => p.x)) - x.clip.x; x.clip.h = Math.max(...x.cpoly.map(p => p.y)) - x.clip.y; delete x._kc; } else delete x.clip; out.push(x); vpo.push(x); } }
     if(!out.length){ log('Layout không có đối tượng nhìn thấy.'); return; }
     let txt; try{ txt = entitiesToDXF(out); }catch(err){ console.error(err); log('Không tạo được DXF.'); return; }
     const base = docNm().replace(/\.[^.]+$/, ''); await shareOrDownload(new Blob([txt], { type: 'application/dxf' }), base + '_' + String(L.name || 'Layout').replace(/[\\/:*?"<>|]+/g, '_') + '.dxf', 'application/dxf');
@@ -325,12 +366,13 @@
   let pauseRes = null;
   { const _rr = A.onReqRes; A.onReqRes = function(){ if(_rr) try{ _rr.apply(this, arguments); }catch(_){} if(pauseRes){ const r = pauseRes; pauseRes = null; setTimeout(r, 0); } }; }
   const waitUser = () => new Promise(res => { pauseRes = res; const t = setInterval(() => { if(!(A.busy && A.busy())){ clearInterval(t); if(pauseRes === res){ pauseRes = null; res(); } } else if(!pauseRes){ clearInterval(t); } }, 150); });
-  async function runMacro(m){ let s = String(m || '').trim(); if(s.startsWith('*')) s = s.slice(1); let cancel = false; while(/^\^C/i.test(s)){ s = s.slice(2); cancel = true; } if(cancel && A.busy && A.busy()) A.cancel(true);
+  async function runMacro(m){ let s = String(m || '').trim(); if(/^\$M=/i.test(s)) s = (A.diesel ? A.diesel(s.slice(3)) : s.slice(3)).trim();   // $M= : tính DIESEL trước khi chạy
+    if(s.startsWith('*')) s = s.slice(1); let cancel = false; while(/^\^C/i.test(s)){ s = s.slice(2); cancel = true; } if(cancel && A.busy && A.busy()) A.cancel(true);
     s = s.replace(/\^M/gi, ';'); const toks = []; let cur = ''; for(const ch of s){ if(ch === ';' || ch === ' '){ toks.push(cur); cur = ''; } else if(ch === '\\'){ if(cur) toks.push(cur); toks.push('\\'); cur = ''; } else cur += ch; } if(cur) toks.push(cur);
     const wait = ms => new Promise(r => setTimeout(r, ms)); let started = false;
     for(let i = 0; i < toks.length; i++){ const t = toks[i];
       if(t === '\\'){ if(A.busy && A.busy()) await waitUser(); continue; }
-      if(!started || !(A.busy && A.busy())){ if(t === '') continue; DVDCmd.run(t.replace(/^'/, '')); started = true; }
+      if(!started || !(A.busy && A.busy())){ if(t === '') continue; DVDCmd.run(t.replace(/^['_.]+/, '')); started = true; }
       else A.input(t);
       await wait(30); } }
   A.runMacro = runMacro;
@@ -443,10 +485,124 @@
   plain(['CUI', 'CUSTOMIZE', 'TOOLBAR', 'MENU'], 'Tuỳ biến giao diện (Customize User Interface): lệnh tự tạo bằng macro, thanh truy cập nhanh, tab ribbon riêng, phím tắt, thao tác nhấp đúp, tệp tuỳ biến bổ sung', () => { if(A.busy && A.busy()) A.cancel(true); cuiDlg(); });
   plain(['QUICKCUI'], 'Tuỳ biến nhanh thanh truy cập nhanh (Quick Access Toolbar) trong hộp CUI', () => { if(A.busy && A.busy()) A.cancel(true); cuiDlg('qat'); });
   plain(['CUIEXPORT'], 'Xuất tuỳ biến giao diện ra tệp .dvdcui', () => { const C = cuiGet(); shareOrDownload(new Blob([JSON.stringify({ dvdcui: 1, cmds: C.cmds, qat: C.qat, keys: C.keys, dbl: C.dbl, tabs: C.tabs }, null, 1)], { type: 'application/json' }), 'dvdcad.dvdcui', 'application/json'); log('CUIEXPORT: đã xuất ' + C.cmds.length + ' lệnh tự tạo, ' + C.keys.length + ' phím tắt, ' + C.tabs.length + ' tab riêng.'); });
-  plain(['CUIIMPORT'], 'Nhập tuỳ biến giao diện từ tệp .dvdcui (ghép vào tuỳ biến hiện có)', async () => { const F = await pickF('.dvdcui,.json'); const f = F && F[0]; if(!f) return; let o = null; try{ o = JSON.parse(await f.text()); }catch(_){} if(!o || !o.dvdcui){ say('Tệp tuỳ biến không hợp lệ.'); return; }
-    const C = cuiGet(), N = cuiNorm(o); for(const c of N.cmds) if(!C.cmds.some(x => x.name === c.name)) C.cmds.push(c); for(const k of N.keys){ C.keys = C.keys.filter(x => x.key !== k.key); C.keys.push(k); } Object.assign(C.dbl, N.dbl); if(N.qat) C.qat = N.qat; for(const t of N.tabs) if(!C.tabs.some(x => x.id === t.id)) C.tabs.push(t); lsSet(CUIK, C); cuiApply(); log('CUIIMPORT: đã nhập ' + f.name); });
-  plain(['CUILOAD'], 'Nạp tệp tuỳ biến bổ sung (.dvdcui) vào giao diện', async () => { const F = await pickF('.dvdcui,.json'); const f = F && F[0]; if(!f) return; let o = null; try{ o = JSON.parse(await f.text()); }catch(_){} if(!o || !o.dvdcui){ say('Tệp tuỳ biến không hợp lệ.'); return; }
-    const C = cuiGet(); C.partial = C.partial.filter(p => p.name !== f.name); C.partial.push({ name: f.name, data: o }); lsSet(CUIK, C); cuiApply(); log('CUILOAD: đã nạp ' + f.name); });
+  /* ---------- DIESEL (như AutoCAD): $(hàm,đối,…) — dùng trong MODEMACRO (thanh trạng thái) và macro $M= ---------- */
+  const DIESEL = (() => {
+    const N = s => { const v = parseFloat(String(s == null ? '' : s).trim()); return isFinite(v) ? v : 0; };
+    const F = v => { if(!isFinite(v)) return '0'; const r = Math.round(v * 1e8) / 1e8; return String(Object.is(r, -0) ? 0 : r); };
+    const julian = d => d.getTime() / 86400000 + 2440587.5 - d.getTimezoneOffset() / 1440;
+    const fromJulian = j => { const t = (j - 2440587.5) * 86400000; const d = new Date(t); return new Date(t + d.getTimezoneOffset() * 60000); };
+    const sv = n => { const u = String(n || '').trim().toUpperCase(); if(u === 'DATE') return F(julian(new Date()));
+      if(u === 'CDATE'){ const d = new Date(), p = (v, k) => String(v).padStart(k, '0'); return d.getFullYear() + p(d.getMonth() + 1, 2) + p(d.getDate(), 2) + '.' + p(d.getHours(), 2) + p(d.getMinutes(), 2) + p(d.getSeconds(), 2) + p(d.getMilliseconds(), 3); }
+      if(u === 'DWGNAME'){ return docNm(); } if(u === 'TILEMODE'){ try{ return isModelView() ? '1' : '0'; }catch(_){ return '1'; } }
+      let v; try{ v = A.sysvar && A.sysvar.get(u); }catch(_){} return v == null ? '' : typeof v === 'number' ? F(v) : String(v); };
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], MONTH = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], DAYF = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    function edtime(t, pic){ const d = +t ? fromJulian(+t) : new Date(); const p2 = v => String(v).padStart(2, '0');
+      const ampm = /AM\/PM|am\/pm|A\/P|a\/p/.test(pic), hr = ampm ? ((d.getHours() + 11) % 12) + 1 : d.getHours();
+      const T = [['DDDD', () => DAYF[d.getDay()]], ['DDD', () => DAY[d.getDay()]], ['DD', () => p2(d.getDate())], ['D', () => String(d.getDate())], ['MONTH', () => MONTH[d.getMonth()]], ['MON', () => MON[d.getMonth()]], ['MO', () => p2(d.getMonth() + 1)],
+        ['MSEC', () => String(d.getMilliseconds()).padStart(3, '0')], ['MM', () => p2(d.getMinutes())], ['M', () => String(d.getMonth() + 1)], ['YYYY', () => String(d.getFullYear())], ['YY', () => p2(d.getFullYear() % 100)], ['HH', () => p2(hr)], ['H', () => String(hr)], ['SS', () => p2(d.getSeconds())],
+        ['AM/PM', () => d.getHours() < 12 ? 'AM' : 'PM'], ['am/pm', () => d.getHours() < 12 ? 'am' : 'pm'], ['A/P', () => d.getHours() < 12 ? 'A' : 'P'], ['a/p', () => d.getHours() < 12 ? 'a' : 'p']];
+      let out = '', i = 0; const s = String(pic); while(i < s.length){ const m = T.find(([k]) => s.startsWith(k, i)); if(m){ out += m[1](); i += m[0].length; } else { out += s[i]; i++; } } return out; }
+    function rtos(v, mode, prec){ v = N(v); mode = mode === '' || mode == null ? 2 : N(mode) | 0; prec = prec === '' || prec == null ? 4 : Math.max(0, Math.min(8, N(prec) | 0));
+      if(mode === 1){ const s = v.toExponential(prec).toUpperCase(); return s.replace(/E([+-])(\d)$/, 'E$1' + '0$2'); }
+      if(mode === 3 || mode === 4){ const neg = v < 0, a = Math.abs(v), ft = Math.floor(a / 12), inch = a - ft * 12; const ii = mode === 3 ? inch.toFixed(prec) : (() => { const den = 2 ** prec, n = Math.round(inch * den); const w = Math.floor(n / den), f = n % den; if(!f) return String(w); let g = f, h = den; while(g % 2 === 0){ g /= 2; h /= 2; } return (w ? w + '-' : '') + g + '/' + h; })(); return (neg ? '-' : '') + (ft ? ft + "'-" : '') + ii + '"'; }
+      if(mode === 5){ const den = 2 ** prec, n = Math.round(Math.abs(v) * den), w = Math.floor(n / den), f = n % den; let g = f, h = den; while(g && g % 2 === 0){ g /= 2; h /= 2; } return (v < 0 ? '-' : '') + (f ? (w ? w + ' ' : '') + g + '/' + h : String(w)); }
+      return v.toFixed(prec); }
+    function angtos(v, mode, prec){ v = N(v); mode = mode === '' || mode == null ? 0 : N(mode) | 0; prec = prec === '' || prec == null ? 0 : Math.max(0, Math.min(8, N(prec) | 0)); const deg = ((v * 180 / Math.PI) % 360 + 360) % 360;
+      if(mode === 1){ const D = Math.floor(deg), mf = (deg - D) * 60, Mi = Math.floor(mf), S = (mf - Mi) * 60; return D + 'd' + Mi + "'" + S.toFixed(Math.max(0, prec - 4)) + '"'; }
+      if(mode === 2) return (deg / 0.9).toFixed(prec) + 'g'; if(mode === 3) return (deg * Math.PI / 180).toFixed(prec) + 'r';
+      if(mode === 4){ const b = (90 - deg + 360) % 360; const ns = b <= 90 || b >= 270 ? 'N' : 'S', ew = b < 180 ? 'E' : 'W'; const a = ns === 'N' ? (b <= 90 ? b : 360 - b) : Math.abs(180 - b); return a < 1e-9 ? ns : Math.abs(a - 90) < 1e-9 ? ew : ns + ' ' + a.toFixed(prec) + 'd ' + ew; }
+      return deg.toFixed(prec); }
+    const ERR = f => '$(' + f + ',??)';
+    const FN = {
+      '+': a => F(a.reduce((s, x) => s + N(x), 0)), '-': a => F(a.slice(1).reduce((s, x) => s - N(x), N(a[0]))), '*': a => F(a.reduce((s, x) => s * N(x), 1)),
+      '/': a => { let s = N(a[0]); for(const x of a.slice(1)){ if(N(x) === 0) return null; s /= N(x); } return F(s); },
+      '=': a => N(a[0]) === N(a[1]) ? '1' : '0', '<': a => N(a[0]) < N(a[1]) ? '1' : '0', '>': a => N(a[0]) > N(a[1]) ? '1' : '0', '!=': a => N(a[0]) !== N(a[1]) ? '1' : '0', '<=': a => N(a[0]) <= N(a[1]) ? '1' : '0', '>=': a => N(a[0]) >= N(a[1]) ? '1' : '0',
+      and: a => String(a.reduce((s, x) => s & (N(x) | 0), -1)), or: a => String(a.reduce((s, x) => s | (N(x) | 0), 0)), xor: a => String(a.reduce((s, x) => s ^ (N(x) | 0), 0)),
+      eq: a => String(a[0]) === String(a[1]) ? '1' : '0', if: a => a.length < 2 ? null : (N(a[0]) !== 0 ? a[1] : (a[2] == null ? '' : a[2])),
+      index: a => { const L = String(a[1] == null ? '' : a[1]).split(','), i = N(a[0]) | 0; return i >= 0 && i < L.length ? L[i] : ''; }, nth: a => { const i = N(a[0]) | 0; return i >= 0 && i + 1 < a.length ? a[i + 1] : ''; },
+      strlen: a => String(String(a[0] == null ? '' : a[0]).length), upper: a => String(a[0] == null ? '' : a[0]).toUpperCase(), fix: a => String(Math.trunc(N(a[0]))),
+      substr: a => { const s = String(a[0] == null ? '' : a[0]), st = Math.max(1, N(a[1]) | 0) - 1; return a[2] == null || a[2] === '' ? s.slice(st) : s.substr(st, Math.max(0, N(a[2]) | 0)); },
+      rtos: a => rtos(a[0], a[1], a[2]), angtos: a => angtos(a[0], a[1], a[2]), edtime: a => edtime(a[0], a[1] == null ? '' : a[1]),
+      getvar: a => sv(a[0]), getenv: a => { try{ return localStorage.getItem('dvd:env:' + String(a[0] || '').trim().toUpperCase()) || ''; }catch(_){ return ''; } },
+      linelen: () => '80', eval: (a, d) => run(String(a[0] == null ? '' : a[0]), d + 1) };
+    function call(s, i, d){   // s[i] ngay sau "$(": tách đối số (giữ nguyên $(...) lồng nhau và "…"), tính đối số rồi gọi hàm
+      const raw = []; let cur = '', lvl = 0, q = false;
+      for(; i < s.length; i++){ const c = s[i];
+        if(q){ cur += c; if(c === '"') q = false; continue; }
+        if(c === '"'){ q = true; cur += c; continue; }
+        if(c === '$' && s[i + 1] === '('){ lvl++; cur += '$('; i++; continue; }
+        if(c === ')'){ if(lvl){ lvl--; cur += c; continue; } raw.push(cur); return { end: i + 1, v: apply(raw, d) }; }
+        if(c === ',' && !lvl){ raw.push(cur); cur = ''; continue; }
+        cur += c; }
+      return { end: s.length, v: '$?' }; }
+    function apply(raw, d){ const fn = String(raw[0] || '').trim().toLowerCase(); const f = FN[fn]; if(!f) return ERR(fn);
+      const args = raw.slice(1).map(x => { const t = x.trim(); if(t.length >= 2 && t[0] === '"' && t[t.length - 1] === '"') return t.slice(1, -1).replace(/""/g, '"'); return run(x, d + 1); });
+      let r; try{ r = f(args, d); }catch(_){ r = null; } return r == null ? ERR(fn) : String(r); }
+    function run(s, d){ s = String(s == null ? '' : s); d = d || 0; if(d > 40) return '$?'; let out = '', i = 0;
+      while(i < s.length){ if(s[i] === '$' && s[i + 1] === '('){ const r = call(s, i + 2, d); out += r.v; i = r.end; } else { out += s[i]; i++; } } return out; }
+    return s => run(s, 0);
+  })();
+  A.diesel = DIESEL;
+  ecmd(['DIESEL'], 'Thử biểu thức DIESEL (như trong MODEMACRO / macro $M=)', async () => { const r = await A.getStr('Biểu thức DIESEL', { def: '$(getvar,clayer)' }); if(r.str == null || r.str === '') return; log(DIESEL(r.str)); });
+  // MODEMACRO: chuỗi DIESEL hiện trên thanh trạng thái (không lưu theo bản vẽ, như AutoCAD)
+  let MODEMACRO = '', mmEl = null;
+  const mmPaint = () => { try{ if(!mmEl || !document.body.contains(mmEl)){ const c = document.getElementById('acCoord'); if(!c || !c.parentNode) return; mmEl = document.createElement('span'); mmEl.id = 'acMM'; mmEl.className = 'ac-mm notranslate'; mmEl.setAttribute('translate', 'no'); mmEl.style.cssText = 'font:600 11px system-ui,sans-serif;color:#dfe5ee;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px'; c.parentNode.insertBefore(mmEl, c); }
+      const t = MODEMACRO ? DIESEL(MODEMACRO) : ''; if(mmEl.textContent !== t) mmEl.textContent = t; mmEl.style.display = t ? '' : 'none'; mmEl.title = MODEMACRO; }catch(_){} };
+  A.modemacroPaint = mmPaint;
+  if(A.sysvar && A.sysvar.def) A.sysvar.def('MODEMACRO', { d: 'Chuỗi hiện trên thanh trạng thái, tính bằng DIESEL — ví dụ $(getvar,clayer)', s: 1, get: () => MODEMACRO, set: v => { MODEMACRO = String(v == null ? '' : v) === '.' ? '' : String(v == null ? '' : v); mmPaint(); } });
+  setInterval(() => { if(MODEMACRO) mmPaint(); }, 1000);
+  { const _ol = A.onLoad; A.onLoad = function(){ if(_ol) _ol.apply(this, arguments); if(MODEMACRO) mmPaint(); }; }
+
+  /* ---------- Nhập tệp CUI của AutoCAD (.cuix = gói zip, .cui = XML): lệnh (macro), thanh công cụ → tab ribbon, phím tắt, nhấp đúp ---------- */
+  async function unzip(buf){ const u = new Uint8Array(buf), dv = new DataView(u.buffer, u.byteOffset, u.byteLength); let e = -1;
+    for(let i = u.length - 22; i >= Math.max(0, u.length - 65557); i--) if(dv.getUint32(i, true) === 0x06054b50){ e = i; break; } if(e < 0) throw new Error('Không phải tệp zip');
+    const n = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true); const out = new Map(), td = new TextDecoder();
+    for(let k = 0; k < n; k++){ if(dv.getUint32(p, true) !== 0x02014b50) break; const meth = dv.getUint16(p + 10, true), csz = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
+      const name = td.decode(u.subarray(p + 46, p + 46 + nl)); p += 46 + nl + xl + cl;
+      const ds = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true); const raw = u.subarray(ds, ds + csz);
+      out.set(name, { meth, raw }); }
+    const get = async name => { let x = out.get(name); if(!x){ const k = [...out.keys()].find(q => q.toLowerCase() === String(name).toLowerCase()); x = k ? out.get(k) : null; } if(!x) return null;
+      if(x.meth === 0) return x.raw; if(x.meth !== 8 || typeof DecompressionStream === 'undefined') throw new Error('Không giải nén được ' + name);
+      const st = new Blob([x.raw]).stream().pipeThrough(new DecompressionStream('deflate-raw')); return new Uint8Array(await new Response(st).arrayBuffer()); };
+    return { names: [...out.keys()], get }; }
+  const DXFDBL = { LINE: 'LINE', LWPOLYLINE: 'POLYLINE', POLYLINE: 'POLYLINE', '2DPOLYLINE': 'POLYLINE', CIRCLE: 'CIRCLE', ARC: 'ARC', ELLIPSE: 'ELLIPSE', SPLINE: 'SPLINE', TEXT: 'TEXT', MTEXT: 'MTEXT', HATCH: 'HATCH', INSERT: 'INSERT', ATTBLOCKREF: 'ATTRIB', ATTDYNBLOCKREF: 'ATTRIB', DYNBLOCKREF: 'INSERT', ATTRIB: 'ATTRIB', ATTDEF: 'ATTRIB', DIMENSION: 'DIMENSION', ACAD_TABLE: 'TABLE', IMAGE: 'IMAGE', POINT: 'POINT', '3DSOLID': 'SOLID3D' };
+  // XML MenuGroup (.cui) → tuỳ biến DVDCAD: macro chỉ gọi một lệnh có sẵn → dùng thẳng lệnh đó; macro khác → lệnh tự tạo
+  function cuiFromXml(xml, fname){
+    const doc = new DOMParser().parseFromString(xml, 'application/xml'); if(doc.getElementsByTagName('parsererror').length) throw new Error('XML lỗi');
+    const kid = (el, tag) => { if(!el) return null; for(const c of el.children) if(c.tagName === tag) return c; return null; };
+    const txt = (el, tag) => { const c = kid(el, tag); return c ? String(c.textContent || '').trim() : ''; };
+    const has = n => DVDCmd.commands.some(c => c.k.includes(n) && !c.cui);
+    const out = { dvdcui: 1, cmds: [], keys: [], dbl: {}, tabs: [], qat: null }; const byId = new Map(); const used = new Set();
+    const grp = (doc.getElementsByTagName('MenuGroup')[0] || null); const gname = grp ? (grp.getAttribute('Name') || '') : '';
+    for(const mm of doc.getElementsByTagName('MenuMacro')){ const uid = mm.getAttribute('UID') || ''; const M = kid(mm, 'Macro'); if(!M) continue;
+      const name = txt(M, 'Name') || uid, macro = txt(M, 'Command'), help = txt(M, 'HelpString'); if(!macro) continue;
+      const body = macro.replace(/^\*/, '').replace(/^(\^C)+/i, '').trim(), one = body.replace(/^[_.'"]+/g, '').replace(/[;\s]+$/, '');
+      const u1 = one.toUpperCase(); let cmd; if(/^[A-Z0-9\-]+$/.test(u1) && has(u1.replace(/^-/, ''))) cmd = has(u1) ? u1 : u1.replace(/^-/, '');
+      else { let n = String(name).replace(/[đĐ]/g, 'D').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 30) || 'MACRO'; if(has(n)) n = 'CUI_' + n; let m = n, k = 2; while(used.has(m)) m = n + '_' + (k++); used.add(m); cmd = m;
+        out.cmds.push({ name: m, desc: (help || name) + (gname ? ' (' + gname + ')' : ''), macro }); }
+      byId.set(uid, cmd); }
+    const refOf = el => { const r = el && (el.getElementsByTagName('MacroRef')[0]); return r ? byId.get(r.getAttribute('MenuMacroID')) || null : null; };
+    for(const a of doc.getElementsByTagName('Accelerator')){ const key = (txt(a, 'AcceleratorShortcutKey') || a.getAttribute('ShortcutKey') || '').toUpperCase().replace(/\s+/g, ''); const c = refOf(a); if(key && c) out.keys.push({ key, cmd: c }); }
+    for(const a of doc.getElementsByTagName('DoubleClickAction')){ const dx = txt(a, 'DxfName').toUpperCase(), k = DXFDBL[dx]; const c = refOf(kid(a, 'DoubleClickCmd') || a); if(k && c) out.dbl[k] = c; }
+    const tbs = [...doc.getElementsByTagName('Toolbar')]; if(tbs.length){ const panels = [];
+      for(const t of tbs){ const items = []; for(const b of t.getElementsByTagName('ToolbarButton')){ const c = refOf(b); if(c) items.push({ cmd: c, label: txt(b, 'Name') || c }); } if(items.length) panels.push({ name: txt(t, 'Name') || 'Toolbar', items: items.slice(0, 40) }); }
+      if(panels.length) out.tabs.push({ id: 'x' + Date.now().toString(36), name: (gname || String(fname || 'CUIX').replace(/\.[^.]+$/, '')), panels: panels.slice(0, 30) }); }
+    out.stat = { macros: byId.size, cmds: out.cmds.length, keys: out.keys.length, dbl: Object.keys(out.dbl).length, panels: out.tabs.reduce((s, t) => s + t.panels.length, 0) };
+    return out; }
+  async function readCui(f){ const nm = f.name || '';
+    if(/\.cuix$/i.test(nm)){ const z = await unzip(await f.arrayBuffer()); const xmlName = z.names.find(n => /(^|\/)MenuGroup\.cui$/i.test(n)) || z.names.find(n => /\.cui$/i.test(n) && !/ribbon|qat|workspace/i.test(n)); if(!xmlName) throw new Error('Gói .cuix không có MenuGroup.cui');
+      const b = await z.get(xmlName); return cuiFromXml(new TextDecoder().decode(b), nm); }
+    const t = await f.text(); if(/^\s*</.test(t)) return cuiFromXml(t, nm); const o = JSON.parse(t); return o && o.dvdcui ? o : null; }
+  A.cuiRead = readCui;
+  const cuiStat = o => o && o.stat ? ' (' + o.stat.macros + ' macro → ' + o.stat.cmds + ' lệnh tự tạo, ' + o.stat.keys + ' phím tắt, ' + o.stat.dbl + ' nhấp đúp, ' + o.stat.panels + ' thanh công cụ)' : '';
+  const cuiImport = async f => { let o = null; try{ o = await readCui(f); }catch(err){ console.warn('cui', err); } if(!o || !o.dvdcui){ say('Tệp tuỳ biến không hợp lệ.'); return; }
+    const C = cuiGet(), N = cuiNorm(o); for(const c of N.cmds) if(!C.cmds.some(x => x.name === c.name)) C.cmds.push(c); for(const k of N.keys){ C.keys = C.keys.filter(x => x.key !== k.key); C.keys.push(k); } Object.assign(C.dbl, N.dbl); if(N.qat) C.qat = N.qat; for(const t of N.tabs) if(!C.tabs.some(x => x.id === t.id)) C.tabs.push(t); lsSet(CUIK, C); cuiApply(); log('CUIIMPORT: đã nhập ' + f.name + cuiStat(o)); };
+  const cuiLoad = async f => { let o = null; try{ o = await readCui(f); }catch(err){ console.warn('cui', err); } if(!o || !o.dvdcui){ say('Tệp tuỳ biến không hợp lệ.'); return; }
+    const C = cuiGet(); C.partial = C.partial.filter(p => p.name !== f.name); C.partial.push({ name: f.name, data: o }); lsSet(CUIK, C); cuiApply(); log('CUILOAD: đã nạp ' + f.name + cuiStat(o)); };
+  A.cuiImportFile = cuiImport; A.cuiLoadFile = cuiLoad;
+  plain(['CUIIMPORT'], 'Nhập tuỳ biến giao diện từ tệp .cuix / .cui của AutoCAD hoặc .dvdcui (ghép vào tuỳ biến hiện có)', async () => { const F = await pickF('.cuix,.cui,.dvdcui,.json'); const f = F && F[0]; if(f) await cuiImport(f); });
+  plain(['CUILOAD'], 'Nạp tệp tuỳ biến bổ sung (.cuix / .cui / .dvdcui) vào giao diện', async () => { const F = await pickF('.cuix,.cui,.dvdcui,.json'); const f = F && F[0]; if(f) await cuiLoad(f); });
   ecmd(['CUIUNLOAD'], 'Gỡ tệp tuỳ biến bổ sung đã nạp', async () => { const C = cuiGet(); if(!C.partial.length){ log('Chưa nạp tệp tuỳ biến bổ sung nào.'); return; } const s = await A.getStr('Tên tệp tuỳ biến cần gỡ (' + C.partial.map(p => p.name).join(', ') + ')'); const n = String(s.str || '').trim().toLowerCase(); if(!n) return;
     const i = C.partial.findIndex(p => p.name.toLowerCase() === n || p.name.toLowerCase().replace(/\.[^.]+$/, '') === n); if(i < 0){ log('Không có tệp "' + s.str + '".'); return; } const nm = C.partial[i].name; C.partial.splice(i, 1); lsSet(CUIK, C); cuiApply(); log('CUIUNLOAD: đã gỡ ' + nm); });
   setTimeout(() => { try{ cuiApply(); }catch(err){ console.warn('cui', err); } }, 0);
@@ -468,7 +624,7 @@
     apply(true); pushUndo({ op: 'fn', undo: () => apply(false), redo: () => apply(true) }); try{ selEnts.clear(); }catch(_){} try{ draw(); A.paint(); }catch(_){} log(label); }
   async function pickVp(L, pr){ for(;;){ const r = await A.getPoint(pr || 'Chọn khung nhìn (bấm bên trong khung)'); if(!r.pt) return -1; const i = vpAt(L, r.pt); if(i >= 0) return i; log('Điểm không nằm trong khung nhìn nào.'); } }
   ecmd(['CHSPACE'], 'Chuyển đối tượng giữa không gian giấy và không gian mô hình qua khung nhìn (Change Space), giữ đúng tỉ lệ khung nhìn', async (_, cur) => {
-    const L = userLayout(); if(!L){ log('CHSPACE dùng trong layout do bạn tạo (lệnh LAYOUT): chọn đối tượng trên giấy để đưa vào Model, hoặc M để lấy đối tượng Model đưa ra giấy.'); return; }
+    const L = ensureUser(); if(!L){ log('CHSPACE dùng trong layout do bạn tạo (lệnh LAYOUT): chọn đối tượng trên giấy để đưa vào Model, hoặc M để lấy đối tượng Model đưa ra giấy.'); return; }
     if(!(L.paper.viewports || []).length){ log('Layout chưa có khung nhìn — dùng MVIEW.'); return; }
     const name = L.name, ps = psOf(L); let pre = cur && cur.pre && cur.pre.length ? cur.pre.filter(e => ps.includes(e)) : []; if(cur) cur.pre = [];
     let mode = pre.length ? 'P' : null;
@@ -491,5 +647,5 @@
         const toP = sel.map(e => toPaperXf(clean(e), q));
         moveSpace(name, sel, toP, [], [], 'CHSPACE: đã chuyển ' + sel.length + ' đối tượng từ Model ra giấy (khung nhìn #' + (vi + 1) + ').'); back(); }); }, 0);
   });
-  plain(['PSPACEOBJ', 'PSOBJ'], 'Liệt kê / chọn đối tượng trên giấy của layout hiện hành', () => { const L = userLayout(); if(!L){ log('Không ở layout do bạn tạo.'); return; } const ps = psOf(L); try{ selEnts.clear(); for(const e of ps) selEnts.add(e); draw(); }catch(_){} log('Layout "' + L.name + '": ' + ps.length + ' đối tượng trên giấy (đã chọn).'); });
+  plain(['PSPACEOBJ', 'PSOBJ'], 'Liệt kê / chọn đối tượng trên giấy của layout hiện hành', () => { const L = ensureUser(); if(!L){ log('Không ở layout giấy.'); return; } const ps = psOf(L); try{ selEnts.clear(); for(const e of ps) selEnts.add(e); draw(); }catch(_){} log('Layout "' + L.name + '": ' + ps.length + ' đối tượng trên giấy (đã chọn).'); });
 })();

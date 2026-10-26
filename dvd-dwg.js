@@ -101,7 +101,7 @@
 
   /* ---------------- mã kiểu đối tượng DWG ---------------- */
   const T = { TEXT: 1, ATTRIB: 2, ATTDEF: 3, BLOCK: 4, ENDBLK: 5, SEQEND: 6, INSERT: 7, ARC: 17, CIRCLE: 18, LINE: 19,
-    DIM_LIN: 21, DIM_ALI: 22, DIM_ANG3: 23, DIM_RAD: 25, DIM_DIA: 26, POINT: 27, FACE3D: 28, SOLID: 31, ELLIPSE: 35, RAY: 40, XLINE: 41,
+    DIM_LIN: 21, DIM_ALI: 22, DIM_ANG3: 23, DIM_RAD: 25, DIM_DIA: 26, POINT: 27, FACE3D: 28, SOLID: 31, VIEWPORT: 34, ELLIPSE: 35, RAY: 40, XLINE: 41,
     DICT: 42, MTEXT: 44, BLOCK_CONTROL: 48, BLOCK_HEADER: 49, LAYER_CONTROL: 50, LAYER: 51, STYLE_CONTROL: 52, STYLE: 53,
     LTYPE_CONTROL: 56, LTYPE: 57, VIEW_CONTROL: 60, UCS_CONTROL: 62, VPORT_CONTROL: 64, VPORT: 65, APPID_CONTROL: 66, APPID: 67,
     DIMSTYLE_CONTROL: 68, DIMSTYLE: 69, VX_CONTROL: 70, MLINESTYLE: 73, LWPOLYLINE: 77, HATCH: 78, XRECORD: 79,
@@ -248,7 +248,7 @@
     }
 
     /* ---------- thực thể: gom theo khối ---------- */
-    const SUP = new Set(['LINE', 'CIRCLE', 'ARC', 'POINT', 'LWPOLYLINE', 'TEXT', 'MTEXT', 'SOLID', '3DFACE', 'ELLIPSE', 'XLINE', 'RAY', 'HATCH', 'INSERT', 'ATTDEF', 'DIMENSION', 'WIPEOUT']);
+    const SUP = new Set(['LINE', 'CIRCLE', 'ARC', 'POINT', 'LWPOLYLINE', 'TEXT', 'MTEXT', 'SOLID', '3DFACE', 'ELLIPSE', 'XLINE', 'RAY', 'HATCH', 'INSERT', 'ATTDEF', 'DIMENSION', 'WIPEOUT', 'VIEWPORT']);
     const blocks = []; { let cur = null;
       for(const r of (S.BLOCKS || [])){
         if(r.type === 'BLOCK'){ cur = { blk: r, ents: [], end: null, br: ref(r.plain().get(330)) }; blocks.push(cur); continue; }
@@ -348,6 +348,12 @@
         for(let i = 1; i < 4; i++) for(let k = 0; k < 3; k++) o.d.DD(q[i][k], q[i - 1][k]); if(inv) o.d.BS(inv); }
       else if(t === 'ELLIPSE'){ o = obj(T.ELLIPSE, h, r); entCommon(o, c); o.d.BD3(r.pt(10)); o.d.BD3(r.pt(11)); o.d.BD3([r.num(210), r.num(220), r.num(230, 1)]); o.d.BD(r.num(40, 1)); o.d.BD(r.num(41)); o.d.BD(r.num(42, Math.PI * 2)); }
       else if(t === 'XLINE' || t === 'RAY'){ o = obj(t === 'RAY' ? T.RAY : T.XLINE, h, r); entCommon(o, c); o.d.BD3(r.pt(10)); o.d.BD3(r.pt(11)); }
+      else if(t === 'VIEWPORT'){ o = obj(T.VIEWPORT, h, r); entCommon(o, c);   // khung nhìn của layout (R2000): tâm/cỡ trên giấy, đích + hướng nhìn, cao vùng nhìn, tâm nhìn DCS
+        o.d.BD3(r.pt(10)); o.d.BD(r.num(40)); o.d.BD(r.num(41));
+        o.d.BD3(r.pt(17)); o.d.BD3([r.num(16), r.num(26), r.num(36, 1)]); o.d.BD(r.num(51) * D2R); o.d.BD(r.num(45, 1)); o.d.BD(r.num(42, 50)); o.d.BD(r.num(43)); o.d.BD(r.num(44)); o.d.BD(r.num(50) * D2R);
+        o.d.RD2([r.num(12), r.num(22)]); o.d.RD2([r.num(13), r.num(23)]); o.d.RD2([r.num(14, 10), r.num(24, 10)]); o.d.RD2([r.num(15, 10), r.num(25, 10)]); o.d.BS(r.int(72, 1000));
+        o.d.BL(0); o.d.BL(r.int(90, 32864)); o.d.TV(r.get(1, '')); o.d.RC(r.int(281)); o.d.B(r.int(74)); o.d.B(r.int(71)); o.d.BD3(r.pt(110)); o.d.BD3([r.num(111, 1), r.num(121), r.num(131)]); o.d.BD3([r.num(112), r.num(122, 1), r.num(132)]); o.d.BD(r.num(146)); o.d.BS(r.int(79));
+        o.hd.H(5, 0); o.hd.H(5, 0); o.hd.H(5, 0); o.hd.H(5, 0); }   // đường cắt (340), đầu VX (R2000), UCS tên (345), UCS gốc (346)
       else if(t === 'HATCH'){ o = obj(T.HATCH, h, r); entCommon(o, c); hatch(o, r.after('AcDbHatch')); }
       else if(t === 'INSERT'){ o = obj(T.INSERT, h, r); entCommon(o, c);
         const s = [r.num(41, 1), r.num(42, 1), r.num(43, 1)]; o.d.BD3(r.pt(10));
@@ -440,7 +446,7 @@
         o.d.BD(s.num(142, 1)); o.d.BD(s.num(143, 1)); o.d.TV(s.get(7, '')); o.d.BS(s.int(75)); o.d.BD(s.num(147, 1)); o.d.BD2([s.num(148), s.num(149)]);
         o.d.TV(l.get(1, '')); o.d.BS(l.int(71)); o.d.BS(l.int(70)); o.d.BD3(l.pt(12)); o.d.RD2([l.num(10), l.num(20)]); o.d.RD2([l.num(11), l.num(21)]);
         o.d.BD3(l.pt(13)); o.d.BD3([l.num(16, 1), l.num(26), l.num(36)]); o.d.BD3([l.num(17), l.num(27, 1), l.num(37)]); o.d.BD(l.num(146)); o.d.BS(l.int(76)); o.d.BD3(l.pt(14)); o.d.BD3(l.pt(15));
-        o.hd.H(4, ref(l.get(330))); o.hd.H(4, 0); o.hd.H(5, 0); o.hd.H(5, 0); }
+        const av = ref(l.get(331)); o.hd.H(4, ref(l.get(330))); o.hd.H(4, entH.has(av) ? av : 0); o.hd.H(5, 0); o.hd.H(5, 0); }
       else if(r.type === 'XRECORD'){ const o = obj(T.XRECORD, h); objCommon(o, owner, rx); const s = r.after('AcDbXrecord'); const items = s.g.filter(x => x[0] !== 280);
         const xd = new BW(256); for(const [c, v] of items){ xd.RS(c); if((c >= 0 && c <= 9) || (c >= 300 && c <= 309) || c === 1000){ const b = tvBytes(v); xd.RS(b.length); xd.RC(30); xd.TF(b); } else if(c >= 280 && c <= 289){ xd.RC(parseInt(v, 10) || 0); } else if(c >= 90 && c <= 99){ xd.RL(parseInt(v, 10) || 0); } else if(c >= 60 && c <= 79){ xd.RS(parseInt(v, 10) || 0); } else xd.RD(parseFloat(v) || 0); }
         o.d.BL(xd.byte); o.d.append(xd); o.d.BS(s.int(280, 1)); }

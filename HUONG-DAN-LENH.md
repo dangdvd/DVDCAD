@@ -1,4 +1,4 @@
-# DVDCAD v5q — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5r — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,27 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v5r)
+- **Layout đọc từ tệp DWG / DXF sửa được** như layout tự tạo.
+  - Vẽ / sửa trên layout của tệp (hoặc chạy MVIEW, VPEDIT, CHSPACE, bảng Thuộc tính): layout tự chuyển thành layout sửa được, giữ nguyên chỗ tab, đối tượng giấy và khung nhìn của tệp.
+  - Chuột phải vào tab layout của tệp: **Chuyển thành layout sửa được**, In, **Xoá layout**. Layout đã chuyển có thêm **Khôi phục layout gốc của tệp**.
+  - Mở DXF giờ có đủ các tab layout (layout đang mở, khối `*Paper_SpaceN`, khung nhìn, khổ giấy của thiết lập in). Đối tượng giấy không còn lẫn vào Model (cả DXF lẫn DWG).
+  - Layout của tệp hiện tờ giấy theo khổ giấy. Hộp Khổ giấy & khung tên có thêm **Khung viền** và khổ giấy riêng của tệp.
+- **Lưu DXF / DWG ghi layout giấy thật**: mỗi layout có LAYOUT (khổ giấy, giới hạn), khối giấy, khung nhìn **VIEWPORT** và mọi đối tượng giấy (khung, khung tên, ghi chú…).
+  - AutoCAD mở ra thấy đúng các tab layout và khung nhìn theo tỉ lệ.
+  - DVDCAD mở lại còn nguyên layout sửa được (khung tên, tham số khung nhìn, đối tượng giấy), kể cả trên máy khác.
+  - DWG 2000 có thực thể VIEWPORT thật (LibreDWG đọc lại đúng).
+- **DIESEL** như AutoCAD: `$(hàm,đối,…)` lồng nhau, đủ hàm `+ - * / = < > != <= >= and or xor eq if index nth strlen substr upper fix rtos angtos edtime eval getenv getvar linelen`.
+  - **MODEMACRO**: chuỗi DIESEL hiện trên thanh trạng thái, tự cập nhật (vd `MODEMACRO` → `Lớp: $(getvar,clayer) | $(edtime,0,DD/MO/YYYY)`; `.` để xoá).
+  - Macro bắt đầu bằng **`$M=`** được tính DIESEL trước khi chạy (dùng trong lệnh tự tạo của CUI, Action Recorder…). Lệnh **DIESEL** để thử biểu thức.
+- **Nhập tệp CUI của AutoCAD**: **CUIIMPORT** / **CUILOAD** đọc **.cuix** (gói zip) và **.cui** (XML), ngoài .dvdcui.
+  - Macro chỉ gọi một lệnh có sẵn → dùng thẳng lệnh đó; macro khác → lệnh tự tạo (giữ `^C^C`, `;`, `\`, `$M=`).
+  - Phím tắt (Accelerators), thao tác nhấp đúp theo loại đối tượng, thanh công cụ → tab ribbon riêng (mỗi thanh một bảng).
+- **In theo bảng kiểu in (.ctb)**:
+  - **Kiểu nét thích ứng** (adaptive): mẫu nét co giãn cho vừa số nguyên lần trên mỗi đối tượng (đường, đa tuyến, cung, đường tròn), tắt được theo từng kiểu.
+  - **Đầu nét / nối nét hình thoi** vẽ đúng mũi thoi ở hai đầu và ở mỗi đỉnh nối (trước đây dùng tạm vuông / vát).
+- **EXPORTLAYOUT** cắt thêm **ảnh** (giữ ảnh + đường cắt theo khung nhìn; DXF ghi khung ảnh đã cắt) và **khối 3D** (đổi thành hình chiếu bằng như khi xem trong khung nhìn — cạnh lưới, biên dạng đùn, đường tròn trụ / nón — rồi cắt theo khung).
 
 ## Bổ sung như AutoCAD 2027 (v5q)
 - **Không gian giấy (paper space)** trong layout do bạn tạo (lệnh LAYOUT): mọi lệnh vẽ / sửa đều ghi lên giấy (ghi chú, khung, ký hiệu…), có hoàn tác / làm lại, lưu cùng layout.

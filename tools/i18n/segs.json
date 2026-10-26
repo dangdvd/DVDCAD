@@ -1,4 +1,7 @@
 {
+"\" (bộ nhớ trình duyệt đầy?).": [
+"dvd-acad-pro.js"
+],
 "\" (lệnh đã nạp vẫn dùng được tới khi mở lại ứng dụng).": [
 "dvd-acad-dlg2.js"
 ],
@@ -14,6 +17,9 @@
 "\" có": [
 "dvd-acad-dlg.js",
 "dvd-acad-x10.js"
+],
+"\" của tệp đã chuyển thành layout sửa được (": [
+"dvd-acad-pro.js"
 ],
 "\" data-a=\"del\">Xoá": [
 "dvd-acad-dlg.js"
@@ -133,6 +139,9 @@
 ],
 "\" và": [
 "dvd-acad-x2.js"
+],
+"\" và lấy lại bản trong tệp?": [
+"dvd-acad-pro.js"
 ],
 "\" và xoá đối tượng gốc": [
 "dvd-acad-cmds.js"
@@ -1181,6 +1190,9 @@
 "Biểu thức (kết quả đưa vào lời nhắc)": [
 "dvd-acad-x2.js"
 ],
+"Biểu thức DIESEL": [
+"dvd-acad-dlg3.js"
+],
 "Biểu thức dùng tên tham số khác, vd": [
 "dvd-acad-x4.js"
 ],
@@ -2144,6 +2156,9 @@
 "Bỏ mặt nào": [
 "dvd-acad-x2.js"
 ],
+"Bỏ mọi thay đổi trên layout \"": [
+"dvd-acad-pro.js"
+],
 "Bỏ mọi thay đổi và mở lại": [
 "dvd-acad-x15.js"
 ],
@@ -2679,6 +2694,9 @@
 "Chuyển thành khối": [
 "dvd-acad-dlg.js"
 ],
+"Chuyển thành layout sửa được": [
+"dvd-acad-pro.js"
+],
 "Chuyển tiếp": [
 "dvd-acad-ui.js"
 ],
@@ -2778,6 +2796,9 @@
 "dvd-acad-dlg2.js",
 "index.html",
 "index.html:html"
+],
+"Chuỗi hiện trên thanh trạng thái, tính bằng DIESEL — ví dụ $(getvar,clayer)": [
+"dvd-acad-dlg3.js"
 ],
 "Chuột giữa": [
 "dvd-cmd.js"
@@ -7250,6 +7271,9 @@
 "Góc<input data-p=\"ang\" type=\"number\" step=\"any\" value=\"": [
 "dvd-acad-dlg.js"
 ],
+"Gói .cuix không có MenuGroup.cui": [
+"dvd-acad-dlg3.js"
+],
 "Gõ 'CAL ở lời nhắc của lệnh khác: kết quả được đưa thẳng vào lời nhắc đó (vd độ dài).": [
 "dvd-help.js"
 ],
@@ -8702,6 +8726,9 @@
 "Khung tên": [
 "dvd-acad-pro.js"
 ],
+"Khung viền": [
+"dvd-acad-pro.js"
+],
 "Khung vùng che": [
 "dvd-acad-ui.js",
 "dvd-acad-x3.js"
@@ -8759,6 +8786,9 @@
 ],
 "Khôi phục khi thoát": [
 "dvd-acad-dlg2.js"
+],
+"Khôi phục layout gốc của tệp": [
+"dvd-acad-pro.js"
 ],
 "Khôi phục số đo": [
 "dvd-acad-x6.js"
@@ -9176,6 +9206,9 @@
 "Không gian: Mô hình": [
 "dvd-acad-dlg2.js"
 ],
+"Không giải nén được": [
+"dvd-acad-dlg3.js"
+],
 "Không gán": [
 "dvd-acad-dlg.js"
 ],
@@ -9221,6 +9254,9 @@
 ],
 "Không lưu được kiểu in (bộ nhớ đầy).": [
 "dvd-acad-x9.js"
+],
+"Không lưu được layout \"": [
+"dvd-acad-pro.js"
 ],
 "Không lưu được lên Drive:": [
 "dvd-cloud.js"
@@ -9290,6 +9326,9 @@
 "dvd-acad-dlg2.js"
 ],
 "Không phải tệp slide (.sld)": [
+"dvd-acad-dlg3.js"
+],
+"Không phải tệp zip": [
 "dvd-acad-dlg3.js"
 ],
 "Không phụ thuộc kích thước (RFS)": [
@@ -9597,7 +9636,7 @@
 "Không ở chế độ so sánh.": [
 "dvd-acad-dlg2.js"
 ],
-"Không ở layout do bạn tạo.": [
+"Không ở layout giấy.": [
 "dvd-acad-dlg3.js"
 ],
 "Khối": [
@@ -12710,7 +12749,7 @@
 "Nhập trực tiếp (1 đơn vị vẽ = ?)": [
 "index.html:html"
 ],
-"Nhập tuỳ biến giao diện từ tệp .dvdcui (ghép vào tuỳ biến hiện có)": [
+"Nhập tuỳ biến giao diện từ tệp .cuix / .cui của AutoCAD hoặc .dvdcui (ghép vào tuỳ biến hiện có)": [
 "dvd-acad-dlg3.js"
 ],
 "Nhập tuỳ chọn": [
@@ -12977,7 +13016,7 @@
 "Nạp tệp": [
 "dvd-acad-dlg2.js"
 ],
-"Nạp tệp tuỳ biến bổ sung (.dvdcui) vào giao diện": [
+"Nạp tệp tuỳ biến bổ sung (.cuix / .cui / .dvdcui) vào giao diện": [
 "dvd-acad-dlg3.js"
 ],
 "Nạp ứng dụng": [
@@ -15013,6 +15052,9 @@
 ],
 "Thứ tự vẽ: đưa đối tượng lên trên / xuống dưới": [
 "dvd-acad-x3.js"
+],
+"Thử biểu thức DIESEL (như trong MODEMACRO / macro $M=)": [
+"dvd-acad-dlg3.js"
 ],
 "Thử kết nối": [
 "dvd-acad-x3.js"
@@ -17426,6 +17468,9 @@
 "XCLIPFRAME (0 = ẩn, 1 = hiện & in, 2 = hiện, không in)": [
 "dvd-acad-x17.js"
 ],
+"XML lỗi": [
+"dvd-acad-dlg3.js"
+],
 "XOPEN: mở": [
 "dvd-acad-x16.js"
 ],
@@ -18531,6 +18576,9 @@
 "khung nhìn đã theo tỉ lệ và vị trí của khung nhìn #": [
 "dvd-acad-x16.js"
 ],
+"khung nhìn).": [
+"dvd-acad-pro.js"
+],
 "khung nhìn.": [
 "dvd-acad-x16.js"
 ],
@@ -18938,6 +18986,9 @@
 "như lúc mở file?": [
 "dvd-acad-x15.js"
 ],
+"nhấp đúp,": [
+"dvd-acad-dlg3.js"
+],
 "nhập chiều rộng thay cho góc đối diện": [
 "dvd-help.js"
 ],
@@ -19075,6 +19126,9 @@
 "tham chiếu.": [
 "dvd-acad-pro.js",
 "dvd-acad-x16.js"
+],
+"thanh công cụ)": [
+"dvd-acad-dlg3.js"
 ],
 "thao tác.": [
 "dvd-acad-cmdline.js"
@@ -23040,6 +23094,9 @@
 "đối tượng của layout \"": [
 "dvd-acad-dlg2.js",
 "dvd-acad-dlg3.js"
+],
+"đối tượng giấy,": [
+"dvd-acad-pro.js"
 ],
 "đối tượng gốc được người khác khôi phục — mở lại bản vẽ để thấy.": [
 "dvd-cloud.js"
