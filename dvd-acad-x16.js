@@ -38,7 +38,7 @@
   const VPK = 'dvd:vpx'; let _vx = null;
   const vxAll = () => { if(!_vx){ try{ _vx = JSON.parse(localStorage.getItem(VPK) || '{}') || {}; }catch(_){ _vx = {}; } } return _vx; };
   const docKey = () => { try{ return (typeof baseKey !== 'undefined' && baseKey) || currentName || '_'; }catch(_){ return '_'; } };
-  window.vpExtra = (L, vi) => { const d = vxAll()[docKey()]; const l = d && L && d[L.name]; return l && l[vi] || null; };
+  window.vpExtra = (L, vi) => { const d = vxAll()[docKey()]; const l = d && L && d[L.name]; const v = L && L.paper && L.paper.viewports && L.paper.viewports[vi]; return (l && l[vi]) || (v && v.vx) || null; };   // bản riêng trên máy, nếu không thì lấy từ tệp (VIEWPORT 331 / 340)
   function vxSet(L, vi, patch){
     const all = vxAll(), dk = docKey(); const d = all[dk] || (all[dk] = {}); const l = d[L.name] || (d[L.name] = {}); const o = Object.assign({}, l[vi] || {}, patch);
     for(const k of Object.keys(o)) if(o[k] == null || (Array.isArray(o[k]) && !o[k].length)) delete o[k];

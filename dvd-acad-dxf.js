@@ -32,7 +32,7 @@
   // dữ liệu riêng của bản vẽ (ràng buộc tham số, định nghĩa khối động) → XRECORD "DVDCAD_DATA" trong OBJECTS
   function dvdData(ents, full){
     const o = {}; try{ const cons = A.constraints ? A.constraints() : []; if(cons && cons.length) o.cons = cons; }catch(_){}
-    if(full) try{ const L = A.userLayoutDefs ? A.userLayoutDefs() : []; const live = new Set((typeof dwgLayouts !== 'undefined' ? dwgLayouts : []).filter(x => x && x.user).map(x => x.name)); const keep = L.filter(D => D && !D.gone && live.has(D.name)); if(keep.length) o.lay = keep; }catch(_){}   // layout DVDCAD (khung tên, khung nhìn, đối tượng giấy) — mở lại sửa tiếp được
+    if(full) try{ const L = A.userLayoutDefs ? A.userLayoutDefs() : []; const live = new Set((typeof dwgLayouts !== 'undefined' ? dwgLayouts : []).filter(x => x && x.user).map(x => x.name)); const keep = L.filter(D => D && !D.gone && live.has(D.name)).map(D => { const X = dwgLayouts.find(x => x && x.user && x.name === D.name); return Object.assign({}, D, { vps: (D.vps || []).map((v, k) => { let vx = null; try{ vx = window.vpExtra ? window.vpExtra(X, k) : null; }catch(_){} return vx ? Object.assign({}, v, { vx }) : v; }) }); }); if(keep.length) o.lay = keep; }catch(_){}   // layout DVDCAD (khung tên, khung nhìn, đối tượng giấy) — mở lại sửa tiếp được
     try{ const D = A.dynDefs ? A.dynDefs() : null; if(D){ const names = new Set(); for(const e of ents){ if(e.blk) names.add(e.blk); if(e.bm && e.bm.name) names.add(e.bm.name); } const dd = {}; for(const n of names) if(D[n]) dd[n] = D[n]; if(Object.keys(dd).length) o.dyn = dd; } }catch(_){}
     return Object.keys(o).length ? JSON.stringify(o) : null;
   }
@@ -66,12 +66,13 @@
         const list = (X.paper.paperPrims || []).filter(e => e && !e.vpf && !e.xr && !e.vh && !e.xh);
         if(D && D.size){ const o = D.org || [0, 0]; r = { x0: o[0], y0: o[1], x1: o[0] + D.size[0], y1: o[1] + D.size[1] }; } else if(X.paper.lim) r = X.paper.lim;
         if(!r){ const b = bbox(list); r = b ? { x0: b.x0 - 10, y0: b.y0 - 10, x1: b.x1 + 10, y1: b.y1 + 10 } : { x0: 0, y0: 0, x1: 420, y1: 297 }; }
-        return { name: String(X.name || ('Layout' + (i + 1))), tab: i + 1, ents: list, vps: (X.paper.viewports || []).filter(v => v && v.w > 0 && v.h > 0 && v.vh > 0), sheet: r,
+        const vxOf = k => { try{ return window.vpExtra ? window.vpExtra(X, k) : null; }catch(_){ return null; } };   // VPLAYER (lớp đóng băng riêng), VPCLIP (đa giác cắt)
+        return { name: String(X.name || ('Layout' + (i + 1))), tab: i + 1, ents: list, vps: (X.paper.viewports || []).map((v, k) => v && v.w > 0 && v.h > 0 && v.vh > 0 ? Object.assign({}, v, { vx: vxOf(k) }) : null).filter(Boolean), sheet: r,
           hLay: i ? H() : hLayPaper, hBR: i ? H() : hBRpaper, hB: i ? H() : hBlkPaper, hE: i ? H() : hEndPaper, bn: i ? '*Paper_Space' + (i - 1) : '*Paper_Space', hVp: H() }; }); })();
     if(!lays.length) lays.push({ name: 'Layout1', tab: 1, ents: [], vps: [], sheet: null, hLay: hLayPaper, hBR: hBRpaper, hB: hBlkPaper, hE: hEndPaper, bn: '*Paper_Space', hVp: null });
     const scanE = ents.concat(...lays.map(l => l.ents));
     // ---------- lớp / kiểu nét / kiểu chữ ----------
-    const layers = new Set(['0']); for(const n of A.layerNames()) if(!String(n).includes('|')) layers.add(n); for(const e of scanE) layers.add(String(e.layer || '0'));
+    const layers = new Set(['0']); for(const n of A.layerNames()) if(!String(n).includes('|')) layers.add(n); for(const e of scanE) layers.add(String(e.layer || '0')); for(const Lp of lays) for(const v of Lp.vps) for(const n of (v.vx && v.vx.frz) || []) if(!String(n).includes('|')) layers.add(String(n));
     const ltUsed = new Set(); for(const ly of layers){ const v = A.layerLT(ly); if(v && !/^(CONTINUOUS|BYLAYER|BYBLOCK)$/i.test(v)) ltUsed.add(String(v).toUpperCase()); }
     for(const e of scanE) if(e.lt && !/^(CONTINUOUS|BYBLOCK|BYLAYER)$/i.test(e.lt)) ltUsed.add(String(e.lt).toUpperCase());
     const ltDefs = [...ltUsed].map(n => { const d = A.ltDefOf(n) || (window.LTYPES && LTYPES[n]); return d && d.pat && d.pat.length ? { n, d, h: H() } : null; }).filter(Boolean);
@@ -255,12 +256,17 @@
     }
     let curOwner = hBRmodel, curPS = false;
     // khung nhìn: ID 1 = khung nhìn tổng của tờ giấy; còn lại = khung nhìn Model (tâm giấy 10/20, cỡ 40/41, tâm nhìn 12/22, cao vùng nhìn 45)
-    const vport = (owner, h, id, cx, cy, w, hh, vx, vy, vh) => { P(0, 'VIEWPORT'); P(5, h || H()); P(330, owner); P(100, 'AcDbEntity'); P(67, 1); P(8, '0'); P(100, 'AcDbViewport');
+    const vport = (owner, h, id, cx, cy, w, hh, vx, vy, vh, X) => { P(0, 'VIEWPORT'); P(5, h || H()); P(330, owner); P(100, 'AcDbEntity'); P(67, 1); P(8, '0'); P(100, 'AcDbViewport');
       P(10, cx); P(20, cy); P(30, 0); P(40, w); P(41, hh); P(68, id === 1 ? 1 : 2); P(69, id); P(12, vx); P(22, vy); P(13, 0); P(23, 0); P(14, 10); P(24, 10); P(15, 10); P(25, 10);
-      P(16, 0); P(26, 0); P(36, 1); P(17, 0); P(27, 0); P(37, 0); P(42, 50); P(43, 0); P(44, 0); P(45, vh); P(50, 0); P(51, 0); P(72, 1000); P(90, 32864); P(1, ''); P(281, 0); P(71, 1); P(74, 0);
+      P(16, 0); P(26, 0); P(36, 1); P(17, 0); P(27, 0); P(37, 0); P(42, 50); P(43, 0); P(44, 0); P(45, vh); P(50, 0); P(51, 0); P(72, 1000);
+      for(const n of (X && X.frz) || []){ const hl = layH.get(String(n)); if(hl) P(331, hl); }   // lớp đóng băng riêng khung nhìn (VPLAYER)
+      P(90, X && X.clipH ? 32864 | 65536 : 32864); if(X && X.clipH) P(340, X.clipH);   // đa giác cắt (VPCLIP)
+      P(1, ''); P(281, 0); P(71, 1); P(74, 0);
       P(110, 0); P(120, 0); P(130, 0); P(111, 1); P(121, 0); P(131, 0); P(112, 0); P(122, 1); P(132, 0); P(79, 0); P(146, 0); if(V2004) P(170, 0); };
     const paperBody = Lp => { curPS = true; try{ if(Lp.sheet){ const S = Lp.sheet, w = S.x1 - S.x0, hh = S.y1 - S.y0; vport(Lp.hBR, Lp.hVp, 1, (S.x0 + S.x1) / 2, (S.y0 + S.y1) / 2, w * 1.05, hh * 1.05, (S.x0 + S.x1) / 2, (S.y0 + S.y1) / 2, hh * 1.05); }
-        Lp.vps.forEach((v, k) => vport(Lp.hBR, null, k + 2, v.vcx, v.vcy, v.w, v.h, v.dcx, v.dcy, v.vh));
+        Lp.vps.forEach((v, k) => { const X = v.vx ? { frz: v.vx.frz || [], clipH: null } : null; const hv = H(), cp = v.vx && Array.isArray(v.vx.cp) && v.vx.cp.length >= 3 ? v.vx.cp : null;
+          if(cp){ X.clipH = H(); P(0, 'LWPOLYLINE'); P(5, X.clipH); P(102, '{ACAD_REACTORS'); P(330, hv); P(102, '}'); P(330, Lp.hBR); P(100, 'AcDbEntity'); P(67, 1); P(8, '0'); P(100, 'AcDbPolyline'); P(90, cp.length); P(70, 1); P(43, 0); for(const q of cp){ P(10, q.x); P(20, q.y); } }
+          vport(Lp.hBR, hv, k + 2, v.vcx, v.vcy, v.w, v.h, v.dcx, v.dcy, v.vh, X); });
         for(const e of Lp.ents) emit(e, Lp.hBR); } finally { curPS = false; } };
     // ---------- BLOCKS ----------
     P(0, 'SECTION'); P(2, 'BLOCKS');

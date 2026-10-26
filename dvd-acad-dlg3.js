@@ -170,6 +170,14 @@
     if(!c.sub) return iv.length ? [e] : [];
     const out = []; for(const [a, b] of iv){ if(b - a < (u1 - u0) * 1e-9) continue; try{ const w = c.sub(a, b); if(w){ const q = Array.isArray(w) ? w : [w]; for(const x of q) if(x) out.push(x); } }catch(_){} } return out; }
   function clipEnt(e, Ps){ const t = e.type;
+    if(t === 'TEXT' && A.textOutline){ const b = entBBox(e); const C = b ? [{ x: b.x0, y: b.y0 }, { x: b.x1, y: b.y0 }, { x: b.x1, y: b.y1 }, { x: b.x0, y: b.y1 }] : [];
+      const vIn = b && Ps.some(P => P.some(q => q.x > b.x0 && q.x < b.x1 && q.y > b.y0 && q.y < b.y1));
+      if(b && !vIn && C.every(q => insideAll(q, Ps))) return [e];   // nằm trọn trong khung: giữ chữ
+      const loops = A.textOutline(e); if(!loops.length) return insideAll({ x: e.x, y: e.y }, Ps) ? [e] : [];
+      const ar = P => { let a = 0; for(let i = 0, j = P.length - 1; i < P.length; j = i++) a += (P[j].x + P[i].x) * (P[j].y - P[i].y); return Math.abs(a / 2); };
+      let a0 = 0, a1 = 0; const L = []; for(const lp of loops){ a0 += ar(lp); let q = lp; for(const P of Ps) q = shClip(q, P); if(q.length >= 3){ a1 += ar(q); L.push(q); } }
+      if(!L.length) return []; if(a1 >= a0 * 0.998) return [e];
+      return [{ type: 'HATCH', solid: true, layer: e.layer, col: e.col, bl: e.bl, loops: L, txo: 1 }]; }   // chữ cắt ngang khung: đường bao chữ cắt theo khung, tô đặc
     if(t === 'TEXT' || t === 'POINT' || t === 'MTEXT'){ return insideAll({ x: e.x, y: e.y }, Ps) ? [e] : []; }
     if(t === 'HATCH'){ const L = []; for(const lp of e.loops || []){ let q = lp; for(const P of Ps) q = shClip(q, P); if(q.length >= 3) L.push(q); } if(!L.length) return []; return [Object.assign({}, e, { loops: L })]; }
     if(t === 'SOLID'){ let q = (e.pts || []).length === 4 ? [e.pts[0], e.pts[1], e.pts[3], e.pts[2]] : (e.pts || []).slice(); for(const P of Ps) q = shClip(q, P); if(q.length < 3) return []; return [{ type: 'HATCH', solid: true, layer: e.layer, col: e.col, bl: e.bl, loops: [q] }]; }
@@ -208,7 +216,7 @@
   let GEOMK = lsGet('dvd:geomk', 1) ? 1 : 0, geoMemo = null;   // { k, v } — điểm mốc vẽ mỗi khung hình: không đọc localStorage mỗi lần
   const geoGet = () => { const k = GEOK(); if(!geoMemo || geoMemo.k !== k) geoMemo = { k, v: lsGet(k, null) }; return geoMemo.v; };
   const geoSet = g => { if(g) lsSet(GEOK(), g); else { try{ localStorage.removeItem(GEOK()); }catch(_){} } geoMemo = null; geoSun(); try{ draw(); }catch(_){} };
-  A.geoGet = geoGet;
+  A.geoGet = geoGet; A.geoSet = geoSet;
   function geoSun(){ const g = geoGet(); if(!g) return; const o = { lat: g.lat, lon: g.lon, tz: g.tz, north: g.north || 0 }; try{ const S = Object.assign(lsGet('dvd:sun', {}), o); lsSet('dvd:sun', S); }catch(_){} try{ if(A.view3D && A.view3D.setSun) A.view3D.setSun(o); }catch(_){} }
   const TZS = [-12, -11, -10, -9.5, -9, -8, -7, -6, -5, -4, -3.5, -3, -2, -1, 0, 1, 2, 3, 3.5, 4, 4.5, 5, 5.5, 5.75, 6, 6.5, 7, 8, 8.75, 9, 9.5, 10, 10.5, 11, 12, 12.75, 13, 14];
   const TZN = { 7: 'Hà Nội, TP Hồ Chí Minh, Bangkok, Jakarta', 8: 'Bắc Kinh, Singapore, Đài Bắc, Perth', 9: 'Tokyo, Seoul', 0: 'London, Lisbon (giờ quốc tế)', 1: 'Paris, Berlin, Rome', 3: 'Moskva, Istanbul', 5.5: 'New Delhi, Mumbai', 10: 'Sydney, Melbourne', '-5': 'New York, Toronto', '-8': 'Los Angeles, Vancouver' };
@@ -259,6 +267,7 @@
   { const _pd = window.parseDXF; if(typeof _pd === 'function') window.parseDXF = function(text){ try{ geoPend = null; const t = String(text);
         const hv = (n, c) => { const m = new RegExp('\\n\\s*9\\s*\\r?\\n\\' + n + '\\s*\\r?\\n\\s*' + c + '\\s*\\r?\\n\\s*([-+\\d.eE]+)').exec(t); return m ? +m[1] : null; };
         const dv = /\n\s*999\s*\r?\nDVDCAD-GEO (\{[^\r\n]*\})/.exec(t); if(dv){ try{ const o = JSON.parse(dv[1]); if(isFinite(o.lat) && isFinite(o.lon)) geoPend = o; }catch(_){} }
+        if(!geoPend && A.geodataParse){ try{ const gd = A.geodataParse(t); if(gd) geoPend = Object.assign({ tz: (() => { const tz = hv('$TIMEZONE', 70); return tz != null ? tz / 1000 : 7; })() }, gd); }catch(_){} }   // GEODATA của AutoCAD: điểm thiết kế, điểm tham chiếu, hệ toạ độ (địa lý / UTM), hướng bắc
         if(!geoPend && /\n\s*0\s*\r?\n\s*GEODATA\s*\r?\n/.test(t)){ const la = hv('$LATITUDE', 40), lo = hv('$LONGITUDE', 40); if(la != null && lo != null){ const nd = hv('$NORTHDIRECTION', 40), tz = hv('$TIMEZONE', 70); geoPend = { lat: la, lon: lo, north: nd != null ? r6(nd * 180 / Math.PI) : 0, tz: tz != null ? tz / 1000 : 7, elev: 0, cs: 'WGS84', dx: 0, dy: 0 }; } } }catch(_){} return _pd.apply(this, arguments); }; }
   A.onLoad = (function(prev){ return function(){ if(prev) prev.apply(this, arguments); try{ geoMemo = null; if(geoPend && !geoGet()){ lsSet(GEOK(), geoPend); geoMemo = null; } geoPend = null; geoSun(); }catch(_){} }; })(A.onLoad);
 
@@ -274,6 +283,7 @@
     const sc = (x, y) => { const q = toScreen(x, y); return { x: q.x, y: hy - q.y }; };
     const raster = new Map();
     for(const e of vis){ const t = e.type;
+      if(t === 'TEXT' && A.textOutline){ const c = aciOf(e); try{ const px = Math.max(24, Math.min(160, (e.h || 2.5) * view.scale * 2)); for(const L of A.textOutline(e, { px, tol: 0.25 })) for(let i = 0; i < L.length; i++){ const r = clip(sc(L[i].x, L[i].y), sc(L[(i + 1) % L.length].x, L[(i + 1) % L.length].y)); if(r) push(c, ...r); } }catch(_){} }   // cạnh chữ: vector theo đường bao
       if(t === 'TEXT' || t === 'HATCH' || t === 'SOLID' || t === 'MTEXT' || e.pw || e.wq || t === 'SOLID3D'){ const c = aciOf(e); if(!raster.has(c)) raster.set(c, []); raster.get(c).push(e); continue; }
       if(t === 'IMAGE') continue;
       const c = aciOf(e);
@@ -357,10 +367,10 @@
      ================================================================== */
   const CUIK = 'dvd:cui';
   const QAT0 = ['NEW', 'OPEN', 'SAVE', 'SAVEAS', 'PLOT', 'UNDO', 'REDO'];
-  const cuiNorm = o => Object.assign({ cmds: [], qat: null, keys: [], dbl: {}, tabs: [], partial: [] }, o && typeof o === 'object' ? o : {});
+  const cuiNorm = o => Object.assign({ cmds: [], qat: null, keys: [], dbl: {}, tabs: [], menus: [], partial: [] }, o && typeof o === 'object' ? o : {});
   const cuiGet = () => cuiNorm(lsGet(CUIK, {}));
-  const cuiEff = C => { const E = { cmds: C.cmds.slice(), qat: C.qat, keys: C.keys.slice(), dbl: Object.assign({}, C.dbl), tabs: C.tabs.slice() };
-    for(const P of C.partial || []){ const d = cuiNorm(P.data); for(const c of d.cmds) if(!E.cmds.some(x => x.name === c.name)) E.cmds.push(c); for(const k of d.keys) if(!E.keys.some(x => x.key === k.key)) E.keys.push(k); for(const k of Object.keys(d.dbl)) if(!E.dbl[k]) E.dbl[k] = d.dbl[k]; for(const t of d.tabs) E.tabs.push(Object.assign({}, t, { id: 'p' + t.id })); }
+  const cuiEff = C => { const E = { cmds: C.cmds.slice(), qat: C.qat, keys: C.keys.slice(), dbl: Object.assign({}, C.dbl), tabs: C.tabs.slice(), menus: (C.menus || []).slice() };
+    for(const P of C.partial || []){ const d = cuiNorm(P.data); for(const c of d.cmds) if(!E.cmds.some(x => x.name === c.name)) E.cmds.push(c); for(const k of d.keys) if(!E.keys.some(x => x.key === k.key)) E.keys.push(k); for(const k of Object.keys(d.dbl)) if(!E.dbl[k]) E.dbl[k] = d.dbl[k]; for(const t of d.tabs) E.tabs.push(Object.assign({}, t, { id: 'p' + t.id })); for(const m of d.menus || []) E.menus.push(m); }
     return E; };
   // chạy macro kiểu AutoCAD: ^C huỷ, ; hoặc dấu cách = Enter, \ = chờ người dùng nhập, _ . ' tiền tố, * lặp
   let pauseRes = null;
@@ -381,7 +391,9 @@
     // lệnh tự tạo
     const now = new Set(C.cmds.map(c => String(c.name).toUpperCase()));
     for(const n of CUIREG) if(!now.has(n)){ const i = DVDCmd.commands.findIndex(c => c.k[0] === n && c.cui); if(i >= 0) DVDCmd.commands.splice(i, 1); }
-    CUIREG = now; for(const c of C.cmds){ const n = String(c.name).toUpperCase(); if(!/^[A-Z0-9_\-]+$/.test(n)) continue; DVDCmd.register([n], (c.desc || 'Lệnh tự tạo') + ' — macro: ' + c.macro, () => runMacro(c.macro), { cui: 1, icon: c.icon || null }); }
+    const DI = window.DVDIcons || (window.DVDIcons = {}); const imgIcon = c => { if(!c.img) return null; const k = 'CUII_' + String(c.name).toUpperCase(); DI[k] = '<image href="' + c.img + '" x="2" y="2" width="20" height="20" preserveAspectRatio="xMidYMid meet"/>'; if(A.ICONS) A.ICONS[k] = DI[k]; return k; };   // hình nút trong gói .cuix
+    CUIREG = now; for(const c of C.cmds){ const n = String(c.name).toUpperCase(); if(!/^[A-Z0-9_\-]+$/.test(n)) continue; DVDCmd.register([n], (c.desc || 'Lệnh tự tạo') + ' — macro: ' + c.macro, () => runMacro(c.macro), { cui: 1, icon: imgIcon(c) || c.icon || null }); }
+    try{ if(A.menuBarSet) A.menuBarSet(C.menus || []); }catch(_){}
     DVDCmd.register(['CUIAPPLY'], 'Áp dụng lại tuỳ biến giao diện (CUI)', () => { cuiApply(); log('Đã áp dụng tuỳ biến giao diện.'); });
     // phím tắt, nhấp đúp
     CUIKEYS = new Map(C.keys.filter(k => k.key && k.cmd).map(k => [k.key.toUpperCase(), k.cmd])); CUIDBL = C.dbl || {};
@@ -392,7 +404,7 @@
         const ic = (c && c.icon) || k; b.innerHTML = (A.ico && A.ICONS && A.ICONS[ic] ? A.ico(ic) : '') || '<span style="font:700 9px system-ui">' + esc(k.slice(0, 4)) + '</span>'; box.appendChild(b); } }
     // tab ribbon riêng
     const R = A.ribbon; if(R && R.RIB && R.WS){ for(const k of Object.keys(R.RIB)) if(k.startsWith('cui_')) delete R.RIB[k]; for(const w of Object.values(R.WS)) if(w && Array.isArray(w.tabs)) w.tabs = w.tabs.filter(t => !String(t).startsWith('cui_'));
-      for(const t of C.tabs){ const id = 'cui_' + t.id; R.RIB[id] = { en: t.name, vi: t.name, panels: (t.panels || []).map((p, i) => ({ id: id + '_' + i, en: p.name, vi: p.name, items: (p.items || []).map(it => ({ t: it.big ? 'big' : 'sm', cmd: it.cmd, en: it.label || it.cmd, vi: it.label || it.cmd })) })) };
+      for(const t of C.tabs){ const id = 'cui_' + t.id; R.RIB[id] = { en: t.name, vi: t.name, panels: (t.panels || []).map((p, i) => ({ id: id + '_' + i, en: p.name, vi: p.name, items: (p.items || []).map(it => { const cc = DVDCmd.commands.find(x => x.k[0] === String(it.cmd).toUpperCase()); const o = { t: it.big ? 'big' : 'sm', cmd: it.cmd, en: it.label || it.cmd, vi: it.label || it.cmd, nt: 1 }; if(cc && cc.icon) o.icon = cc.icon; return o; }) })) };
         for(const w of Object.values(R.WS)) if(w && Array.isArray(w.tabs) && t.ws !== false) w.tabs.push(id); }
       try{ R.setWS(R.ws); const rt = localStorage.getItem('dvd:rtab'); if(rt && rt.startsWith('cui_') && R.tab !== rt){ const b = document.querySelector('#acTabs [data-t="' + rt + '"]'); if(b) b.click(); } }catch(_){} }
     try{ DVDCmd.refresh && DVDCmd.refresh(); }catch(_){} }
@@ -484,7 +496,7 @@
     renderT(); renderL(); renderP(); renderPa(); }); }
   plain(['CUI', 'CUSTOMIZE', 'TOOLBAR', 'MENU'], 'Tuỳ biến giao diện (Customize User Interface): lệnh tự tạo bằng macro, thanh truy cập nhanh, tab ribbon riêng, phím tắt, thao tác nhấp đúp, tệp tuỳ biến bổ sung', () => { if(A.busy && A.busy()) A.cancel(true); cuiDlg(); });
   plain(['QUICKCUI'], 'Tuỳ biến nhanh thanh truy cập nhanh (Quick Access Toolbar) trong hộp CUI', () => { if(A.busy && A.busy()) A.cancel(true); cuiDlg('qat'); });
-  plain(['CUIEXPORT'], 'Xuất tuỳ biến giao diện ra tệp .dvdcui', () => { const C = cuiGet(); shareOrDownload(new Blob([JSON.stringify({ dvdcui: 1, cmds: C.cmds, qat: C.qat, keys: C.keys, dbl: C.dbl, tabs: C.tabs }, null, 1)], { type: 'application/json' }), 'dvdcad.dvdcui', 'application/json'); log('CUIEXPORT: đã xuất ' + C.cmds.length + ' lệnh tự tạo, ' + C.keys.length + ' phím tắt, ' + C.tabs.length + ' tab riêng.'); });
+  plain(['CUIEXPORT'], 'Xuất tuỳ biến giao diện ra tệp .dvdcui', () => { const C = cuiGet(); shareOrDownload(new Blob([JSON.stringify({ dvdcui: 1, cmds: C.cmds, qat: C.qat, keys: C.keys, dbl: C.dbl, tabs: C.tabs, menus: C.menus }, null, 1)], { type: 'application/json' }), 'dvdcad.dvdcui', 'application/json'); log('CUIEXPORT: đã xuất ' + C.cmds.length + ' lệnh tự tạo, ' + C.keys.length + ' phím tắt, ' + C.tabs.length + ' tab riêng.'); });
   /* ---------- DIESEL (như AutoCAD): $(hàm,đối,…) — dùng trong MODEMACRO (thanh trạng thái) và macro $M= ---------- */
   const DIESEL = (() => {
     const N = s => { const v = parseFloat(String(s == null ? '' : s).trim()); return isFinite(v) ? v : 0; };
@@ -568,8 +580,10 @@
     return { names: [...out.keys()], get }; }
   const DXFDBL = { LINE: 'LINE', LWPOLYLINE: 'POLYLINE', POLYLINE: 'POLYLINE', '2DPOLYLINE': 'POLYLINE', CIRCLE: 'CIRCLE', ARC: 'ARC', ELLIPSE: 'ELLIPSE', SPLINE: 'SPLINE', TEXT: 'TEXT', MTEXT: 'MTEXT', HATCH: 'HATCH', INSERT: 'INSERT', ATTBLOCKREF: 'ATTRIB', ATTDYNBLOCKREF: 'ATTRIB', DYNBLOCKREF: 'INSERT', ATTRIB: 'ATTRIB', ATTDEF: 'ATTRIB', DIMENSION: 'DIMENSION', ACAD_TABLE: 'TABLE', IMAGE: 'IMAGE', POINT: 'POINT', '3DSOLID': 'SOLID3D' };
   // XML MenuGroup (.cui) → tuỳ biến DVDCAD: macro chỉ gọi một lệnh có sẵn → dùng thẳng lệnh đó; macro khác → lệnh tự tạo
-  function cuiFromXml(xml, fname){
+  function cuiFromXml(xml, fname, more){
     const doc = new DOMParser().parseFromString(xml, 'application/xml'); if(doc.getElementsByTagName('parsererror').length) throw new Error('XML lỗi');
+    const docs = [doc].concat(((more && more.xml) || []).map(x => { try{ const d = new DOMParser().parseFromString(x, 'application/xml'); return d.getElementsByTagName('parsererror').length ? null : d; }catch(_){ return null; } }).filter(Boolean));
+    const allTag = tag => docs.flatMap(d => [...d.getElementsByTagName(tag)]);
     const kid = (el, tag) => { if(!el) return null; for(const c of el.children) if(c.tagName === tag) return c; return null; };
     const txt = (el, tag) => { const c = kid(el, tag); return c ? String(c.textContent || '').trim() : ''; };
     const has = n => DVDCmd.commands.some(c => c.k.includes(n) && !c.cui);
@@ -580,7 +594,7 @@
       const body = macro.replace(/^\*/, '').replace(/^(\^C)+/i, '').trim(), one = body.replace(/^[_.'"]+/g, '').replace(/[;\s]+$/, '');
       const u1 = one.toUpperCase(); let cmd; if(/^[A-Z0-9\-]+$/.test(u1) && has(u1.replace(/^-/, ''))) cmd = has(u1) ? u1 : u1.replace(/^-/, '');
       else { let n = String(name).replace(/[đĐ]/g, 'D').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 30) || 'MACRO'; if(has(n)) n = 'CUI_' + n; let m = n, k = 2; while(used.has(m)) m = n + '_' + (k++); used.add(m); cmd = m;
-        out.cmds.push({ name: m, desc: (help || name) + (gname ? ' (' + gname + ')' : ''), macro }); }
+        const im = kid(M, 'SmallImage') || kid(M, 'LargeImage'); const c = { name: m, desc: (help || name) + (gname ? ' (' + gname + ')' : ''), macro }; if(im && im.getAttribute('Name')) c._img = im.getAttribute('Name'); out.cmds.push(c); }
       byId.set(uid, cmd); }
     const refOf = el => { const r = el && (el.getElementsByTagName('MacroRef')[0]); return r ? byId.get(r.getAttribute('MenuMacroID')) || null : null; };
     for(const a of doc.getElementsByTagName('Accelerator')){ const key = (txt(a, 'AcceleratorShortcutKey') || a.getAttribute('ShortcutKey') || '').toUpperCase().replace(/\s+/g, ''); const c = refOf(a); if(key && c) out.keys.push({ key, cmd: c }); }
@@ -588,16 +602,37 @@
     const tbs = [...doc.getElementsByTagName('Toolbar')]; if(tbs.length){ const panels = [];
       for(const t of tbs){ const items = []; for(const b of t.getElementsByTagName('ToolbarButton')){ const c = refOf(b); if(c) items.push({ cmd: c, label: txt(b, 'Name') || c }); } if(items.length) panels.push({ name: txt(t, 'Name') || 'Toolbar', items: items.slice(0, 40) }); }
       if(panels.length) out.tabs.push({ id: 'x' + Date.now().toString(36), name: (gname || String(fname || 'CUIX').replace(/\.[^.]+$/, '')), panels: panels.slice(0, 30) }); }
-    out.stat = { macros: byId.size, cmds: out.cmds.length, keys: out.keys.length, dbl: Object.keys(out.dbl).length, panels: out.tabs.reduce((s, t) => s + t.panels.length, 0) };
+    // ribbon (RibbonRoot.cui trong gói .cuix, hoặc trong chính tệp .cui): tab → bảng → nút lệnh
+    { const at = (el, a) => el.getAttribute(a) || ''; const pan = new Map();
+      for(const P of allTag('RibbonPanelSource')){ const items = []; for(const b of P.getElementsByTagName('RibbonCommandButton')){ const c = byId.get(at(b, 'MenuMacroID')) || refOf(b); if(!c) continue; items.push({ cmd: c, label: (at(b, 'Text') || txt(b, 'Name') || c).replace(/&/g, ''), big: /^Large/i.test(at(b, 'ButtonStyle')) }); }
+        if(items.length) pan.set(at(P, 'UID'), { name: (at(P, 'Text') || txt(P, 'Name') || 'Panel').replace(/&/g, ''), items: items.slice(0, 40) }); }
+      for(const T of allTag('RibbonTabSource')){ const panels = [...T.getElementsByTagName('RibbonPanelSourceReference')].map(r => pan.get(at(r, 'PanelId'))).filter(Boolean); if(panels.length) out.tabs.push({ id: 'r' + Math.random().toString(36).slice(2, 8), name: (at(T, 'Text') || txt(T, 'Name') || 'Tab').replace(/&/g, ''), panels: panels.slice(0, 30), rb: 1 }); } }
+    // menu thả xuống (PopMenu POP1…) → thanh menu cổ điển (MENUBAR)
+    { const lab = v => String(v || '').replace(/&(?!&)/g, '').replace(/&&/g, '&').trim(); const popById = new Map(); for(const pm of allTag('PopMenu')) if(pm.getAttribute('UID')) popById.set(pm.getAttribute('UID'), pm);
+      const popItems = (pm, depth) => { const items = []; if(depth > 4) return items;
+        for(const ch of pm.children){ const tg = ch.tagName;
+          if(tg === 'PopMenuItem'){ const sep = /true/i.test(ch.getAttribute('IsSeparator') || ch.getAttribute('Separator') || txt(ch, 'IsSeparator') || ''); const nmEl = kid(ch, 'Name') || ch.getElementsByTagName('Name')[0]; const nm = lab(nmEl ? nmEl.textContent : ''); const c = refOf(ch);
+            if(sep || (!c && !nm)) items.push({ sep: 1 }); else if(c) items.push({ t: nm || c, c }); }
+          else if(tg === 'PopMenuRef' || tg === 'PopMenu'){ const sub = tg === 'PopMenu' ? ch : popById.get(ch.getAttribute('MenuItemID') || ch.getAttribute('MenuID') || ch.getAttribute('PopMenuID') || ''); const nmEl = kid(ch, 'Name'); const L = sub ? popItems(sub, depth + 1) : []; if(L.length) items.push({ t: lab((nmEl && nmEl.textContent) || (sub && txt(sub, 'Name'))) || 'Menu', sub: L }); } }
+        return items; };
+      const tops = allTag('PopMenu').filter(pm => { const al = [...pm.children].filter(c => c.tagName === 'Alias').map(c => c.textContent.trim().toUpperCase()); return al.length ? al.some(a => /^POP[1-9]\d*$/.test(a)) : (pm.parentElement && pm.parentElement.tagName === 'PopMenuRoot'); });
+      out.menus = tops.map(pm => ({ t: lab(txt(pm, 'Name')) || 'Menu', items: popItems(pm, 0) })).filter(m => m.items.some(x => !x.sep)); }
+    out.stat = { macros: byId.size, cmds: out.cmds.length, keys: out.keys.length, dbl: Object.keys(out.dbl).length, panels: out.tabs.reduce((s, t) => s + t.panels.length, 0), menus: out.menus.length, imgs: 0 };
     return out; }
+  // hình nút: tên ảnh trong gói (.bmp / .png / .ico) → data URL
+  async function cuiImages(o, z){ if(!z) { for(const c of o.cmds) delete c._img; return; } const base = n => String(n).split('/').pop().toLowerCase().replace(/\.[^.]+$/, '');
+    const map = new Map(); for(const n of z.names) if(/\.(bmp|png|ico|jpe?g|gif)$/i.test(n)) map.set(base(n), n);
+    for(const c of o.cmds){ const want = c._img && map.get(base(c._img)); delete c._img; if(!want) continue; try{ const b = await z.get(want); if(!b || b.length > 120000) continue; let bin = ''; for(let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+        const ext = want.split('.').pop().toLowerCase(); c.img = 'data:' + (ext === 'png' ? 'image/png' : ext === 'ico' ? 'image/x-icon' : ext === 'gif' ? 'image/gif' : /jpe?g/.test(ext) ? 'image/jpeg' : 'image/bmp') + ';base64,' + btoa(bin); o.stat.imgs++; }catch(_){} } }
   async function readCui(f){ const nm = f.name || '';
     if(/\.cuix$/i.test(nm)){ const z = await unzip(await f.arrayBuffer()); const xmlName = z.names.find(n => /(^|\/)MenuGroup\.cui$/i.test(n)) || z.names.find(n => /\.cui$/i.test(n) && !/ribbon|qat|workspace/i.test(n)); if(!xmlName) throw new Error('Gói .cuix không có MenuGroup.cui');
-      const b = await z.get(xmlName); return cuiFromXml(new TextDecoder().decode(b), nm); }
-    const t = await f.text(); if(/^\s*</.test(t)) return cuiFromXml(t, nm); const o = JSON.parse(t); return o && o.dvdcui ? o : null; }
+      const b = await z.get(xmlName); const extra = []; for(const n of z.names) if(n !== xmlName && /\.cui$/i.test(n) && /ribbon/i.test(n)){ try{ extra.push(new TextDecoder().decode(await z.get(n))); }catch(_){} }
+      const o = cuiFromXml(new TextDecoder().decode(b), nm, { xml: extra }); await cuiImages(o, z); return o; }
+    const t = await f.text(); if(/^\s*</.test(t)){ const o = cuiFromXml(t, nm); await cuiImages(o, null); return o; } const o = JSON.parse(t); return o && o.dvdcui ? o : null; }
   A.cuiRead = readCui;
-  const cuiStat = o => o && o.stat ? ' (' + o.stat.macros + ' macro → ' + o.stat.cmds + ' lệnh tự tạo, ' + o.stat.keys + ' phím tắt, ' + o.stat.dbl + ' nhấp đúp, ' + o.stat.panels + ' thanh công cụ)' : '';
+  const cuiStat = o => o && o.stat ? ' (' + o.stat.macros + ' macro → ' + o.stat.cmds + ' lệnh tự tạo, ' + o.stat.keys + ' phím tắt, ' + o.stat.dbl + ' nhấp đúp, ' + o.stat.panels + ' bảng ribbon / thanh công cụ, ' + (o.stat.menus || 0) + ' menu, ' + (o.stat.imgs || 0) + ' hình nút)' : '';
   const cuiImport = async f => { let o = null; try{ o = await readCui(f); }catch(err){ console.warn('cui', err); } if(!o || !o.dvdcui){ say('Tệp tuỳ biến không hợp lệ.'); return; }
-    const C = cuiGet(), N = cuiNorm(o); for(const c of N.cmds) if(!C.cmds.some(x => x.name === c.name)) C.cmds.push(c); for(const k of N.keys){ C.keys = C.keys.filter(x => x.key !== k.key); C.keys.push(k); } Object.assign(C.dbl, N.dbl); if(N.qat) C.qat = N.qat; for(const t of N.tabs) if(!C.tabs.some(x => x.id === t.id)) C.tabs.push(t); lsSet(CUIK, C); cuiApply(); log('CUIIMPORT: đã nhập ' + f.name + cuiStat(o)); };
+    const C = cuiGet(), N = cuiNorm(o); for(const c of N.cmds) if(!C.cmds.some(x => x.name === c.name)) C.cmds.push(c); for(const k of N.keys){ C.keys = C.keys.filter(x => x.key !== k.key); C.keys.push(k); } Object.assign(C.dbl, N.dbl); if(N.qat) C.qat = N.qat; for(const t of N.tabs) if(!C.tabs.some(x => x.id === t.id)) C.tabs.push(t); for(const m of N.menus || []){ C.menus = (C.menus || []).filter(x => x.t !== m.t); C.menus.push(m); } lsSet(CUIK, C); cuiApply(); log('CUIIMPORT: đã nhập ' + f.name + cuiStat(o)); };
   const cuiLoad = async f => { let o = null; try{ o = await readCui(f); }catch(err){ console.warn('cui', err); } if(!o || !o.dvdcui){ say('Tệp tuỳ biến không hợp lệ.'); return; }
     const C = cuiGet(); C.partial = C.partial.filter(p => p.name !== f.name); C.partial.push({ name: f.name, data: o }); lsSet(CUIK, C); cuiApply(); log('CUILOAD: đã nạp ' + f.name + cuiStat(o)); };
   A.cuiImportFile = cuiImport; A.cuiLoadFile = cuiLoad;

@@ -1,4 +1,4 @@
-# DVDCAD v5r — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5s — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,24 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v5s)
+- **Sửa lỗi:** STYLE → *New…* (và mọi hộp hỏi tên / nhập chữ mở từ một hộp thoại) giờ hiện trên cùng, không bị hộp thoại đang mở che.
+- **VPLAYER / VPCLIP lưu vào tệp**: lớp đóng băng riêng từng khung nhìn và đường cắt đa giác ghi vào DXF (VIEWPORT 331 / 340) và DWG 2000; mở tệp của AutoCAD cũng đọc được hai thông tin này. Layout của tệp hiện khung của từng khung nhìn.
+- **TXTEXP** (Express Tools → Chữ → *Nổ chữ*): nổ chữ thành đa tuyến đường bao (đủ dấu tiếng Việt, chữ xoay, hệ số rộng, phông TrueType).
+  - **EXPORTLAYOUT**: chữ cắt ngang khung nhìn được cắt đúng theo khung (đường bao chữ, tô đặc); chữ nằm trọn trong khung giữ nguyên là chữ.
+  - **MSLIDE**: cạnh chữ ghi thành vector theo đường bao (sắc nét khi phóng to slide).
+- **Thanh menu cổ điển** (biến **MENUBAR** = 1, hoặc menu Xem → Thanh menu): Tệp, Sửa, Xem, Chèn, Định dạng, Công cụ, Vẽ, Kích thước, Hiệu chỉnh, Tham số, Cửa sổ, Trợ giúp như AutoCAD.
+- **CUIIMPORT / CUILOAD (.cuix / .cui)** lấy thêm:
+  - **Menu** (PopMenu POP1…, có menu con) → thêm vào thanh menu cổ điển.
+  - **Ribbon** (RibbonRoot.cui: tab → bảng → nút lớn / nhỏ) → tab ribbon riêng.
+  - **Hình nút** trong gói (.png / .bmp / .ico) → biểu tượng của lệnh tự tạo trên ribbon, thanh truy cập nhanh.
+- **Vị trí địa lý:**
+  - Mở DXF của AutoCAD có **GEODATA**: lấy điểm thiết kế, điểm tham chiếu, cao độ, hướng bắc; hệ toạ độ địa lý (LL84 / WGS84) hoặc **UTM** (vd UTM84-48N, VN-2000 UTM 48N) tự đổi ra vĩ độ / kinh độ.
+  - **GEOMAP** (tab Hiển thị → Ánh sáng): bản đồ nền dưới bản vẽ trong Model — *Đường* (OpenStreetMap, cần mạng), *Ảnh vệ tinh* (dịch vụ ô bản đồ riêng: biến **GEOMAPURL** `…/{z}/{x}/{y}.png`), *Tắt*; biến **GEOMAPMODE**. Bản đồ không in.
+- **Máy vẽ HPGL/2**: hộp PLOT → *HP DesignJet (HPGL/2).pc3* in ra tệp **.plt**.
+  - Bút theo bảng kiểu in: **bút vật lý** (physical pen), không có thì **bút ảo** (virtual pen), không có nữa thì số màu ACI; màu bút (PC), bề rộng nét (PW).
+  - Nét, cung (theo dây cung 0,3 mm), kiểu nét (của bảng kiểu in hoặc của đối tượng), hatch mẫu, vùng tô / chữ thành đa giác tô (FP), cắt theo vùng in (IW), khung nhìn layout cắt theo khung.
 
 ## Bổ sung như AutoCAD 2027 (v5r)
 - **Layout đọc từ tệp DWG / DXF sửa được** như layout tự tạo.

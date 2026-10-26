@@ -365,6 +365,7 @@
   html.acad .modal.acw-free{max-width:97vw}
   html.acad .modal > *{flex:0 0 auto}
   html.acad .modal > :not(.dvd-tb):not(.modal-actions):not(h3:first-child){margin-left:12px;margin-right:12px}
+  html.acad .modal > textarea,html.acad .modal > input{width:calc(100% - 24px) !important}
   html.acad .modal > h3:first-child,html.acad .dvd-tb{display:flex;align-items:center;height:30px;margin:0 0 10px;padding:0 0 0 12px;background:var(--acw-tb);border-bottom:1px solid var(--acw-ln);font:400 12.5px var(--acw-font);color:#f2f5f9;user-select:none;-webkit-user-select:none}
   html.acad .dvd-tb{cursor:default}
   html.acad .dvd-tb h3{flex:1;margin:0;font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -653,7 +654,7 @@
     ] },
     express: { en: 'Express Tools', vi: 'Express Tools', panels: [
       { id: 'xblk', en: 'Blocks', vi: 'Khối', items: [big('BURST', 'Explode\nAttributes', 'Phá khối\ngiữ chữ'), col(sm('NCOPY', 'Copy Nested Objects', 'Chép nét trong khối'), sm('WBLOCK', 'Write Block', 'Ghi khối ra file'), sm('BLOCKLIB', 'Blocks Library', 'Thư viện khối')), col(sm('BREPLACE', 'Replace Block', 'Thay khối'), sm('RESETBLOCK', 'Reset Block', 'Đặt lại khối'))] },
-      { id: 'xtxt', en: 'Text', vi: 'Chữ', items: [big('TCOUNT', 'Auto\nNumber', 'Đánh số\nchữ'), col(sm('TEXTMASK', 'Mask', 'Che nền chữ'), sm('TEXTUNMASK', 'Unmask', 'Bỏ che'), sm('ARCTEXT', 'Arc-Aligned', 'Chữ theo cung')), col(sm('TXT2MTXT', 'Convert to MText', 'Gộp chữ'), sm('JUSTIFYTEXT', 'Justify', 'Canh lề'), sm('SCALETEXT', 'Scale Text', 'Đổi cỡ chữ'))] },
+      { id: 'xtxt', en: 'Text', vi: 'Chữ', items: [big('TCOUNT', 'Auto\nNumber', 'Đánh số\nchữ'), col(sm('TEXTMASK', 'Mask', 'Che nền chữ'), sm('TEXTUNMASK', 'Unmask', 'Bỏ che'), sm('ARCTEXT', 'Arc-Aligned', 'Chữ theo cung')), col(sm('TXT2MTXT', 'Convert to MText', 'Gộp chữ'), sm('JUSTIFYTEXT', 'Justify', 'Canh lề'), sm('SCALETEXT', 'Scale Text', 'Đổi cỡ chữ')), col(sm('TXTEXP', 'Explode Text', 'Nổ chữ'))] },
       { id: 'xmod', en: 'Modify', vi: 'Sửa', items: [big('EXTRIM', 'Extended\nTrim', 'Cắt theo\nđường kín'), col(sm('COPYM', 'Multiple Copy', 'Sao chép nhiều'), sm('FLATTEN', 'Flatten', 'Làm phẳng'), sm('OVERKILL', 'Delete Duplicates', 'Xoá nét trùng'))] },
       { id: 'xdraw', en: 'Draw', vi: 'Vẽ', items: [big('BREAKLINE', 'Break-line\nSymbol', 'Đường\ncắt ngắn'), col(sm('REVCLOUD', 'Revision Cloud', 'Khoanh mây'), sm('HELIX', 'Helix', 'Xoắn ốc'))] },
       { id: 'xlay', en: 'Layers', vi: 'Lớp', items: [big('LAYWALK', 'Layer\nWalk', 'Duyệt\nlớp'), col(sm('LAYMRG', 'Merge', 'Gộp lớp'), sm('LAYDEL', 'Delete', 'Xoá lớp'), sm('COPYTOLAYER', 'Copy to Layer', 'Chép sang lớp')), col(sm('LAYCUR', 'Change to Current', 'Về lớp hiện hành'), sm('LAYMCH', 'Match Layer', 'Theo lớp đích'), sm('LAYERP', 'Previous', 'Lớp trước'))] },
@@ -682,7 +683,7 @@
     visualize: { en: 'Visualize', vi: 'Trình diễn', panels: [
       { id: 'views', en: 'Views', vi: 'Hướng nhìn', items: [col(sm('VIEWTOP', 'Top', 'Trên'), sm('VIEWFRONT', 'Front', 'Trước'), sm('VIEWRIGHT', 'Right', 'Phải')), col(sm('VIEWSWISO', 'SW Isometric', 'ISO Tây Nam'), sm('VIEWSEISO', 'SE Isometric', 'ISO Đông Nam'), sm('VIEWNEISO', 'NE Isometric', 'ISO Đông Bắc')), col(sm('VIEWNWISO', 'NW Isometric', 'ISO Tây Bắc'))] },
       { id: 'navi', en: 'Navigate', vi: 'Điều hướng', items: [big('3DORBIT', '3D\nOrbit', 'Xem\n3D'), big('3DWALK', 'Walk', 'Đi bộ'), col(sm('VPOINT', 'Viewpoint', 'Điểm nhìn'), sm('DDVPOINT', 'Viewpoint Presets', 'Hướng nhìn 2 góc'), sm('HIDE', 'Hide', 'Khuất nét'))] },
-      { id: 'lights', en: 'Lights', vi: 'Ánh sáng', items: [big('LIGHT', 'Point\nLight', 'Đèn\nđiểm'), col(sm('SPOTLIGHT', 'Spot', 'Đèn rọi'), sm('DISTANTLIGHT', 'Distant', 'Đèn song song'), sm('LIGHTLIST', 'Light List', 'Danh sách đèn')), big('SUNPROPERTIES', 'Sun &\nLocation', 'Mặt\ntrời')] },
+      { id: 'lights', en: 'Lights', vi: 'Ánh sáng', items: [big('LIGHT', 'Point\nLight', 'Đèn\nđiểm'), col(sm('SPOTLIGHT', 'Spot', 'Đèn rọi'), sm('DISTANTLIGHT', 'Distant', 'Đèn song song'), sm('LIGHTLIST', 'Light List', 'Danh sách đèn')), big('SUNPROPERTIES', 'Sun &\nLocation', 'Mặt\ntrời'), col(sm('GEOGRAPHICLOCATION', 'Set Location', 'Vị trí địa lý'), sm('GEOMAP', 'Map', 'Bản đồ nền'), sm('GEOREMOVE', 'Remove Location', 'Xoá vị trí'))] },
       { id: 'mats', en: 'Materials', vi: 'Vật liệu', items: [big('MATERIALS', 'Materials\nBrowser', 'Vật\nliệu')] },
       { id: 'cam', en: 'Camera', vi: 'Camera', items: [big('CAMERA', 'Create\nCamera', 'Đặt\ncamera')] },
       { id: 'rend', en: 'Render', vi: 'Render', items: [big('RENDER', 'Render', 'Render')] },
@@ -767,9 +768,9 @@
     const on = it.tog && SET[it.tog] ? ' on' : '';
     const dd = it.menu ? ' data-menu="' + idx + '"' : '';
     const tip = ' data-tl="' + esc((L(f) + (f.sub ? ', ' + L(f.sub) : '')).replace(/\n/g, ' ')) + '" data-ts="' + esc(L2(f).replace(/\n/g, ' ')) + '"';
-    if(it.t === 'big') return '<button class="ac-rbig' + on + (it.menu ? ' has-dd' : '') + '" data-c="' + f.cmd + '"' + dd + tg + tip + ' aria-label="' + esc(lab) + '">' + ico(iconOf(f.cmd, f.icon)) + '<span>' + esc(lab).replace(/\n/g, '<br>') + (it.menu ? '<i class="dd">▾</i>' : '') + '</span></button>';
-    if(it.t === 'ic') return '<span class="ac-sgrp"><button class="ac-rbtn ac-ic' + on + '" data-c="' + f.cmd + '"' + tg + tip + ' aria-label="' + esc(lab) + '">' + ico(iconOf(f.cmd, f.icon)) + '</button>' + (it.menu ? '<button class="ac-dd" data-menu="' + idx + '" aria-label="▾">▾</button>' : '') + '</span>';
-    return '<span class="ac-sgrp"><button class="ac-rbtn' + on + '" data-c="' + f.cmd + '"' + tg + tip + ' aria-label="' + esc(lab) + '">' + ico(iconOf(f.cmd, f.icon)) + '<span>' + esc(lab) + '</span></button>' + (it.menu ? '<button class="ac-dd" data-menu="' + idx + '" aria-label="▾">▾</button>' : '') + '</span>';
+    if(it.t === 'big') return '<button class="ac-rbig' + on + (it.menu ? ' has-dd' : '') + '" data-c="' + f.cmd + '"' + dd + tg + tip + (it.nt ? ' translate="no"' : '') + ' aria-label="' + esc(lab) + '">' + ico(iconOf(f.cmd, f.icon)) + '<span>' + esc(lab).replace(/\n/g, '<br>') + (it.menu ? '<i class="dd">▾</i>' : '') + '</span></button>';
+    if(it.t === 'ic') return '<span class="ac-sgrp"><button class="ac-rbtn ac-ic' + on + '" data-c="' + f.cmd + '"' + tg + tip + (it.nt ? ' translate="no"' : '') + ' aria-label="' + esc(lab) + '">' + ico(iconOf(f.cmd, f.icon)) + '</button>' + (it.menu ? '<button class="ac-dd" data-menu="' + idx + '" aria-label="▾">▾</button>' : '') + '</span>';
+    return '<span class="ac-sgrp"><button class="ac-rbtn' + on + '" data-c="' + f.cmd + '"' + tg + tip + (it.nt ? ' translate="no"' : '') + ' aria-label="' + esc(lab) + '">' + ico(iconOf(f.cmd, f.icon)) + '<span>' + esc(lab) + '</span></button>' + (it.menu ? '<button class="ac-dd" data-menu="' + idx + '" aria-label="▾">▾</button>' : '') + '</span>';
   }
   let ITEMS = [];   // các nút đang hiện (để mở menu tách)
   const reg = it => { ITEMS.push(it); return ITEMS.length - 1; };

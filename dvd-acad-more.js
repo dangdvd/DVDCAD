@@ -259,6 +259,9 @@
     return R;
   }
   A.plotRender = plotRender; A.PS = PS;
+  // khổ giấy, vùng in, tỉ lệ (mm giấy / đơn vị) và vị trí vùng in (mm từ góc trên trái) — như plotRender, không vẽ (máy vẽ HPGL/2)
+  A.plotGeom = () => { const [Wmm, Hmm] = paperMM(); const mg = LYT() ? 0 : Math.max(0, +PS.margin || 0); const area = plotArea(); const k = plotK(area, Wmm - 2 * mg, Hmm - 2 * mg);
+    const aw = area.x1 - area.x0, ah = area.y1 - area.y0; let ox = mg, oy = mg; if(PS.center || PS.fit){ ox = (Wmm - aw * k) / 2; oy = (Hmm - ah * k) / 2; } else { oy = Hmm - mg - ah * k; } return { Wmm, Hmm, area, k, ox, oy }; };
   function plotInfo(){ const [Wmm, Hmm] = paperMM(); const mg = +PS.margin || 0; const area = plotArea(); const k = plotK(area, Wmm - 2 * mg, Hmm - 2 * mg); const N = mmPerUnit() / k;
     const fits = (area.x1 - area.x0) * k <= Wmm - 2 * mg + 0.01 && (area.y1 - area.y0) * k <= Hmm - 2 * mg + 0.01;
     return { N, fits, wmm: (area.x1 - area.x0) * k, hmm: (area.y1 - area.y0) * k }; }
@@ -270,6 +273,8 @@
   }
   async function doPlot(fmt){
     say('Đang tạo bản in…'); await new Promise(r => setTimeout(r, 40));
+    if(fmt === 'plt'){ try{ const txt = A.hpglPlot ? A.hpglPlot() : null; if(!txt){ say('Không tạo được tệp HPGL/2.'); return; } const nm = ((typeof exportFilename === 'function') ? exportFilename('pdf') : 'banve.pdf').replace(/\.pdf$/i, '.plt');
+        await shareOrDownload(new Blob([txt.data], { type: 'application/vnd.hp-hpgl' }), nm, 'application/vnd.hp-hpgl'); log('Đã in ra ' + nm + ' (HPGL/2, ' + txt.pens + ' bút, khổ ' + PS.paper + ').'); }catch(err){ console.error(err); say('Không tạo được tệp HPGL/2.'); } return; }
     try{
       const r = plotRender(fmt === 'png' ? 200 : 300, false);
       const name = (typeof exportFilename === 'function') ? exportFilename(fmt === 'png' ? 'png' : 'pdf') : 'banve.' + fmt;
@@ -287,7 +292,7 @@
     const dev = PS.dev || 'pdf';
     const html = '<div class="pl-wrap"><div class="pl-left">' +
       F('Thiết lập trang', R('Tên:', '<select disabled><option>&lt;Không&gt;</option></select> <button type="button" class="acw-btn" disabled>Thêm…</button>')) +
-      F('Máy in / máy vẽ', R('Tên:', '<select id="plDev">' + opt('pdf', 'DWG To PDF.pc3', dev === 'pdf') + opt('print', 'Máy in Windows (hệ thống)', dev === 'print') + opt('png', 'PublishToWeb PNG.pc3', dev === 'png') + '</select>') +
+      F('Máy in / máy vẽ', R('Tên:', '<select id="plDev">' + opt('pdf', 'DWG To PDF.pc3', dev === 'pdf') + opt('print', 'Máy in Windows (hệ thống)', dev === 'print') + opt('png', 'PublishToWeb PNG.pc3', dev === 'png') + opt('plt', 'HP DesignJet (HPGL/2).pc3', dev === 'plt') + '</select>') +
         '<div class="acw-note" id="plDevN" style="margin:0 0 2px"></div><label class="acw-ck dis"><input type="checkbox" disabled checked><span>In ra file</span></label>') +
       '<div style="display:flex;gap:8px">' + F('Khổ giấy', '<select id="plPaper" style="width:100%">' + Object.keys(PAPERS).map(k => opt(k, 'ISO ' + k + ' (' + PAPERS[k][0] + '.00 x ' + PAPERS[k][1] + '.00 MM)', k === PS.paper)).join('') + '</select>', 'flex:1') +
         F('Số bản', '<input type="number" value="1" disabled style="width:60px">', 'flex:0 0 auto') + '</div>' +
@@ -308,7 +313,7 @@
       ok: () => { read(); if(PS.area === 'window' && !PS.win){ say('Chưa chọn khung in.'); return false; } const f = g('plDev').value; setTimeout(() => doPlot(f), 0); } });
     const root = d.root; root.querySelector('.modal').classList.add('pl-modal');
     const g = id => root.querySelector('#' + id);
-    const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; g('plDevN').textContent = PS.dev === 'pdf' ? 'Xuất file PDF vector' : PS.dev === 'png' ? 'Xuất ảnh PNG' : 'Mở hộp in của hệ điều hành'; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit; psSave(); };
+    const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; g('plDevN').textContent = PS.dev === 'pdf' ? 'Xuất file PDF vector' : PS.dev === 'png' ? 'Xuất ảnh PNG' : PS.dev === 'plt' ? 'Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in' : 'Mở hộp in của hệ điều hành'; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit; psSave(); };
     g('plStampB').onclick = () => { try{ DVDCmd.run('PLOTSTAMP'); }catch(_){} };
     let pvT = 0;
     const preview = () => { clearTimeout(pvT); pvT = setTimeout(() => {

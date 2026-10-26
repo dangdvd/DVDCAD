@@ -352,8 +352,9 @@
         o.d.BD3(r.pt(10)); o.d.BD(r.num(40)); o.d.BD(r.num(41));
         o.d.BD3(r.pt(17)); o.d.BD3([r.num(16), r.num(26), r.num(36, 1)]); o.d.BD(r.num(51) * D2R); o.d.BD(r.num(45, 1)); o.d.BD(r.num(42, 50)); o.d.BD(r.num(43)); o.d.BD(r.num(44)); o.d.BD(r.num(50) * D2R);
         o.d.RD2([r.num(12), r.num(22)]); o.d.RD2([r.num(13), r.num(23)]); o.d.RD2([r.num(14, 10), r.num(24, 10)]); o.d.RD2([r.num(15, 10), r.num(25, 10)]); o.d.BS(r.int(72, 1000));
-        o.d.BL(0); o.d.BL(r.int(90, 32864)); o.d.TV(r.get(1, '')); o.d.RC(r.int(281)); o.d.B(r.int(74)); o.d.B(r.int(71)); o.d.BD3(r.pt(110)); o.d.BD3([r.num(111, 1), r.num(121), r.num(131)]); o.d.BD3([r.num(112), r.num(122, 1), r.num(132)]); o.d.BD(r.num(146)); o.d.BS(r.int(79));
-        o.hd.H(5, 0); o.hd.H(5, 0); o.hd.H(5, 0); o.hd.H(5, 0); }   // đường cắt (340), đầu VX (R2000), UCS tên (345), UCS gốc (346)
+        const frz = r.g.filter(x => x[0] === 331 || x[0] === 341).map(x => ref(x[1])).filter(Boolean), clip = ref(r.get(340));   // lớp đóng băng riêng (VPLAYER), đường cắt (VPCLIP)
+        o.d.BL(frz.length); o.d.BL(r.int(90, 32864)); o.d.TV(r.get(1, '')); o.d.RC(r.int(281)); o.d.B(r.int(74)); o.d.B(r.int(71)); o.d.BD3(r.pt(110)); o.d.BD3([r.num(111, 1), r.num(121), r.num(131)]); o.d.BD3([r.num(112), r.num(122, 1), r.num(132)]); o.d.BD(r.num(146)); o.d.BS(r.int(79));
+        for(const h of frz) o.hd.H(5, h); o.hd.H(5, clip && entH.has(clip) ? clip : 0); o.hd.H(5, 0); o.hd.H(5, 0); o.hd.H(5, 0); }   // lớp đóng băng, đường cắt (340), đầu VX (R2000), UCS tên (345), UCS gốc (346)
       else if(t === 'HATCH'){ o = obj(T.HATCH, h, r); entCommon(o, c); hatch(o, r.after('AcDbHatch')); }
       else if(t === 'INSERT'){ o = obj(T.INSERT, h, r); entCommon(o, c);
         const s = [r.num(41, 1), r.num(42, 1), r.num(43, 1)]; o.d.BD3(r.pt(10));

@@ -256,7 +256,7 @@
     if(live && live !== cur && psSer(live) === psSer(cur)){ D.ps = live; return live; } for(const e of cur) if(e) e.userAdded = true; PSLIVE.set(key, cur); D.ps = cur; return cur; }
   function toLayout(D){
     const k = n => mmU() / n;   // mm giấy trên 1 đơn vị bản vẽ
-    const vps = (D.vps || []).map(v => ({ vcx: v.x + v.w / 2, vcy: v.y + v.h / 2, w: v.w, h: v.h, dcx: v.cx, dcy: v.cy, vh: v.h / k(v.n) }));
+    const vps = (D.vps || []).map(v => ({ vcx: v.x + v.w / 2, vcy: v.y + v.h / 2, w: v.w, h: v.h, dcx: v.cx, dcy: v.cy, vh: v.h / k(v.n), vx: v.vx || undefined }));
     return { name: D.name, tabOrder: 100 + (D.ord || 0), isModel: false, user: true, def: D, paper: { paperPrims: sheetPrims(D).concat(psOf(D)), viewports: vps } };
   }
   function installLayouts(){
@@ -278,7 +278,7 @@
   function fileDef(L){
     if(!L || L.user || L.isModel || !L.paper) return null;
     const P = L.paper, ps = (P.paperPrims || []).filter(e => e && !e.vpf);
-    const vps = (P.viewports || []).map(v => ({ x: v.vcx - v.w / 2, y: v.vcy - v.h / 2, w: v.w, h: v.h, n: v.vh * mmU() / v.h, cx: v.dcx, cy: v.dcy }));
+    const vps = (P.viewports || []).map((v, k) => { const o = { x: v.vcx - v.w / 2, y: v.vcy - v.h / 2, w: v.w, h: v.h, n: v.vh * mmU() / v.h, cx: v.dcx, cy: v.dcy }; let vx = null; try{ vx = window.vpExtra ? window.vpExtra(L, k) : v.vx; }catch(_){} if(vx) o.vx = JSON.parse(JSON.stringify(vx)); return o; });
     let b = P.lim ? { x0: P.lim.x0, y0: P.lim.y0, x1: P.lim.x1, y1: P.lim.y1 } : null;
     if(!b){ let a = Infinity, c = Infinity, d = -Infinity, f = -Infinity; const add = bb => { if(!bb) return; if(bb.x0 < a) a = bb.x0; if(bb.y0 < c) c = bb.y0; if(bb.x1 > d) d = bb.x1; if(bb.y1 > f) f = bb.y1; };
       for(const e of ps){ try{ add(entBBox(e)); }catch(_){} } for(const v of vps) add({ x0: v.x, y0: v.y, x1: v.x + v.w, y1: v.y + v.h });

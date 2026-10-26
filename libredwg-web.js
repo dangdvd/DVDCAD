@@ -6889,6 +6889,23 @@ class LibreEntityConverter {
     const visualStyleId = libredwg.dwg_ref_get_absref(visualstyle_ref);
     const sun_ref = libredwg.dwg_dynapi_entity_value(entity, "sun").data;
     const sunId = libredwg.dwg_ref_get_absref(sun_ref);
+    // DVDCAD: lớp đóng băng riêng khung nhìn (VPLAYER) và đường cắt (VPCLIP)
+    let frozenLayerIds = [];
+    try {
+      const nfl = libredwg.dwg_dynapi_entity_value(entity, "num_frozen_layers").data;
+      const fl = libredwg.dwg_dynapi_entity_value(entity, "frozen_layers").data;
+      if (nfl > 0 && fl) frozenLayerIds = libredwg.dwg_ptr_to_object_ref_array(fl, nfl).map((r) => idToString(r.absolute_ref));
+    } catch (_e) {
+    }
+    let clipBoundaryId = void 0;
+    try {
+      const cb = libredwg.dwg_dynapi_entity_value(entity, "clip_boundary").data;
+      if (cb) {
+        const h = libredwg.dwg_ref_get_absref(cb);
+        if (h) clipBoundaryId = idToString(h);
+      }
+    } catch (_e) {
+    }
     return {
       type: "VIEWPORT",
       ...commonAttrs,
@@ -6897,6 +6914,8 @@ class LibreEntityConverter {
       height,
       status,
       viewportId: 0,
+      frozenLayerIds,
+      clipBoundaryId,
       // Will be set later in LibreDwgConverter.convert
       displayCenter,
       snapBase,

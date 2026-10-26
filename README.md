@@ -6,6 +6,15 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5s: hộp hỏi tên trên cùng, VPLAYER / VPCLIP trong tệp, chữ → đường bao (TXTEXP), MENUBAR + menu / ribbon / hình nút CUIX, GEODATA + GEOMAP, máy vẽ HPGL/2
+- Tệp mới `dvd-acad-dlg4.js` (nạp sau `dvd-acad-dlg3.js`).
+- `openModal(o)` đưa lớp phủ tĩnh (vd `#txtBar` của `askText`) xuống cuối `body` → nằm trên hộp thoại `A.dialog` đang mở (cùng `z-index: 50`).
+- VIEWPORT: DXF ghi 331 (handle lớp đóng băng), 340 + cờ 90 bit 65536 (đường cắt LWPOLYLINE giấy, có reactor về khung nhìn); DWG 2000 ghi `frozen_layers` + `clip_boundary`. Đọc DXF: `_h` (handle) của đối tượng giấy, `layerByH`; đọc DWG: `frozenLayerIds` / `clipBoundaryId` (thêm vào `convertViewport` của `libredwg-web.js`). Kết quả gắn ở `viewport.vx = { frz, cp }`; `window.vpExtra` lấy bản riêng trên máy trước, không có thì `vx` của tệp.
+- `A.textOutline(e, { px, tol })`: vẽ chữ ra canvas phụ bằng chính `drawEntity`, dò biên marching squares (nội suy theo alpha), Douglas–Peucker cho vòng kín → các vòng (ngoài + lỗ, tô evenodd). Dùng cho TXTEXP, `clipEnt` của EXPORTLAYOUT (HATCH `txo`), MSLIDE, HPGL/2.
+- MENUBAR: `A.menuBarSet(menus)`, menu `{ t, items: [{ t, c } | { sep } | { t, sub }] }`; `dvd:cui.menus`. CUIX: `RibbonPanelSource` / `RibbonTabSource` → `tabs` (`rb: 1`), `SmallImage` / `LargeImage` → `cmds[].img` (data URL) → `DVDIcons['CUII_<lệnh>']` (`<image>` trong SVG). Nhãn của tệp CUI không qua bộ dịch (`translate="no"`, `it.nt`).
+- `A.geodataParse(text)`, `A.utmToLL(E, N, zone, south)`; GEOMAP vẽ trong `drawGrid` (dưới bản vẽ) bằng ô Web Mercator, khung toạ độ địa phương (mét / đơn vị bản vẽ, hướng bắc); ghi chú bản quyền OSM góc dưới phải.
+- `A.plotGeom()` (khổ, vùng in, tỉ lệ, gốc) trong `dvd-acad-more.js`; `A.hpglPlot()` → `{ data, pens, ents }`, thiết bị `plt` trong PLOT.
+
 ## v5r: layout của tệp sửa được, DXF / DWG ghi layout thật, DIESEL + MODEMACRO, nhập CUIX, nét in thích ứng, đầu nét thoi
 - Đọc DXF: `parseDXF` trả thêm `layouts` (LAYOUT trong OBJECTS; khối giấy qua mã 340 của BLOCK_RECORD vì 330 bị bỏ khi đọc) và `paper` (đối tượng mã 67 = 1 của ENTITIES, tách khỏi Model; VIEWPORT gom ở `list.vports`). `dxfLayouts(r)` dựng `dwgLayouts` giống `buildLayouts` của DWG; `paper.lim` = tờ giấy (khổ giấy thiết lập in, hoặc LIMMIN / LIMMAX), viền `vpf` không in.
 - Đọc DWG: LibreDWG gộp đối tượng `*Paper_Space*` vào `db.entities` → `dwgBuild` lọc theo handle để Model chỉ còn `*Model_Space`.

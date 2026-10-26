@@ -1155,6 +1155,9 @@
 "dvd-acad-dlg.js",
 "dvd-acad-x6.js"
 ],
+"Biên…": [
+"dvd-acad-dlg4.js"
+],
 "Biến": [
 "dvd-acad-dlg.js"
 ],
@@ -1180,6 +1183,9 @@
 ],
 "Biến hệ thống: đã đổi": [
 "dvd-acad-dlg2.js"
+],
+"Biến hệ thống…": [
+"dvd-acad-dlg4.js"
 ],
 "Biểu thức": [
 "dvd-acad-x4.js"
@@ -1235,6 +1241,9 @@
 "Bo góc: chạm 1 góc đa tuyến/chữ nhật, hoặc chạm 2 đường thẳng (đang": [
 "index.html"
 ],
+"Bo tròn": [
+"dvd-acad-dlg4.js"
+],
 "Bo tròn cạnh khối 3D (cạnh trên/dưới/đứng)": [
 "dvd-acad-3dy.js"
 ],
@@ -1260,6 +1269,7 @@
 "Bán kính": [
 "dvd-acad-3d.js",
 "dvd-acad-cmds.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-ui.js",
 "dvd-acad-x10.js",
@@ -1287,6 +1297,9 @@
 ],
 "Bán kính cuối": [
 "dvd-acad-x6.js"
+],
+"Bán kính gãy": [
+"dvd-acad-dlg4.js"
 ],
 "Bán kính gấp khúc": [
 "dvd-acad-ui.js"
@@ -1470,6 +1483,9 @@
 "Bản vẽ chưa có layout giấy — dùng LAYOUT để tạo.": [
 "dvd-acad-x12.js"
 ],
+"Bản vẽ chưa có vị trí địa lý — dùng GEOGRAPHICLOCATION trước.": [
+"dvd-acad-dlg4.js"
+],
 "Bản vẽ chưa có vị trí địa lý.": [
 "dvd-acad-dlg3.js"
 ],
@@ -1550,6 +1566,18 @@
 "Bản vẽ:": [
 "dvd-acad-x16.js"
 ],
+"Bản đồ nền": [
+"dvd-acad-ui.js"
+],
+"Bản đồ nền [Đường / Ảnh vệ tinh / Tắt]": [
+"dvd-acad-dlg4.js"
+],
+"Bản đồ nền theo vị trí địa lý: Đường (OpenStreetMap) / Ảnh vệ tinh (dịch vụ GEOMAPURL) / Tắt": [
+"dvd-acad-dlg4.js"
+],
+"Bản đồ nền: 0 tắt, 1 ảnh vệ tinh, 2 đường": [
+"dvd-acad-dlg4.js"
+],
 "Bảng": [
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
@@ -1600,7 +1628,8 @@
 "dvd-acad-x8.js"
 ],
 "Bảng khối": [
-"dvd-acad-dlg.js"
+"dvd-acad-dlg.js",
+"dvd-acad-dlg4.js"
 ],
 "Bảng kiểu in (.ctb)…": [
 "dvd-acad-dlg.js"
@@ -1649,6 +1678,9 @@
 ],
 "Bảng đích không theo kiểu bảng.": [
 "dvd-acad-dlg2.js"
+],
+"Bảng…": [
+"dvd-acad-dlg4.js"
 ],
 "Bấm \"Bắt đầu\" để kiểm tra chính tả.": [
 "dvd-acad-dlg2.js"
@@ -2056,6 +2088,7 @@
 "dvd-acad-dlg2.js"
 ],
 "Bề rộng nét…": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Bề rộng và chiều cao cột phải lớn hơn 0.": [
@@ -2469,6 +2502,9 @@
 "Cao độ: khoảng cách đều (vd 1000) hoặc danh sách cao độ từng mặt (vd 0,800,2500)": [
 "dvd-acad-3dy.js"
 ],
+"Che khuất": [
+"dvd-acad-dlg4.js"
+],
 "Che nền chữ": [
 "dvd-acad-ui.js"
 ],
@@ -2509,9 +2545,11 @@
 "dvd-acad-ui.js"
 ],
 "Chia theo khoảng": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Chia đều": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x6.js"
 ],
@@ -2593,6 +2631,9 @@
 "Chiều dài / chu vi đối tượng": [
 "dvd-acad-dlg.js",
 "dvd-acad-x6.js"
+],
+"Chiều dài cung": [
+"dvd-acad-dlg4.js"
 ],
 "Chiều dài gióng cố định": [
 "dvd-acad-dlg.js"
@@ -2785,6 +2826,9 @@
 "Chuẩn CAD: bấm để kiểm tra chuẩn (CHECKSTANDARDS)": [
 "dvd-acad-dlg2.js"
 ],
+"Chuẩn CAD…": [
+"dvd-acad-dlg4.js"
+],
 "Chuẩn hoá": [
 "dvd-acad-dlg2.js"
 ],
@@ -2810,6 +2854,7 @@
 "dvd-acad-cmds.js",
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-ui.js:attr"
 ],
@@ -2923,6 +2968,9 @@
 ],
 "Chép kiểu ô": [
 "dvd-acad-ui.js"
+],
+"Chép kèm điểm gốc": [
+"dvd-acad-dlg4.js"
 ],
 "Chép lịch sử lệnh": [
 "dvd-acad-ui.js"
@@ -3269,6 +3317,9 @@
 "Chạy script": [
 "dvd-acad-ui.js",
 "dvd-addins.js"
+],
+"Chạy script…": [
+"dvd-acad-dlg4.js"
 ],
 "Chạy thử": [
 "dvd-acad-dlg3.js"
@@ -4110,6 +4161,9 @@
 "Chọn chữ / kích thước": [
 "dvd-acad-x3.js"
 ],
+"Chọn chữ cần nổ": [
+"dvd-acad-dlg4.js"
+],
 "Chọn chữ cần sửa": [
 "dvd-acad-cmds.js"
 ],
@@ -4528,6 +4582,7 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
 "dvd-acad-dlg3.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-ui.js",
 "dvd-cmd.js",
@@ -5098,6 +5153,7 @@
 ],
 "Chữ một dòng": [
 "dvd-acad-dlg3.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Chữ một dòng / nhiều dòng": [
@@ -5109,6 +5165,7 @@
 "Chữ nhiều dòng": [
 "dvd-acad-cmds.js",
 "dvd-acad-dlg3.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-help.js"
 ],
@@ -5189,6 +5246,9 @@
 ],
 "Co / giãn bề rộng chữ (hệ số rộng) cho vừa tới điểm chỉ định": [
 "dvd-acad-x13.js"
+],
+"Co giãn": [
+"dvd-acad-dlg4.js"
 ],
 "Co giãn bề rộng nét": [
 "dvd-acad-more.js"
@@ -5351,6 +5411,9 @@
 ],
 "Cài đặt tìm kiếm…": [
 "dvd-cmd.js"
+],
+"Cài đặt vẽ…": [
+"dvd-acad-dlg4.js"
 ],
 "Cài đặt: Xoá nguồn =": [
 "dvd-acad-x9.js"
@@ -5531,6 +5594,7 @@
 ],
 "Công cụ": [
 "dvd-acad-dlg.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Công cụ CAD": [
@@ -5694,6 +5758,9 @@
 "Cần Thơ": [
 "dvd-acad-dlg3.js"
 ],
+"Cần URL có {z}, {x}, {y} (đặt bằng biến GEOMAPURL).": [
+"dvd-acad-dlg4.js"
+],
 "Cần biên dạng kín.": [
 "dvd-acad-3dx.js"
 ],
@@ -5820,6 +5887,7 @@
 "dvd-acad-3d.js",
 "dvd-acad-cmds.js",
 "dvd-acad-dlg.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-help.js",
 "index.html:html"
@@ -5871,6 +5939,12 @@
 ],
 "Cắt vào bộ nhớ tạm (Ctrl+X)": [
 "dvd-acad-cmds.js"
+],
+"Cắt xén": [
+"dvd-acad-dlg4.js"
+],
+"Cắt đứt": [
+"dvd-acad-dlg4.js"
 ],
 "Cắt ảnh": [
 "dvd-acad-ui.js"
@@ -6007,6 +6081,7 @@
 "dvd-acad-dlg.js"
 ],
 "Cửa sổ": [
+"dvd-acad-dlg4.js",
 "dvd-acad-x8.js"
 ],
 "Cửa sổ chữ": [
@@ -6093,7 +6168,7 @@
 "DWG đọc được nhưng chưa có đối tượng 2D nào được hỗ trợ.": [
 "index.html"
 ],
-"DWG/DXF · bản màu · v5q": [
+"DWG/DXF · bản màu · v5r": [
 "index.html:html"
 ],
 "DWG: trùng handle": [
@@ -6169,6 +6244,7 @@
 ],
 "Di chuyển": [
 "dvd-acad-core.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "index.html",
 "index.html:html"
@@ -6196,6 +6272,7 @@
 ],
 "Diện tích": [
 "dvd-acad-cmds.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-ui.js",
 "dvd-acad-x9.js",
@@ -6268,6 +6345,7 @@
 ],
 "Dán": [
 "dvd-acad-dlg.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Dán (Ctrl+V) dữ liệu từ Excel": [
@@ -6287,6 +6365,7 @@
 "dvd-acad-dlg2.js"
 ],
 "Dán thành khối": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Dán từ bộ nhớ tạm (Ctrl+V)": [
@@ -6303,6 +6382,9 @@
 ],
 "Dán đặc biệt (dán từ bộ nhớ tạm)": [
 "dvd-acad-x16.js"
+],
+"Dán đặc biệt…": [
+"dvd-acad-dlg4.js"
 ],
 "Dòng lệnh": [
 "dvd-acad-ui.js",
@@ -6438,6 +6520,9 @@
 "Dấu in:": [
 "dvd-acad-dlg2.js"
 ],
+"Dấu in…": [
+"dvd-acad-dlg4.js"
+],
 "Dấu phân cách hàng nghìn": [
 "dvd-acad-dlg2.js"
 ],
@@ -6450,6 +6535,7 @@
 "Dấu tâm": [
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x2.js"
 ],
@@ -6564,8 +6650,14 @@
 "Dời gốc in (gốc = vùng in được)": [
 "dvd-acad-more.js"
 ],
+"Dời hình": [
+"dvd-acad-dlg4.js"
+],
 "Dời khối 3D (cả theo phương đứng Z)": [
 "dvd-acad-3dx.js"
+],
+"Dời song song": [
+"dvd-acad-dlg4.js"
 ],
 "Dời theo Z (lên +, xuống −)": [
 "dvd-acad-3dx.js"
@@ -6692,6 +6784,12 @@
 "GATTE: đổi \"": [
 "dvd-acad-x12.js"
 ],
+"GEOMAP: bản đồ": [
+"dvd-acad-dlg4.js"
+],
+"GEOMAP: tắt bản đồ nền.": [
+"dvd-acad-dlg4.js"
+],
 "GEOREMOVE: đã xoá vị trí địa lý của bản vẽ.": [
 "dvd-acad-dlg3.js"
 ],
@@ -6729,6 +6827,7 @@
 "dvd-acad-more.js"
 ],
 "Ghi chú dẫn": [
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-ui.js"
 ],
@@ -6760,6 +6859,7 @@
 "dvd-acad-dlg2.js"
 ],
 "Ghi thao tác": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Ghi đè kiểu cho kích thước đã vẽ (cao chữ, số lẻ, mũi tên, hệ số đo, tiền tố / hậu tố…) hoặc xoá ghi đè": [
@@ -6899,6 +6999,9 @@
 "Giới hạn (Limits)": [
 "dvd-acad-dlg.js"
 ],
+"Giới hạn bản vẽ": [
+"dvd-acad-dlg4.js"
+],
 "Giới hạn bản vẽ (góc dưới trái / trên phải); BẬT = không cho vẽ ra ngoài": [
 "dvd-acad-x10.js"
 ],
@@ -6906,6 +7009,7 @@
 "dvd-acad-dlg.js"
 ],
 "Giới thiệu DVDCAD": [
+"dvd-acad-dlg4.js",
 "dvd-acad-x14.js"
 ],
 "Giờ": [
@@ -7002,6 +7106,7 @@
 "dvd-acad-3d.js",
 "dvd-acad-cmds.js",
 "dvd-acad-dlg.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-ui.js",
 "dvd-acad-x10.js",
@@ -7119,6 +7224,9 @@
 "Góc nhìn \"": [
 "dvd-acad-dlg.js",
 "dvd-acad-x2.js"
+],
+"Góc nhìn có tên…": [
+"dvd-acad-dlg4.js"
 ],
 "Góc nhìn của bản vẽ này": [
 "dvd-acad-dlg2.js"
@@ -7807,6 +7915,9 @@
 "Hiện thanh cuộn trong vùng vẽ": [
 "dvd-acad-dlg.js"
 ],
+"Hiện thanh menu cổ điển (1) hay ẩn (0)": [
+"dvd-acad-dlg4.js"
+],
 "Hiện thanh thẻ bản vẽ (File Tabs)": [
 "dvd-acad-dlg2.js"
 ],
@@ -7871,6 +7982,9 @@
 "Hiện/ẩn ký hiệu": [
 "dvd-acad-ui.js"
 ],
+"Hiệu chỉnh": [
+"dvd-acad-dlg4.js"
+],
 "Hiệu năng": [
 "dvd-acad-dlg.js"
 ],
@@ -7888,6 +8002,7 @@
 "dvd-acad-cmds.js",
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-x14.js",
 "dvd-acad-x6.js",
 "dvd-acad-x9.js",
@@ -8021,6 +8136,9 @@
 "Hình chiếu đứng": [
 "dvd-acad-x13.js"
 ],
+"Hình chữ nhật": [
+"dvd-acad-dlg4.js"
+],
 "Hình chữ nhật suy biến.": [
 "dvd-acad-cmds.js",
 "dvd-acad-x11.js"
@@ -8041,6 +8159,9 @@
 ],
 "Hình thức chữ": [
 "dvd-acad-dlg.js"
+],
+"Hình vành khăn": [
+"dvd-acad-dlg4.js"
 ],
 "Hình độ dài 0": [
 "dvd-acad-dlg.js"
@@ -8702,6 +8823,9 @@
 ],
 "Khung nhìn:": [
 "dvd-acad-dlg3.js"
+],
+"Khung nhìn…": [
+"dvd-acad-dlg4.js"
 ],
 "Khung quanh chữ": [
 "dvd-acad-dlg.js",
@@ -9463,6 +9587,9 @@
 "Không tạo được tường.": [
 "dvd-acad-x14.js"
 ],
+"Không tạo được tệp HPGL/2.": [
+"dvd-acad-more.js"
+],
 "Không tạo được ảnh.": [
 "dvd-acad-x8.js",
 "index.html"
@@ -9797,6 +9924,9 @@
 "dvd-acad-dlg2.js",
 "dvd-acad-more.js"
 ],
+"Khối…": [
+"dvd-acad-dlg4.js"
+],
 "Khổ": [
 "dvd-acad-more.js"
 ],
@@ -9864,7 +9994,8 @@
 "dvd-acad-dlg2.js"
 ],
 "Kiểm tra chuẩn…": [
-"dvd-acad-dlg2.js"
+"dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js"
 ],
 "Kiểm tra chính tả": [
 "dvd-acad-dlg2.js",
@@ -9965,6 +10096,9 @@
 "Kiểu bảng mới:": [
 "dvd-acad-dlg2.js"
 ],
+"Kiểu bảng…": [
+"dvd-acad-dlg4.js"
+],
 "Kiểu chữ": [
 "dvd-acad-cmdline.js",
 "dvd-acad-cmds.js",
@@ -10017,6 +10151,9 @@
 "Kiểu chữ: font, hệ số rộng, kiểu hiện hành": [
 "dvd-acad-more.js"
 ],
+"Kiểu chữ…": [
+"dvd-acad-dlg4.js"
+],
 "Kiểu cung": [
 "dvd-acad-x11.js"
 ],
@@ -10045,6 +10182,9 @@
 "Kiểu ghi chú dẫn: loại / cỡ mũi tên, độ dài gờ, cao chữ, khung chữ": [
 "dvd-acad-x9.js"
 ],
+"Kiểu ghi chú dẫn…": [
+"dvd-acad-dlg4.js"
+],
 "Kiểu gốc": [
 "dvd-acad-dlg2.js"
 ],
@@ -10062,6 +10202,9 @@
 ],
 "Kiểu hiển thị:": [
 "dvd-acad-x7.js"
+],
+"Kiểu hiển thị…": [
+"dvd-acad-dlg4.js"
 ],
 "Kiểu hiện hành": [
 "dvd-acad-dlg.js"
@@ -10090,6 +10233,9 @@
 "Kiểu in:": [
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js"
+],
+"Kiểu in…": [
+"dvd-acad-dlg4.js"
 ],
 "Kiểu khung": [
 "dvd-acad-x13.js"
@@ -10123,6 +10269,9 @@
 ],
 "Kiểu kích thước:": [
 "dvd-acad-dlg2.js"
+],
+"Kiểu kích thước…": [
+"dvd-acad-dlg4.js"
 ],
 "Kiểu lưới": [
 "dvd-acad-dlg.js"
@@ -10206,6 +10355,9 @@
 "Kiểu nét: \"": [
 "dvd-acad-dlg2.js"
 ],
+"Kiểu nét…": [
+"dvd-acad-dlg4.js"
+],
 "Kiểu nối": [
 "dvd-acad-x10.js"
 ],
@@ -10267,6 +10419,9 @@
 "Kiểu điểm: PTYPE (PDMODE, PDSIZE).": [
 "dvd-help.js"
 ],
+"Kiểu điểm…": [
+"dvd-acad-dlg4.js"
+],
 "Kiểu đường đôi": [
 "dvd-acad-dlg.js"
 ],
@@ -10284,6 +10439,9 @@
 ],
 "Kiểu đường đôi: khoảng cách các đường, nắp đầu": [
 "dvd-acad-x2.js"
+],
+"Kiểu đường đôi…": [
+"dvd-acad-dlg4.js"
 ],
 "Kiểu đầu nét": [
 "dvd-acad-dlg2.js"
@@ -10319,13 +10477,18 @@
 ],
 "Kéo dài": [
 "dvd-acad-core.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
+],
+"Kéo dài thêm": [
+"dvd-acad-dlg4.js"
 ],
 "Kéo dài tới đối tượng gần nhất (B = cạnh biên, C = khung cắt, F = hàng rào, O = chế độ)": [
 "dvd-acad-cmds.js"
 ],
 "Kéo giãn": [
 "dvd-acad-core.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x5.js"
 ],
@@ -10379,6 +10542,7 @@
 "dvd-acad-cmds.js",
 "dvd-acad-dlg.js",
 "dvd-acad-dlg3.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-pro.js",
 "dvd-acad-ui.js",
@@ -10436,6 +10600,7 @@
 "dvd-acad-cmds.js"
 ],
 "Kích thước nhanh": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Kích thước nhanh: chọn đối tượng → đặt chuỗi kích thước liên tục": [
@@ -10443,6 +10608,9 @@
 ],
 "Kích thước nối tiếp chuỗi": [
 "dvd-acad-cmds.js"
+],
+"Kích thước ràng buộc": [
+"dvd-acad-dlg4.js"
 ],
 "Kích thước thông minh": [
 "dvd-acad-ui.js"
@@ -10586,6 +10754,7 @@
 "dvd-acad-dlg3.js"
 ],
 "Layout mới": [
+"dvd-acad-dlg4.js",
 "dvd-acad-pro.js",
 "dvd-acad-ui.js"
 ],
@@ -10648,6 +10817,7 @@
 "dvd-acad-ui.js"
 ],
 "Liệt kê": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x16.js"
 ],
@@ -10765,6 +10935,7 @@
 ],
 "Làm lại": [
 "dvd-acad-dlg.js",
+"dvd-acad-dlg4.js",
 "index.html:attr"
 ],
 "Làm lại (Ctrl+Y)": [
@@ -10829,6 +11000,7 @@
 ],
 "Lưu": [
 "dvd-acad-dlg.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x9.js",
 "dvd-cloud.js",
@@ -10850,6 +11022,7 @@
 "dvd-cmd.js"
 ],
 "Lưu DWG": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x3.js"
 ],
@@ -10958,7 +11131,8 @@
 "dvd-acad-dlg2.js"
 ],
 "Lưu thành…": [
-"dvd-acad-dlg2.js"
+"dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js"
 ],
 "Lưu trong app": [
 "dvd-acad-start.js"
@@ -11404,6 +11578,9 @@
 "Lớp: \"": [
 "dvd-acad-dlg2.js"
 ],
+"Lớp…": [
+"dvd-acad-dlg4.js"
+],
 "Lời nhắc": [
 "dvd-acad-dlg.js",
 "dvd-acad-pro.js",
@@ -11655,7 +11832,8 @@
 "dvd-acad-dlg2.js"
 ],
 "Màu…": [
-"dvd-acad-dlg.js"
+"dvd-acad-dlg.js",
+"dvd-acad-dlg4.js"
 ],
 "Máy chủ DWG": [
 "dvd-acad-ui.js"
@@ -11800,6 +11978,7 @@
 ],
 "Mảng": [
 "dvd-acad-cmds.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x6.js",
 "dvd-help.js"
@@ -12099,6 +12278,7 @@
 "Mới…": [
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-x9.js"
 ],
 "MỜI NGƯỜI CÙNG SỬA / XEM": [
@@ -12255,6 +12435,7 @@
 "dvd-acad-dlg.js"
 ],
 "Mở…": [
+"dvd-acad-dlg4.js",
 "dvd-acad-start.js",
 "dvd-acad-ui.js"
 ],
@@ -13032,6 +13213,9 @@
 "Nạp ứng dụng: add-in AutoLISP (.lsp) / JavaScript (.js), Startup Suite, add-in mẫu": [
 "dvd-addins.js"
 ],
+"Nạp ứng dụng…": [
+"dvd-acad-dlg4.js"
+],
 "Nạp…": [
 "dvd-acad-dlg2.js"
 ],
@@ -13046,7 +13230,8 @@
 ],
 "Nằm ngang": [
 "dvd-acad-dlg.js",
-"dvd-acad-dlg2.js"
+"dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js"
 ],
 "Nền trắng (kiểu bản in)": [
 "index.html",
@@ -13069,6 +13254,7 @@
 ],
 "Nối": [
 "dvd-acad-cmds.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x15.js",
 "dvd-help.js",
@@ -13093,6 +13279,7 @@
 "dvd-acad-dlg.js"
 ],
 "Nối tiếp": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Nối đường dẫn": [
@@ -13106,6 +13293,13 @@
 ],
 "Nối: chạm gần ĐẦU các đường cần kéo dài (tới ranh đã chọn) · chạm lại để đổi": [
 "index.html"
+],
+"Nổ chữ": [
+"dvd-acad-dlg4.js",
+"dvd-acad-ui.js"
+],
+"Nổ chữ thành đường bao đa tuyến (Express Tools — Explode Text)": [
+"dvd-acad-dlg4.js"
 ],
 "Nội dung": [
 "dvd-acad-dlg.js",
@@ -13266,6 +13460,7 @@
 ],
 "Phá khối": [
 "dvd-acad-dlg.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Phá khối / đa tuyến / hatch (như EXPLODE)": [
@@ -13345,6 +13540,9 @@
 "Phóng to": [
 "dvd-acad-ui.js",
 "index.html:attr"
+],
+"Phóng to / thu nhỏ": [
+"dvd-acad-dlg4.js"
 ],
 "Phóng to khung nhìn của layout ra cả màn hình để xem / sửa (VPMIN để quay lại)": [
 "dvd-acad-x12.js"
@@ -13549,6 +13747,12 @@
 ],
 "Quản lý tham số (Parameters Manager): tham số ràng buộc kích thước và tham số người dùng, sửa tên / biểu thức": [
 "dvd-acad-x4.js"
+],
+"Quản lý tham số…": [
+"dvd-acad-dlg4.js"
+],
+"Quản lý thao tác…": [
+"dvd-acad-dlg4.js"
 ],
 "Quản lý thuộc tính khối": [
 "dvd-acad-dlg.js"
@@ -13762,6 +13966,7 @@
 "dvd-acad-cmds.js",
 "dvd-acad-core.js",
 "dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x11.js",
 "dvd-acad-x13.js",
@@ -13806,6 +14011,9 @@
 ],
 "Sao chép sang lớp khác": [
 "dvd-acad-ui.js"
+],
+"Sao chép thuộc tính": [
+"dvd-acad-dlg4.js"
 ],
 "Sao chép thuộc tính (lớp, màu, kiểu nét, bề rộng, cao chữ, mẫu hatch)": [
 "dvd-acad-cmds.js"
@@ -13856,7 +14064,8 @@
 "dvd-acad-dlg2.js"
 ],
 "Siêu liên kết…": [
-"dvd-acad-dlg.js"
+"dvd-acad-dlg.js",
+"dvd-acad-dlg4.js"
 ],
 "Snap chữ nhật": [
 "dvd-acad-dlg.js"
@@ -14162,6 +14371,7 @@
 ],
 "Sửa": [
 "dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "index.html:html"
 ],
@@ -14311,6 +14521,7 @@
 "dvd-acad-dlg2.js"
 ],
 "Sửa spline": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Sửa spline: đóng/mở, sửa/thêm/xoá điểm qua, đảo chiều, chuyển thành đa tuyến": [
@@ -14348,6 +14559,7 @@
 "dvd-acad-dlg2.js"
 ],
 "Sửa đa tuyến": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Sửa đa tuyến: đóng/mở, nối, đảo chiều, chuyển đường thành đa tuyến": [
@@ -14415,6 +14627,9 @@
 "TXT2MTXT: gộp": [
 "dvd-acad-x2.js"
 ],
+"TXTEXP: không có chữ nào nổ được.": [
+"dvd-acad-dlg4.js"
+],
 "Tab của tôi": [
 "dvd-acad-dlg3.js"
 ],
@@ -14450,6 +14665,9 @@
 "dvd-acad-ui.js",
 "dvd-help.js"
 ],
+"Tham chiếu DWG…": [
+"dvd-acad-dlg4.js"
+],
 "Tham chiếu chỉ để xem và bắt điểm, không ghi vào file khi lưu. Bấm chuột phải vào tham chiếu để Mở / Gỡ nạp / Nạp lại / Gỡ / Gộp.": [
 "dvd-acad-pro.js"
 ],
@@ -14461,7 +14679,11 @@
 "dvd-acad-pro.js",
 "dvd-acad-x13.js"
 ],
+"Tham chiếu ngoài…": [
+"dvd-acad-dlg4.js"
+],
 "Tham số": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Tham số \"": [
@@ -14481,6 +14703,9 @@
 ],
 "Tham số động": [
 "dvd-acad-ui.js"
+],
+"Tham số…": [
+"dvd-acad-dlg4.js"
 ],
 "Thanh dòng lệnh (Ctrl+9)": [
 "dvd-acad-ui.js"
@@ -14626,6 +14851,9 @@
 "Thiết lập trang in (khổ giấy, hướng, tỉ lệ, kiểu in) — mở hộp thoại In": [
 "dvd-acad-x12.js"
 ],
+"Thiết lập trang…": [
+"dvd-acad-dlg4.js"
+],
 "Thiết lập:": [
 "dvd-acad-x7.js"
 ],
@@ -14654,6 +14882,7 @@
 "Thoát": [
 "dvd-acad-cmds.js",
 "dvd-acad-core.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-x11.js",
 "dvd-acad-x15.js",
@@ -14687,6 +14916,7 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
 "dvd-acad-dlg3.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-pro.js",
 "dvd-acad-ui.js",
 "dvd-acad-x10.js",
@@ -14705,6 +14935,9 @@
 ],
 "Thuộc tính bản vẽ:": [
 "dvd-acad-dlg.js"
+],
+"Thuộc tính bản vẽ…": [
+"dvd-acad-dlg4.js"
 ],
 "Thuộc tính chữ": [
 "dvd-acad-dlg2.js"
@@ -14973,6 +15206,7 @@
 "Thẳng": [
 "dvd-acad-cmds.js",
 "dvd-acad-dlg.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x4.js",
 "dvd-acad-x6.js",
@@ -14985,11 +15219,18 @@
 "dvd-acad-dlg.js"
 ],
 "Thẳng hàng": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x4.js"
 ],
+"Thẳng đứng": [
+"dvd-acad-dlg4.js"
+],
 "Thẻ (handle) =": [
 "dvd-acad-dlg2.js"
+],
+"Thẻ tệp": [
+"dvd-acad-dlg4.js"
 ],
 "Thế giới": [
 "dvd-acad-3dy.js",
@@ -15175,6 +15416,7 @@
 "dvd-acad-more.js"
 ],
 "Toạ độ": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "index.html",
 "index.html:html"
@@ -15208,6 +15450,7 @@
 "dvd-acad-dlg.js"
 ],
 "Toạ độ điểm": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Toạ độ: rê chuột tới điểm rồi bấm chuột; chạm ô X/Y để copy": [
@@ -15215,6 +15458,9 @@
 ],
 "Toạ độ: đưa điểm vào tâm ngắm rồi chạm màn hình; chạm vào ô X/Y để copy": [
 "index.html"
+],
+"Trang Bắt đầu": [
+"dvd-acad-dlg4.js"
 ],
 "Trang PDF không có nét vector (bản quét) → chèn trang thành ảnh nền.": [
 "dvd-acad-x8.js"
@@ -15425,6 +15671,7 @@
 "dvd-acad-dlg2.js"
 ],
 "Trùng điểm": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x4.js"
 ],
@@ -15458,6 +15705,9 @@
 "Trường:": [
 "dvd-acad-dlg2.js"
 ],
+"Trường…": [
+"dvd-acad-dlg4.js"
+],
 "Trạng thái": [
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
@@ -15487,6 +15737,9 @@
 "Trạng thái lớp mới cần lưu": [
 "dvd-acad-dlg.js"
 ],
+"Trạng thái lớp…": [
+"dvd-acad-dlg4.js"
+],
 "Trạng thái:": [
 "dvd-acad-pro.js"
 ],
@@ -15509,6 +15762,7 @@
 ],
 "Trợ giúp": [
 "dvd-acad-cmds.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Trợ giúp (F1)": [
@@ -15594,6 +15848,9 @@
 "Tuỳ biến giao diện người dùng": [
 "dvd-acad-dlg3.js"
 ],
+"Tuỳ biến giao diện…": [
+"dvd-acad-dlg4.js"
+],
 "Tuỳ biến nhanh thanh truy cập nhanh (Quick Access Toolbar) trong hộp CUI": [
 "dvd-acad-dlg3.js"
 ],
@@ -15669,7 +15926,8 @@
 "dvd-acad-cmdline.js"
 ],
 "Tuỳ chọn…": [
-"dvd-acad-dlg.js"
+"dvd-acad-dlg.js",
+"dvd-acad-dlg4.js"
 ],
 "TÊN BẢN VẼ": [
 "dvd-acad-pro.js"
@@ -15697,6 +15955,12 @@
 ],
 "Tách đối tượng tại 1 điểm": [
 "dvd-acad-cmds.js"
+],
+"Tái tạo": [
+"dvd-acad-dlg4.js"
+],
+"Tái tạo tất cả": [
+"dvd-acad-dlg4.js"
 ],
 "Tâm": [
 "dvd-acad-3dx.js",
@@ -16108,7 +16372,8 @@
 "dvd-acad-x6.js"
 ],
 "Tìm và thay thế…": [
-"dvd-acad-dlg.js"
+"dvd-acad-dlg.js",
+"dvd-acad-dlg4.js"
 ],
 "Tìm vùng này": [
 "index.html"
@@ -16296,6 +16561,9 @@
 "Tạo khối từ đối tượng (lưu vào thư viện của tôi)": [
 "dvd-acad-cmds.js"
 ],
+"Tạo khối…": [
+"dvd-acad-dlg4.js"
+],
 "Tạo kiểu bảng mới": [
 "dvd-acad-dlg2.js"
 ],
@@ -16462,6 +16730,7 @@
 "dvd-acad-cmdline.js",
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-x10.js",
 "dvd-acad-x12.js",
 "dvd-acad-x15.js",
@@ -16505,7 +16774,8 @@
 "dvd-acad-x3.js"
 ],
 "Tệp": [
-"dvd-acad-dlg2.js"
+"dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js"
 ],
 "Tệp .actm không hợp lệ (chỉ đọc được macro DVDCAD).": [
 "dvd-acad-dlg2.js"
@@ -16515,6 +16785,9 @@
 ],
 "Tệp AutoLISP (*.lsp)": [
 "dvd-acad-dlg2.js"
+],
+"Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in": [
+"dvd-acad-more.js"
 ],
 "Tệp JavaScript (*.js)": [
 "dvd-acad-dlg2.js"
@@ -16863,6 +17136,7 @@
 "dvd-acad-cmdline.js"
 ],
 "Tự ràng buộc": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Tự sửa": [
@@ -16962,6 +17236,12 @@
 "UNION: đã cộng": [
 "dvd-acad-3dx.js"
 ],
+"URL mẫu dịch vụ ảnh vệ tinh ({z}/{x}/{y})": [
+"dvd-acad-dlg4.js"
+],
+"URL mẫu ô bản đồ ảnh vệ tinh / riêng ({z}/{x}/{y}) cho GEOMAP": [
+"dvd-acad-dlg4.js"
+],
 "VD: 1 hoặc #ff0000": [
 "dvd-acad-x10.js"
 ],
@@ -17044,6 +17324,7 @@
 "Vuông góc": [
 "dvd-acad-core.js",
 "dvd-acad-dlg.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x4.js",
 "dvd-acad-x6.js"
@@ -17084,6 +17365,7 @@
 ],
 "Vát góc": [
 "dvd-acad-cmds.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-help.js"
 ],
@@ -17130,12 +17412,14 @@
 "Vùng": [
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-x9.js"
 ],
 "Vùng bắt điểm (aperture, px)": [
 "dvd-acad-ui.js"
 ],
 "Vùng che": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Vùng che cần ít nhất 3 điểm.": [
@@ -17225,6 +17509,7 @@
 "dvd-acad-3dx.js"
 ],
 "Vẽ": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Vẽ 2D & Chú thích": [
@@ -17247,6 +17532,7 @@
 "dvd-acad-x13.js"
 ],
 "Vẽ lại": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Vẽ lại màn hình": [
@@ -17415,13 +17701,17 @@
 "dvd-acad-x9.js"
 ],
 "Vị trí địa lý": [
-"dvd-acad-dlg3.js"
+"dvd-acad-dlg3.js",
+"dvd-acad-ui.js"
 ],
 "Vị trí địa lý (Geographic Location): vĩ độ / kinh độ, cao độ, hệ toạ độ, điểm thiết kế, hướng bắc, múi giờ — dùng cho mặt trời và bóng đổ": [
 "dvd-acad-dlg3.js"
 ],
 "Vị trí địa lý:": [
 "dvd-acad-dlg3.js"
+],
+"Vị trí địa lý…": [
+"dvd-acad-dlg4.js"
 ],
 "Vị trí:": [
 "dvd-acad-dlg.js",
@@ -17513,6 +17803,9 @@
 ],
 "Xem mô hình 3D (quay, thu phóng, ViewCube, kiểu hiển thị)": [
 "dvd-acad-3d.js"
+],
+"Xem nhanh bản vẽ": [
+"dvd-acad-dlg4.js"
 ],
 "Xem nhanh bản vẽ đang mở (Quick View Drawings): ảnh thu nhỏ, bấm để chuyển": [
 "dvd-acad-dlg2.js"
@@ -17659,6 +17952,7 @@
 "dvd-acad-cmds.js",
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x10.js",
 "dvd-acad-x10.js:attr",
@@ -17778,6 +18072,9 @@
 ],
 "Xoá tất cả phép đo": [
 "index.html:html"
+],
+"Xoá vị trí": [
+"dvd-acad-ui.js"
 ],
 "Xoá đa tuyến gốc?": [
 "dvd-acad-x3.js"
@@ -17905,6 +18202,9 @@
 "Xuất bảng đo & ghi chú (CSV)": [
 "index.html:html"
 ],
+"Xuất bản…": [
+"dvd-acad-dlg4.js"
+],
 "Xuất file": [
 "dvd-acad-ui.js"
 ],
@@ -17979,7 +18279,8 @@
 "dvd-acad-ui.js"
 ],
 "Xuất…": [
-"dvd-acad-dlg.js"
+"dvd-acad-dlg.js",
+"dvd-acad-dlg4.js"
 ],
 "Xuống": [
 "dvd-acad-dlg.js",
@@ -18082,6 +18383,9 @@
 "bình thường — thuộc tính ẩn (Invisible) không hiện.": [
 "dvd-acad-x12.js"
 ],
+"bút, khổ": [
+"dvd-acad-more.js"
+],
 "bước).": [
 "dvd-acad-cmdline.js"
 ],
@@ -18134,6 +18438,9 @@
 ],
 "bảng liên kết": [
 "dvd-acad-x9.js"
+],
+"bảng ribbon / thanh công cụ,": [
+"dvd-acad-dlg3.js"
 ],
 "bảng theo kiểu \"": [
 "dvd-acad-dlg2.js"
@@ -18280,6 +18587,7 @@
 "dvd-acad-x10.js"
 ],
 "chữ →": [
+"dvd-acad-dlg4.js",
 "dvd-acad-x13.js"
 ],
 "chữ.": [
@@ -18491,6 +18799,9 @@
 "dvd-acad-x15.js",
 "dvd-acad-x4.js"
 ],
+"hiện dưới bản vẽ (Model).": [
+"dvd-acad-dlg4.js"
+],
 "hiện mọi thuộc tính, cả thuộc tính ẩn (Invisible).": [
 "dvd-acad-x12.js"
 ],
@@ -18506,7 +18817,7 @@
 "hoặc bỏ giới hạn vùng": [
 "index.html"
 ],
-"html.acad{--bg:#1f242c;--bg-canvas:#212830;--panel:#2b313b;--panel-2:#353c48;--line:#3f4754;--ink:#e6eaf0;--ink-dim:#aab3c0;--ink-faint:#7c8696;--accent:#3d9ae8} html.acad body{background:#1f242c} html.acad .topbar,html.acad nav.toolbar,html.acad .ctools,html.acad .infocard,html.acad #selBar,html.acad #panRow,html.acad #gripRow{display:none !important} html.acad .readout{display:none} html.acad body[data-mode=measure] .readout,html.acad body[data-mode=note] .readout,html.acad body[data-mode=del] .readout{display:flex;top:34px} html.acad .stage::after{display:none} html.acad .stage canvas#cv{cursor:none} html.acad body[data-mode=measure] .stage canvas#cv,html.acad body[data-mode=note] .stage canvas#cv{cursor:crosshair} html.acad .zoom{right:10px;top:40px;transform:none;border-radius:6px;background:#3f4754;box-shadow:0 2px 10px rgba(0,0,0,.4)} html.acad .zoom button{width:30px;height:30px;font-size:16px;background:#2b313b;color:#cfd6e0} html.acad .zoom button:hover{background:#3d4757} html.acad #gUndo,html.acad #gRedo{display:none} html.acad .subrow,html.acad .confirmrow{background:#2b313b;border-top:1px solid #3f4754;padding-top:6px;padding-bottom:6px} html.acad .confirmrow button{padding:8px 14px;font-size:13px;border-radius:7px} html.acad .subrow .pill{padding:6px 12px;font-size:12.5px} html.acad .overlay{align-items:center} html.acad .modal{border-radius:10px;max-width:520px;animation:none;box-shadow:0 18px 60px rgba(0,0,0,.6);padding:16px 18px 16px} html.acad .modal.wide{max-width:760px} html.acad body .toast{top:auto;bottom:118px} html.acad #dvdChip{top:30px !important;left:10px !important} html.acad #dvdProps{right:0;top:0;bottom:0;max-height:none;height:100%;width:290px;border-radius:0;border:none;border-left:1px solid #3f4754;background:#2b313b;box-shadow:none} html.acad.dvd-props-on .zoom{right:300px} html.acad.dvd-props-on #cv,html.acad.dvd-props-on #dvdOvS,html.acad.dvd-props-on #dvdOvC{width:calc(100% - 290px) !important} html.acad.dvd-props-on #dvdCmd{transform:translateX(calc(-50% - 145px))} html.acad #dvdProps .hd{background:#353c48} html.acad #dvdCmd .box{background:rgba(30,36,45,.96);border-radius:4px;border-color:#4a5363} html.acad #dvdCmd .hist div{border-radius:2px} html.acad .empty{background:#1f242c} html.acad.acad-clean #acadTop,html.acad.acad-clean #acadFile{display:none} #acadTop,#acadStatus,#acadFile,#acadVP{display:none} body[data-mode=acad] .readout{display:none !important} html.acad #acadTop{display:block;flex:0 0 auto;background:#2b313b;border-bottom:1px solid #161a20;user-select:none;-webkit-user-select:none;z-index:12;position:relative} .ac-appbar{display:flex;align-items:center;height:34px;background:#232830;gap:2px;padding:0 6px} .ac-logo{display:flex;align-items:center;gap:6px;padding:0 10px 0 4px;height:30px;border:none;background:#c0392b;color:#fff;font:800 13px system-ui,sans-serif;border-radius:4px;cursor:pointer;letter-spacing:.5px} .ac-logo:hover{background:#d24a3c} .ac-logo .tri{font-size:9px;opacity:.85} .ac-qat{display:flex;gap:1px;margin-left:8px} .ac-qat button,.ac-sb button,.ac-rbtn,.ac-rbig{font-family:inherit;color:#dfe5ee;background:none;border:1px solid transparent;cursor:pointer} .ac-qat button{width:28px;height:28px;border-radius:4px;display:grid;place-items:center} .ac-qat button:hover,.ac-sb button:hover{background:#3a4250;border-color:#4b5566} .ac-qat .ic{width:17px;height:17px} .ic{stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round} .ac-title{flex:1;text-align:center;color:#cfd6e0;font:500 12.5px system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px} .ac-title b{color:#fff;font-weight:600} .ac-right{display:flex;gap:4px;align-items:center} .ac-right button{height:26px;padding:0 9px;border-radius:4px;background:#353c48;border:1px solid #454e5c;color:#dfe5ee;font:600 12px system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;gap:5px} .ac-right button .ic{width:15px;height:15px} .ac-right button:hover{background:#414a58} .ac-tabs{display:flex;gap:0;padding:0 8px;height:28px;align-items:flex-end;background:#2b313b} .ac-tabs button{font:600 12.5px system-ui,sans-serif;color:#b9c2cf;background:none;border:none;padding:6px 14px 6px;cursor:pointer;border-bottom:2px solid transparent} .ac-tabs button:hover{color:#fff} .ac-tabs button.on{color:#fff;border-bottom-color:#3d9ae8;background:#353c48;border-radius:4px 4px 0 0} .ac-tabs button.ctx{color:#7ee0a0;background:rgba(46,160,90,.14);border-radius:4px 4px 0 0} .ac-tabs button.ctx.on{color:#fff;background:#2c6e46;border-bottom-color:#5fd38d} .ac-html{display:flex;align-items:stretch} .ac-ribbon{display:flex;gap:0;height:100px;background:#353c48;border-top:1px solid #3f4754;overflow-x:auto;overflow-y:hidden;scrollbar-width:none} .ac-ribbon::-webkit-scrollbar{display:none} #acadTop.min .ac-ribbon{display:none} .ac-panel{display:flex;flex-direction:column;border-right:1px solid #2a3039;flex:0 0 auto} .ac-pbody{flex:1;display:flex;align-items:stretch;gap:2px;padding:4px 5px 2px} .ac-ptitle{height:19px;font:500 11px system-ui,sans-serif;color:#aab3c0;text-align:center;background:#2f3541;line-height:19px;padding:0 6px;white-space:nowrap} .ac-rbig{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;min-width:50px;padding:4px 5px;border-radius:4px;font-size:11px;line-height:1.15;text-align:center} .ac-rbig span{white-space:nowrap} .ac-rbig .ic{width:28px;height:28px;stroke-width:1.4} .ac-rbig:hover,.ac-rbtn:hover{background:#45505f;border-color:#56627a} .ac-col{display:flex;flex-direction:column;gap:1px;justify-content:flex-start} .ac-rbtn{display:flex;align-items:center;gap:5px;height:24px;padding:0 6px 0 3px;border-radius:3px;font-size:11.5px;white-space:nowrap;text-align:left} .ac-rbtn .ic{width:16px;height:16px;flex:0 0 auto} .ac-rbtn.on,.ac-rbig.on{background:#2f6db0;border-color:#4a8fd6} .ac-panel.ico-only .ac-rbtn span{display:none} .ac-panel.ico-only .ac-rbtn{padding:0 4px} .ac-ctl{display:flex;flex-direction:column;gap:4px;padding:2px 2px;width:200px;flex:0 0 auto} .ac-ctl select,.ac-laybtn{height:24px;background:#262b34;color:#e6eaf0;border:1px solid #4a5363;border-radius:3px;font:12px system-ui,sans-serif;padding:0 6px;cursor:pointer;width:100%} .ac-laybtn{display:flex;align-items:center;gap:6px;text-align:left} .ac-p3{gap:3px} #acadStatus button.iso-on{color:#ff5b5b} .ac-p3 select{height:22px;font-size:11.5px} .ac-laybtn .sw,.ac-lrow .sw{width:12px;height:12px;border:1px solid rgba(255,255,255,.4);flex:0 0 auto} .ac-laybtn .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .ac-laybtn .ic{width:14px;height:14px} .ac-pop{position:fixed;z-index:70;background:#2b313b;border:1px solid #4a5363;border-radius:4px;box-shadow:0 10px 30px rgba(0,0,0,.55);max-height:60vh;overflow-y:auto;min-width:220px;padding:3px 0;font:12.5px system-ui,sans-serif;color:#e6eaf0} .ac-pop .it{display:flex;align-items:center;gap:8px;padding:5px 12px;cursor:pointer;white-space:nowrap} .ac-pop .it:hover{background:#3d6fa8} .ac-pop .it.dis{opacity:.45;pointer-events:none} .ac-pop .it .k{margin-left:auto;color:#9aa4b2;font-size:11px;padding-left:18px} .ac-pop .it .ic{width:15px;height:15px} .ac-pop .sep{height:1px;background:#454e5c;margin:3px 0} .ac-pop .hd{padding:5px 12px 3px;color:#8f99a8;font-size:11px;font-weight:700;letter-spacing:.4px} .ac-lrow{display:flex;align-items:center;gap:6px;padding:3px 8px;cursor:pointer} .ac-lrow:hover{background:#3a4250} .ac-lrow.cur{background:#30507a} .ac-lrow .t{width:20px;height:20px;display:grid;place-items:center;border-radius:3px;color:#cfd6e0} .ac-lrow .t:hover{background:#4b5566} .ac-lrow .t .ic{width:14px;height:14px} .ac-lrow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} html.acad #acadFile{display:flex;align-items:flex-end;gap:2px;height:26px;padding:0 6px;background:#1f242c;border-bottom:1px solid #3a414d;flex:0 0 auto} #acadFile .ft{display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;background:#2b313b;border:1px solid #3a414d;border-bottom:none;border-radius:4px 4px 0 0;color:#e6eaf0;font:500 12px system-ui,sans-serif;max-width:360px} #acadFile .ft.start{background:#262b34;color:#aab3c0;cursor:pointer} #acadFile .ft span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} #acadFile .ft .x{color:#8f99a8;cursor:pointer;font-size:14px} #acadFile .plus{height:22px;width:24px;border:none;background:none;color:#aab3c0;font-size:17px;cursor:pointer} #acadFile .plus:hover{color:#fff} html.acad #acadVP{display:flex;position:absolute;left:10px;top:6px;z-index:6;gap:2px;font:12px system-ui,sans-serif;color:#b9c2cf} #acadVP span{cursor:pointer;padding:1px 3px;border-radius:3px} #acadVP span:hover{background:rgba(60,70,85,.8);color:#fff} html.acad #acadStatus{display:flex;align-items:center;height:28px;flex:0 0 auto;background:#2b313b;border-top:1px solid #161a20;padding:0 6px;gap:4px;font:12px system-ui,sans-serif;color:#cfd6e0;user-select:none;-webkit-user-select:none} .ac-lt{display:flex;align-items:stretch;height:24px;gap:1px;overflow-x:auto;max-width:42%;scrollbar-width:none} .ac-lt button{font:500 12px system-ui,sans-serif;color:#b9c2cf;background:#262b34;border:1px solid #3a414d;border-top:none;padding:0 12px;cursor:pointer;border-radius:0 0 4px 4px;white-space:nowrap} .ac-lt button.on{background:#3a4250;color:#fff;border-color:#55627a} .ac-sb{display:flex;align-items:center;gap:1px;margin-left:auto} .ac-coord{font:12px ui-monospace,Consolas,Menlo,monospace;color:#dfe5ee;min-width:210px;text-align:right;padding-right:8px;white-space:nowrap} .ac-sb button{height:24px;min-width:26px;padding:0 6px;border-radius:3px;display:flex;align-items:center;gap:4px;font:600 11px system-ui,sans-serif;color:#9aa4b2} .ac-sb button .ic{width:16px;height:16px} .ac-sb button.on{color:#5fb3ff;background:rgba(61,154,232,.16);border-color:rgba(61,154,232,.4)} .ac-sb .model{color:#fff;font-weight:700;padding:0 8px} .ac-sep{width:1px;height:16px;background:#454e5c;margin:0 4px} #dvdDyn{position:absolute;z-index:9;display:none;pointer-events:none;font:12px system-ui,sans-serif} #dvdDyn .pr{background:rgba(245,247,250,.96);color:#1a1f27;padding:3px 7px;border:1px solid #9aa4b2;border-radius:2px;margin-bottom:2px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} #dvdDyn .vals{display:flex;gap:3px} #dvdDyn .in{background:#fff;color:#0b4fa0;border:1px solid #3d9ae8;padding:2px 7px;border-radius:2px;font:600 12px ui-monospace,Consolas,monospace;min-width:54px} #dvdDyn .in:not(.on){background:#eef1f5;color:#4f5b6b;border-color:#b3bdc9} #dvdDyn .in .lock{width:9px;height:11px;margin-left:4px;vertical-align:-1px;fill:none;stroke:currentColor;stroke-width:1.3} #dvdDyn .pr .dd{color:#0b4fa0;font-weight:700;margin-left:2px} .dvd-dlg .modal{max-height:86vh} /* ---- hộp thoại: bản điện thoại giữ kiểu cũ (Huỷ bên trái, nút to); bản máy tính như AutoCAD 2027 ---- */ .dvd-dlg .dvd-tb{display:flex;align-items:center;gap:4px} .dvd-dlg .dvd-tb h3{flex:1;margin:0 0 4px} html:not(.acad) .dvd-dlg .dvd-tbh,html:not(.acad) .dvd-dlg .dvd-tbx,html:not(.acad) .dvd-dlg .dvd-help{display:none} html:not(.acad) .dvd-dlg .modal-actions .dvd-cancel{order:-1} .dvd-fl{display:flex;gap:6px;margin-right:auto} html.acad{--acw-bg:#3b4452;--acw-tb:#2b313b;--acw-ln:#1d2128;--acw-in:#262b34;--acw-inb:#5a6578;--acw-btn:#4a5466;--acw-btnb:#636f85;--acw-tx:#e8ecf2;--acw-dim:#b4bdca;--acw-acc:#0696d7;--acw-font:\"Segoe UI\",system-ui,-apple-system,\"Helvetica Neue\",sans-serif} html.acad .overlay{background:rgba(8,10,14,.22)} html.acad .modal{display:flex;flex-direction:column;background:var(--acw-bg);border:1px solid var(--acw-ln);border-radius:3px;padding:0;max-height:90vh;overflow:hidden;box-shadow:0 14px 44px rgba(0,0,0,.6);font:12px/1.35 var(--acw-font);color:var(--acw-tx);width:auto;min-width:340px;max-width:min(560px,96vw)} html.acad .modal.wide{max-width:min(820px,96vw)} html.acad .modal.xwide{max-width:min(1040px,97vw)} html.acad .modal.acw-free{max-width:97vw} html.acad .modal > *{flex:0 0 auto} html.acad .modal > :not(.dvd-tb):not(.modal-actions):not(h3:first-child){margin-left:12px;margin-right:12px} html.acad .modal > h3:first-child,html.acad .dvd-tb{display:flex;align-items:center;height:30px;margin:0 0 10px;padding:0 0 0 12px;background:var(--acw-tb);border-bottom:1px solid var(--acw-ln);font:400 12.5px var(--acw-font);color:#f2f5f9;user-select:none;-webkit-user-select:none} html.acad .dvd-tb{cursor:default} html.acad .dvd-tb h3{flex:1;margin:0;font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} html.acad .dvd-tb button{width:40px;height:29px;border:none;background:none;color:#d6dce5;font:15px var(--acw-font);cursor:pointer;flex:0 0 auto} html.acad .dvd-tb .dvd-tbh{width:30px;font-size:13px} html.acad .dvd-tb button:hover{background:#3d4553;color:#fff} html.acad .dvd-tb .dvd-tbx:hover{background:#c42b1c;color:#fff} html.acad .modal > p,html.acad .modal .dvd-body > p{font-size:12px;color:var(--acw-dim);margin:0 12px 8px} html.acad .dvd-dlg .dvd-body{flex:1 1 auto;overflow:auto;min-height:0;padding:0 12px 2px;margin:0 !important} html.acad .dvd-dlg .dvd-body p{margin:0 0 8px} html.acad .modal-actions{display:flex;justify-content:flex-end;align-items:center;gap:7px;margin:12px 0 0;padding:10px 12px 12px;border-top:1px solid rgba(0,0,0,.18)} html.acad .modal-actions button,html.acad .acw-btn{flex:0 0 auto;min-width:76px;height:24px;padding:0 12px;border-radius:2px;background:var(--acw-btn);border:1px solid var(--acw-btnb);color:#eef2f7;font:400 12px var(--acw-font);cursor:pointer;white-space:nowrap} html.acad .modal-actions button:hover,html.acad .acw-btn:hover{background:#56627a;border-color:#7a879e} html.acad .modal-actions button:disabled,html.acad .acw-btn:disabled{opacity:.45;cursor:default;background:var(--acw-btn);border-color:var(--acw-btnb)} html.acad .modal-actions button:focus-visible,html.acad .acw-btn:focus-visible{outline:1px dotted #fff;outline-offset:-4px} html.acad .modal-actions .btn-ok,html.acad .modal-actions .btn-solid,html.acad .acw-btn.def{background:var(--acw-btn);color:#fff;border-color:var(--acw-acc);box-shadow:inset 0 0 0 1px var(--acw-acc)} html.acad .modal-actions .btn-ok:hover,html.acad .modal-actions .btn-solid:hover{background:#0b6fa6} html.acad .modal-actions .btn-danger,html.acad .modal-actions .danger{background:var(--acw-btn);color:#ff9c9c;border-color:#8a4b4b} html.acad .modal-actions .dvd-help{margin-left:0} html.acad .modal.dvd-flash{animation:dvdFlash .12s 3 alternate} html.acad .overlay.dvd-modeless{background:none;pointer-events:none;align-items:flex-start;justify-content:flex-start;padding:150px 0 0 24px} html.acad .overlay.dvd-modeless .modal{pointer-events:auto;box-shadow:0 8px 30px rgba(0,0,0,.55)} @keyframes dvdFlash{to{box-shadow:0 0 0 2px var(--acw-acc),0 14px 44px rgba(0,0,0,.6)}} /* ô nhập, hộp chọn, ô đánh dấu kiểu Windows */ html.acad .modal input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),html.acad .modal select,html.acad .modal textarea,html.acad .acw input:not([type=checkbox]):not([type=radio]),html.acad .acw select{height:22px;background:var(--acw-in);color:var(--acw-tx);border:1px solid var(--acw-inb);border-radius:2px;padding:0 6px;font:12px var(--acw-font);outline:none;box-sizing:border-box} html.acad .modal textarea{height:auto;padding:4px 6px;font:12px/1.4 Consolas,ui-monospace,monospace} html.acad .modal select{padding:0 2px 0 4px} html.acad .modal input:focus,html.acad .modal select:focus,html.acad .modal textarea:focus{border-color:var(--acw-acc)} html.acad .modal input[disabled],html.acad .modal select[disabled]{opacity:.5} html.acad .modal input[type=checkbox],html.acad .modal input[type=radio]{width:13px;height:13px;margin:0;accent-color:var(--acw-acc);flex:0 0 auto} html.acad .dvd-form{gap:5px} html.acad .dvd-frow{gap:8px;font-size:12px;color:var(--acw-tx);min-height:22px} html.acad .dvd-frow > span:first-child{flex:0 0 44%} html.acad .dvd-frow .v{align-items:center} html.acad .dvd-frow input,html.acad .dvd-frow select{border-radius:2px} html.acad .dvd-sub{display:flex;align-items:center;gap:6px;font:600 11.5px var(--acw-font);color:var(--acw-tx);text-transform:none;letter-spacing:0;margin:10px 0 5px} html.acad .dvd-sub::after{content:\"\";flex:1;height:1px;background:#56627a} html.acad .sheet-item{font:12.5px var(--acw-font);padding:7px 10px;border-radius:2px;margin-bottom:4px;background:var(--acw-btn);border:1px solid var(--acw-btnb)} html.acad .sheet-item:hover{background:#56627a} html.acad .ds-tabs,html.acad .acw-tabs{display:flex;gap:0;margin:0 0 -1px;flex-wrap:wrap;position:relative;z-index:1} html.acad .ds-tabs button,html.acad .acw-tabs button{padding:4px 11px;border-radius:2px 2px 0 0;border:1px solid transparent;border-bottom:none;background:none;color:var(--acw-dim);font:12px var(--acw-font);cursor:pointer;margin-right:1px} html.acad .ds-tabs button:hover,html.acad .acw-tabs button:hover{color:#fff;background:#434c5c} html.acad .ds-tabs button.on,html.acad .acw-tabs button.on{color:#fff;background:var(--acw-bg);border-color:#6a768c;box-shadow:inset 0 2px 0 var(--acw-acc)} html.acad .ds-tabs + *,html.acad .ds-pane,html.acad .acw-pane{border:1px solid #6a768c;padding:10px;border-radius:0 2px 2px 2px} html.acad .ds-pane:not(.on){display:none} html.acad .lm-bar button{padding:0 9px;height:24px;border-radius:2px;background:var(--acw-btn);border-color:var(--acw-btnb);font:12px var(--acw-font)} html.acad .lm-bar button:hover{background:#56627a} html.acad .lm-tbl{border-radius:0;border-color:var(--acw-inb);background:var(--acw-in)} html.acad .lm-tbl table{font:12px var(--acw-font)} html.acad .lm-tbl th{background:#434c5b;color:var(--acw-tx);font-weight:400;border-right:1px solid #5a6578;padding:3px 6px} html.acad .lm-tbl td{padding:2px 6px} html.acad .lm-tbl tr.cur td{background:#0b5f8f} .dvd-form{display:flex;flex-direction:column;gap:6px} .dvd-frow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-dim)} .dvd-frow > span:first-child{flex:0 0 46%} .dvd-frow .v{flex:1;display:flex;gap:6px} .dvd-frow input,.dvd-frow select,.dvd-dlg input,.dvd-dlg select{background:var(--bg-canvas);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:13px system-ui,sans-serif;outline:none;width:100%} .dvd-sub{font-size:11.5px;font-weight:700;color:var(--ink-faint);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px} .dvd-pats,.dvd-blks{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;margin-bottom:10px;max-height:46vh;overflow-y:auto} .dvd-pat,.dvd-blk{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:11.5px system-ui,sans-serif;cursor:pointer;text-align:center} .dvd-pat.on,.dvd-blk.on{border-color:var(--accent);background:rgba(61,154,232,.18)} .dvd-blk span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .dvd-blk canvas,.dvd-pat canvas,.dvd-dlg canvas{position:static;inset:auto;width:auto;height:auto;touch-action:auto;display:block} .lm-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px} .lm-bar button{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:600 12px system-ui,sans-serif;cursor:pointer} .lm-bar button .ic{width:15px;height:15px} .lm-bar input{flex:1;min-width:120px} .lm-tbl{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:6px} .lm-tbl table{width:100%;border-collapse:collapse;font:12.5px system-ui,sans-serif} .lm-tbl th{position:sticky;top:0;background:#353c48;color:#aab3c0;font-weight:600;text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap} .lm-tbl td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--ink);white-space:nowrap} .lm-tbl tr.cur td{background:rgba(61,154,232,.16)} .lm-tbl tr:hover td{background:rgba(255,255,255,.04)} .lm-tbl .tg{width:24px;height:22px;display:grid;place-items:center;border-radius:4px;border:none;background:none;color:#cfd6e0;cursor:pointer} .lm-tbl .tg:hover{background:#4b5566} .lm-tbl .tg .ic{width:15px;height:15px} .lm-tbl .off{color:#6c7686} .lm-tbl .sw{display:inline-block;width:14px;height:14px;border:1px solid rgba(255,255,255,.45);vertical-align:middle;cursor:pointer} .lm-tbl .nm{cursor:pointer;max-width:260px;overflow:hidden;text-overflow:ellipsis} .lm-tbl .lk{cursor:pointer;color:#cfd6e0;border-bottom:1px dotted #6c7686} .lm-tbl .lk:hover{color:#fff} .lm-tbl canvas{display:block;position:static !important;width:140px;height:14px} .aci-grid{display:grid;grid-template-columns:repeat(24,14px);gap:1px;margin:6px 0} .aci-grid button{width:14px;height:14px;border:1px solid rgba(0,0,0,.4);padding:0;cursor:pointer} .aci-grid button:hover{outline:2px solid #fff;z-index:1} .aci-std{display:flex;gap:3px;margin:6px 0} .aci-std button{width:22px;height:22px;border:1px solid rgba(255,255,255,.3);cursor:pointer} .ds-tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap} .ds-tabs button{padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-dim);font:600 12px system-ui,sans-serif;cursor:pointer} .ds-tabs button.on{color:#fff;background:#2f6db0;border-color:#4a8fd6} .ds-pane{display:none}.ds-pane.on{display:block} .os-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px} .os-grid label,.ds-pane label.ck{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer;padding:3px 0} .os-grid input,.ds-pane label.ck input{width:16px;height:16px} .os-grid svg{width:18px;height:18px} .mb-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px} .mb-grid button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:600 11px inherit;font-family:inherit;cursor:pointer} .mb-grid button .ic{width:24px;height:24px} .mb-grid button:active{transform:scale(.96)} .mb-sec{font-size:11.5px;font-weight:700;color:var(--ink-faint);margin:10px 0 6px;text-transform:uppercase} /* ===== ribbon kiểu AutoCAD (giao diện tối) ===== */ .ac-appbar{background:#20262f;height:34px} .ac-ws{display:flex;align-items:center;gap:5px;height:24px;margin-left:8px;padding:0 8px;border-radius:3px;border:1px solid #3c4553;background:#2a313b;color:#d6dde7;font:500 11.5px system-ui,sans-serif;cursor:pointer;white-space:nowrap} .ac-ws:hover{background:#38414e} .ac-ws .ic{width:14px;height:14px} .ac-ws i{font-style:normal;font-size:9px;opacity:.7} .ac-tabs{background:#2b323c;height:27px;padding:0 6px;border-top:1px solid #1a1f26} .ac-tabs button{font:500 12.5px \"Segoe UI\",system-ui,sans-serif;color:#c3cbd6;padding:5px 13px 5px;border:1px solid transparent;border-bottom:none;border-radius:3px 3px 0 0;margin-top:2px} .ac-tabs button:hover{color:#fff;background:#343c48} .ac-tabs button.on{color:#fff;background:#3b4452;border-color:#4a5463;border-bottom-color:#3b4452} .ac-tabsp{flex:1} .ac-tabs .ac-tabmin{padding:2px 8px;margin:0 0 2px;font-size:11px;color:#9aa4b2;border:none;background:none} .ac-ribbon{background:#3b4452;height:104px;border-top:1px solid #4a5463;border-bottom:1px solid #20262e} .ac-panel{border-right:1px solid #2c333e;box-shadow:inset -1px 0 0 #46505e} .ac-pbody{padding:3px 4px 1px;gap:1px} .ac-ptitle{height:20px;line-height:20px;font:500 11.5px \"Segoe UI\",system-ui,sans-serif;color:#c1c9d4;background:#323a46;border-top:1px solid #2c333e;padding:0 8px} .ac-ptitle.more{cursor:pointer} .ac-ptitle.more i{font-style:normal;font-size:9px;opacity:.75;margin-left:2px} .ac-ptitle.more:hover,.ac-ptitle.open{background:#3f6ea5;color:#fff} .ac-rbig{min-width:46px;max-width:76px;padding:2px 4px 3px;gap:2px;border-radius:2px;font:400 11.5px \"Segoe UI\",system-ui,sans-serif;color:#e4e9f0;justify-content:flex-start} .ac-rbig .ic{width:32px;height:32px;margin-top:1px} .ac-rbig span{white-space:nowrap;line-height:1.18} .ac-rbig .dd,.ac-dd{font-style:normal;font-size:8.5px;color:#aeb7c3} .ac-rbig .dd{display:block;line-height:9px} .ac-rbig.has-dd{padding-bottom:1px} .ac-rbig:hover,.ac-rbtn:hover,.ac-dd:hover{background:#4c5869;border-color:#61708a} .ac-col{gap:0;justify-content:space-around} .ac-sgrp{display:flex;align-items:stretch} .ac-rbtn{height:25px;gap:5px;padding:0 6px 0 3px;border-radius:2px;font:400 12px \"Segoe UI\",system-ui,sans-serif;color:#e4e9f0} .ac-rbtn .ic{width:16px;height:16px} .ac-rbtn.ac-ic{padding:0 4px;width:27px;justify-content:center} .ac-dd{width:13px;height:25px;padding:0;border:1px solid transparent;background:none;cursor:pointer;border-radius:2px;margin-left:-2px} .ac-rbtn.on,.ac-rbig.on{background:#2d6cb3;border-color:#4b8fdc} .ac-panel.ico-only .ac-rbtn:not(.ac-ic) span{display:none} .ac-panel.ico-only .ac-rbtn{padding:0 4px} .ac-ctl{min-width:190px} .ac-ctl select,.ac-laybtn{background:#2a313b;border-color:#566173;height:23px} .ac-ctl .ac-rbtn.ac-ic{width:24px;height:23px} .ac-slide{position:fixed;z-index:69;background:#3b4452;border:1px solid #5a6680;box-shadow:0 10px 26px rgba(0,0,0,.5);display:flex;flex-direction:column} .ac-slbody{display:grid;grid-template-columns:repeat(2,minmax(150px,auto));gap:1px;padding:4px} .ac-slide .ac-ptitle{cursor:pointer;background:#3f6ea5;color:#fff} .ac-fly{background:#353c48;border-color:#56627a} .ac-panel.collapsed .ac-rbig.open{background:#3f6ea5;border-color:#5a8fd0} .ac-fly .ac-pbody{height:76px;padding:4px 5px 2px} .ac-fly .ac-ptitle{background:#2f3541;color:#aab3c0;cursor:default} .ac-fly .ac-ptitle.more{cursor:pointer} .ac-fly .ac-slbody{border-top:1px solid #2a3039} .ac-fly:not(.mo) .ac-slbody{display:none} .ac-rtip{position:fixed;z-index:90;max-width:340px;background:#f4f6f9;color:#1d232c;border:1px solid #8f9aaa;border-radius:2px;box-shadow:0 6px 18px rgba(0,0,0,.45);padding:8px 10px 6px;font:12px \"Segoe UI\",system-ui,sans-serif;pointer-events:none} .ac-rtip.sm{padding:3px 7px} .ac-rtip .tt{font-weight:700;font-size:13px;margin-bottom:3px} .ac-rtip .tt span{font-weight:400;color:#5b6676;font-size:12px;margin-left:8px} .ac-rtip .td{color:#2b333f;line-height:1.4;margin-bottom:6px} .ac-rtip .tk{display:flex;align-items:center;gap:6px;border-top:1px solid #d3d9e2;padding-top:5px;color:#3a4553} .ac-rtip .tk .ic{width:18px;height:18px;color:#46505e;--ic-bg:#f4f6f9} .ac-rtip .tf{color:#7a8594;font-size:11px;margin-top:4px} .ac-qat .ic{width:18px;height:18px} /* màu biểu tượng */ .ic{--ia:#4ba7ff;--ir:#ff5f57;--iy:#f6c445;--ig:#5fd07a;--ic-bg:#3b4452} .ac-pop .ic,.mb-grid .ic,.dvd-dlg .ic,.lm-bar .ic,.lm-tbl .ic{--ic-bg:#2b313b} .ic .a{stroke:var(--ia)} .ic .r{stroke:var(--ir)} .ic .y{stroke:var(--iy)} .ic .g{stroke:var(--ig)} .ic .w{stroke:currentColor} .ic .p{fill:var(--ia);stroke:none} .ic .pd{fill:currentColor;stroke:none} .ic .pa{fill:var(--ia);stroke:none} .ic .py{fill:var(--iy);stroke:none} .ic .pg{fill:var(--ig);stroke:none} .ic .fa{fill:var(--ia);fill-opacity:.28;stroke:none} .ic .fa2{fill:var(--ia);stroke:none} .ic .fa3{fill:var(--ia);fill-opacity:.45;stroke:none} .ic .fy{fill:var(--iy);stroke:none} .ic .fy2{fill:#ffd977;stroke:currentColor;stroke-width:1} .ic .fr{fill:var(--ir);fill-opacity:.85;stroke:none} .ic .fr2{fill:var(--ir);fill-opacity:.32;stroke:none} .ic .fg2{fill:var(--ig);fill-opacity:.45;stroke:none} .ic .fd{fill:#dfe6ef;fill-opacity:.16} .ic .fbg{fill:var(--ic-bg);stroke:none} .ic .fz{fill:#7d8796;stroke:none} .ic .fk{fill:#1d232b;stroke:#17324f;stroke-width:.6} .ic .fl0{fill:#7d8796;stroke:#1d232b;stroke-width:.8} .ic .fl1{fill:#f6c445;stroke:#1d232b;stroke-width:.8} .ic .fl2{fill:#4ba7ff;stroke:#1d232b;stroke-width:.8} .ic .fl3{fill:#5fd07a;stroke:#1d232b;stroke-width:.8} .ic .f1{fill:#a8d4ff;stroke:#17324f;stroke-width:.8} .ic .f2{fill:#4b93dc;stroke:#17324f;stroke-width:.8} .ic .f3{fill:#2b62a0;stroke:#17324f;stroke-width:.8} .ic .f2n{fill:#4b93dc;stroke:none} .ic .f2s{fill:#4b93dc;fill-opacity:.35} .ac-rtip .ic .fd{fill:#dfe6ef;fill-opacity:1} .ac-find{outline:2px solid #ffd24a !important;outline-offset:1px;border-radius:4px;animation:acFind .55s ease-in-out 6 alternate} @keyframes acFind{from{box-shadow:0 0 0 0 rgba(255,210,74,.95)}to{box-shadow:0 0 0 8px rgba(255,210,74,0)}}": [
+"html.acad{--bg:#1f242c;--bg-canvas:#212830;--panel:#2b313b;--panel-2:#353c48;--line:#3f4754;--ink:#e6eaf0;--ink-dim:#aab3c0;--ink-faint:#7c8696;--accent:#3d9ae8} html.acad body{background:#1f242c} html.acad .topbar,html.acad nav.toolbar,html.acad .ctools,html.acad .infocard,html.acad #selBar,html.acad #panRow,html.acad #gripRow{display:none !important} html.acad .readout{display:none} html.acad body[data-mode=measure] .readout,html.acad body[data-mode=note] .readout,html.acad body[data-mode=del] .readout{display:flex;top:34px} html.acad .stage::after{display:none} html.acad .stage canvas#cv{cursor:none} html.acad body[data-mode=measure] .stage canvas#cv,html.acad body[data-mode=note] .stage canvas#cv{cursor:crosshair} html.acad .zoom{right:10px;top:40px;transform:none;border-radius:6px;background:#3f4754;box-shadow:0 2px 10px rgba(0,0,0,.4)} html.acad .zoom button{width:30px;height:30px;font-size:16px;background:#2b313b;color:#cfd6e0} html.acad .zoom button:hover{background:#3d4757} html.acad #gUndo,html.acad #gRedo{display:none} html.acad .subrow,html.acad .confirmrow{background:#2b313b;border-top:1px solid #3f4754;padding-top:6px;padding-bottom:6px} html.acad .confirmrow button{padding:8px 14px;font-size:13px;border-radius:7px} html.acad .subrow .pill{padding:6px 12px;font-size:12.5px} html.acad .overlay{align-items:center} html.acad .modal{border-radius:10px;max-width:520px;animation:none;box-shadow:0 18px 60px rgba(0,0,0,.6);padding:16px 18px 16px} html.acad .modal.wide{max-width:760px} html.acad body .toast{top:auto;bottom:118px} html.acad #dvdChip{top:30px !important;left:10px !important} html.acad #dvdProps{right:0;top:0;bottom:0;max-height:none;height:100%;width:290px;border-radius:0;border:none;border-left:1px solid #3f4754;background:#2b313b;box-shadow:none} html.acad.dvd-props-on .zoom{right:300px} html.acad.dvd-props-on #cv,html.acad.dvd-props-on #dvdOvS,html.acad.dvd-props-on #dvdOvC{width:calc(100% - 290px) !important} html.acad.dvd-props-on #dvdCmd{transform:translateX(calc(-50% - 145px))} html.acad #dvdProps .hd{background:#353c48} html.acad #dvdCmd .box{background:rgba(30,36,45,.96);border-radius:4px;border-color:#4a5363} html.acad #dvdCmd .hist div{border-radius:2px} html.acad .empty{background:#1f242c} html.acad.acad-clean #acadTop,html.acad.acad-clean #acadFile{display:none} #acadTop,#acadStatus,#acadFile,#acadVP{display:none} body[data-mode=acad] .readout{display:none !important} html.acad #acadTop{display:block;flex:0 0 auto;background:#2b313b;border-bottom:1px solid #161a20;user-select:none;-webkit-user-select:none;z-index:12;position:relative} .ac-appbar{display:flex;align-items:center;height:34px;background:#232830;gap:2px;padding:0 6px} .ac-logo{display:flex;align-items:center;gap:6px;padding:0 10px 0 4px;height:30px;border:none;background:#c0392b;color:#fff;font:800 13px system-ui,sans-serif;border-radius:4px;cursor:pointer;letter-spacing:.5px} .ac-logo:hover{background:#d24a3c} .ac-logo .tri{font-size:9px;opacity:.85} .ac-qat{display:flex;gap:1px;margin-left:8px} .ac-qat button,.ac-sb button,.ac-rbtn,.ac-rbig{font-family:inherit;color:#dfe5ee;background:none;border:1px solid transparent;cursor:pointer} .ac-qat button{width:28px;height:28px;border-radius:4px;display:grid;place-items:center} .ac-qat button:hover,.ac-sb button:hover{background:#3a4250;border-color:#4b5566} .ac-qat .ic{width:17px;height:17px} .ic{stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round} .ac-title{flex:1;text-align:center;color:#cfd6e0;font:500 12.5px system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px} .ac-title b{color:#fff;font-weight:600} .ac-right{display:flex;gap:4px;align-items:center} .ac-right button{height:26px;padding:0 9px;border-radius:4px;background:#353c48;border:1px solid #454e5c;color:#dfe5ee;font:600 12px system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;gap:5px} .ac-right button .ic{width:15px;height:15px} .ac-right button:hover{background:#414a58} .ac-tabs{display:flex;gap:0;padding:0 8px;height:28px;align-items:flex-end;background:#2b313b} .ac-tabs button{font:600 12.5px system-ui,sans-serif;color:#b9c2cf;background:none;border:none;padding:6px 14px 6px;cursor:pointer;border-bottom:2px solid transparent} .ac-tabs button:hover{color:#fff} .ac-tabs button.on{color:#fff;border-bottom-color:#3d9ae8;background:#353c48;border-radius:4px 4px 0 0} .ac-tabs button.ctx{color:#7ee0a0;background:rgba(46,160,90,.14);border-radius:4px 4px 0 0} .ac-tabs button.ctx.on{color:#fff;background:#2c6e46;border-bottom-color:#5fd38d} .ac-html{display:flex;align-items:stretch} .ac-ribbon{display:flex;gap:0;height:100px;background:#353c48;border-top:1px solid #3f4754;overflow-x:auto;overflow-y:hidden;scrollbar-width:none} .ac-ribbon::-webkit-scrollbar{display:none} #acadTop.min .ac-ribbon{display:none} .ac-panel{display:flex;flex-direction:column;border-right:1px solid #2a3039;flex:0 0 auto} .ac-pbody{flex:1;display:flex;align-items:stretch;gap:2px;padding:4px 5px 2px} .ac-ptitle{height:19px;font:500 11px system-ui,sans-serif;color:#aab3c0;text-align:center;background:#2f3541;line-height:19px;padding:0 6px;white-space:nowrap} .ac-rbig{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;min-width:50px;padding:4px 5px;border-radius:4px;font-size:11px;line-height:1.15;text-align:center} .ac-rbig span{white-space:nowrap} .ac-rbig .ic{width:28px;height:28px;stroke-width:1.4} .ac-rbig:hover,.ac-rbtn:hover{background:#45505f;border-color:#56627a} .ac-col{display:flex;flex-direction:column;gap:1px;justify-content:flex-start} .ac-rbtn{display:flex;align-items:center;gap:5px;height:24px;padding:0 6px 0 3px;border-radius:3px;font-size:11.5px;white-space:nowrap;text-align:left} .ac-rbtn .ic{width:16px;height:16px;flex:0 0 auto} .ac-rbtn.on,.ac-rbig.on{background:#2f6db0;border-color:#4a8fd6} .ac-panel.ico-only .ac-rbtn span{display:none} .ac-panel.ico-only .ac-rbtn{padding:0 4px} .ac-ctl{display:flex;flex-direction:column;gap:4px;padding:2px 2px;width:200px;flex:0 0 auto} .ac-ctl select,.ac-laybtn{height:24px;background:#262b34;color:#e6eaf0;border:1px solid #4a5363;border-radius:3px;font:12px system-ui,sans-serif;padding:0 6px;cursor:pointer;width:100%} .ac-laybtn{display:flex;align-items:center;gap:6px;text-align:left} .ac-p3{gap:3px} #acadStatus button.iso-on{color:#ff5b5b} .ac-p3 select{height:22px;font-size:11.5px} .ac-laybtn .sw,.ac-lrow .sw{width:12px;height:12px;border:1px solid rgba(255,255,255,.4);flex:0 0 auto} .ac-laybtn .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .ac-laybtn .ic{width:14px;height:14px} .ac-pop{position:fixed;z-index:70;background:#2b313b;border:1px solid #4a5363;border-radius:4px;box-shadow:0 10px 30px rgba(0,0,0,.55);max-height:60vh;overflow-y:auto;min-width:220px;padding:3px 0;font:12.5px system-ui,sans-serif;color:#e6eaf0} .ac-pop .it{display:flex;align-items:center;gap:8px;padding:5px 12px;cursor:pointer;white-space:nowrap} .ac-pop .it:hover{background:#3d6fa8} .ac-pop .it.dis{opacity:.45;pointer-events:none} .ac-pop .it .k{margin-left:auto;color:#9aa4b2;font-size:11px;padding-left:18px} .ac-pop .it .ic{width:15px;height:15px} .ac-pop .sep{height:1px;background:#454e5c;margin:3px 0} .ac-pop .hd{padding:5px 12px 3px;color:#8f99a8;font-size:11px;font-weight:700;letter-spacing:.4px} .ac-lrow{display:flex;align-items:center;gap:6px;padding:3px 8px;cursor:pointer} .ac-lrow:hover{background:#3a4250} .ac-lrow.cur{background:#30507a} .ac-lrow .t{width:20px;height:20px;display:grid;place-items:center;border-radius:3px;color:#cfd6e0} .ac-lrow .t:hover{background:#4b5566} .ac-lrow .t .ic{width:14px;height:14px} .ac-lrow .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} html.acad #acadFile{display:flex;align-items:flex-end;gap:2px;height:26px;padding:0 6px;background:#1f242c;border-bottom:1px solid #3a414d;flex:0 0 auto} #acadFile .ft{display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;background:#2b313b;border:1px solid #3a414d;border-bottom:none;border-radius:4px 4px 0 0;color:#e6eaf0;font:500 12px system-ui,sans-serif;max-width:360px} #acadFile .ft.start{background:#262b34;color:#aab3c0;cursor:pointer} #acadFile .ft span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} #acadFile .ft .x{color:#8f99a8;cursor:pointer;font-size:14px} #acadFile .plus{height:22px;width:24px;border:none;background:none;color:#aab3c0;font-size:17px;cursor:pointer} #acadFile .plus:hover{color:#fff} html.acad #acadVP{display:flex;position:absolute;left:10px;top:6px;z-index:6;gap:2px;font:12px system-ui,sans-serif;color:#b9c2cf} #acadVP span{cursor:pointer;padding:1px 3px;border-radius:3px} #acadVP span:hover{background:rgba(60,70,85,.8);color:#fff} html.acad #acadStatus{display:flex;align-items:center;height:28px;flex:0 0 auto;background:#2b313b;border-top:1px solid #161a20;padding:0 6px;gap:4px;font:12px system-ui,sans-serif;color:#cfd6e0;user-select:none;-webkit-user-select:none} .ac-lt{display:flex;align-items:stretch;height:24px;gap:1px;overflow-x:auto;max-width:42%;scrollbar-width:none} .ac-lt button{font:500 12px system-ui,sans-serif;color:#b9c2cf;background:#262b34;border:1px solid #3a414d;border-top:none;padding:0 12px;cursor:pointer;border-radius:0 0 4px 4px;white-space:nowrap} .ac-lt button.on{background:#3a4250;color:#fff;border-color:#55627a} .ac-sb{display:flex;align-items:center;gap:1px;margin-left:auto} .ac-coord{font:12px ui-monospace,Consolas,Menlo,monospace;color:#dfe5ee;min-width:210px;text-align:right;padding-right:8px;white-space:nowrap} .ac-sb button{height:24px;min-width:26px;padding:0 6px;border-radius:3px;display:flex;align-items:center;gap:4px;font:600 11px system-ui,sans-serif;color:#9aa4b2} .ac-sb button .ic{width:16px;height:16px} .ac-sb button.on{color:#5fb3ff;background:rgba(61,154,232,.16);border-color:rgba(61,154,232,.4)} .ac-sb .model{color:#fff;font-weight:700;padding:0 8px} .ac-sep{width:1px;height:16px;background:#454e5c;margin:0 4px} #dvdDyn{position:absolute;z-index:9;display:none;pointer-events:none;font:12px system-ui,sans-serif} #dvdDyn .pr{background:rgba(245,247,250,.96);color:#1a1f27;padding:3px 7px;border:1px solid #9aa4b2;border-radius:2px;margin-bottom:2px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} #dvdDyn .vals{display:flex;gap:3px} #dvdDyn .in{background:#fff;color:#0b4fa0;border:1px solid #3d9ae8;padding:2px 7px;border-radius:2px;font:600 12px ui-monospace,Consolas,monospace;min-width:54px} #dvdDyn .in:not(.on){background:#eef1f5;color:#4f5b6b;border-color:#b3bdc9} #dvdDyn .in .lock{width:9px;height:11px;margin-left:4px;vertical-align:-1px;fill:none;stroke:currentColor;stroke-width:1.3} #dvdDyn .pr .dd{color:#0b4fa0;font-weight:700;margin-left:2px} .dvd-dlg .modal{max-height:86vh} /* ---- hộp thoại: bản điện thoại giữ kiểu cũ (Huỷ bên trái, nút to); bản máy tính như AutoCAD 2027 ---- */ .dvd-dlg .dvd-tb{display:flex;align-items:center;gap:4px} .dvd-dlg .dvd-tb h3{flex:1;margin:0 0 4px} html:not(.acad) .dvd-dlg .dvd-tbh,html:not(.acad) .dvd-dlg .dvd-tbx,html:not(.acad) .dvd-dlg .dvd-help{display:none} html:not(.acad) .dvd-dlg .modal-actions .dvd-cancel{order:-1} .dvd-fl{display:flex;gap:6px;margin-right:auto} html.acad{--acw-bg:#3b4452;--acw-tb:#2b313b;--acw-ln:#1d2128;--acw-in:#262b34;--acw-inb:#5a6578;--acw-btn:#4a5466;--acw-btnb:#636f85;--acw-tx:#e8ecf2;--acw-dim:#b4bdca;--acw-acc:#0696d7;--acw-font:\"Segoe UI\",system-ui,-apple-system,\"Helvetica Neue\",sans-serif} html.acad .overlay{background:rgba(8,10,14,.22)} html.acad .modal{display:flex;flex-direction:column;background:var(--acw-bg);border:1px solid var(--acw-ln);border-radius:3px;padding:0;max-height:90vh;overflow:hidden;box-shadow:0 14px 44px rgba(0,0,0,.6);font:12px/1.35 var(--acw-font);color:var(--acw-tx);width:auto;min-width:340px;max-width:min(560px,96vw)} html.acad .modal.wide{max-width:min(820px,96vw)} html.acad .modal.xwide{max-width:min(1040px,97vw)} html.acad .modal.acw-free{max-width:97vw} html.acad .modal > *{flex:0 0 auto} html.acad .modal > :not(.dvd-tb):not(.modal-actions):not(h3:first-child){margin-left:12px;margin-right:12px} html.acad .modal > textarea,html.acad .modal > input{width:calc(100% - 24px) !important} html.acad .modal > h3:first-child,html.acad .dvd-tb{display:flex;align-items:center;height:30px;margin:0 0 10px;padding:0 0 0 12px;background:var(--acw-tb);border-bottom:1px solid var(--acw-ln);font:400 12.5px var(--acw-font);color:#f2f5f9;user-select:none;-webkit-user-select:none} html.acad .dvd-tb{cursor:default} html.acad .dvd-tb h3{flex:1;margin:0;font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} html.acad .dvd-tb button{width:40px;height:29px;border:none;background:none;color:#d6dce5;font:15px var(--acw-font);cursor:pointer;flex:0 0 auto} html.acad .dvd-tb .dvd-tbh{width:30px;font-size:13px} html.acad .dvd-tb button:hover{background:#3d4553;color:#fff} html.acad .dvd-tb .dvd-tbx:hover{background:#c42b1c;color:#fff} html.acad .modal > p,html.acad .modal .dvd-body > p{font-size:12px;color:var(--acw-dim);margin:0 12px 8px} html.acad .dvd-dlg .dvd-body{flex:1 1 auto;overflow:auto;min-height:0;padding:0 12px 2px;margin:0 !important} html.acad .dvd-dlg .dvd-body p{margin:0 0 8px} html.acad .modal-actions{display:flex;justify-content:flex-end;align-items:center;gap:7px;margin:12px 0 0;padding:10px 12px 12px;border-top:1px solid rgba(0,0,0,.18)} html.acad .modal-actions button,html.acad .acw-btn{flex:0 0 auto;min-width:76px;height:24px;padding:0 12px;border-radius:2px;background:var(--acw-btn);border:1px solid var(--acw-btnb);color:#eef2f7;font:400 12px var(--acw-font);cursor:pointer;white-space:nowrap} html.acad .modal-actions button:hover,html.acad .acw-btn:hover{background:#56627a;border-color:#7a879e} html.acad .modal-actions button:disabled,html.acad .acw-btn:disabled{opacity:.45;cursor:default;background:var(--acw-btn);border-color:var(--acw-btnb)} html.acad .modal-actions button:focus-visible,html.acad .acw-btn:focus-visible{outline:1px dotted #fff;outline-offset:-4px} html.acad .modal-actions .btn-ok,html.acad .modal-actions .btn-solid,html.acad .acw-btn.def{background:var(--acw-btn);color:#fff;border-color:var(--acw-acc);box-shadow:inset 0 0 0 1px var(--acw-acc)} html.acad .modal-actions .btn-ok:hover,html.acad .modal-actions .btn-solid:hover{background:#0b6fa6} html.acad .modal-actions .btn-danger,html.acad .modal-actions .danger{background:var(--acw-btn);color:#ff9c9c;border-color:#8a4b4b} html.acad .modal-actions .dvd-help{margin-left:0} html.acad .modal.dvd-flash{animation:dvdFlash .12s 3 alternate} html.acad .overlay.dvd-modeless{background:none;pointer-events:none;align-items:flex-start;justify-content:flex-start;padding:150px 0 0 24px} html.acad .overlay.dvd-modeless .modal{pointer-events:auto;box-shadow:0 8px 30px rgba(0,0,0,.55)} @keyframes dvdFlash{to{box-shadow:0 0 0 2px var(--acw-acc),0 14px 44px rgba(0,0,0,.6)}} /* ô nhập, hộp chọn, ô đánh dấu kiểu Windows */ html.acad .modal input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),html.acad .modal select,html.acad .modal textarea,html.acad .acw input:not([type=checkbox]):not([type=radio]),html.acad .acw select{height:22px;background:var(--acw-in);color:var(--acw-tx);border:1px solid var(--acw-inb);border-radius:2px;padding:0 6px;font:12px var(--acw-font);outline:none;box-sizing:border-box} html.acad .modal textarea{height:auto;padding:4px 6px;font:12px/1.4 Consolas,ui-monospace,monospace} html.acad .modal select{padding:0 2px 0 4px} html.acad .modal input:focus,html.acad .modal select:focus,html.acad .modal textarea:focus{border-color:var(--acw-acc)} html.acad .modal input[disabled],html.acad .modal select[disabled]{opacity:.5} html.acad .modal input[type=checkbox],html.acad .modal input[type=radio]{width:13px;height:13px;margin:0;accent-color:var(--acw-acc);flex:0 0 auto} html.acad .dvd-form{gap:5px} html.acad .dvd-frow{gap:8px;font-size:12px;color:var(--acw-tx);min-height:22px} html.acad .dvd-frow > span:first-child{flex:0 0 44%} html.acad .dvd-frow .v{align-items:center} html.acad .dvd-frow input,html.acad .dvd-frow select{border-radius:2px} html.acad .dvd-sub{display:flex;align-items:center;gap:6px;font:600 11.5px var(--acw-font);color:var(--acw-tx);text-transform:none;letter-spacing:0;margin:10px 0 5px} html.acad .dvd-sub::after{content:\"\";flex:1;height:1px;background:#56627a} html.acad .sheet-item{font:12.5px var(--acw-font);padding:7px 10px;border-radius:2px;margin-bottom:4px;background:var(--acw-btn);border:1px solid var(--acw-btnb)} html.acad .sheet-item:hover{background:#56627a} html.acad .ds-tabs,html.acad .acw-tabs{display:flex;gap:0;margin:0 0 -1px;flex-wrap:wrap;position:relative;z-index:1} html.acad .ds-tabs button,html.acad .acw-tabs button{padding:4px 11px;border-radius:2px 2px 0 0;border:1px solid transparent;border-bottom:none;background:none;color:var(--acw-dim);font:12px var(--acw-font);cursor:pointer;margin-right:1px} html.acad .ds-tabs button:hover,html.acad .acw-tabs button:hover{color:#fff;background:#434c5c} html.acad .ds-tabs button.on,html.acad .acw-tabs button.on{color:#fff;background:var(--acw-bg);border-color:#6a768c;box-shadow:inset 0 2px 0 var(--acw-acc)} html.acad .ds-tabs + *,html.acad .ds-pane,html.acad .acw-pane{border:1px solid #6a768c;padding:10px;border-radius:0 2px 2px 2px} html.acad .ds-pane:not(.on){display:none} html.acad .lm-bar button{padding:0 9px;height:24px;border-radius:2px;background:var(--acw-btn);border-color:var(--acw-btnb);font:12px var(--acw-font)} html.acad .lm-bar button:hover{background:#56627a} html.acad .lm-tbl{border-radius:0;border-color:var(--acw-inb);background:var(--acw-in)} html.acad .lm-tbl table{font:12px var(--acw-font)} html.acad .lm-tbl th{background:#434c5b;color:var(--acw-tx);font-weight:400;border-right:1px solid #5a6578;padding:3px 6px} html.acad .lm-tbl td{padding:2px 6px} html.acad .lm-tbl tr.cur td{background:#0b5f8f} .dvd-form{display:flex;flex-direction:column;gap:6px} .dvd-frow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-dim)} .dvd-frow > span:first-child{flex:0 0 46%} .dvd-frow .v{flex:1;display:flex;gap:6px} .dvd-frow input,.dvd-frow select,.dvd-dlg input,.dvd-dlg select{background:var(--bg-canvas);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:13px system-ui,sans-serif;outline:none;width:100%} .dvd-sub{font-size:11.5px;font-weight:700;color:var(--ink-faint);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px} .dvd-pats,.dvd-blks{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px;margin-bottom:10px;max-height:46vh;overflow-y:auto} .dvd-pat,.dvd-blk{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:11.5px system-ui,sans-serif;cursor:pointer;text-align:center} .dvd-pat.on,.dvd-blk.on{border-color:var(--accent);background:rgba(61,154,232,.18)} .dvd-blk span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .dvd-blk canvas,.dvd-pat canvas,.dvd-dlg canvas{position:static;inset:auto;width:auto;height:auto;touch-action:auto;display:block} .lm-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px} .lm-bar button{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:600 12px system-ui,sans-serif;cursor:pointer} .lm-bar button .ic{width:15px;height:15px} .lm-bar input{flex:1;min-width:120px} .lm-tbl{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:6px} .lm-tbl table{width:100%;border-collapse:collapse;font:12.5px system-ui,sans-serif} .lm-tbl th{position:sticky;top:0;background:#353c48;color:#aab3c0;font-weight:600;text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap} .lm-tbl td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--ink);white-space:nowrap} .lm-tbl tr.cur td{background:rgba(61,154,232,.16)} .lm-tbl tr:hover td{background:rgba(255,255,255,.04)} .lm-tbl .tg{width:24px;height:22px;display:grid;place-items:center;border-radius:4px;border:none;background:none;color:#cfd6e0;cursor:pointer} .lm-tbl .tg:hover{background:#4b5566} .lm-tbl .tg .ic{width:15px;height:15px} .lm-tbl .off{color:#6c7686} .lm-tbl .sw{display:inline-block;width:14px;height:14px;border:1px solid rgba(255,255,255,.45);vertical-align:middle;cursor:pointer} .lm-tbl .nm{cursor:pointer;max-width:260px;overflow:hidden;text-overflow:ellipsis} .lm-tbl .lk{cursor:pointer;color:#cfd6e0;border-bottom:1px dotted #6c7686} .lm-tbl .lk:hover{color:#fff} .lm-tbl canvas{display:block;position:static !important;width:140px;height:14px} .aci-grid{display:grid;grid-template-columns:repeat(24,14px);gap:1px;margin:6px 0} .aci-grid button{width:14px;height:14px;border:1px solid rgba(0,0,0,.4);padding:0;cursor:pointer} .aci-grid button:hover{outline:2px solid #fff;z-index:1} .aci-std{display:flex;gap:3px;margin:6px 0} .aci-std button{width:22px;height:22px;border:1px solid rgba(255,255,255,.3);cursor:pointer} .ds-tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap} .ds-tabs button{padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-dim);font:600 12px system-ui,sans-serif;cursor:pointer} .ds-tabs button.on{color:#fff;background:#2f6db0;border-color:#4a8fd6} .ds-pane{display:none}.ds-pane.on{display:block} .os-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px} .os-grid label,.ds-pane label.ck{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer;padding:3px 0} .os-grid input,.ds-pane label.ck input{width:16px;height:16px} .os-grid svg{width:18px;height:18px} .mb-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px} .mb-grid button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:600 11px inherit;font-family:inherit;cursor:pointer} .mb-grid button .ic{width:24px;height:24px} .mb-grid button:active{transform:scale(.96)} .mb-sec{font-size:11.5px;font-weight:700;color:var(--ink-faint);margin:10px 0 6px;text-transform:uppercase} /* ===== ribbon kiểu AutoCAD (giao diện tối) ===== */ .ac-appbar{background:#20262f;height:34px} .ac-ws{display:flex;align-items:center;gap:5px;height:24px;margin-left:8px;padding:0 8px;border-radius:3px;border:1px solid #3c4553;background:#2a313b;color:#d6dde7;font:500 11.5px system-ui,sans-serif;cursor:pointer;white-space:nowrap} .ac-ws:hover{background:#38414e} .ac-ws .ic{width:14px;height:14px} .ac-ws i{font-style:normal;font-size:9px;opacity:.7} .ac-tabs{background:#2b323c;height:27px;padding:0 6px;border-top:1px solid #1a1f26} .ac-tabs button{font:500 12.5px \"Segoe UI\",system-ui,sans-serif;color:#c3cbd6;padding:5px 13px 5px;border:1px solid transparent;border-bottom:none;border-radius:3px 3px 0 0;margin-top:2px} .ac-tabs button:hover{color:#fff;background:#343c48} .ac-tabs button.on{color:#fff;background:#3b4452;border-color:#4a5463;border-bottom-color:#3b4452} .ac-tabsp{flex:1} .ac-tabs .ac-tabmin{padding:2px 8px;margin:0 0 2px;font-size:11px;color:#9aa4b2;border:none;background:none} .ac-ribbon{background:#3b4452;height:104px;border-top:1px solid #4a5463;border-bottom:1px solid #20262e} .ac-panel{border-right:1px solid #2c333e;box-shadow:inset -1px 0 0 #46505e} .ac-pbody{padding:3px 4px 1px;gap:1px} .ac-ptitle{height:20px;line-height:20px;font:500 11.5px \"Segoe UI\",system-ui,sans-serif;color:#c1c9d4;background:#323a46;border-top:1px solid #2c333e;padding:0 8px} .ac-ptitle.more{cursor:pointer} .ac-ptitle.more i{font-style:normal;font-size:9px;opacity:.75;margin-left:2px} .ac-ptitle.more:hover,.ac-ptitle.open{background:#3f6ea5;color:#fff} .ac-rbig{min-width:46px;max-width:76px;padding:2px 4px 3px;gap:2px;border-radius:2px;font:400 11.5px \"Segoe UI\",system-ui,sans-serif;color:#e4e9f0;justify-content:flex-start} .ac-rbig .ic{width:32px;height:32px;margin-top:1px} .ac-rbig span{white-space:nowrap;line-height:1.18} .ac-rbig .dd,.ac-dd{font-style:normal;font-size:8.5px;color:#aeb7c3} .ac-rbig .dd{display:block;line-height:9px} .ac-rbig.has-dd{padding-bottom:1px} .ac-rbig:hover,.ac-rbtn:hover,.ac-dd:hover{background:#4c5869;border-color:#61708a} .ac-col{gap:0;justify-content:space-around} .ac-sgrp{display:flex;align-items:stretch} .ac-rbtn{height:25px;gap:5px;padding:0 6px 0 3px;border-radius:2px;font:400 12px \"Segoe UI\",system-ui,sans-serif;color:#e4e9f0} .ac-rbtn .ic{width:16px;height:16px} .ac-rbtn.ac-ic{padding:0 4px;width:27px;justify-content:center} .ac-dd{width:13px;height:25px;padding:0;border:1px solid transparent;background:none;cursor:pointer;border-radius:2px;margin-left:-2px} .ac-rbtn.on,.ac-rbig.on{background:#2d6cb3;border-color:#4b8fdc} .ac-panel.ico-only .ac-rbtn:not(.ac-ic) span{display:none} .ac-panel.ico-only .ac-rbtn{padding:0 4px} .ac-ctl{min-width:190px} .ac-ctl select,.ac-laybtn{background:#2a313b;border-color:#566173;height:23px} .ac-ctl .ac-rbtn.ac-ic{width:24px;height:23px} .ac-slide{position:fixed;z-index:69;background:#3b4452;border:1px solid #5a6680;box-shadow:0 10px 26px rgba(0,0,0,.5);display:flex;flex-direction:column} .ac-slbody{display:grid;grid-template-columns:repeat(2,minmax(150px,auto));gap:1px;padding:4px} .ac-slide .ac-ptitle{cursor:pointer;background:#3f6ea5;color:#fff} .ac-fly{background:#353c48;border-color:#56627a} .ac-panel.collapsed .ac-rbig.open{background:#3f6ea5;border-color:#5a8fd0} .ac-fly .ac-pbody{height:76px;padding:4px 5px 2px} .ac-fly .ac-ptitle{background:#2f3541;color:#aab3c0;cursor:default} .ac-fly .ac-ptitle.more{cursor:pointer} .ac-fly .ac-slbody{border-top:1px solid #2a3039} .ac-fly:not(.mo) .ac-slbody{display:none} .ac-rtip{position:fixed;z-index:90;max-width:340px;background:#f4f6f9;color:#1d232c;border:1px solid #8f9aaa;border-radius:2px;box-shadow:0 6px 18px rgba(0,0,0,.45);padding:8px 10px 6px;font:12px \"Segoe UI\",system-ui,sans-serif;pointer-events:none} .ac-rtip.sm{padding:3px 7px} .ac-rtip .tt{font-weight:700;font-size:13px;margin-bottom:3px} .ac-rtip .tt span{font-weight:400;color:#5b6676;font-size:12px;margin-left:8px} .ac-rtip .td{color:#2b333f;line-height:1.4;margin-bottom:6px} .ac-rtip .tk{display:flex;align-items:center;gap:6px;border-top:1px solid #d3d9e2;padding-top:5px;color:#3a4553} .ac-rtip .tk .ic{width:18px;height:18px;color:#46505e;--ic-bg:#f4f6f9} .ac-rtip .tf{color:#7a8594;font-size:11px;margin-top:4px} .ac-qat .ic{width:18px;height:18px} /* màu biểu tượng */ .ic{--ia:#4ba7ff;--ir:#ff5f57;--iy:#f6c445;--ig:#5fd07a;--ic-bg:#3b4452} .ac-pop .ic,.mb-grid .ic,.dvd-dlg .ic,.lm-bar .ic,.lm-tbl .ic{--ic-bg:#2b313b} .ic .a{stroke:var(--ia)} .ic .r{stroke:var(--ir)} .ic .y{stroke:var(--iy)} .ic .g{stroke:var(--ig)} .ic .w{stroke:currentColor} .ic .p{fill:var(--ia);stroke:none} .ic .pd{fill:currentColor;stroke:none} .ic .pa{fill:var(--ia);stroke:none} .ic .py{fill:var(--iy);stroke:none} .ic .pg{fill:var(--ig);stroke:none} .ic .fa{fill:var(--ia);fill-opacity:.28;stroke:none} .ic .fa2{fill:var(--ia);stroke:none} .ic .fa3{fill:var(--ia);fill-opacity:.45;stroke:none} .ic .fy{fill:var(--iy);stroke:none} .ic .fy2{fill:#ffd977;stroke:currentColor;stroke-width:1} .ic .fr{fill:var(--ir);fill-opacity:.85;stroke:none} .ic .fr2{fill:var(--ir);fill-opacity:.32;stroke:none} .ic .fg2{fill:var(--ig);fill-opacity:.45;stroke:none} .ic .fd{fill:#dfe6ef;fill-opacity:.16} .ic .fbg{fill:var(--ic-bg);stroke:none} .ic .fz{fill:#7d8796;stroke:none} .ic .fk{fill:#1d232b;stroke:#17324f;stroke-width:.6} .ic .fl0{fill:#7d8796;stroke:#1d232b;stroke-width:.8} .ic .fl1{fill:#f6c445;stroke:#1d232b;stroke-width:.8} .ic .fl2{fill:#4ba7ff;stroke:#1d232b;stroke-width:.8} .ic .fl3{fill:#5fd07a;stroke:#1d232b;stroke-width:.8} .ic .f1{fill:#a8d4ff;stroke:#17324f;stroke-width:.8} .ic .f2{fill:#4b93dc;stroke:#17324f;stroke-width:.8} .ic .f3{fill:#2b62a0;stroke:#17324f;stroke-width:.8} .ic .f2n{fill:#4b93dc;stroke:none} .ic .f2s{fill:#4b93dc;fill-opacity:.35} .ac-rtip .ic .fd{fill:#dfe6ef;fill-opacity:1} .ac-find{outline:2px solid #ffd24a !important;outline-offset:1px;border-radius:4px;animation:acFind .55s ease-in-out 6 alternate} @keyframes acFind{from{box-shadow:0 0 0 0 rgba(255,210,74,.95)}to{box-shadow:0 0 0 8px rgba(255,210,74,0)}}": [
 "dvd-acad-ui.js"
 ],
 "hàng": [
@@ -18523,6 +18834,9 @@
 ],
 "hình (cao": [
 "dvd-acad-3d.js"
+],
+"hình nút)": [
+"dvd-acad-dlg3.js"
 ],
 "hình vẽ": [
 "index.html"
@@ -19126,9 +19440,6 @@
 "tham chiếu.": [
 "dvd-acad-pro.js",
 "dvd-acad-x16.js"
-],
-"thanh công cụ)": [
-"dvd-acad-dlg3.js"
 ],
 "thao tác.": [
 "dvd-acad-cmdline.js"
@@ -19747,12 +20058,14 @@
 "dvd-acad-core.js"
 ],
 "Đa giác đều": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Đa tuyến": [
 "dvd-acad-cmds.js",
 "dvd-acad-dlg.js",
 "dvd-acad-dlg3.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-ui.js",
 "dvd-acad-x10.js",
@@ -20009,6 +20322,7 @@
 "Điểm": [
 "dvd-acad-cmds.js",
 "dvd-acad-dlg3.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-ui.js",
 "dvd-acad-x10.js",
@@ -20309,6 +20623,9 @@
 "Đo diện tích: đưa từng đỉnh vào tâm ngắm rồi chạm để thêm; có ≥3 đỉnh thì bấm \"Đóng vùng\" (đang": [
 "index.html"
 ],
+"Đo khoảng cách": [
+"dvd-acad-dlg4.js"
+],
 "Đo nhanh": [
 "dvd-acad-ui.js"
 ],
@@ -20353,6 +20670,9 @@
 ],
 "Đá ốp": [
 "dvd-acad-3d.js"
+],
+"Đám mây sửa": [
+"dvd-acad-dlg4.js"
 ],
 "Đánh dấu": [
 "dvd-acad-cmdline.js",
@@ -20721,6 +21041,9 @@
 ],
 "Đã huỷ thay đổi khối.": [
 "dvd-acad-ext.js"
+],
+"Đã in ra": [
+"dvd-acad-more.js"
 ],
 "Đã in: khổ": [
 "dvd-acad-more.js"
@@ -21503,6 +21826,7 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
 "dvd-acad-dlg2.js:attr",
+"dvd-acad-dlg4.js",
 "dvd-acad-ext.js:attr",
 "dvd-acad-more.js",
 "dvd-acad-pro.js",
@@ -21755,6 +22079,9 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js"
 ],
+"Đơn vị…": [
+"dvd-acad-dlg4.js"
+],
 "Đưa chữ / kích thước lên trên mọi đối tượng khác": [
 "dvd-acad-x3.js"
 ],
@@ -21800,6 +22127,7 @@
 "index.html"
 ],
 "Đường": [
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "index.html:html"
 ],
@@ -21811,6 +22139,9 @@
 ],
 "Đường cong trơn qua các điểm (Enter để xong)": [
 "dvd-acad-cmds.js"
+],
+"Đường cơ sở": [
+"dvd-acad-dlg4.js"
 ],
 "Đường cắt [Đa giác / Đối tượng / Xoá]": [
 "dvd-acad-x16.js"
@@ -21854,6 +22185,7 @@
 ],
 "Đường dựng": [
 "dvd-acad-cmds.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-ui.js",
 "dvd-acad-x13.js",
@@ -21879,6 +22211,7 @@
 ],
 "Đường kính": [
 "dvd-acad-cmds.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x10.js",
 "dvd-acad-x4.js",
@@ -21917,6 +22250,7 @@
 "Đường thẳng": [
 "dvd-acad-cmds.js",
 "dvd-acad-dlg3.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-ui.js",
 "dvd-acad-x10.js",
@@ -21931,6 +22265,7 @@
 "Đường tròn": [
 "dvd-acad-cmds.js",
 "dvd-acad-dlg3.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-more.js",
 "dvd-acad-ui.js",
 "dvd-acad-x10.js",
@@ -22007,6 +22342,7 @@
 ],
 "Đường đôi": [
 "dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
 ],
 "Đường đôi (Multiline)": [
@@ -22314,6 +22650,7 @@
 ],
 "Định dạng": [
 "dvd-acad-dlg.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-x6.js",
 "dvd-acad-x9.js"
 ],
@@ -22418,6 +22755,9 @@
 "Đối tượng không phải đa tuyến — chuyển thành đa tuyến?": [
 "dvd-acad-cmds.js"
 ],
+"Đối tượng không sửa được ở đây.": [
+"dvd-acad-dlg4.js"
+],
 "Đối tượng không thuộc nhóm nào.": [
 "dvd-acad-dlg2.js"
 ],
@@ -22451,6 +22791,7 @@
 "Đối xứng": [
 "dvd-acad-core.js",
 "dvd-acad-dlg.js",
+"dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x6.js"
 ],
@@ -22691,7 +23032,8 @@
 ],
 "Đổi tên…": [
 "dvd-acad-dlg.js",
-"dvd-acad-dlg2.js"
+"dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js"
 ],
 "Đổi tỉ lệ quanh điểm gốc (C = sao chép, R = tham chiếu)": [
 "dvd-acad-cmds.js"
@@ -22864,6 +23206,7 @@
 ],
 "đa tuyến": [
 "dvd-acad-cmds.js",
+"dvd-acad-dlg4.js",
 "index.html"
 ],
 "đa tuyến biên.": [
@@ -22871,6 +23214,9 @@
 ],
 "đa tuyến thành": [
 "dvd-acad-x15.js"
+],
+"đa tuyến đường bao.": [
+"dvd-acad-dlg4.js"
 ],
 "đa tuyến.": [
 "dvd-acad-x15.js"
@@ -22962,6 +23308,9 @@
 ],
 "đường": [
 "index.html"
+],
+"đường (OpenStreetMap)": [
+"dvd-acad-dlg4.js"
 ],
 "đường biên": [
 "dvd-acad-dlg.js"
@@ -23343,8 +23692,17 @@
 "Ảnh tham chiếu": [
 "index.html"
 ],
+"Ảnh vệ tinh": [
+"dvd-acad-dlg4.js"
+],
+"Ảnh…": [
+"dvd-acad-dlg4.js"
+],
 "ả": [
 "index.html"
+],
+"ảnh vệ tinh": [
+"dvd-acad-dlg4.js"
 ],
 "ảnh,": [
 "dvd-acad-x16.js"
