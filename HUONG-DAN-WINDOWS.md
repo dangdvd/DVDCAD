@@ -25,7 +25,7 @@ Gỡ cài đặt: **Settings → Apps → DVDCAD → Uninstall**.
 | Mở bản vẽ | `OPEN` / **Ctrl+O** mở hộp thoại *Select File* của Windows. Chọn được nhiều file, mỗi file một tab |
 | Mở từ Explorer | Nhấp đúp file .dwg / .dxf, hoặc kéo thả file vào cửa sổ. Khi DVDCAD đang chạy, file mở thêm thành tab mới trong cùng cửa sổ |
 | Lưu | `QSAVE` / **Ctrl+S**: lần đầu hỏi chỗ lưu, các lần sau ghi đè đúng file đó. `SAVEAS` / **Ctrl+Shift+S**: chọn *Bản vẽ AutoCAD (\*.dwg)* hoặc *DXF* trong hộp thoại |
-| Lưu DWG | `SAVEDWG` (`DWGOUT`): ghi thẳng **DWG 2000** bằng bộ ghi có sẵn, không cần cài thêm gì |
+| Lưu DWG | `SAVEDWG` (`DWGOUT`): ghi thẳng **DWG 2018** (hoặc 2013 / 2010 / 2004 / 2000, chọn trong `DWGSERVER`) bằng bộ ghi có sẵn, không cần cài thêm gì |
 | Nhiều bản vẽ | Tab file phía trên khung vẽ, **Ctrl+Tab** chuyển tab, **Ctrl+F4** đóng tab |
 | Phím chức năng | F1 trợ giúp, F2 lịch sử lệnh, F3 OSNAP, F7 GRID, F8 ORTHO, F9 SNAP, F10 POLAR, F11 OTRACK, F12 DYN |
 | In | `PLOT` / **Ctrl+P**: xuất PDF đúng khổ giấy và tỉ lệ, hoặc in ra máy in |
@@ -44,11 +44,11 @@ Danh sách lệnh đầy đủ: [HUONG-DAN-LENH.md](HUONG-DAN-LENH.md), hoặc b
 
 ## Giới hạn
 
-- **Lưu DWG**: DVDCAD tự ghi file **.dwg định dạng AutoCAD 2000** (AC1015) — định dạng mà AutoCAD từ bản 2000 trở đi đều mở được — không cần ODA File Converter hay mạng.
-  Mở lại trong DVDCAD còn nguyên lớp, kiểu nét, kiểu chữ, khối + thuộc tính, kích thước, hatch, khối 3D, vùng che.
-  - Cần DWG 2004 → 2018: cài **ODA File Converter** (miễn phí, opendesign.com), rồi chọn phiên bản trong lệnh `DWGSERVER`.
-    DVDCAD tự tìm ODA trong `C:\Program Files\ODA`; cài chỗ khác thì chọn đường dẫn trong `DWGSERVER`. Không có ODA thì DVDCAD tự ghi DWG 2000.
-  - Khối động: AutoCAD nhận như khối thường ở trạng thái đang hiện. Thông số khối động, ràng buộc tham số và khối 3D tham số vẫn còn đủ khi mở lại trong DVDCAD.
+- **Lưu DWG**: DVDCAD tự ghi file **.dwg AutoCAD 2018** (AC1032, mặc định), 2013, 2010, 2004 hoặc 2000 — không cần ODA File Converter hay mạng.
+  Mở lại trong DVDCAD còn nguyên lớp, kiểu nét, kiểu chữ, khối + thuộc tính, kích thước, hatch, khối 3D, vùng che, khối động, vị trí địa lý.
+  - AutoCAD 2017 trở về trước không mở được DWG 2018 — chọn DWG 2013 (AutoCAD 2013 → 2017) hoặc thấp hơn trong `DWGSERVER`.
+  - DWG 2007: cần **ODA File Converter** (miễn phí, opendesign.com). DVDCAD tự tìm ODA trong `C:\Program Files\ODA`; cài chỗ khác thì chọn đường dẫn trong `DWGSERVER`. Không có ODA thì DVDCAD tự ghi DWG 2018.
+  - Khối động: tham số hiển thị là khối động thật trong AutoCAD (bản 2018). Kéo giãn / lật: AutoCAD thấy đúng hình đang hiện, đổi tiếp trong DVDCAD. Ràng buộc tham số và khối 3D tham số vẫn còn đủ khi mở lại trong DVDCAD.
 - Đây là phần mềm mã nguồn mở có **tên lệnh và cách dùng giống AutoCAD**, **không phải** sản phẩm của Autodesk.
   Biểu tượng là hình DVDCAD tự vẽ theo quy ước quen thuộc của phần mềm CAD; DVDCAD không dùng logo, biểu tượng hay mã nguồn của Autodesk.
 
@@ -65,8 +65,8 @@ Mã bản Windows nằm trong thư mục `desktop/` (Electron). Phần giao di�
   Trên trình duyệt file này không làm gì.
 - `dvd-acad-start.js` — trang Start kiểu AutoCAD (dùng cho cả bản web).
 
-- `dvd-dwg.js` — bộ ghi DWG 2000 (AC1015) bằng JavaScript, viết theo tài liệu mở của Open Design Alliance và mã nguồn LibreDWG.
-  Đầu vào là DXF 2000 do DVDCAD tạo; đầu ra kiểm tra bằng LibreDWG (đọc lại trong app) và ODA File Converter (trên GitHub Actions).
+- `dvd-dwg.js` — bộ ghi DWG 2018 / 2013 / 2010 / 2004 / 2000 bằng JavaScript, viết theo tài liệu mở của Open Design Alliance, mã nguồn LibreDWG và ACadSharp.
+  Đầu vào là DXF cùng phiên bản do DVDCAD tạo; đầu ra kiểm tra bằng LibreDWG (đọc lại trong app), ODA File Converter (audit) và ACadSharp (trên GitHub Actions).
 
 Chạy thử và đóng gói:
 

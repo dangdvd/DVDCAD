@@ -3,8 +3,23 @@
 > **Bản Windows** (cài như phần mềm, chạy offline, giao diện kiểu AutoCAD): xem **[HUONG-DAN-WINDOWS.md](HUONG-DAN-WINDOWS.md)**.
 
 Ứng dụng web một trang: **xem** bản vẽ, **đo khoảng cách** (có bắt điểm), **thêm ghi chú**.
-Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2000** ngay trong app.
+Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
+
+## v5t: DWG gốc 2004 → 2018, GEODATA, GEOMAPIMAGE, độ sâu màu + dither khi in, khối động như AutoCAD
+- `dvd-dwg.js`: một bộ ghi cho 5 phiên bản (`DVDDwg.dwgFromDxf(text, { version: 'R2018' | 'R2013' | 'R2010' | 'R2004' | 'R2000' })`, `A.dwgNative(ents, { version })`, `A.dwgVersions`).
+  - Bộ chứa R2004+: header 0x100 byte (khối 0x6C byte XOR theo dãy LCG + CRC-32), trang dữ liệu căn 0x20 (đầu trang XOR theo địa chỉ, checksum kiểu Adler 0x15B0 / 0xFFF1), nén LZ77 kiểu AutoCAD, bản đồ section / trang, bản sao header cuối file; SummaryInfo, AppInfo, RevHistory, AuxHeader.
+  - Mã hoá đối tượng theo phiên bản: R2004 màu ENC / CMC, danh sách sở hữu; R2007+ luồng chuỗi UTF-16 riêng và luồng handle riêng của header; R2010+ BOT, cỡ handle UMC; R2013 / R2018 các trường thêm.
+  - AuxHeader R2018 như AutoCAD 2018; mili-giây TDUPDATE trong AuxHeader bỏ bit 15 vì ACadSharp 3.8 đọc maint dạng RL (lệch 6 byte) và ném lỗi DateTime.
+  - Khối động: lớp `ACAD_EVALUATION_GRAPH`, `BLOCKVISIBILITYPARAMETER`, `BLOCKVISIBILITYGRIP`, `BLOCKGRIPLOCATIONCOMPONENT`, `ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION`, `ACDB_BLOCKREPRESENTATION_DATA` (bố cục theo bộ đọc của ACadSharp, kiểm bằng tệp mẫu AutoCAD); từ điển mở rộng của INSERT; EED 1005; XRECORD điểm 3D / 1071.
+- `dvd-acad-dxf.js`:
+  - GEODATA (90 = 3 / 2) trong `ACAD_GEOGRAPHICDATA` của `*Model_Space` (DXF 2010+).
+  - Khối động: khối gốc ở trạng thái mặc định (`A.dynStateCopy(list, 'default')`, nét ẩn 60 = 1, XDATA `AcDbBlockRepETag`), mỗi bản chèn một `*U` (`AcDbBlockRepBTag` → khối gốc, INSERT xdict `AcDbBlockRepresentation` → `AcDbRepData` + `AppDataCache` / `ACAD_ENHANCEDBLOCKDATA` / XRECORD trạng thái); R2018 thêm đồ thị đánh giá 4 nút (tham số hiển thị ← grip → 2 thành phần vị trí grip). XDATA DVDCAD: `dbn` (tên khối gốc) trên INSERT, `dvs` / `dyn` trên nét trong khối.
+  - Dữ liệu ảnh nhúng (`imgs`, IMAGE → khung đa tuyến + `imgx`), vị trí địa lý (`geo`) trong DVDCAD_DATA.
+- `index.html` (bộ đọc): cờ ẩn 60 / `isVisible` (nét ẩn không vẽ, trừ nét của khối động DVDCAD), `AcDbBlockRepBTag` → `trueName`, tham số hiển thị AutoCAD → `dynVis` (trạng thái theo XRECORD của INSERT hoặc theo các nét đang hiện) → `window._dxfDynVis` → định nghĩa khối động của `dvd-acad-x5.js`.
+- `dvd-acad-dlg4.js`: `GEOMAPIMAGE` / `GEOMAPIMAGEUPDATE`; in giảm màu `A.plotQuantize(R, mask)` (Floyd–Steinberg quét rắn bò, bảng ACI 256 màu tra theo khối 32³, mặt nạ màu tắt dither), `A.pngIndexed(q, dpi)` (PNG color type 3 + pHYs), `A.plotterProps(dev)`.
+- `dvd-acad-more.js` `plotRender`: giảm màu thì vẽ lên nền trong suốt (`window.__plotClear`) để biết độ phủ từng điểm ảnh; lượt vẽ mặt nạ khi bảng .ctb có màu tắt dither.
+- CI Windows: bước ACadSharp (NuGet) đọc lại mọi DWG gốc, in đầu stack khi lỗi; bản vẽ tổng hợp của smoke test có khối động.
 
 ## v5s: hộp hỏi tên trên cùng, VPLAYER / VPCLIP trong tệp, chữ → đường bao (TXTEXP), MENUBAR + menu / ribbon / hình nút CUIX, GEODATA + GEOMAP, máy vẽ HPGL/2
 - Tệp mới `dvd-acad-dlg4.js` (nạp sau `dvd-acad-dlg3.js`).
@@ -114,7 +129,7 @@ Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn 
   - Viết theo tài liệu mở của Open Design Alliance và mã nguồn LibreDWG (cùng GPL-3.0): mã hoá bit, CRC-16, thứ tự trường, bố cục section giống AutoCAD 2000 (header → AuxHeader → ảnh xem trước BMP → biến hệ thống → lớp → đối tượng → bản đồ handle → ObjFreeSpace → header phụ → Template).
   - Dữ liệu riêng DVDCAD (XDATA "DVDCAD": khối 3D tham số, vùng, thứ tự vẽ, chú thích theo tỉ lệ; DVDCAD_DATA: ràng buộc, khối động) ghi thành EED chuẩn và một khối `DVDCADX1` giữa các section, vì bộ đọc WASM chưa đọc được EED của DWG 2000.
   - API: `A.dwgNative(ents)` → `Uint8Array`; `DVDDwg.dwgFromDxf(text, { bmp })` (chạy được trong Node để kiểm thử).
-- `SAVEDWG` mặc định dùng bộ ghi gốc; DWG 2004 → 2018 vẫn qua ODA File Converter / máy chủ (`DWGSERVER`), không có thì tự ghi DWG 2000. `SAVEAS` / Ctrl+S chọn được `*.dwg`.
+- `SAVEDWG` mặc định dùng bộ ghi gốc (từ v5t: DWG 2018, chọn 2013 / 2010 / 2004 / 2000 trong `DWGSERVER`; DWG 2007 qua ODA File Converter / máy chủ). `SAVEAS` / Ctrl+S chọn được `*.dwg`.
 - Mở DWG: bỏ ATTRIB trùng (libredwg trả ATTRIB cả trong danh sách chung lẫn trong `INSERT.attribs`); đọc khối `DVDCADX1` của file do DVDCAD ghi.
 - Kiểm tra:
   - 36 file DWG mẫu của LibreDWG (2000 → 2018) + `sample.dwg` (10 nghìn đối tượng): mở → ghi DWG gốc → mở lại, **giống hệt từng đối tượng** so với mở lại bản DXF 2000; LibreDWG đọc mọi file không cảnh báo.

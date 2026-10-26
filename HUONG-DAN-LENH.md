@@ -1,4 +1,4 @@
-# DVDCAD v5s — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5t — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,30 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v5t)
+- **Lưu DWG gốc 2018 / 2013 / 2010 / 2004 / 2000** — không cần ODA File Converter.
+  - `SAVEDWG`, `SAVEAS` *.dwg* mặc định ghi **DWG 2018 (AC1032)**. Chọn phiên bản khác trong `DWGSERVER`; DWG 2007 vẫn qua ODA (không có ODA thì tự ghi DWG 2018).
+  - Bộ chứa R2004+ như AutoCAD: trang nén LZ77, checksum, bản đồ section / trang, header mã hoá; chữ Unicode (2007+); dữ liệu theo đúng từng phiên bản.
+  - Kiểm tra: mở lại trong DVDCAD giống hệt; LibreDWG, ODA File Converter (audit) và ACadSharp đọc không lỗi.
+- **Vị trí địa lý lưu thành đối tượng GEODATA** (DXF / DWG 2010 trở lên) trong từ điển `ACAD_GEOGRAPHICDATA` của Model: điểm thiết kế, điểm tham chiếu, cao độ, hướng bắc, đơn vị. AutoCAD mở ra thấy đúng vị trí; DVDCAD mở lại lấy đủ cả múi giờ, hệ toạ độ.
+- **GEOMAPIMAGE** — chụp bản đồ nền thành ảnh nằm trong bản vẽ, **in được**:
+  - Chỉ định 2 góc, hoặc Enter / `V` (*Khung nhìn*) lấy cả khung nhìn; độ phân giải `C` Thô / `O` Tối ưu / `F` Mịn / `V` Rất mịn (1024 → 4096 điểm ảnh).
+  - Ảnh nằm dưới cùng (DRAWORDER), lưu kèm DXF / DWG (DVDCAD mở lại còn nguyên ảnh). **GEOMAPIMAGEUPDATE** chụp lại ảnh đã chọn theo bản đồ hiện tại.
+- **In PNG / PDF: độ sâu màu + dither** — hộp PLOT → nút **Thuộc tính…** cạnh máy in (*PublishToWeb PNG.pc3*, *DWG To PDF.pc3*):
+  - *24-bit (True color)* (mặc định), *256 màu (8-bit, bảng màu AutoCAD)*, *Đen trắng (1-bit)*.
+  - Khi giảm màu, mục **Bật dither** của từng màu trong bảng kiểu in .ctb có tác dụng: bật — giả màu bằng chấm (Floyd–Steinberg); tắt — lấy màu gần nhất, nét / mảng đặc.
+  - Nét mảnh không đứt chấm (làm tròn độ phủ ở mép nét như máy vẽ). PNG ghi đúng ảnh bảng màu 8-bit / 1-bit.
+  - SOLID 2D in đặc (trên màn hình vẫn tô mờ như trước).
+- **Khối động lưu như AutoCAD** (DXF và DWG):
+  - Khối gốc chứa mọi nét ở trạng thái mặc định (nét thuộc trạng thái khác có cờ ẩn); mỗi bản chèn là khối ẩn danh `*U…` theo trạng thái của nó, liên kết về khối gốc.
+  - Bản 2018: tham số hiển thị (`BPARAMETER` → V) ghi thành **tham số Visibility của AutoCAD** — AutoCAD mở ra là khối động, có grip đổi trạng thái.
+  - Kéo giãn (L) và lật (F): AutoCAD thấy đúng hình đang kéo / lật; đổi tham số tiếp trong DVDCAD.
+  - Mở lại trong DVDCAD còn đủ nét của mọi trạng thái (trước đây nét đang ẩn bị bỏ khi lưu, khối động lưu DXF bị tách rời).
+- **Mở khối động của AutoCAD**:
+  - Bản chèn hiện **tên khối gốc** thay cho `*U12`.
+  - DXF: đọc tham số hiển thị và trạng thái từng bản chèn → đổi trạng thái được bằng bảng **Thuộc tính** hoặc `BDYN`.
+  - Nét ẩn (cờ invisible) không còn vẽ chồng lên nhau — cả DXF và DWG.
 
 ## Bổ sung như AutoCAD 2027 (v5s)
 - **Sửa lỗi:** STYLE → *New…* (và mọi hộp hỏi tên / nhập chữ mở từ một hộp thoại) giờ hiện trên cùng, không bị hộp thoại đang mở che.
@@ -289,10 +313,10 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Mã `$INSUNITS` sửa đúng theo AutoCAD: 7 = km, 15 = decameter (trước đây 15 bị hiểu nhầm là km).
 
 ## Lưu DWG gốc (v5k)
-- `SAVEDWG` ghi thẳng file **DWG 2000 (AC1015)** bằng bộ ghi có sẵn của DVDCAD — không cần ODA File Converter, chạy cả trên trình duyệt và điện thoại.
+- `SAVEDWG` ghi thẳng file DWG bằng bộ ghi có sẵn của DVDCAD — không cần ODA File Converter, chạy cả trên trình duyệt và điện thoại. Từ v5t mặc định **DWG 2018**, chọn được 2013 / 2010 / 2004 / 2000 (v5k: DWG 2000).
 - `SAVEAS` / **Ctrl+Shift+S** chọn được *Bản vẽ AutoCAD (\*.dwg)*; **Ctrl+S** sau đó ghi đè đúng định dạng đó.
 - Mở DWG: thuộc tính khối (ATTRIB) không còn bị đọc trùng hai lần.
-- Chi tiết, phiên bản DWG 2004 → 2018 qua ODA: mục **Lưu DWG** trong phần khối động bên dưới.
+- Chi tiết các phiên bản: mục **Lưu DWG** trong phần khối động bên dưới.
 
 ## Dòng lệnh (v5j) — như AutoCAD 2027
 - **Gợi ý khi gõ** (AutoComplete) có biểu tượng, gồm:
@@ -1059,13 +1083,14 @@ Bố cục tab, bảng và biểu tượng theo AutoCAD để người dùng Aut
 - Định nghĩa khối động lưu trên máy theo tên khối nên dùng được cho mọi bản vẽ chèn khối đó.
 
 **Lưu DWG:**
-- `SAVEDWG` (`DWGOUT`) — lưu ra file **DWG 2000** (AC1015) bằng bộ ghi có sẵn trong DVDCAD: chạy cả trên trình duyệt, điện thoại và bản Windows, không cần mạng hay cài thêm.
+- `SAVEDWG` (`DWGOUT`) — lưu ra file **DWG 2018** (AC1032, mặc định), 2013, 2010, 2004 hoặc 2000 bằng bộ ghi có sẵn trong DVDCAD: chạy cả trên trình duyệt, điện thoại và bản Windows, không cần mạng hay cài thêm.
   - Giữ: lớp (màu, bật/tắt, đóng băng, khoá, bề rộng nét, kiểu nét), kiểu nét có chữ / hình, kiểu chữ, khối + thuộc tính, kích thước (thẳng, chéo, góc, bán kính, đường kính), hatch đặc và hatch mẫu, đa tuyến có cung / độ rộng, MTEXT, elip, XLINE / RAY, vùng che (WIPEOUT), layout Model / Layout1, ảnh xem trước trong hộp thoại Mở.
-  - Dữ liệu riêng của DVDCAD (khối 3D tham số, vùng, thứ tự vẽ, chú thích theo tỉ lệ, ràng buộc, khối động) ghi kèm trong file: mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này.
+  - Khối động ghi như AutoCAD (khối gốc + `*U`, bản 2018 có tham số hiển thị của AutoCAD); vị trí địa lý ghi thành GEODATA (2010+).
+  - Dữ liệu riêng của DVDCAD (khối 3D tham số, vùng, thứ tự vẽ, chú thích theo tỉ lệ, ràng buộc, kéo giãn / lật của khối động) ghi kèm trong file: mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này.
 - `SAVEAS` / **Ctrl+Shift+S**: chọn *Bản vẽ AutoCAD (\*.dwg)* hoặc *DXF* trong hộp thoại lưu. Bản vẽ mở từ DWG thì hộp thoại gợi ý DWG trước. **Ctrl+S** sau đó ghi đè đúng định dạng đã chọn.
-- `DWGSERVER` — chọn phiên bản: **DWG 2000 (bộ ghi sẵn có, mặc định)**, hoặc DWG 2004 → 2018 qua **ODA File Converter** (miễn phí).
+- `DWGSERVER` — chọn phiên bản: **DWG 2018 / 2013 / 2010 / 2004 / 2000 (bộ ghi sẵn có, mặc định 2018)**, hoặc qua **ODA File Converter** (miễn phí; cần cho DWG 2007).
   - Bản Windows: cài ODA File Converter là chuyển được ngay trên máy. Bản web: qua máy chủ chuyển đổi của bạn: cài ODA File Converter và **Node.js**, chạy `node server-dwg.js` (đặt biến `ODA` trỏ tới ODAFileConverter); điện thoại cùng mạng nhập `http://<IP máy tính>:8787/convert`.
-  - Không có ODA / máy chủ thì DVDCAD tự ghi DWG 2000.
+  - Không có ODA / máy chủ thì DVDCAD tự ghi bằng bộ ghi sẵn có (cùng năm nếu có, không thì DWG 2018).
 
 ## In bản vẽ (PLOT, Ctrl+P)
 Hộp thoại giống AutoCAD:
@@ -1094,7 +1119,7 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - **Bản vẽ mới** (`NEW`, Ctrl+N) dùng đơn vị mm và được lưu trong mục "Gần đây".
 
 ## Khác với AutoCAD
-- Lưu **DWG 2000** và DXF ngay trong app (`SAVEDWG`, `SAVEAS`). DWG 2004 → 2018 cần ODA File Converter hoặc máy chủ chuyển đổi (`DWGSERVER`).
+- Lưu **DWG 2018 / 2013 / 2010 / 2004 / 2000** và DXF ngay trong app (`SAVEDWG`, `SAVEAS`). Riêng DWG 2007 cần ODA File Converter hoặc máy chủ chuyển đổi (`DWGSERVER`).
 - Khối lưu ra DXF thành BLOCK + INSERT (kèm thuộc tính ATTDEF/ATTRIB); kích thước thẳng, bán kính, đường kính lưu thành DIMENSION. Kích thước góc lưu thành DIMENSION 3 điểm; bản khối bị sửa riêng lưu thành khối biến thể (TÊN$1…). Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước, và bám theo đường hình khi gốc đường gióng nằm đúng điểm đặc trưng (v5b). Kích thước góc chưa bám theo đường hình. AutoCAD đọc lại thấy kích thước thường (không liên kết).
 - Kích thước thẳng/chéo có sẵn trong file DWG/DXF cũng kéo ô nắm và STRETCH được. Khi sửa, kích thước được vẽ lại theo kiểu của DVDCAD: giữ cao chữ, số lẻ, mũi tên/gạch chéo. Kích thước góc và bán kính của file gốc chỉ chọn theo cụm.
 - DXF lưu mặc định **2018 (AC1032)**, chữ UTF-8, màu RGB. `DXFVERSION` chọn 2013 / 2010 / 2007 / 2004 / 2000, Tự động (2000/2004) hoặc R12 (phần mềm rất cũ). AutoCAD 2017 trở về trước không mở được file 2018 — chọn phiên bản thấp hơn.
@@ -1102,7 +1127,7 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Đa tuyến có cung giữ đúng cung khi di chuyển, xoay, lật, tỉ lệ, OFFSET, sửa bằng ô nắm và lưu DXF. TRIM, BREAK, EXTEND, JOIN, FILLET / CHAMFER đa tuyến, REVERSE cũng giữ cung. Cung ở đầu đa tuyến chưa EXTEND được (kéo ô nắm hoặc LENGTHEN).
 - Vùng (REGION) lưu ra DXF dạng đa tuyến kín kèm dữ liệu DVDCAD (mở lại trong DVDCAD vẫn là vùng; AutoCAD thấy đa tuyến). Spline / elip trong phép toán vùng được chia thành đoạn thẳng nhỏ.
 - DATALINK tự đọc lại file Excel trên Chrome / Edge máy tính. Trên iPhone / iPad / Safari: dùng `DATALINKURL` (Google Sheets / link CSV) để tự cập nhật, hoặc chọn lại file khi chạy DATALINKUPDATE.
-- Ràng buộc tham số và định nghĩa khối động ghi kèm trong DXF (R2000+, mục DVDCAD_DATA) — mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này. Khối động lưu ra (DXF và DWG) thành khối thường ở trạng thái hiện tại; định dạng khối động riêng của AutoCAD chưa ghi được. Khối động trong file AutoCAD hiện đúng trạng thái đang lưu nhưng chưa đổi được tham số gốc của AutoCAD.
+- Ràng buộc tham số và định nghĩa khối động ghi kèm trong DXF (R2000+, mục DVDCAD_DATA) — mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này. Khối động lưu ra (DXF và DWG) như AutoCAD: khối gốc + khối ẩn danh `*U` cho từng bản chèn; bản 2018 ghi tham số hiển thị của AutoCAD (AutoCAD đổi trạng thái được). Kéo giãn / lật chỉ ghi thành hình đang hiện (AutoCAD chưa có grip kéo giãn / lật). Khối động của AutoCAD: DXF đọc được tham số hiển thị (đổi trạng thái trong DVDCAD); DWG hiện đúng trạng thái đang lưu, tên khối là `*U…`; tham số khác (kéo giãn, lật, xoay, bảng tra…) chưa đổi được.
 - Vùng che ghi thành WIPEOUT, thứ tự vẽ ghi theo thứ tự trong file (AutoCAD hiện đúng trên/dưới). Chú thích theo tỉ lệ ghi thành chữ thường cho AutoCAD (DVDCAD mở lại vẫn theo tỉ lệ). Màu RGB ghi đúng, cả màu RGB của lớp khi mở lại. Màu sách màu (color book) đọc theo màu RGB tương ứng.
 - 3D chưa có: bo cạnh tuỳ ý trên khối sau cộng/trừ (chỉ bo được hộp, khối đùn, trụ), render dò tia chất lượng ảnh chụp.
 - Khối sau UNION/SUBTRACT là lưới tam giác: mặt cong hiện dạng nhiều mặt phẳng nhỏ.
