@@ -374,6 +374,11 @@
     { const ol = A.onLayers; A.onLayers = function(){ if(ol) ol.apply(this, arguments); upd(); }; } upd(); }
   plain(['ABOUT'], 'Thông tin phiên bản DVDCAD', () => {
     const m = (document.body.innerHTML.match(/bản màu · (v\w+)/) || [])[1] || '';
-    A.dialog({ title: 'DVDCAD', html: '<div style="line-height:1.6">DVDCAD ' + m + '<br>Xem và sửa bản vẽ DWG / DXF trên trình duyệt, chạy offline.<br>Số lệnh: ' + new Set(DVDCmd.commands.map(c => c.k[0])).size + '</div>', ok: () => {} });
+    const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const K = A.acw, n = new Set(DVDCmd.commands.map(c => c.k[0])).size, desk = !!window.dvdDesktop, R = (l, v) => '<div class="acw-row"><span class="l" style="min-width:110px">' + l + '</span><span>' + v + '</span></div>';
+    // bố cục như hộp About của AutoCAD: tên sản phẩm, phiên bản, thông tin sản phẩm / giấy phép
+    const html = '<div class="acw" style="width:440px"><div style="display:flex;gap:14px;align-items:center;margin:2px 0 10px"><div style="font:800 30px/1 system-ui;color:#fff;background:#c8161d;border-radius:4px;padding:8px 10px">DVD</div><div><div style="font-size:18px">DVDCAD ' + esc(m) + '</div><div class="acw-note" style="margin:2px 0 0">Xem và sửa bản vẽ DWG / DXF, chạy offline</div></div></div>' +
+      (K ? K.grp('Thông tin sản phẩm', R('Phiên bản:', esc(m || '—')) + R('Nền tảng:', desk ? 'Ứng dụng Windows (Electron)' : 'Trình duyệt / PWA') + R('Số lệnh:', String(n)) + R('Giấy phép:', 'GNU GPL v3 (mã nguồn mở)')) : '') + '</div>';
+    A.dialog({ title: 'Giới thiệu DVDCAD', cls: 'acw-free', help: 'ABOUT', html, noCancel: true, okText: 'Đóng' });
   });
 })();

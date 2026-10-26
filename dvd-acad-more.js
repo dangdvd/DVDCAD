@@ -254,7 +254,9 @@
       view.scale = sv.v.scale; view.offsetX = sv.v.offsetX; view.offsetY = sv.v.offsetY; view.rot = sv.v.rot; window.drawGrid = sv.grid; window.drawScaleBar = sv.sb;
       Object.defineProperty(window, 'devicePixelRatio', { value: sv.dpr, configurable: true }); bbDirty = true;
     }
-    return { canvas: out, pagePt: [Wmm * 72 / 25.4, Hmm * 72 / 25.4], k, area, Wmm, Hmm, ox, oy };
+    const R = { canvas: out, pagePt: [Wmm * 72 / 25.4, Hmm * 72 / 25.4], k, area, Wmm, Hmm, ox, oy };
+    try{ if(A.plotPost) A.plotPost(R, forPreview); }catch(err){ console.warn('plotPost', err); }   // dấu in (PLOTSTAMP), in lộn ngược
+    return R;
   }
   A.plotRender = plotRender; A.PS = PS;
   function plotInfo(){ const [Wmm, Hmm] = paperMM(); const mg = +PS.margin || 0; const area = plotArea(); const k = plotK(area, Wmm - 2 * mg, Hmm - 2 * mg); const N = mmPerUnit() / k;
@@ -298,14 +300,16 @@
       '</div><div class="pl-right">' +
       F('Bảng kiểu in (gán bút)', '<select id="plStyle" style="width:calc(100% - 40px)">' + opt('mono', 'monochrome.ctb', PS.style === 'mono') + opt('color', 'Không (in theo màu bản vẽ)', PS.style === 'color') + opt('gray', 'grayscale.ctb', PS.style === 'gray') + '</select>') +
       F('Tuỳ chọn in', '<label class="acw-ck dis"><input type="checkbox" disabled><span>In nền</span></label><br><label class="acw-ck"><input type="checkbox" id="plLw"' + (PS.lw ? ' checked' : '') + '><span>In bề rộng nét của đối tượng</span></label><br>' +
-        '<label class="acw-ck dis"><input type="checkbox" disabled><span>In độ trong suốt</span></label><br><label class="acw-ck dis"><input type="checkbox" disabled checked><span>In theo kiểu in</span></label>') +
-      F('Hướng bản vẽ', '<label class="acw-ck"><input type="radio" name="plLand" value="0"' + (!PS.land ? ' checked' : '') + '><span>Dọc (Portrait)</span></label><br><label class="acw-ck"><input type="radio" name="plLand" value="1"' + (PS.land ? ' checked' : '') + '><span>Ngang (Landscape)</span></label><br><label class="acw-ck dis"><input type="checkbox" disabled><span>In lộn ngược</span></label>') +
+        '<label class="acw-ck dis"><input type="checkbox" disabled><span>In độ trong suốt</span></label><br><label class="acw-ck dis"><input type="checkbox" disabled checked><span>In theo kiểu in</span></label><br>' +
+        '<label class="acw-ck"><input type="checkbox" id="plStamp"' + (PS.stamp ? ' checked' : '') + '><span>Bật dấu in</span></label><button type="button" class="acw-btn" id="plStampB" title="Cài đặt dấu in (PLOTSTAMP)" style="min-width:0;padding:0 6px;height:20px">⚙</button>') +
+      F('Hướng bản vẽ', '<label class="acw-ck"><input type="radio" name="plLand" value="0"' + (!PS.land ? ' checked' : '') + '><span>Dọc (Portrait)</span></label><br><label class="acw-ck"><input type="radio" name="plLand" value="1"' + (PS.land ? ' checked' : '') + '><span>Ngang (Landscape)</span></label><br><label class="acw-ck"><input type="checkbox" id="plUd"' + (PS.ud ? ' checked' : '') + '><span>In lộn ngược</span></label>') +
       '<div class="pl-prev"><canvas id="plPrev"></canvas></div><div class="pl-info" id="plInfo"></div></div></div>';
     const d = A.dialog({ title: 'In — Model', wide: true, help: 'PLOT', html, okText: 'OK', left: '<button type="button" class="acw-btn" id="plPv">Xem trước…</button><button type="button" class="acw-btn" disabled>Áp cho layout</button>',
       ok: () => { read(); if(PS.area === 'window' && !PS.win){ say('Chưa chọn khung in.'); return false; } const f = g('plDev').value; setTimeout(() => doPlot(f), 0); } });
     const root = d.root; root.querySelector('.modal').classList.add('pl-modal');
     const g = id => root.querySelector('#' + id);
-    const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; g('plDevN').textContent = PS.dev === 'pdf' ? 'Xuất file PDF vector' : PS.dev === 'png' ? 'Xuất ảnh PNG' : 'Mở hộp in của hệ điều hành'; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; g('plScale').disabled = PS.fit; psSave(); };
+    const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; g('plDevN').textContent = PS.dev === 'pdf' ? 'Xuất file PDF vector' : PS.dev === 'png' ? 'Xuất ảnh PNG' : 'Mở hộp in của hệ điều hành'; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit; psSave(); };
+    g('plStampB').onclick = () => { try{ DVDCmd.run('PLOTSTAMP'); }catch(_){} };
     let pvT = 0;
     const preview = () => { clearTimeout(pvT); pvT = setTimeout(() => {
       read(); const c = g('plPrev'); if(!c) return; const [Wmm, Hmm] = paperMM(); const box = 300; const s = Math.min(box / Wmm, (box * 0.78) / Hmm);

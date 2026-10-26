@@ -206,9 +206,10 @@
       P(91, V.length + 1); for(const q of V.concat([V[0]])){ P(14, (q.x - x0) / W - 0.5); P(24, 0.5 - (q.y - y0) / Hh); }
     }
     // HATCH thật: tô đặc, hoặc mẫu đường song song (ANSI31, ANSI32, ANSI37, NET, LINE, BRICK); mẫu khác ghi thành nét
-    function patLines(e){ const P0 = (A.PATS || {})[e.pat]; if(!P0) return null; const sc = e.psc || 1, rot = (e.pang || 0); const out = [];
+    function patLines(e){ const P0 = (A.PATS || {})[e.pat]; if(!P0) return null; const an = e.hanno && A.ANNO && A.ANNO.N > 0 ? A.ANNO.N : 1, sc = P0.user ? 1 : (A.hatchSc ? A.hatchSc(e) : (e.psc || 1)), rot = (e.pang || 0); const out = []; const og = e.porg || { x: 0, y: 0 };
       const add = (aDeg, base, dpat, dash) => { const a = (aDeg + rot) * D2R, c = Math.cos(a), s = Math.sin(a); const r0 = rot * D2R, cr = Math.cos(r0), sr = Math.sin(r0);
-        out.push({ a: aDeg + rot, bx: (base[0] * cr - base[1] * sr) * sc, by: (base[0] * sr + base[1] * cr) * sc, ox: (dpat[0] * c - dpat[1] * s) * sc, oy: (dpat[0] * s + dpat[1] * c) * sc, dash: (dash || []).map(v => v * sc) }); };
+        out.push({ a: aDeg + rot, bx: (base[0] * cr - base[1] * sr) * sc + og.x, by: (base[0] * sr + base[1] * cr) * sc + og.y, ox: (dpat[0] * c - dpat[1] * s) * sc, oy: (dpat[0] * s + dpat[1] * c) * sc, dash: (dash || []).map(v => v * sc) }); };
+      if(P0.user){ const sp = (e.usp > 0 ? e.usp : 1) * an; add(0, [0, 0], [0, sp]); if(e.udbl) add(90, [0, 0], [0, sp]); return out; }
       if(P0.fam){ for(const f of P0.fam){ const a = f.a * D2R; const off = f.off || 0; add(f.a, [-Math.sin(a) * off, Math.cos(a) * off], [0, f.sp]); } return out; }
       if(P0.brick){ const h = P0.brick.h, w = P0.brick.w; add(0, [0, 0], [0, h]); add(90, [0, 0], [h, -w / 2], [h, -h]); return out; }
       if(P0.dots){ const S = P0.dots; add(0, [0, 0], [S / 2, S], [0, -S]); return out; }
@@ -227,7 +228,7 @@
         for(const d of r.dots) if(G.ptInLoops({ x: d[0], y: d[1] }, loops)) emit({ type: 'POINT', x: d[0], y: d[1], layer: e.layer, col: e.col, bl: e.bl }, curOwner, o2); return; }
       head('HATCH', 'AcDbHatch'); P(10, 0); P(20, 0); P(30, 0); P(210, 0); P(220, 0); P(230, 1); P(2, solid ? 'SOLID' : dxfStr(e.pat)); P(70, solid ? 1 : 0); P(71, 0); P(91, loops.length);
       loops.forEach((lp, i) => { P(92, i === 0 ? 3 : 2); P(72, 0); P(73, 1); P(93, lp.length); for(const q of lp){ P(10, q.x); P(20, q.y); } P(97, 0); });
-      P(75, 0); P(76, 1); if(!solid){ P(52, e.pang || 0); P(41, e.psc || 1); P(77, 0); P(78, PL.length); for(const l of PL){ P(53, l.a); P(43, l.bx); P(44, l.by); P(45, l.ox); P(46, l.oy); P(79, l.dash.length); for(const d of l.dash) P(49, d); } }
+      P(75, 0); P(76, e.pat === '_USER' ? 0 : 1); if(!solid){ P(52, e.pang || 0); P(41, e.pat === '_USER' ? (e.usp || 1) : (A.hatchSc ? A.hatchSc(e) : (e.psc || 1))); P(77, e.udbl ? 1 : 0); P(78, PL.length); for(const l of PL){ P(53, l.a); P(43, l.bx); P(44, l.by); P(45, l.ox); P(46, l.oy); P(79, l.dash.length); for(const d of l.dash) P(49, d); } }
       P(98, 0);
     }
     // khối 3D → mặt 3DFACE + XDATA thông số (mở lại trong DVDCAD vẫn là khối)

@@ -197,7 +197,7 @@
     try{
       if(ch){
         // hatch mới: gắn với đường biên kín trùng khớp
-        const adds = ch.add || []; const hs = adds.filter(e => e && e.type === 'HATCH' && !e.hassoc && e.loops && e.loops.length && !e.grp);
+        const adds = ch.add || []; const hs = adds.filter(e => e && e.type === 'HATCH' && !e.hassoc && !e.nassoc && e.loops && e.loops.length && !e.grp);
         if(hs.length){ ch.rep = ch.rep || [];
           for(const h of hs){ const pool = []; const b = entBBox(h); if(!b) continue; const pad = Math.max(b.x1 - b.x0, b.y1 - b.y0) * 0.01; for(const e of A.queryBox(b.x0 - pad, b.y0 - pad, b.x1 + pad, b.y1 + pad, 5000)) pool.push(e); for(const e of adds) if(e !== h) pool.push(e);
             const ids = h.loops.map(lp => { const m = matchBoundary(lp, pool); if(!m) return null; if(!m.cid){ if(adds.includes(m)) m.cid = newCid(); else { const pr = ch.rep.find(([o]) => o === m); if(pr){ if(!pr[1].cid) pr[1].cid = newCid(); return pr[1].cid; } const w = copy(m); w.cid = newCid(); ch.rep.push([m, w]); return w.cid; } } return m.cid; });

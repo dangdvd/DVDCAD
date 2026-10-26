@@ -111,7 +111,7 @@
     const txt = K.grp('Thuộc tính', K.row('Kiểu chữ:', '<span class="acw-w" style="display:flex;gap:4px">' + K.sel('tseTs', TSN.map(n => [n, n]), 'Standard') + K.btn('tseTsB', '…', { tip: 'Kiểu chữ (STYLE)' }) + '</span>') +
       K.row('Cao chữ:', K.num('tseTh', 4.5, { min: 0 })) + K.row('Màu chữ:', K.colorSel('tseCol', '')) + K.row('Góc chữ:', K.num('tseAng', 0)));
     const bdr = K.grp('Thuộc tính', K.row('Bề rộng nét:', K.lwSel('tseLw', '')) + K.row('Kiểu nét:', K.ltSel('tseLt', '')) + K.row('Màu:', K.colorSel('tseBc', '')) +
-        K.chk('tseDbl', 'Đường đôi', 0, { dis: 1, tip: 'Chưa hỗ trợ đường viền đôi' }) + K.row('Khoảng cách:', K.num('tseSp', 1.125, { dis: 1 }), { dis: 1 }) +
+        K.chk('tseDbl', 'Đường đôi', 0) + K.row('Khoảng cách:', K.num('tseSp', 1.125, { min: 0 })) +
         '<div class="tsb-bd" id="tseBd">' + BDBTN.map(([k, t]) => '<button type="button" data-b="' + k + '" title="' + esc(t) + '">' + bdIcon(k) + '</button>').join('') + '</div>' +
         '<div class="acw-note">Bấm các nút trên để áp thuộc tính đã chọn cho đường viền (bấm lại để tắt).</div>');
     const right = K.grp('Kiểu ô', '<div class="tsb-cs">' + '<select id="tseCs"></select>' + K.btn('tseCsNew', '＋', { tip: 'Tạo kiểu ô mới' }) + K.btn('tseCsMgr', '☰', { tip: 'Quản lý kiểu ô' }) + '</div>' +
@@ -129,20 +129,20 @@
     let curBd = null;
     function load(){ const c = cs(); setColor('tseFill', c.fill || ''); $('tseAl').value = c.al || 'MC'; $('tseFmt').value = fmtName(c.fmt); $('tseType').value = c.type || 'data'; $('tseHm').value = r6(c.hm); $('tseVm').value = r6(c.vm); $('tseMerge').checked = !!c.merge;
       if(![...$('tseTs').options].some(o => o.value === c.ts)){ const op = document.createElement('option'); op.value = op.textContent = c.ts; $('tseTs').appendChild(op); } $('tseTs').value = c.ts || 'Standard'; $('tseTh').value = r6(c.th); setColor('tseCol', c.col || ''); $('tseAng').value = r6(c.ang || 0);
-      const b0 = EDGES.map(k => c.bd[k]).find(b => b && b.on) || {}; setColor('tseBc', b0.col || ''); $('tseLw').value = b0.lw == null ? '' : String(b0.lw); $('tseLt').value = b0.lt || ''; curBd = null; bdState(); }
+      const b0 = EDGES.map(k => c.bd[k]).find(b => b && b.on) || {}; setColor('tseBc', b0.col || ''); $('tseLw').value = b0.lw == null ? '' : String(b0.lw); $('tseLt').value = b0.lt || ''; $('tseDbl').checked = !!b0.dbl; $('tseSp').value = r6(b0.sp > 0 ? b0.sp : 1.125); $('tseSp').disabled = !b0.dbl; curBd = null; bdState(); }
     function pull(){ const c = cs(); c.fill = $('tseFill').value || ''; c.al = $('tseAl').value; c.type = $('tseType').value; const hm = num($('tseHm').value), vm = num($('tseVm').value); if(hm >= 0) c.hm = hm; if(vm >= 0) c.vm = vm; c.merge = $('tseMerge').checked ? 1 : 0;
       c.ts = $('tseTs').value; const th = num($('tseTh').value); if(th > 0) c.th = th; c.col = $('tseCol').value || ''; c.ang = num($('tseAng').value) || 0; st.dir = $('tseDir').value; }
-    const bdProps = () => { const o = { on: 1 }; const col = $('tseBc').value; if(col) o.col = col; const lw = $('tseLw').value; if(lw !== '') o.lw = +lw; const lt = $('tseLt').value; if(lt) o.lt = lt; return o; };
+    const bdProps = () => { const o = { on: 1 }; const col = $('tseBc').value; if(col) o.col = col; const lw = $('tseLw').value; if(lw !== '') o.lw = +lw; const lt = $('tseLt').value; if(lt) o.lt = lt; if($('tseDbl').checked){ o.dbl = 1; const sp = num($('tseSp').value); o.sp = sp > 0 ? sp : 1.125; } return o; };
     function bdState(){ const c = cs(); root.querySelectorAll('#tseBd [data-b]').forEach(b => { const L = (BDBTN.find(x => x[0] === b.dataset.b) || [])[2] || []; b.classList.toggle('on', L.length ? L.every(k => c.bd[k] && c.bd[k].on) : EDGES.every(k => !(c.bd[k] && c.bd[k].on))); }); }
     $('tseBd').addEventListener('click', e => { const b = e.target.closest('[data-b]'); if(!b) return; const c = cs(), L = (BDBTN.find(x => x[0] === b.dataset.b) || [])[2] || [];
       if(!L.length){ for(const k of EDGES) c.bd[k] = { on: 0 }; }
-      else { const p = bdProps(), same = L.every(k => c.bd[k] && c.bd[k].on && (c.bd[k].col || '') === (p.col || '') && (c.bd[k].lw == null ? '' : c.bd[k].lw) === (p.lw == null ? '' : p.lw) && (c.bd[k].lt || '') === (p.lt || ''));
+      else { const p = bdProps(), same = L.every(k => c.bd[k] && c.bd[k].on && (c.bd[k].col || '') === (p.col || '') && (c.bd[k].lw == null ? '' : c.bd[k].lw) === (p.lw == null ? '' : p.lw) && (c.bd[k].lt || '') === (p.lt || '') && !!c.bd[k].dbl === !!p.dbl);
         for(const k of L) c.bd[k] = same ? { on: 0 } : Object.assign({}, p); }
       bdState(); paint(); });
     function paint(){ paintTable($('tsePv'), sampleTable(st));
       const c = cs(), one = { cells: { [ck]: c } }; const T = { o: { x: 0, y: 0 }, rot: 0, cw: [c.th * 7, c.th * 7], rh: [0], cells: [[csLabel(ck), c.merge ? '' : csLabel(ck)]], th: c.th, rs: [ck], tss: one };
       paintTable($('tseCpv'), T); }
-    root.addEventListener('change', e => { if(e.target.id === 'tseCs'){ pull(); ck = e.target.value; load(); paint(); return; } if(e.target.closest('#tseBd')) return; pull(); paint(); });
+    root.addEventListener('change', e => { if(e.target.id === 'tseCs'){ pull(); ck = e.target.value; load(); paint(); return; } if(e.target.id === 'tseDbl'){ $('tseSp').disabled = !e.target.checked; return; } if(e.target.closest('#tseBd')) return; pull(); paint(); });
     root.addEventListener('input', e => { if(e.target.type === 'number'){ pull(); paint(); } });
     $('tseFmtB').onclick = () => cellFormat(cs().fmt, f => { cs().fmt = f; $('tseFmt').value = fmtName(f); paint(); });
     $('tseTsB').onclick = () => { try{ DVDCmd.run('STYLE'); }catch(_){} };
@@ -1305,4 +1305,700 @@
       if(cur && /^A\s*,/i.test(ln)){ const pat = ln.replace(/^A\s*,/i, '').replace(/\[[^\]]*\]/g, '').split(',').map(s => parseFloat(s)).filter(v => isFinite(v)); if(pat.length){ cur.pat = pat; cur.cx = /\[/.test(ln); out.push(cur); } cur = null; } }
     return out; };
   A.defineLT = function(d){ try{ LTYPES[d.name] = { name: d.name, desc: d.desc, pat: d.pat }; A.LS.ltd[d.name] = LTYPES[d.name]; A.lsSave(); try{ draw(); }catch(_){} return true; }catch(_){ return false; } };
+  /* ==================================================================
+     HATCH (v5p): gốc mẫu (HATCHSETORIGIN, HPORIGIN), thứ tự vẽ, biến HP… như AutoCAD
+     ================================================================== */
+  const bbLoops = L => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for(const lp of L || []) for(const p of lp){ x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); } return isFinite(x0) ? { x0, y0, x1, y1 } : null; };
+  const extOrg = (L, k) => { const b = bbLoops(L); if(!b) return null; return k === 'br' ? { x: b.x1, y: b.y0 } : k === 'tr' ? { x: b.x1, y: b.y1 } : k === 'tl' ? { x: b.x0, y: b.y1 } : k === 'c' ? { x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 } : { x: b.x0, y: b.y0 }; };
+  A.hatchOrigin = function(loops, S){ const H = S || A.HS || {}; if(H.orgMode === 'set'){ if(H.orgExt) return extOrg(loops, H.orgExt); if(H.org) return { x: H.org.x, y: H.org.y }; } return H.org0 ? { x: H.org0.x, y: H.org0.y } : null; };
+  function dordFor(e, k){ if(!k || k === 'none' || k === 'behind') return; let mn = 0, mx = 0; for(const x of modelEntities){ const d = x.dord | 0; if(d < mn) mn = d; if(d > mx) mx = d; }
+    if(k === 'back') e.dord = mn - 1; else if(k === 'front') e.dord = mx + 1;
+    else if(k === 'infront'){ const b = bbLoops(e.loops); let m = 0; if(b && A.queryBox) for(const x of A.queryBox(b.x0, b.y0, b.x1, b.y1, 2000)) if(x !== e && x.type !== 'HATCH') m = Math.max(m, x.dord | 0); e.dord = m + 1; } }
+  A.hatchDrawOrder = e => dordFor(e, (A.HS && A.HS.dord) || 'behind');
+  { const _ae = A.applyHatchEdit; A.applyHatchEdit = function(list, R){
+      if(!R || R.gmode) return _ae.apply(this, arguments);
+      const L = list.filter(e => !A.isLocked(e)); const reassoc = R.assoc && L.some(e => !e.hassoc);
+      const out = L.map(e => { const w = deep(e); delete w.userAdded; delete w.grad;
+        if(R.pat === '_USER'){ w.pat = '_USER'; w.solid = false; w.usp = R.usp; if(R.udbl) w.udbl = 1; else delete w.udbl; w.psc = 1; } else { w.pat = R.pat; w.solid = R.pat === 'SOLID'; delete w.usp; delete w.udbl; w.psc = R.scale > 0 ? R.scale : (e.psc || 1); }
+        w.pang = R.ang || 0; if(R.col){ w.col = R.col; delete w.bl; } else { w.bl = 1; w.col = A.layerHex(w.layer || '0'); }
+        const o = R.orgMode === 'set' ? (R.orgExt ? extOrg(w.loops, R.orgExt) : R.org) : (A.HS && A.HS.org0) || null; if(o) w.porg = { x: o.x, y: o.y }; else delete w.porg;
+        if(R.anno) w.hanno = 1; else delete w.hanno; if(!R.assoc){ delete w.hassoc; w.nassoc = 1; } else delete w.nassoc;
+        if(R.dord && R.dord !== 'none') dordFor(w, R.dord); return w; });
+      if(!out.length) return 0;
+      // bật lại "Liên kết biên": xoá rồi thêm để lõi gắn lại hatch với đường biên trùng khớp
+      if(reassoc){ for(const w of out) delete w.hassoc; A.commit({ del: L, add: out }, 'Đã sửa ' + out.length + ' hatch'); }
+      else A.commit({ rep: L.map((e, i) => [e, out[i]]) }, 'Đã sửa ' + out.length + ' hatch');
+      return out.length; }; }
+  ecmd(['HATCHSETORIGIN', 'HSO'], 'Đặt gốc mẫu của hatch đã chọn (Hatch Origin)', async (_, cur) => {
+    let sel = cur && cur.pre && cur.pre.length ? cur.pre : null; if(cur) cur.pre = [];
+    if(!sel){ const s = await A.getSel('Chọn hatch', { filter: e => e.type === 'HATCH' }); sel = s.sel || []; } const L = sel.filter(e => e.type === 'HATCH' && !A.isLocked(e) && !e.solid); if(!L.length){ log('Chưa chọn hatch có mẫu.'); return; }
+    const r = await A.getPoint('Chỉ định gốc hatch mới hoặc', { kw: [{ k: 'BL', t: 'Dưới trái' }, { k: 'BR', t: 'Dưới phải' }, { k: 'TR', t: 'Trên phải' }, { k: 'TL', t: 'Trên trái' }, { k: 'C', t: 'Tâm' }] }); if(!r.pt && !r.kw) return;
+    const rep = L.map(e => { const w = deep(e); delete w.userAdded; const o = r.pt ? r.pt : extOrg(w.loops, r.kw.toLowerCase()); if(o) w.porg = { x: o.x, y: o.y }; return [e, w]; });
+    A.commit({ rep }, 'HATCHSETORIGIN: đã đặt gốc cho ' + rep.length + ' hatch'); });
+  if(A.sysvar && A.sysvar.def && A.HS){ const HS = A.HS, sv = () => { if(A.hsSave) A.hsSave(); };
+    A.sysvar.def('HPORIGIN', { d: 'Gốc mẫu hatch mặc định (x,y)', s: 1, get: () => HS.org0 ? r6(HS.org0.x) + ',' + r6(HS.org0.y) : '0,0', set: v => { const m = String(v).split(/[,;\s]+/).map(Number); if(m.length >= 2 && m.every(isFinite)){ HS.org0 = (m[0] || m[1]) ? { x: m[0], y: m[1] } : null; sv(); } } });
+    A.sysvar.def('HPNAME', { d: 'Mẫu hatch mặc định (SOLID, ANSI31, _USER…)', s: 1, get: () => HS.pat, set: v => { const n = String(v).trim().toUpperCase(); if(A.PATS && A.PATS[n]){ HS.pat = n; HS.gmode = 0; sv(); } else log('Không có mẫu ' + n + '.'); } });
+    A.sysvar.def('HPSCALE', { d: 'Tỉ lệ mẫu hatch mặc định (0 = tự chọn)', get: () => HS.scale || 0, set: v => { if(+v >= 0){ HS.scale = +v; sv(); } } });
+    A.sysvar.def('HPANG', { d: 'Góc mẫu hatch mặc định (độ)', get: () => HS.ang || 0, set: v => { if(isFinite(+v)){ HS.ang = +v; sv(); } } });
+    A.sysvar.def('HPSPACE', { d: 'Khoảng cách mẫu hatch tự định nghĩa (_USER)', get: () => HS.usp || 1, set: v => { if(+v > 0){ HS.usp = +v; sv(); } } });
+    A.sysvar.def('HPDOUBLE', { d: 'Mẫu tự định nghĩa hai chiều (0/1)', get: () => HS.udbl ? 1 : 0, set: v => { HS.udbl = +v ? 1 : 0; sv(); } });
+    A.sysvar.def('HPASSOC', { d: 'Hatch mới liên kết với biên (0/1)', get: () => HS.noassoc ? 0 : 1, set: v => { HS.noassoc = +v ? 0 : 1; sv(); } });
+    A.sysvar.def('HPANNOTATIVE', { d: 'Hatch mới là chú thích theo tỉ lệ (0/1)', get: () => HS.anno ? 1 : 0, set: v => { HS.anno = +v ? 1 : 0; sv(); } });
+    A.sysvar.def('HPSEPARATE', { d: 'Tạo hatch riêng cho từng vùng khi chọn nhiều đối tượng kín (0/1)', get: () => HS.sep ? 1 : 0, set: v => { HS.sep = +v ? 1 : 0; sv(); } });
+    A.sysvar.def('HPDRAWORDER', { d: 'Thứ tự vẽ hatch mới (0 không gán, 1 dưới cùng, 2 trên cùng, 3 sau biên, 4 trước biên)', get: () => ['none', 'back', 'front', 'behind', 'infront'].indexOf(HS.dord || 'behind'), set: v => { const k = ['none', 'back', 'front', 'behind', 'infront'][+v | 0]; if(k){ HS.dord = k; sv(); } } }); }
+  /* ==================================================================
+     TINSERT — Insert a Block in a Table Cell (như AutoCAD): tên khối, xem trước, tỉ lệ / tự khớp, góc, căn lề ô
+     ================================================================== */
+  ecmd(['TINSERT'], 'Chèn khối vào ô bảng (Insert a Block in a Table Cell): tên khối, tỉ lệ / tự khớp, góc, căn lề', async () => {
+    const a = await A.getPoint('Chọn ô bảng'); if(!a.pt) return; const s = tableAtPoint(a.pt); if(!s){ log('Không có ô bảng tại điểm này.'); return; }
+    if(!s.c.tbld.tss){ log('Bảng này không theo kiểu bảng — chèn bảng bằng TABLE để chèn khối vào ô.'); return; }
+    const key = s.rc.r + ',' + s.rc.c, cur0 = (s.c.tbld.cb || {})[key] || null; const N = blockNames(); if(!N.length){ log('Bản vẽ chưa có khối nào.'); return; }
+    const o = await new Promise(res => { let name = cur0 ? cur0.name : N[0];
+      const html = '<div class="acw" style="width:460px"><div class="acw-cols"><div class="c1">' + K.row('Tên:', K.sel('tiN', N.map(n => [n, n]), name)) + K.grp('Thuộc tính', K.row('Tỉ lệ:', K.num('tiS', cur0 ? cur0.sc || 1 : 1, { min: 0 })) + K.chk('tiF', 'Tự khớp', cur0 ? !!cur0.fit : 1) + K.row('Góc xoay:', K.num('tiR', cur0 ? cur0.rot || 0 : 0)) +
+          K.row('Căn lề trong ô:', K.sel('tiA', [['', '(theo kiểu ô)']].concat(AL), cur0 ? cur0.al || '' : ''))) + '</div><div class="c2"><div class="acw-lab">Xem trước</div>' + K.canvas('tiP', 150, 120) + '</div></div></div>';
+      const d = A.dialog({ title: 'Chèn khối vào ô bảng', cls: 'acw-free', help: 'TINSERT', html, left: cur0 ? K.btn('tiDel', 'Bỏ khối khỏi ô') : '',
+        ok: r => { const sc = num(K.val(r, 'tiS')); res({ name: K.val(r, 'tiN'), sc: sc > 0 ? sc : 1, fit: K.on(r, 'tiF') ? 1 : 0, rot: num(K.val(r, 'tiR')) || 0, al: K.val(r, 'tiA') || '' }); }, cancel: () => res(null) });
+      const root = d.root, $ = id => root.querySelector('#' + id);
+      const pv = () => { let L = []; try{ L = A.instBlock($('tiN').value, srcOf($('tiN').value), { x: 0, y: 0 }, 1, num($('tiR').value) || 0); }catch(_){} K.paint($('tiP'), L.map(e => { e.col = e.col || '#cfd6e0'; return e; })); $('tiS').disabled = $('tiF').checked; };
+      root.addEventListener('change', pv); root.addEventListener('input', pv); pv();
+      if(cur0) $('tiDel').onclick = () => { d.close(); res({ del: 1 }); }; });
+    if(!o) return;
+    const w = deep(s.c); delete w.userAdded; const T = w.tbld; T.cb = T.cb || {};
+    if(o.del){ delete T.cb[key]; if(!Object.keys(T.cb).length) delete T.cb; A.commit({ rep: [[s.c, w]] }, 'Đã bỏ khối khỏi ô ' + String.fromCharCode(65 + (s.rc.c % 26)) + (s.rc.r + 1)); return; }
+    T.cb[key] = { name: o.name, src: srcOf(o.name), sc: o.sc, fit: o.fit, rot: o.rot, al: o.al };
+    A.commit({ rep: [[s.c, w]] }, 'TINSERT: khối "' + o.name + '" → ô ' + String.fromCharCode(65 + (s.rc.c % 26)) + (s.rc.r + 1));
+  });
+  /* ==================================================================
+     PLOTSTAMP — Dấu in (Plot Stamp, như AutoCAD): trường dấu in, trường người dùng, tệp tham số, Nâng cao…
+     A.plotPost: in lộn ngược (Plot upside-down) và vẽ dấu in lên bản in / xem trước
+     ================================================================== */
+  const PSK = 'dvd:plotstamp', PLOG = 'dvd:plotlog';
+  const PSD = () => ({ fields: { dwg: 1, layout: 1, date: 1, login: 1, device: 1, paper: 0, scale: 0 }, user: [], u1: '', u2: '', loc: 'bl', orient: 'h', ud: 0, ox: 10, oy: 10, rel: 'print', font: 'Arial', h: 2.5, single: 1, units: 'mm', log: 0, file: '' });
+  const stampNorm = o => { const d = PSD(); o = o && typeof o === 'object' ? o : {}; return Object.assign(d, o, { fields: Object.assign(d.fields, o.fields || {}), user: Array.isArray(o.user) ? o.user.map(String) : [] }); };
+  const stampGet = () => stampNorm(lsGet(PSK, {}));
+  A.plotStamp = stampGet;
+  const loginName = () => String(lsGet('dvd:login', '') || 'User');
+  const SF = [['dwg', 'Tên bản vẽ'], ['layout', 'Tên layout'], ['date', 'Ngày và giờ'], ['login', 'Tên đăng nhập'], ['device', 'Tên thiết bị'], ['paper', 'Khổ giấy'], ['scale', 'Tỉ lệ in']];
+  const DEVN = { pdf: 'DWG To PDF.pc3', png: 'PublishToWeb PNG.pc3', print: 'Máy in Windows (hệ thống)' };
+  const userLay = () => { try{ return !!(A.curUserLayout && A.curUserLayout()); }catch(_){ return false; } };
+  function stampFields(S, R){ const P = A.PS || {}, F = S.fields || {}, out = [];
+    let lay = 'Model'; try{ const L = dwgLayouts[currentLayout]; if(L && L.name) lay = L.name; }catch(_){}
+    let sc = '1:' + (P.scale || 1); if(userLay()) sc = '1:1'; else if(P.fit && R && R.k > 0){ let mm = 1; try{ mm = unitToMM() || 1; }catch(_){} sc = '1:' + r6(mm / R.k); }
+    const paper = R ? (userLay() ? '' : 'ISO ' + (P.paper || 'A3') + ' ') + '(' + r6(R.Wmm) + ' x ' + r6(R.Hmm) + ' mm)' : 'ISO ' + (P.paper || 'A3');
+    let dwg = 'Drawing1.dwg'; try{ if(currentName) dwg = currentName; }catch(_){}
+    const V = { dwg, layout: lay, date: new Date().toLocaleString(), login: loginName(), device: DEVN[P.dev || 'pdf'] || String(P.dev || ''), paper, scale: sc };
+    for(const [k] of SF) if(F[k]) out.push(V[k]);
+    for(const n of [S.u1, S.u2]) if(n && S.user.includes(n)) out.push(n);
+    return out; }
+  A.plotStampText = R => stampFields(stampGet(), R).join(', ');
+  const toMM = (v, S, pxmm) => { v = +v || 0; return S.units === 'in' ? v * 25.4 : S.units === 'px' ? v / (pxmm || 1) : v; };
+  function stampDraw(R, S){ const c = R.canvas, g = c.getContext('2d'), pxmm = c.width / R.Wmm; const F = stampFields(S, R); if(!F.length) return;
+    const lines = S.single ? [F.join(', ')] : [F.slice(0, Math.ceil(F.length / 2)).join(', '), F.slice(Math.ceil(F.length / 2)).join(', ')].filter(Boolean);
+    const P = A.PS || {}, mg = S.rel === 'paper' || userLay() ? 0 : Math.max(0, +P.margin || 0);
+    const hp = Math.max(1, toMM(S.h, S, pxmm) * pxmm), ox = toMM(S.ox, S, pxmm) * pxmm, oy = toMM(S.oy, S, pxmm) * pxmm;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.font = Math.round(hp) + 'px "' + String(S.font || 'Arial').replace(/"/g, '') + '", Arial, sans-serif'; g.fillStyle = '#000'; g.textBaseline = 'alphabetic';
+    const lh = hp * 1.4, bw = Math.max(...lines.map(t => g.measureText(t).width)), bh = lh * (lines.length - 1) + hp * 1.15;
+    const vert = S.orient === 'v', W = vert ? bh : bw, H = vert ? bw : bh;
+    const x0 = mg * pxmm, y0 = mg * pxmm, x1 = c.width - mg * pxmm, y1 = c.height - mg * pxmm;
+    const L = S.loc === 'tl' || S.loc === 'bl', T = S.loc === 'tl' || S.loc === 'tr';
+    const bx = L ? x0 + ox : x1 - ox - W, by = T ? y0 + oy : y1 - oy - H;
+    g.translate(bx + W / 2, by + H / 2); g.rotate((vert ? -Math.PI / 2 : 0) + (S.ud ? Math.PI : 0));
+    lines.forEach((t, i) => g.fillText(t, -bw / 2, -bh / 2 + hp + i * lh));
+    g.restore(); }
+  function flip180(c){ const t = document.createElement('canvas'); t.width = c.width; t.height = c.height; t.getContext('2d').drawImage(c, 0, 0); const g = c.getContext('2d');
+    g.save(); g.setTransform(-1, 0, 0, -1, c.width, c.height); g.drawImage(t, 0, 0); g.restore(); }
+  A.plotPost = function(R, forPreview){ const P = A.PS || {}; if(!R || !R.canvas) return;
+    if(P.ud) flip180(R.canvas);
+    if(P.stamp){ const S = stampGet(); stampDraw(R, S);
+      if(S.log && !forPreview){ const L = lsGet(PLOG, []); L.push(stampFields(Object.assign({}, S, { fields: { dwg: 1, layout: 1, date: 1, login: 1, device: 1, paper: 1, scale: 1 }, u1: '', u2: '' }), R).join(', ')); lsSet(PLOG, L.slice(-500)); } } };
+  if(A.sysvar && A.sysvar.def) A.sysvar.def('LOGINNAME', { d: 'Tên đăng nhập hiển thị trong dấu in (PLOTSTAMP)', s: 1, get: loginName, set: v => { lsSet('dvd:login', String(v || '').trim()); } });
+
+  const askStr = (title, label, v) => new Promise(res => A.dialog({ title, cls: 'acw-free', help: false, html: '<div class="acw" style="width:320px">' + K.row(label, K.txt('asV', v || '')) + '</div>', ok: r => { const s = String(K.val(r, 'asV') || '').trim(); if(!s) return false; res(s); }, cancel: () => res(null) }));
+  function userFieldsDlg(S){ return new Promise(res => { const U = S.user.slice(); let cur = U[0] || '';
+    const d = A.dialog({ title: 'Trường do người dùng định nghĩa', cls: 'acw-free', help: 'PLOTSTAMP', html: '<div class="acw" style="width:380px"><div class="acw-cols"><div class="c1">' + K.list('ufL', [], '', 'height:150px') + '</div><div class="c2 acw-btncol">' + K.btn('ufA', 'Thêm') + K.btn('ufE', 'Sửa') + K.btn('ufD', 'Xoá') + '</div></div></div>',
+      ok: () => { S.user = U; if(!U.includes(S.u1)) S.u1 = ''; if(!U.includes(S.u2)) S.u2 = ''; res(true); }, cancel: () => res(false) });
+    const root = d.root, $ = id => root.querySelector('#' + id), L = $('ufL');
+    const render = () => { L.innerHTML = U.map(u => '<div class="it' + (u === cur ? ' on' : '') + '" data-v="' + esc(u) + '">' + esc(u) + '</div>').join(''); $('ufE').disabled = $('ufD').disabled = !U.includes(cur); };
+    K.bindList(L, v => { cur = v; render(); }, () => $('ufE').click()); render();
+    $('ufA').onclick = async () => { const s = await askStr('Thêm trường người dùng', 'Trường:', ''); if(s && !U.includes(s)){ U.push(s); cur = s; render(); } };
+    $('ufE').onclick = async () => { const i = U.indexOf(cur); if(i < 0) return; const s = await askStr('Sửa trường người dùng', 'Trường:', cur); if(s){ U[i] = s; cur = s; render(); } };
+    $('ufD').onclick = () => { const i = U.indexOf(cur); if(i < 0) return; U.splice(i, 1); cur = U[Math.min(i, U.length - 1)] || ''; render(); }; }); }
+  function stampAdvDlg(S){ return new Promise(res => { const fonts = (A.FONTS || ['Arial']).slice(); if(S.font && !fonts.includes(S.font)) fonts.push(S.font);
+    const html = '<div class="acw" style="width:470px">' +
+      K.grp('Vị trí và độ dời', '<div class="acw-cols"><div class="c1">' + K.row('Vị trí:', K.sel('saLoc', [['tl', 'Trên trái'], ['bl', 'Dưới trái'], ['br', 'Dưới phải'], ['tr', 'Trên phải']], S.loc)) + K.row('Hướng:', K.sel('saOr', [['h', 'Nằm ngang'], ['v', 'Dọc']], S.orient)) + K.chk('saUd', 'Dấu in lộn ngược', S.ud) + '</div><div class="c1">' +
+        K.row('Dời X:', K.num('saX', S.ox)) + K.row('Dời Y:', K.num('saY', S.oy)) + K.rad('saRel', 'print', 'Dời theo vùng in được', S.rel !== 'paper') + '<br>' + K.rad('saRel', 'paper', 'Dời theo mép giấy', S.rel === 'paper') + '</div></div>') +
+      K.grp('Thuộc tính chữ', '<div class="acw-cols"><div class="c1">' + K.row('Phông:', K.sel('saF', fonts.map(f => [f, f]), S.font)) + '</div><div class="c1">' + K.row('Cao chữ:', K.num('saH', S.h, { min: 0 })) + '</div></div>' + K.chk('saSg', 'Dấu in một dòng', S.single)) +
+      K.grp('Đơn vị dấu in', K.row('Đơn vị:', K.sel('saU', [['mm', 'Milimét'], ['in', 'Inch'], ['px', 'Điểm ảnh (pixel)']], S.units))) +
+      K.grp('Vị trí tệp nhật ký', K.chk('saLg', 'Tạo tệp nhật ký', S.log) + '<div class="acw-row">' + K.txt('saLf', 'plot.log', { dis: 1 }) + K.btn('saLd', 'Tải nhật ký…') + K.btn('saLc', 'Xoá nhật ký') + '</div>') + '</div>';
+    const d = A.dialog({ title: 'Tuỳ chọn nâng cao', cls: 'acw-free', help: 'PLOTSTAMP', html,
+      ok: r => { const h = num(K.val(r, 'saH')); Object.assign(S, { loc: K.val(r, 'saLoc'), orient: K.val(r, 'saOr'), ud: K.on(r, 'saUd') ? 1 : 0, ox: num(K.val(r, 'saX')) || 0, oy: num(K.val(r, 'saY')) || 0, rel: K.radio(r, 'saRel') || 'print', font: K.val(r, 'saF'), h: h > 0 ? h : S.h, single: K.on(r, 'saSg') ? 1 : 0, units: K.val(r, 'saU'), log: K.on(r, 'saLg') ? 1 : 0 }); res(true); }, cancel: () => res(false) });
+    const $ = id => d.root.querySelector('#' + id);
+    $('saLd').onclick = () => { const L = lsGet(PLOG, []); if(!L.length){ say('Nhật ký in còn trống.'); return; } shareOrDownload(new Blob([L.join('\r\n') + '\r\n'], { type: 'text/plain' }), 'plot.log', 'text/plain'); };
+    $('saLc').onclick = () => { lsSet(PLOG, []); say('Đã xoá nhật ký in.'); }; }); }
+  function plotStampDlg(){ return new Promise(res => { const S = stampGet();
+    const uOpts = () => [['', '(không)']].concat(S.user.map(u => [u, u]));
+    const html = '<div class="acw" style="width:560px"><div class="acw-cols"><div class="c1">' +
+        K.grp('Trường dấu in', '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 12px">' + SF.map(([k, t]) => K.chk('pf_' + k, t, S.fields[k])).join('') + '</div>') + '</div>' +
+      '<div class="c2"><div class="acw-lab">Xem trước</div><canvas id="psPv" class="acw-prev" width="150" height="110" style="width:150px;height:110px"></canvas></div></div>' +
+      K.grp('Trường do người dùng định nghĩa', '<div class="acw-row">' + K.sel('psU1', uOpts(), S.u1) + K.sel('psU2', uOpts(), S.u2) + K.btn('psUE', 'Thêm / Sửa') + '</div>') +
+      K.grp('Tệp tham số dấu in', '<div class="acw-row">' + K.txt('psFile', S.file || '(chưa lưu)', { dis: 1 }) + K.btn('psLoad', 'Nạp…') + K.btn('psSave', 'Lưu thành…') + '</div>') +
+      '<div class="acw-note" id="psTxt" style="margin-top:4px;white-space:normal"></div></div>';
+    const d = A.dialog({ title: 'Dấu in', cls: 'acw-free', help: 'PLOTSTAMP', html, left: K.btn('psAdv', 'Nâng cao…'),
+      ok: r => { read(r); lsSet(PSK, S); res(S); }, cancel: () => res(null) });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    function read(r){ for(const [k] of SF) S.fields[k] = K.on(r, 'pf_' + k) ? 1 : 0; S.u1 = K.val(r, 'psU1') || ''; S.u2 = K.val(r, 'psU2') || ''; }
+    function load(o){ Object.assign(S, stampNorm(o)); for(const [k] of SF) $('pf_' + k).checked = !!S.fields[k]; refillU(); $('psFile').value = S.file || '(chưa lưu)'; pv(); }
+    function refillU(){ for(const id of ['psU1', 'psU2']){ const v = id === 'psU1' ? S.u1 : S.u2; $(id).innerHTML = uOpts().map(([a, b]) => '<option value="' + esc(a) + '"' + (a === v ? ' selected' : '') + '>' + esc(b) + '</option>').join(''); } }
+    function pv(){ read(root); const c = $('psPv'), g = c.getContext('2d'), W = c.width, H = c.height; g.clearRect(0, 0, W, H);
+      const P = A.PS || {}; const land = P.land !== false; const pw = land ? 120 : 76, ph = land ? 84 : 100, x0 = (W - pw) / 2, y0 = (H - ph) / 2;
+      g.fillStyle = '#fff'; g.fillRect(x0, y0, pw, ph); g.strokeStyle = '#8a94a6'; g.strokeRect(x0 + .5, y0 + .5, pw - 1, ph - 1);
+      const L = S.loc === 'tl' || S.loc === 'bl', T = S.loc === 'tl' || S.loc === 'tr', vert = S.orient === 'v', m = 6, len = vert ? ph * 0.5 : pw * 0.5;
+      g.strokeStyle = '#d33'; g.lineWidth = 2; g.beginPath();
+      if(vert){ const x = L ? x0 + m : x0 + pw - m, ya = T ? y0 + m : y0 + ph - m; g.moveTo(x, ya); g.lineTo(x, T ? ya + len : ya - len); }
+      else { const y = T ? y0 + m : y0 + ph - m, xa = L ? x0 + m : x0 + pw - m; g.moveTo(xa, y); g.lineTo(L ? xa + len : xa - len, y); }
+      g.stroke(); g.lineWidth = 1;
+      $('psTxt').textContent = 'Dấu in: ' + (stampFields(S, null).join(', ') || '(không có trường nào)'); }
+    root.addEventListener('change', pv); pv();
+    $('psUE').onclick = async () => { read(root); if(await userFieldsDlg(S)){ refillU(); pv(); } };
+    $('psAdv').onclick = async () => { read(root); if(await stampAdvDlg(S)) pv(); };
+    $('psSave').onclick = () => { read(root); const nm = (S.file && S.file !== '(chưa lưu)' ? S.file : 'dvd.pss').replace(/\.[^.]*$/, '') + '.pss'; S.file = nm; $('psFile').value = nm;
+      const o = Object.assign({}, S); shareOrDownload(new Blob([JSON.stringify({ dvdPlotStamp: 1, v: o }, null, 1)], { type: 'application/json' }), nm, 'application/json'); };
+    $('psLoad').onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.pss,.json'; i.onchange = () => { const f = i.files[0]; if(!f) return;
+      f.text().then(t => { let o = null; try{ o = JSON.parse(t); }catch(_){} if(!o || !(o.v || o.fields)){ say('Tệp tham số dấu in không hợp lệ (cần tệp .pss do DVDCAD lưu).'); return; } load(Object.assign({}, o.v || o, { file: f.name })); log('Đã nạp tham số dấu in từ ' + f.name); }); }; i.click(); }; }); }
+  plain(['PLOTSTAMP'], 'Dấu in (Plot Stamp): trường thông tin, trường người dùng, vị trí / hướng / cỡ chữ, tệp tham số .pss, nhật ký in — in kèm khi bật "Bật dấu in" trong PLOT', async () => {
+    if(A.busy && A.busy()) A.cancel(true); const S = await plotStampDlg(); if(!S) return;
+    const P = A.PS; log('PLOTSTAMP: ' + (stampFields(S, null).join(', ') || '(không trường)') + (P && !P.stamp ? ' — bật "Bật dấu in" trong hộp PLOT để in kèm.' : '')); });
+
+  /* ==================================================================
+     STANDARDS — Cấu hình chuẩn (Configure Standards, như AutoCAD): gắn tệp chuẩn (DXF/DWS dạng DXF) với bản vẽ,
+     trình cắm Lớp / Kiểu nét / Kiểu chữ / Kiểu kích thước, Cài đặt
+     CHECKSTANDARDS — Kiểm tra chuẩn: Lỗi, Thay bằng, Xem trước thay đổi, Sửa / Lỗi tiếp theo / Bỏ qua
+     ================================================================== */
+  const STK = 'dvd:standards', STS = 'dvd:stdset', STI = 'dvd:stdign';
+  const docKey = () => { try{ return currentName || '(Drawing1)'; }catch(_){ return '(Drawing1)'; } };
+  let stdMemo = null;   // { k, L } — tránh đọc localStorage mỗi lần commit
+  const stdFiles = () => { const k = docKey(); if(stdMemo && stdMemo.k === k) return stdMemo.L; const o = lsGet(STK, {}); const L = Array.isArray(o[k]) ? o[k] : []; stdMemo = { k, L }; return L; };
+  const stdFilesSet = L => { const o = lsGet(STK, {}); if(L.length) o[docKey()] = L; else delete o[docKey()]; lsSet(STK, o); stdMemo = null; };
+  const stdSet = () => Object.assign({ plug: { ds: 1, lay: 1, lt: 1, ts: 1 }, auto: 0, showIgn: 0, pref: '', notify: 'icon' }, lsGet(STS, {}));
+  const ignGet = () => { const o = lsGet(STI, {}); return new Set(Array.isArray(o[docKey()]) ? o[docKey()] : []); };
+  const ignSet = S => { const o = lsGet(STI, {}); o[docKey()] = [...S]; lsSet(STI, o); };
+  const PLUGS = [['ds', 'Kiểu kích thước', 'Kiểm tra tên và thuộc tính (cao chữ, mũi tên, số lẻ) của kiểu kích thước so với tệp chuẩn.'], ['lay', 'Lớp', 'Kiểm tra tên lớp và thuộc tính lớp (màu, kiểu nét, bề rộng nét) so với tệp chuẩn.'],
+    ['lt', 'Kiểu nét', 'Kiểm tra tên kiểu nét và định nghĩa nét gạch so với tệp chuẩn.'], ['ts', 'Kiểu chữ', 'Kiểm tra tên kiểu chữ và phông, hệ số rộng so với tệp chuẩn.']];
+  // đọc bảng LAYER / LTYPE / STYLE / DIMSTYLE của tệp DXF
+  function dxfTables(txt){ const ln = String(txt).split(/\r?\n/), T = { LAYER: [], LTYPE: [], STYLE: [], DIMSTYLE: [] }; let tab = null, cur = null, want = false, prev0 = '';
+    for(let i = 0; i + 1 < ln.length; i += 2){ const c = ln[i].trim(), v = ln[i + 1].trim();
+      if(c === '0'){ cur = null; prev0 = v; if(v === 'TABLE'){ want = true; tab = null; } else if(v === 'ENDTAB') tab = null; else if(tab && v === tab){ cur = { pat: [] }; T[tab].push(cur); } continue; }
+      if(c === '2' && prev0 === 'SECTION' && (v === 'BLOCKS' || v === 'ENTITIES')) break;
+      if(want && c === '2'){ want = false; tab = T[v] ? v : null; continue; }
+      if(!cur) continue; const n = +v;
+      if(c === '2') cur.name = v;
+      else if(tab === 'LAYER'){ if(c === '62') cur.aci = Math.abs(n); else if(c === '6') cur.lt = v.toUpperCase(); else if(c === '370') cur.lw = n; }
+      else if(tab === 'LTYPE'){ if(c === '3') cur.desc = v; else if(c === '49') cur.pat.push(n); }
+      else if(tab === 'STYLE'){ if(c === '3') cur.font = v; else if(c === '41') cur.wf = n; else if(c === '40') cur.h = n; else if(c === '70') cur.fl = n; }
+      else if(tab === 'DIMSTYLE'){ const m = { 140: 'txt', 41: 'asz', 42: 'exo', 44: 'exe', 147: 'gap', 271: 'dec' }[c]; if(m) cur[m] = n; } }
+    T.LAYER = T.LAYER.filter(o => o.name).map(o => ({ name: o.name, aci: o.aci != null ? o.aci : 7, lt: o.lt && o.lt !== 'BYLAYER' && o.lt !== 'BYBLOCK' ? o.lt : 'CONTINUOUS', lw: o.lw > 0 ? o.lw : 0 }));
+    T.LTYPE = T.LTYPE.filter(o => o.name && !/^BY(LAYER|BLOCK)$/i.test(o.name)).map(o => ({ name: o.name.toUpperCase(), desc: o.desc || '', pat: o.pat }));
+    T.STYLE = T.STYLE.filter(o => o.name && !(o.fl & 1)).map(o => ({ name: o.name, font: o.font || '', wf: o.wf > 0 ? o.wf : 1 }));
+    T.DIMSTYLE = T.DIMSTYLE.filter(o => o.name).map(o => { const r = { name: o.name }; for(const k of ['txt', 'asz', 'exo', 'exe', 'gap', 'dec']) if(o[k] != null && isFinite(o[k])) r[k] = o[k]; return r; });
+    return T; }
+  A.dxfStdTables = dxfTables;
+  const U = s => String(s || '').toUpperCase();
+  const fontBase = f => String(f || '').replace(/^.*[\\/]/, '').replace(/\.(ttf|ttc|otf|shx)$/i, '').trim();
+  const fontOf = r => { const b = fontBase(r.font) || 'Arial'; const F = A.FONTS || []; return F.find(x => U(x) === U(b)) || F.find(x => U(x).replace(/\s+/g, '') === U(b).replace(/\s+/g, '')) || b.charAt(0).toUpperCase() + b.slice(1); };
+  const hexOfAci = a => typeof aciHex === 'function' ? aciHex(a) : '#ffffff';
+  const aciOf = n => A.aciNear ? A.aciNear(A.layerHex(n)) : 7;
+  const lwName = v => v > 0 ? (v / 100).toFixed(2) + ' mm' : 'Mặc định';
+  const ltDef = n => { try{ return LTYPES[n] || null; }catch(_){ return null; } };
+  const patEq = (a, b) => a && b && a.length === b.length && a.every((v, i) => Math.abs(v - b[i]) < 1e-6 * Math.max(1, Math.abs(v)));
+  function stdMerged(){ const M = { LAYER: new Map(), LTYPE: new Map(), STYLE: new Map(), DIMSTYLE: new Map() };
+    for(const f of stdFiles()) for(const t of Object.keys(M)) for(const r of ((f.data || {})[t] || [])){ const k = U(r.name); if(!M[t].has(k)) M[t].set(k, { r, f: f.name }); }
+    return M; }
+  function dimTexts(){ const out = []; for(const e of modelEntities) if(e && e.type === 'TEXT' && e.dimd && e.grp) out.push(e); return out; }
+  const dsOf = t => (t.dimd && t.dimd.s && t.dimd.s.name) || 'Standard';
+  function dimValsFrom(r, base){ const v = Object.assign({}, base || {}); if(r.txt > 0) v.txt = r.txt; const h = r.txt > 0 ? r.txt : (v.txt > 0 ? v.txt : 0);
+    if(h) for(const k of ['asz', 'exo', 'exe', 'gap']) if(r[k] != null) v[k] = r6(r[k] / h); if(r.dec != null) v.dec = r.dec | 0; return v; }
+  function dimDiffs(cur, r){ const D = [], h = r.txt > 0 ? r.txt : (cur.txt > 0 ? cur.txt : 0);
+    if(r.txt > 0 && cur.txt > 0 && Math.abs(cur.txt - r.txt) > 1e-6) D.push(['Cao chữ', r6(cur.txt), r6(r.txt)]);
+    if(r.dec != null && (cur.dec | 0) !== (r.dec | 0)) D.push(['Số chữ số thập phân', cur.dec | 0, r.dec | 0]);
+    if(h && r.asz != null && cur.asz != null && Math.abs(cur.asz * h - r.asz) > 1e-4) D.push(['Cỡ mũi tên', r6(cur.asz * h), r6(r.asz)]);
+    return D; }
+  // dựng lại các kích thước dùng kiểu "from" theo giá trị vals (đổi tên sang "to")
+  function dimRestyle(from, to, vals){ if(!A.dimRegenFrom || !A.groupMembers) return 0; const del = [], add = [], done = new Set();
+    for(const t of dimTexts()){ if(U(dsOf(t)) !== U(from) || done.has(t.grp)) continue; done.add(t.grp); const w = deep(t); delete w.userAdded;
+      w.dimd.s = Object.assign({}, vals, { name: to, txt: vals.txt > 0 ? vals.txt : (t.dimd.s && t.dimd.s.txt) || vals.txt }); let ents = null; try{ ents = A.dimRegenFrom(w); }catch(_){}
+      if(ents && ents.length){ del.push(...A.groupMembers(t.grp)); add.push(...ents); } }
+    if(add.length) A.commit({ del, add }, 'Chuẩn hoá ' + done.size + ' kích thước theo kiểu ' + to); return done.size; }
+  // danh sách lỗi chuẩn (như các trình cắm của CHECKSTANDARDS)
+  function stdProblems(){ const S = stdSet(), M = stdMerged(), P = [];
+    if(S.plug.lay && M.LAYER.size){ const std = [...M.LAYER.values()].map(x => x.r);
+      for(const n of A.layerNames()){ if(n.includes('|')) continue; const s = M.LAYER.get(U(n));
+        if(s){ const r = s.r, D = []; if(aciOf(n) !== r.aci) D.push(['Màu', aciOf(n), r.aci]); if(U(A.layerLT(n)) !== U(r.lt || 'CONTINUOUS')) D.push(['Kiểu nét', A.layerLT(n), r.lt]);
+          if((A.layerLW(n) || 0) !== (r.lw || 0)) D.push(['Bề rộng nét', lwName(A.layerLW(n)), lwName(r.lw)]);
+          if(D.length) P.push({ key: 'lay:p:' + n, plug: 'lay', kind: 'prop', name: n, text: 'Thuộc tính của lớp "' + n + '" không khớp với chuẩn (' + s.f + ').', opts: [{ v: r.name, rec: true, r }], diffs: () => D }); }
+        else if(n !== '0' && U(n) !== 'DEFPOINTS'){ const rec = std.find(r => U(r.name).includes(U(n)) || U(n).includes(U(r.name)));
+          P.push({ key: 'lay:n:' + n, plug: 'lay', kind: 'name', name: n, text: 'Lớp "' + n + '" không có trong tệp chuẩn.', opts: std.map(r => ({ v: r.name, rec: r === rec, r })),
+            diffs: o => [['Tên', n, o.r.name], ['Màu', aciOf(n), o.r.aci], ['Kiểu nét', A.layerLT(n), o.r.lt], ['Bề rộng nét', lwName(A.layerLW(n)), lwName(o.r.lw)]] }); } } }
+    if(S.plug.lt && M.LTYPE.size){ const std = [...M.LTYPE.values()].map(x => x.r); const used = new Set();
+      for(const n of A.layerNames()) used.add(U(A.layerLT(n))); for(const e of modelEntities) if(e && e.lt && !/^BY(LAYER|BLOCK)$/i.test(e.lt)) used.add(U(e.lt)); try{ for(const k of Object.keys(LTYPES)) used.add(U(k)); }catch(_){}
+      for(const n of [...used].sort()){ if(!n || n === 'CONTINUOUS' || n === 'BYLAYER' || n === 'BYBLOCK') continue; const s = M.LTYPE.get(n), d = ltDef(n);
+        if(s){ if(d && d.pat && s.r.pat.length && !patEq(d.pat, s.r.pat)) P.push({ key: 'lt:p:' + n, plug: 'lt', kind: 'prop', name: n, text: 'Định nghĩa kiểu nét "' + n + '" khác với chuẩn (' + s.f + ').', opts: [{ v: s.r.name, rec: true, r: s.r }], diffs: () => [['Mẫu nét', d.pat.join(', '), s.r.pat.join(', ')]] }); }
+        else P.push({ key: 'lt:n:' + n, plug: 'lt', kind: 'name', name: n, text: 'Kiểu nét "' + n + '" không có trong tệp chuẩn.', opts: std.map(r => ({ v: r.name, rec: false, r })), diffs: o => [['Tên', n, o.r.name], ['Mô tả', (d && d.desc) || '', o.r.desc]] }); } }
+    if(S.plug.ts && M.STYLE.size && A.TS){ const std = [...M.STYLE.values()].map(x => x.r);
+      for(const n of Object.keys(A.TS.list)){ const s = M.STYLE.get(U(n)), st = A.TS.list[n] || {};
+        if(s){ const D = []; if(s.r.font && U(st.font || 'Arial') !== U(fontOf(s.r))) D.push(['Phông', st.font || 'Arial', fontOf(s.r)]); if(Math.abs((st.wf > 0 ? st.wf : 1) - s.r.wf) > 1e-6) D.push(['Hệ số rộng', st.wf > 0 ? st.wf : 1, s.r.wf]);
+          if(D.length) P.push({ key: 'ts:p:' + n, plug: 'ts', kind: 'prop', name: n, text: 'Thuộc tính của kiểu chữ "' + n + '" không khớp với chuẩn (' + s.f + ').', opts: [{ v: s.r.name, rec: true, r: s.r }], diffs: () => D }); }
+        else P.push({ key: 'ts:n:' + n, plug: 'ts', kind: 'name', name: n, text: 'Kiểu chữ "' + n + '" không có trong tệp chuẩn.', opts: std.map(r => ({ v: r.name, rec: false, r })), diffs: o => [['Tên', n, o.r.name], ['Phông', st.font || 'Arial', fontOf(o.r)]] }); } }
+    if(S.plug.ds && M.DIMSTYLE.size && A.dimStyles){ const lib = A.dimStyles.lib(), std = [...M.DIMSTYLE.values()].map(x => x.r);
+      for(const n of Object.keys(lib)){ const s = M.DIMSTYLE.get(U(n));
+        if(s){ const D = dimDiffs(lib[n] || {}, s.r); if(D.length) P.push({ key: 'ds:p:' + n, plug: 'ds', kind: 'prop', name: n, text: 'Thuộc tính của kiểu kích thước "' + n + '" không khớp với chuẩn (' + s.f + ').', opts: [{ v: s.r.name, rec: true, r: s.r }], diffs: () => D }); }
+        else P.push({ key: 'ds:n:' + n, plug: 'ds', kind: 'name', name: n, text: 'Kiểu kích thước "' + n + '" không có trong tệp chuẩn.', opts: std.map(r => ({ v: r.name, rec: false, r })), diffs: o => [['Tên', n, o.r.name]] }); } }
+    // tệp chuẩn ưu tiên (Cài đặt): gợi ý thay thế lấy từ tệp đó khi chưa có gợi ý
+    if(S.pref){ const pf = stdFiles().find(f => f.name === S.pref); if(pf) for(const p of P) if(p.kind === 'name' && !p.opts.some(o => o.rec)){ const T = { lay: 'LAYER', lt: 'LTYPE', ts: 'STYLE', ds: 'DIMSTYLE' }[p.plug]; const r0 = ((pf.data || {})[T] || [])[0]; const o = r0 && p.opts.find(x => U(x.v) === U(r0.name)); if(o) o.rec = true; } }
+    return P; }
+  A.stdProblems = stdProblems;
+  function ensureLT(n){ n = U(n); if(!n || n === 'CONTINUOUS' || ltDef(n)) return; const s = stdMerged().LTYPE.get(n); if(s && s.r.pat.length && A.defineLT) A.defineLT({ name: n, desc: s.r.desc, pat: s.r.pat.slice() }); else if(A.loadLT) A.loadLT(n); }
+  function layerProps(n, r){ if(r.aci != null && aciOf(n) !== r.aci) A.setLayerColor(n, hexOfAci(r.aci)); ensureLT(r.lt); A.setLayerLT(n, r.lt || 'CONTINUOUS'); A.setLayerLW(n, r.lw > 0 ? r.lw : 0); }
+  // sửa một lỗi theo lựa chọn thay thế o
+  function stdFix(p, o){ const r = o.r;
+    if(p.plug === 'lay'){ if(p.kind === 'prop'){ layerProps(p.name, r); return 'Đã sửa thuộc tính lớp ' + p.name; }
+      const to = r.name; if(!A.layerNames().includes(to)) A.addLayer(to, hexOfAci(r.aci)); layerProps(to, r);
+      const rep = []; for(const e of modelEntities){ if(!e || e.xr || (e.layer || '0') !== p.name) continue; const w = deep(e); delete w.userAdded; w.layer = to; if(w.bl) w.col = A.layerHex(to); rep.push([e, w]); }
+      if(rep.length) A.commit({ rep }, 'CHECKSTANDARDS: lớp ' + p.name + ' → ' + to); if(A.LS && A.LS.cur === p.name) A.setCurLayer(to); try{ A.deleteLayer(p.name); }catch(_){}
+      return 'Đã chuyển ' + rep.length + ' đối tượng từ lớp ' + p.name + ' sang ' + to; }
+    if(p.plug === 'lt'){ const to = U(r.name);
+      if(p.kind === 'prop'){ if(A.defineLT) A.defineLT({ name: to, desc: r.desc || (ltDef(to) || {}).desc || '', pat: r.pat.slice() }); return 'Đã định nghĩa lại kiểu nét ' + to; }
+      ensureLT(to); for(const n of A.layerNames()) if(U(A.layerLT(n)) === p.name) A.setLayerLT(n, to);
+      const rep = []; for(const e of modelEntities){ if(!e || e.xr || U(e.lt) !== p.name) continue; const w = deep(e); delete w.userAdded; w.lt = to; rep.push([e, w]); }
+      if(rep.length) A.commit({ rep }, 'CHECKSTANDARDS: kiểu nét ' + p.name + ' → ' + to);
+      try{ for(const k of Object.keys(LTYPES)) if(U(k) === p.name) delete LTYPES[k]; for(const k of Object.keys(A.LS.ltd || {})) if(U(k) === p.name) delete A.LS.ltd[k]; A.lsSave(); }catch(_){}
+      try{ draw(); }catch(_){} return 'Đã thay kiểu nét ' + p.name + ' bằng ' + to; }
+    if(p.plug === 'ts'){ const TS = A.TS;
+      if(p.kind === 'prop'){ const st = TS.list[p.name] = Object.assign({}, TS.list[p.name]); if(r.font) st.font = fontOf(r); st.wf = r.wf > 0 ? r.wf : 1; A.tsSave(); try{ forceRedraw(); }catch(_){ try{ draw(); }catch(__){} } return 'Đã sửa kiểu chữ ' + p.name; }
+      const to = Object.keys(TS.list).find(k => U(k) === U(r.name)) || r.name; if(!TS.list[to]) TS.list[to] = { font: fontOf(r), wf: r.wf > 0 ? r.wf : 1 };
+      const rep = []; for(const e of modelEntities){ if(!e || e.xr || e.style !== p.name) continue; const w = deep(e); delete w.userAdded; w.style = to; rep.push([e, w]); }
+      if(rep.length) A.commit({ rep }, 'CHECKSTANDARDS: kiểu chữ ' + p.name + ' → ' + to);
+      if(p.name !== 'Standard' && p.name !== to) delete TS.list[p.name]; if(TS.cur === p.name || !TS.list[TS.cur]) TS.cur = to; A.tsSave(); return 'Đã thay kiểu chữ ' + p.name + ' bằng ' + to; }
+    if(p.plug === 'ds'){ const DSN = A.dimStyles, lib = DSN.lib();
+      if(p.kind === 'prop'){ lib[p.name] = dimValsFrom(r, lib[p.name]); DSN.saveLib(lib); if(A.DS && A.DS.name === p.name) DSN.setCurrent(p.name, lib); const k = dimRestyle(p.name, p.name, lib[p.name]); return 'Đã sửa kiểu kích thước ' + p.name + (k ? ' (' + k + ' kích thước)' : ''); }
+      const to = Object.keys(lib).find(k => U(k) === U(r.name)) || r.name; if(!lib[to]) lib[to] = dimValsFrom(r, lib.Standard || DSN.values());
+      const k = dimRestyle(p.name, to, lib[to]); if(p.name !== to && p.name !== 'Standard') delete lib[p.name]; DSN.saveLib(lib); if(!A.DS || A.DS.name === p.name || !lib[A.DS.name]) DSN.setCurrent(to, lib);
+      return 'Đã thay kiểu kích thước ' + p.name + ' bằng ' + to + (k ? ' (' + k + ' kích thước)' : ''); }
+    return ''; }
+
+  function stdSettingsDlg(){ return new Promise(res => { const S = stdSet(), F = stdFiles();
+    const html = '<div class="acw" style="width:420px">' + K.grp('Thông báo', K.rad('ssN', 'off', 'Tắt thông báo chuẩn', S.notify === 'off') + '<br>' + K.rad('ssN', 'alert', 'Hiện cảnh báo khi có vi phạm chuẩn', S.notify === 'alert') + '<br>' + K.rad('ssN', 'icon', 'Hiện biểu tượng chuẩn trên thanh trạng thái', S.notify === 'icon')) +
+      K.grp('Kiểm tra chuẩn', K.chk('ssA', 'Tự động sửa thuộc tính không chuẩn', S.auto) + '<br>' + K.chk('ssI', 'Hiện các lỗi đã bỏ qua', S.showIgn) + K.vrow('Tệp chuẩn ưu tiên dùng để thay thế:', K.sel('ssP', [['', '(Không)']].concat(F.map(f => [f.name, f.name])), S.pref))) + '</div>';
+    A.dialog({ title: 'Cài đặt chuẩn CAD', cls: 'acw-free', help: 'STANDARDS', html, ok: r => { S.notify = K.radio(r, 'ssN') || 'icon'; S.auto = K.on(r, 'ssA') ? 1 : 0; S.showIgn = K.on(r, 'ssI') ? 1 : 0; S.pref = K.val(r, 'ssP') || ''; lsSet(STS, S); stdIcon(); res(true); }, cancel: () => res(false) }); }); }
+  function pickStdFile(){ return new Promise(res => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.dws,.dxf,.dwt'; i.onchange = () => { const f = i.files[0]; if(!f){ res(null); return; }
+    f.text().then(t => { if(!/(^|\n)\s*0\s*\r?\n\s*SECTION/.test(t)){ say('Chỉ đọc được tệp chuẩn dạng DXF ASCII (lưu .dws / .dwg dưới dạng DXF).'); res(null); return; }
+      const data = dxfTables(t); const n = data.LAYER.length + data.LTYPE.length + data.STYLE.length + data.DIMSTYLE.length; if(!n){ say('Tệp không có bảng lớp / kiểu nét / kiểu chữ / kiểu kích thước.'); res(null); return; }
+      res({ name: f.name, date: new Date(f.lastModified || Date.now()).toLocaleString(), data }); }); }; i.click(); }); }
+  A.stdAttach = (name, dxfText) => { const L = stdFiles().filter(f => f.name !== name); L.push({ name, date: new Date().toLocaleString(), data: dxfTables(dxfText) }); stdFilesSet(L); stdIcon(); return L.length; };
+  function standardsDlg(){ return new Promise(res => { let F = stdFiles().map(f => deep(f)), S = stdSet(), sel = F.length ? F[0].name : '', psel = 'lay';
+    const html = '<div class="acw" style="width:600px">' + K.tabs('st', [['std', 'Chuẩn'], ['plg', 'Trình cắm']], 'std') +
+      K.pane('st', 'std', 'std', '<div class="acw-lab">Các tệp chuẩn gắn với bản vẽ hiện hành:</div><div class="acw-cols"><div class="c1" style="flex:1 1 55%">' + K.list('stL', [], '', 'height:190px') + '</div>' +
+        '<div class="c2 acw-btncol">' + K.btn('stAdd', '+ Thêm…') + K.btn('stRm', '− Bỏ') + K.btn('stUp', '↑ Lên') + K.btn('stDn', '↓ Xuống') + '</div><div class="c1" style="flex:1 1 45%"><div class="acw-lab">Mô tả</div><div class="acw-note" id="stD" style="height:174px;overflow:auto;white-space:pre-wrap;border:1px solid #4a5363;padding:6px;margin:0"></div></div></div>') +
+      K.pane('st', 'plg', 'std', '<div class="acw-lab">Trình cắm dùng khi kiểm tra chuẩn:</div><div class="acw-cols"><div class="c1" style="flex:1 1 50%"><div class="acw-list" id="stP" style="height:190px">' + PLUGS.map(([k, t]) => '<div class="it' + (k === psel ? ' on' : '') + '" data-v="' + k + '"><label class="acw-ck"><input type="checkbox" data-pl="' + k + '"' + (S.plug[k] ? ' checked' : '') + '><span>' + t + '</span></label></div>').join('') + '</div></div>' +
+        '<div class="c1" style="flex:1 1 50%"><div class="acw-lab">Mô tả</div><div class="acw-note" id="stPD" style="height:174px;overflow:auto;white-space:pre-wrap;border:1px solid #4a5363;padding:6px;margin:0"></div></div></div>') + '</div>';
+    const save = () => { stdFilesSet(F); const ss = stdSet(); ss.plug = S.plug; if(ss.pref && !F.some(f => f.name === ss.pref)) ss.pref = ''; lsSet(STS, ss); stdIcon(); };
+    const d = A.dialog({ title: 'Cấu hình chuẩn', cls: 'acw-free', help: 'STANDARDS', html, left: K.btn('stChk', 'Kiểm tra chuẩn…') + K.btn('stSet', 'Cài đặt…'), ok: () => { save(); res(true); }, cancel: () => res(false) });
+    const root = d.root, $ = id => root.querySelector('#' + id); K.bindTabs(root);
+    function render(){ $('stL').innerHTML = F.length ? F.map(f => '<div class="it' + (f.name === sel ? ' on' : '') + '" data-v="' + esc(f.name) + '">📄 ' + esc(f.name) + '</div>').join('') : '<div class="acw-note" style="padding:6px">(chưa gắn tệp chuẩn — bấm "+ Thêm…" để chọn tệp DXF / DWS)</div>';
+      const f = F.find(x => x.name === sel), i = F.indexOf(f); $('stRm').disabled = !f; $('stUp').disabled = !f || i <= 0; $('stDn').disabled = !f || i >= F.length - 1;
+      $('stD').textContent = f ? 'Tệp: ' + f.name + '\nNgày: ' + (f.date || '') + '\n\nLớp: ' + f.data.LAYER.length + '\nKiểu nét: ' + f.data.LTYPE.length + '\nKiểu chữ: ' + f.data.STYLE.length + '\nKiểu kích thước: ' + f.data.DIMSTYLE.length + (i > 0 ? '\n\nKhi trùng tên, tệp xếp trên được ưu tiên.' : '') : '';
+      const p = PLUGS.find(x => x[0] === psel); $('stPD').textContent = p ? 'Trình cắm: ' + p[1] + '\nPhiên bản: 1.0\nNhà phát hành: DVDCAD\n\nMục đích: ' + p[2] : ''; }
+    K.bindList($('stL'), v => { sel = v; render(); });
+    $('stP').addEventListener('click', e => { const it = e.target.closest('.it'); if(!it) return; psel = it.dataset.v; root.querySelectorAll('#stP .it').forEach(x => x.classList.toggle('on', x === it)); render(); });
+    $('stP').addEventListener('change', e => { const c = e.target.closest('[data-pl]'); if(c) S.plug[c.dataset.pl] = c.checked ? 1 : 0; });
+    $('stAdd').onclick = async () => { const f = await pickStdFile(); if(!f) return; F = F.filter(x => x.name !== f.name); F.push(f); sel = f.name; render(); log('STANDARDS: đã gắn ' + f.name + ' (' + f.data.LAYER.length + ' lớp, ' + f.data.LTYPE.length + ' kiểu nét, ' + f.data.STYLE.length + ' kiểu chữ, ' + f.data.DIMSTYLE.length + ' kiểu kích thước)'); };
+    $('stRm').onclick = () => { const i = F.findIndex(x => x.name === sel); if(i < 0) return; F.splice(i, 1); sel = (F[Math.min(i, F.length - 1)] || {}).name || ''; render(); };
+    const mv = k => { const i = F.findIndex(x => x.name === sel), j = i + k; if(i < 0 || j < 0 || j >= F.length) return; [F[i], F[j]] = [F[j], F[i]]; render(); };
+    $('stUp').onclick = () => mv(-1); $('stDn').onclick = () => mv(1);
+    $('stSet').onclick = async () => { save(); await stdSettingsDlg(); S = Object.assign(stdSet(), { plug: S.plug }); };
+    $('stChk').onclick = () => { save(); d.close(); res(true); setTimeout(() => DVDCmd.run('CHECKSTANDARDS'), 0); };
+    render(); }); }
+  plain(['STANDARDS'], 'Cấu hình chuẩn (Configure Standards): gắn tệp chuẩn DXF / DWS với bản vẽ, chọn trình cắm (lớp, kiểu nét, kiểu chữ, kiểu kích thước), cài đặt thông báo', async () => { if(A.busy && A.busy()) A.cancel(true); await standardsDlg(); });
+
+  function checkDone(st){ A.dialog({ title: 'Kiểm tra chuẩn - Hoàn tất', cls: 'acw-free', help: 'CHECKSTANDARDS', noCancel: true, html: '<div class="acw" style="width:360px">' + K.grp('Kết quả', '<div style="line-height:1.7">Đã kiểm tra xong bản vẽ.<br>Số lỗi: <b>' + st.n + '</b><br>Tự động sửa: ' + st.auto + '<br>Sửa thủ công: ' + st.fix + '<br>Đánh dấu bỏ qua: ' + st.ign + '<br>Chưa sửa: ' + Math.max(0, st.n - st.auto - st.fix - st.ign) + '</div>') + '</div>' }); }
+  function checkStandards(){ if(!stdFiles().length){ A.dialog({ title: 'Kiểm tra chuẩn', cls: 'acw-free', help: 'CHECKSTANDARDS', okText: 'Cấu hình chuẩn…', cancelText: 'Đóng', html: '<div class="acw" style="width:380px"><p style="margin:4px 0">Bản vẽ hiện hành chưa gắn tệp chuẩn nào.</p><p style="margin:4px 0">Dùng STANDARDS để gắn tệp chuẩn (DXF / DWS) với bản vẽ trước khi kiểm tra.</p></div>', ok: () => { setTimeout(() => DVDCmd.run('STANDARDS'), 0); } }); return; }
+    const S = stdSet(), ign = ignGet(), st = { n: 0, auto: 0, fix: 0, ign: 0 }; let all = stdProblems(); st.n = all.length;
+    if(S.auto) for(const p of all){ const o = p.kind === 'prop' ? p.opts[0] : p.opts.find(x => x.rec); if(o && !(ign.has(p.key) && !S.showIgn)){ try{ log(stdFix(p, o)); st.auto++; p.done = 1; }catch(err){ console.warn(err); } } }
+    let Q = all.filter(p => !p.done && (S.showIgn || !ign.has(p.key))); st.ign = all.filter(p => !p.done && ign.has(p.key) && !S.showIgn).length;
+    if(!Q.length){ checkDone(st); return; }
+    let i = 0, choice = null;
+    const html = '<div class="acw" style="width:560px"><div class="acw-row"><span class="l">Vấn đề:</span><span id="csN" style="margin-left:auto;color:#9aa6b8"></span></div><div class="acw-note" id="csP" style="min-height:44px;border:1px solid #4a5363;padding:6px;margin:0 0 6px;white-space:pre-wrap"></div>' +
+      '<div class="acw-lab">Thay bằng:</div>' + K.list('csR', [], '', 'height:120px') +
+      '<div class="acw-lab" style="margin-top:6px">Xem trước thay đổi:</div><div class="lm-grid" style="height:118px"><table class="acw-cmp"><thead><tr><th>Thuộc tính</th><th>Giá trị hiện tại</th><th>Giá trị chuẩn</th></tr></thead><tbody id="csV"></tbody></table></div>' +
+      '<div class="acw-row" style="margin-top:6px">' + K.btn('csFix', 'Sửa lỗi', { def: 1 }) + K.btn('csNext', 'Lỗi tiếp theo') + '<span class="l"></span>' + K.chk('csIg', 'Đánh dấu bỏ qua lỗi này', 0) + '</div></div>';
+    const d = A.dialog({ title: 'Kiểm tra chuẩn', cls: 'acw-free', help: 'CHECKSTANDARDS', html, noOk: true, cancelText: 'Đóng', left: K.btn('csSet', 'Cài đặt…'), cancel: () => { ignSet(ign); log('CHECKSTANDARDS: ' + st.n + ' lỗi, đã sửa ' + (st.fix + st.auto) + ', bỏ qua ' + st.ign + '.'); } });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    function show(){ const p = Q[i]; $('csN').textContent = 'Lỗi ' + (i + 1) + ' / ' + Q.length; $('csP').textContent = p.text + (ign.has(p.key) ? '\n(đã đánh dấu bỏ qua)' : '');
+      const def = p.opts.find(o => o.rec) || p.opts[0]; choice = def;
+      $('csR').innerHTML = p.opts.map(o => '<div class="it' + (o === def ? ' on' : '') + '" data-v="' + esc(o.v) + '">' + (o.rec ? '✓ ' : '<span style="display:inline-block;width:1.1em"></span>') + esc(o.v) + '</div>').join('');
+      $('csIg').checked = ign.has(p.key); $('csFix').disabled = !p.opts.length; prev(); }
+    function prev(){ const p = Q[i]; const D = choice ? p.diffs(choice) : []; $('csV').innerHTML = D.map(([a, b, c]) => '<tr><td>' + esc(a) + '</td><td>' + esc(b) + '</td><td' + (String(b) !== String(c) ? ' style="color:#ffd26a"' : '') + '>' + esc(c) + '</td></tr>').join(''); }
+    function next(){ const p = Q[i]; if($('csIg').checked && !ign.has(p.key)){ ign.add(p.key); st.ign++; } else if(!$('csIg').checked && ign.has(p.key)){ ign.delete(p.key); }
+      i++; if(i >= Q.length){ ignSet(ign); d.close(); log('CHECKSTANDARDS: ' + st.n + ' lỗi, đã sửa ' + (st.fix + st.auto) + ', bỏ qua ' + st.ign + '.'); checkDone(st); return; } show(); }
+    K.bindList($('csR'), v => { choice = Q[i].opts.find(o => o.v === v) || null; prev(); }, () => $('csFix').click());
+    $('csFix').onclick = () => { const p = Q[i]; if(!choice) return; try{ const m = stdFix(p, choice); if(m) log(m); st.fix++; ign.delete(p.key); }catch(err){ console.error(err); say('Không sửa được lỗi này.'); return; }
+      // lỗi khác có thể đã hết sau khi sửa (vd. đổi lớp kéo theo kiểu nét) → bỏ những lỗi không còn
+      const live = new Set(stdProblems().map(x => x.key)); Q = Q.slice(0, i + 1).concat(Q.slice(i + 1).filter(x => live.has(x.key))); $('csIg').checked = false; next(); };
+    $('csNext').onclick = next;
+    $('csSet').onclick = () => stdSettingsDlg();
+    show(); }
+  plain(['CHECKSTANDARDS'], 'Kiểm tra chuẩn (Check Standards): so bản vẽ với tệp chuẩn đã gắn — lớp, kiểu nét, kiểu chữ, kiểu kích thước; Sửa / Lỗi tiếp theo / Bỏ qua', () => { if(A.busy && A.busy()) A.cancel(true); checkStandards(); });
+
+  // thông báo vi phạm chuẩn (Cài đặt → Hiện cảnh báo) và biểu tượng chuẩn trên thanh trạng thái
+  let stdLast = -1, stdT = 0;
+  function stdIcon(){ let el = document.getElementById('stdIco'); const on = stdFiles().length && stdSet().notify === 'icon'; const bar = document.querySelector('#acadStatus .ac-sb');
+    if(!on || !bar){ if(el) el.remove(); return; } if(!el){ el = document.createElement('span'); el.id = 'stdIco'; el.setAttribute('role', 'button'); el.title = 'Chuẩn CAD: bấm để kiểm tra chuẩn (CHECKSTANDARDS)'; el.className = 'st-ico'; el.style.cssText = 'cursor:pointer;padding:0 6px;align-self:center'; el.onclick = () => DVDCmd.run('CHECKSTANDARDS'); bar.appendChild(el); }
+    let n = 0; try{ const ig = ignGet(); n = stdProblems().filter(p => !ig.has(p.key)).length; }catch(_){} el.textContent = '⚖ ' + (n ? n : '✓'); el.style.color = n ? '#ffb347' : ''; }
+  A.stdIcon = stdIcon;
+  function stdWatch(){ clearTimeout(stdT); stdT = setTimeout(() => { if(!stdFiles().length){ stdLast = -1; stdIcon(); return; } const S = stdSet(); if(S.notify === 'off'){ stdIcon(); return; }
+      let n = 0; try{ const ig = ignGet(); n = stdProblems().filter(p => !ig.has(p.key)).length; }catch(_){ return; }
+      if(S.notify === 'alert' && stdLast >= 0 && n > stdLast && !(A.busy && A.busy()) && !document.querySelector('.dvd-dlg.show'))
+        A.dialog({ title: 'Vi phạm chuẩn', cls: 'acw-free', help: 'CHECKSTANDARDS', okText: 'Sửa vi phạm chuẩn', cancelText: 'Để nguyên', html: '<div class="acw" style="width:360px"><p style="margin:4px 0">Bản vẽ vừa có thêm vi phạm chuẩn (' + n + ' lỗi).</p></div>', ok: () => { setTimeout(() => DVDCmd.run('CHECKSTANDARDS'), 0); } });
+      stdLast = n; stdIcon(); }, 400); }
+  { const _c = A.commit; A.commit = function(){ const r = _c.apply(this, arguments); if(stdFiles().length) stdWatch(); return r; }; }
+  { const _a = A.addLayer; A.addLayer = function(){ const r = _a.apply(this, arguments); if(r && stdFiles().length) stdWatch(); return r; }; }
+  A.onLoad = (function(prev){ return function(){ if(prev) prev(); stdLast = -1; setTimeout(stdWatch, 300); }; })(A.onLoad);
+  setTimeout(stdIcon, 1500);
+  /* ==================================================================
+     v5p — hộp thoại kiểu cũ còn lại theo bố cục AutoCAD 2027 + lệnh nhỏ còn thiếu
+     PTYPE · STYLESMANAGER (Plot Style Table Editor) · VISUALSTYLES / VSCURRENT / VSSAVE · ATTACH · REINIT · TEXTSCR / DBLIST
+     CENTERMARK / CENTERLINE liên kết + CENTERRESET / CENTERDISASSOCIATE / CENTERREASSOCIATE · BSAVEAS · EXPORTLAYOUT · TREESTAT · COMPARECLOSE
+     ================================================================== */
+  const css8 = document.createElement('style');
+  css8.textContent = `
+  .pts-g{display:grid;grid-template-columns:repeat(5,52px);gap:4px;padding:6px;background:#1b2028;border:1px solid #5a6578;width:max-content;margin:0 auto 8px}
+  .pts-g canvas{border:1px solid transparent;cursor:pointer;background:#1b2028;width:48px;height:40px;box-sizing:border-box}
+  .pts-g canvas.on{border-color:#0696d7;background:#0b5f8f}
+  .tile-v{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;padding:6px;background:#1b2028;border:1px solid #4a5363;overflow:auto}
+  .tile-v .tl{width:92px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 3px;border:1px solid transparent;border-radius:2px;cursor:pointer;font-size:11.5px;text-align:center;color:#dfe5ee}
+  .tile-v .tl:hover{background:#2c323d}
+  .tile-v .tl.on{background:#0b5f8f;border-color:#0696d7}
+  .tile-v .tl canvas{background:#262b34;border:1px solid #4a5363}
+  .tile-v .tl .ic{font-size:28px;line-height:40px}
+  .pse-tv{overflow:auto;height:300px;border:1px solid #4a5363}
+  .pse-tv table{border-collapse:collapse;font-size:11.5px;white-space:nowrap}
+  .pse-tv th,.pse-tv td{border:1px solid #3a4250;padding:2px 6px;min-width:84px}
+  .pse-tv th{background:#434c5b;font-weight:400;position:sticky;top:0;z-index:1}
+  .pse-tv td.k{background:#353c48;position:sticky;left:0;z-index:2;min-width:120px}
+  .pse-tv td.ed{cursor:pointer}
+  .pse-tv td.ed:hover{background:#2c3f55}
+  .pse-tv td select,.pse-tv td input{width:100%;box-sizing:border-box}
+  .pse-pl .it{display:flex;align-items:center;gap:6px}
+  .pse-pl .sw{display:inline-block;width:11px;height:11px;border:1px solid #666;flex:0 0 auto}
+  .pse-fm .acw-row .l{min-width:118px}
+  .txw-t{width:100%;height:360px;box-sizing:border-box;font:12px ui-monospace,Menlo,Consolas,monospace;background:#1b2028;color:#dfe5ee;border:1px solid #4a5363;white-space:pre;resize:vertical}
+  `;
+  document.head.appendChild(css8);
+
+  /* ---------- PTYPE — Point Style ---------- */
+  const PT_MODES = [0, 1, 2, 3, 4, 32, 33, 34, 35, 36, 64, 65, 66, 67, 68, 96, 97, 98, 99, 100];
+  function ptGlyph(g, m, x, y, r, col){ g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1.3; const b = m & 31; g.beginPath();
+    if(b === 0){ g.arc(x, y, 1.6, 0, 2 * Math.PI); g.fill(); g.beginPath(); }
+    else if(b === 2){ g.moveTo(x - r, y); g.lineTo(x + r, y); g.moveTo(x, y - r); g.lineTo(x, y + r); }
+    else if(b === 3){ const q = r * 0.75; g.moveTo(x - q, y - q); g.lineTo(x + q, y + q); g.moveTo(x - q, y + q); g.lineTo(x + q, y - q); }
+    else if(b === 4){ g.moveTo(x, y); g.lineTo(x, y - r); }
+    g.stroke(); const h = r * 0.62;
+    if(m & 32){ g.beginPath(); g.arc(x, y, h, 0, 2 * Math.PI); g.stroke(); }
+    if(m & 64) g.strokeRect(x - h, y - h, 2 * h, 2 * h); }
+  A.ptGlyph = ptGlyph;
+  plain(['PTYPE', 'DDPTYPE'], 'Kiểu điểm (Point Style): 20 kiểu điểm, cỡ điểm theo tỉ lệ màn hình hoặc đơn vị tuyệt đối (PDMODE / PDSIZE)', () => {
+    if(A.busy && A.busy()) A.cancel(true); const SV = A.sysvar; let cur = +SV.get('PDMODE') | 0; const sz = +SV.get('PDSIZE') || 0; if(!PT_MODES.includes(cur)) cur = 0;
+    const html = '<div class="acw" style="width:310px"><div class="pts-g" id="ptG">' + PT_MODES.map(m => '<canvas data-m="' + m + '" width="96" height="80"' + (m === cur ? ' class="on"' : '') + '></canvas>').join('') + '</div>' +
+      '<div class="acw-row"><span class="l">Cỡ điểm:</span>' + K.num('ptS', Math.abs(sz) || 5, { min: 0 }) + '<span id="ptU" style="margin-left:6px;min-width:44px">' + (sz > 0 ? 'Đơn vị' : '%') + '</span></div>' +
+      K.rad('ptR', 'rel', 'Cỡ theo tỉ lệ màn hình', sz <= 0) + '<br>' + K.rad('ptR', 'abs', 'Cỡ theo đơn vị tuyệt đối', sz > 0) + '</div>';
+    const d = A.dialog({ title: 'Kiểu điểm', cls: 'acw-free', help: 'PTYPE', html, ok: r => { const v = Math.abs(num(K.val(r, 'ptS')) || 5); SV.set('PDMODE', cur); SV.set('PDSIZE', K.radio(r, 'ptR') === 'abs' ? v : -v); try{ draw(); }catch(_){} log('PDMODE = ' + cur + ', PDSIZE = ' + SV.get('PDSIZE')); } });
+    const root = d.root, G = root.querySelector('#ptG');
+    const paint = () => G.querySelectorAll('canvas').forEach(c => { const g = c.getContext('2d'); g.setTransform(2, 0, 0, 2, 0, 0); g.clearRect(0, 0, 48, 40); ptGlyph(g, +c.dataset.m, 24, 20, 12, '#e6eaf0'); });
+    G.addEventListener('click', e => { const c = e.target.closest('canvas'); if(!c) return; cur = +c.dataset.m; G.querySelectorAll('canvas').forEach(x => x.classList.toggle('on', x === c)); });
+    root.querySelectorAll('input[name=ptR]').forEach(x => x.addEventListener('change', () => { root.querySelector('#ptU').textContent = K.radio(root, 'ptR') === 'abs' ? 'Đơn vị' : '%'; }));
+    paint(); });
+
+  /* ---------- STYLESMANAGER — Kiểu in (Plot Styles) + Plot Style Table Editor (Chung / Dạng bảng / Dạng biểu mẫu) ---------- */
+  const CT = A.ctb, LWS = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211];
+  const PSC = [['o', 'Dùng màu đối tượng'], ['#000000', 'Đen'], ['#ffffff', 'Trắng'], ['#ff0000', 'Đỏ'], ['#ffff00', 'Vàng'], ['#00ff00', 'Xanh lá'], ['#00ffff', 'Lục lam'], ['#0000ff', 'Xanh dương'], ['#ff00ff', 'Tím'], ['x', 'Màu khác…']];
+  const lwT = v => v > 0 ? (v / 100).toFixed(2) + ' mm' : 'Dùng bề rộng nét đối tượng';
+  const colT = c => { if(!c) return 'Dùng màu đối tượng'; const f = PSC.find(x => x[0] === String(c).toLowerCase()); return f ? f[1] : c; };
+  const grayOf = c => { let r, g, b; const s = String(c || ''); let m = /^#?([0-9a-f]{6})$/i.exec(s); if(m){ const n = parseInt(m[1], 16); r = n >> 16 & 255; g = n >> 8 & 255; b = n & 255; } else { m = s.match(/\d+(\.\d+)?/g); if(!m || m.length < 3) return c; [r, g, b] = m.map(Number); } const l = Math.round(0.299 * r + 0.587 * g + 0.114 * b); return 'rgb(' + l + ',' + l + ',' + l + ')'; };
+  // Chuyển xám (Grayscale) khi in bằng bảng .ctb
+  { const memo = new Map(); let t0 = 0; const _pc = window.plotColor;
+    if(_pc && CT) window.plotColor = function(hex){ let out = _pc.apply(this, arguments);
+      try{ if(plotMode && typeof _plotStyle === 'string' && _plotStyle.startsWith('ctb:')){ const now = Date.now(); if(now - t0 > 1500){ memo.clear(); t0 = now; } const n = _plotStyle.slice(4); if(!memo.has(n)) memo.set(n, CT.get(n));
+        const T = memo.get(n), st = T && T.st && T.st[A.aciOf ? A.aciOf(hex) : 7]; if(st && st.g) out = grayOf(out); } }catch(_){} return out; }; }
+  function plotOptsRefresh(){ const s = document.querySelector('#plStyle'); if(!s || !CT) return; const cur = s.value; s.querySelectorAll('option[data-ctb]').forEach(o => o.remove());
+    for(const n of Object.keys(CT.all()).sort()){ const o = document.createElement('option'); o.value = 'ctb:' + n; o.textContent = n + '.ctb'; o.dataset.ctb = 1; s.appendChild(o); } if([...s.options].some(o => o.value === cur)) s.value = cur; }
+  const pickF = accept => new Promise(res => { const i = document.createElement('input'); i.type = 'file'; i.accept = accept; i.onchange = () => res(i.files[0] || null); i.click(); });
+  function addPlotStyleWizard(){ return new Promise(res => { const all = CT.all(), names = Object.keys(all).sort(), P = Object.keys(CT.presets || {});
+    const html = '<div class="acw" style="width:440px">' + K.grp('Bắt đầu', K.rad('awS', 'new', 'Bắt đầu từ đầu', 1) + '<br>' + K.rad('awS', 'ex', 'Dùng bảng kiểu in có sẵn', 0, { dis: !names.length }) + '<div style="margin:2px 0 4px 22px">' + K.sel('awE', names.map(n => [n, n + '.ctb']), names[0] || '') + '</div>' +
+        K.rad('awS', 'pre', 'Dùng mẫu kiểu in', 0) + '<div style="margin:2px 0 4px 22px">' + K.sel('awP', P.map(n => [n, n]), P[0] || '') + '</div>' + K.rad('awS', 'imp', 'Nhập tệp .ctb của AutoCAD…', 0)) +
+      K.grp('Tên tệp', K.row('Tên tệp:', K.txt('awN', 'KieuIn' + (names.length + 1)) + '<span style="margin-left:4px">.ctb</span>')) + K.chk('awO', 'Mở Trình sửa bảng kiểu in sau khi tạo', 1) + '</div>';
+    A.dialog({ title: 'Thêm bảng kiểu in', cls: 'acw-free', help: 'STYLESMANAGER', html, okText: 'Hoàn tất', ok: r => { const nm = String(K.val(r, 'awN') || '').trim().replace(/\.ctb$/i, ''); if(!nm){ say('Nhập tên tệp.'); return false; } if(all[nm] && !confirm('Đã có "' + nm + '.ctb". Ghi đè?')) return false;
+        const S = K.radio(r, 'awS'), open = K.on(r, 'awO');
+        const done = T => { CT.put(nm, T); plotOptsRefresh(); log('Đã tạo bảng kiểu in "' + nm + '.ctb"'); res(nm); if(open) setTimeout(() => plotStyleEditor(nm), 0); };
+        if(S === 'imp'){ pickF('.ctb').then(async f => { if(!f){ res(null); return; } try{ const T = await CT.parse(await f.arrayBuffer()); done(T); }catch(err){ say('Không đọc được ' + f.name + ': ' + (err.message || err)); res(null); } }); return; }
+        if(S === 'ex'){ const v = K.val(r, 'awE'); done(deep(all[v] || { st: {} })); return; }
+        if(S === 'pre'){ const p = (CT.presets || {})[K.val(r, 'awP')]; done({ st: p ? p.mk() : {}, desc: p ? p.d : '', src: 'preset' }); return; }
+        done({ st: {}, desc: '' }); }, cancel: () => res(null) }); }); }
+  function plotStyleEditor(name){ const T0 = CT.get(name); if(!T0){ say('Không có bảng kiểu in ' + name); return; } const W = deep(T0); W.st = W.st || {}; let sel = new Set([1]), anchor = 1, tab = 'frm';
+    const stOf = i => W.st[i] || {}, setSt = (i, f) => { const o = Object.assign({}, W.st[i] || {}); f(o); for(const k of Object.keys(o)) if(o[k] == null || o[k] === '' || (k === 'sc' && o[k] >= 100) || (k === 'lw' && !(o[k] > 0)) || (k === 'g' && !o[k])) delete o[k]; if(Object.keys(o).length) W.st[i] = o; else delete W.st[i]; };
+    const nSt = Object.keys(W.st).length;
+    const lwOpts = [['0', 'Dùng bề rộng nét đối tượng']].concat(LWS.slice(1).map(v => [String(v), (v / 100).toFixed(2) + ' mm']));
+    const dis = (l, v) => K.row(l, '<select disabled><option>' + v + '</option></select>');
+    const html = '<div class="acw" style="width:720px">' + K.tabs('pse', [['gen', 'Tổng quát'], ['tbl', 'Dạng bảng'], ['frm', 'Dạng biểu mẫu']], tab) +
+      K.pane('pse', 'gen', tab, K.row('Tên tệp bảng kiểu in:', '<b>' + esc(name) + '.ctb</b>') + K.vrow('Mô tả', '<textarea id="peD" rows="4" style="width:100%;box-sizing:border-box">' + esc(W.desc || '') + '</textarea>') +
+        K.grp('Thông tin tệp', '<div style="line-height:1.8">Số kiểu: 255<br>Đường dẫn: (lưu trong DVDCAD — xuất .ctb bằng "Lưu thành…")<br>Phiên bản: 1.0<br>Nguồn: ' + (W.src === 'ctb' ? 'nhập từ tệp .ctb' : W.src === 'preset' ? 'mẫu DVDCAD' : 'tạo trong DVDCAD') + '<br>Kiểu khác mặc định: <span id="peN">' + nSt + '</span></div>') +
+        K.chk('peAf', 'Áp hệ số tỉ lệ chung cho kiểu nét không theo ISO', 0, { dis: 1 })) +
+      K.pane('pse', 'tbl', tab, '<div class="pse-tv" id="peTV"></div><div class="acw-note" style="margin-top:4px">Bấm vào ô để sửa. Thuộc tính mờ chưa hỗ trợ khi in bằng DVDCAD.</div>') +
+      K.pane('pse', 'frm', tab, '<div class="acw-cols"><div class="c1" style="flex:0 0 190px"><div class="acw-lab">Kiểu in:</div><div class="acw-list pse-pl" id="pePL" tabindex="0" style="height:330px"></div></div>' +
+        '<div class="c1 pse-fm" style="flex:1 1 auto">' + K.grp('Thuộc tính', K.row('Màu:', '<span style="display:flex;gap:4px;flex:1">' + K.sel('peC', PSC, 'o') + '<input type="color" id="peCx" value="#000000" style="width:40px;display:none"></span>') +
+          dis('Dither:', 'Bật') + K.row('Chuyển xám:', K.sel('peG', [['0', 'Tắt'], ['1', 'Bật']], '0')) + dis('Số bút:', 'Tự động') + dis('Bút ảo:', 'Tự động') + K.row('Độ đậm:', K.num('peS', 100, { min: 0, max: 100 })) +
+          dis('Kiểu nét:', 'Dùng kiểu nét đối tượng') + dis('Thích ứng:', 'Bật') + K.row('Bề rộng nét:', K.sel('peW', lwOpts, '0')) + dis('Kiểu đầu nét:', 'Dùng kiểu đầu nét đối tượng') + dis('Kiểu nối nét:', 'Dùng kiểu nối nét đối tượng') + dis('Kiểu tô:', 'Dùng kiểu tô đối tượng')) +
+          K.vrow('Mô tả:', '<textarea id="peSd" rows="2" style="width:100%;box-sizing:border-box"></textarea>') + '<div class="acw-row">' + K.btn('peLw', 'Sửa bề rộng nét…', { dis: 1 }) + K.btn('peSa', 'Lưu thành…') + '</div></div></div>') + '</div>';
+    const d = A.dialog({ title: 'Trình sửa bảng kiểu in - ' + name + '.ctb', cls: 'acw-free', help: 'STYLESMANAGER', html, okText: 'Lưu & đóng', ok: r => { W.desc = r.querySelector('#peD').value; CT.put(name, W); plotOptsRefresh(); try{ forceRedraw(); }catch(_){} log('Đã lưu bảng kiểu in "' + name + '.ctb"'); } });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    K.bindTabs(root, k => { tab = k; if(k === 'tbl') renderTV(); if(k === 'frm'){ renderPL(); loadForm(); } });
+    function renderPL(){ let h = ''; for(let i = 1; i <= 255; i++){ const s = stOf(i); h += '<div class="it' + (sel.has(i) ? ' on' : '') + '" data-v="' + i + '"><span class="sw" style="background:' + (typeof aciHex === 'function' ? aciHex(i) : '#888') + '"></span>Color_' + i + (Object.keys(s).length ? ' •' : '') + '</div>'; } $('pePL').innerHTML = h; }
+    function loadForm(){ const L = [...sel], s0 = stOf(L[0]); const same = k => L.every(i => (stOf(i)[k] || null) === (s0[k] || null));
+      const c = s0.c || 'o', known = PSC.some(x => x[0] === c); $('peC').value = !same('c') ? '' : known ? c : 'x'; $('peCx').style.display = $('peC').value === 'x' ? '' : 'none'; if(s0.c) $('peCx').value = s0.c;
+      $('peG').value = same('g') ? (s0.g ? '1' : '0') : ''; $('peS').value = same('sc') ? (s0.sc != null ? s0.sc : 100) : ''; $('peW').value = same('lw') ? String(s0.lw > 0 ? s0.lw : 0) : ''; $('peSd').value = same('d') ? s0.d || '' : ''; }
+    const apply = f => { for(const i of sel) setSt(i, f); $('peN').textContent = Object.keys(W.st).length; };
+    $('pePL').addEventListener('click', e => { const it = e.target.closest('.it'); if(!it) return; const i = +it.dataset.v;
+      if(e.shiftKey){ sel = new Set(); const [a, b] = anchor < i ? [anchor, i] : [i, anchor]; for(let k = a; k <= b; k++) sel.add(k); } else if(e.ctrlKey || e.metaKey){ if(sel.has(i) && sel.size > 1) sel.delete(i); else sel.add(i); anchor = i; } else { sel = new Set([i]); anchor = i; }
+      $('pePL').querySelectorAll('.it').forEach(x => x.classList.toggle('on', sel.has(+x.dataset.v))); loadForm(); });
+    $('peC').onchange = () => { const v = $('peC').value; $('peCx').style.display = v === 'x' ? '' : 'none'; if(!v) return; apply(o => { o.c = v === 'o' ? null : v === 'x' ? $('peCx').value : v; }); };
+    $('peCx').oninput = () => apply(o => { o.c = $('peCx').value; });
+    $('peG').onchange = () => { const v = $('peG').value; if(v) apply(o => { o.g = v === '1' ? 1 : 0; }); };
+    $('peS').onchange = () => { const v = num($('peS').value); if(v != null) apply(o => { o.sc = Math.max(0, Math.min(100, v)); }); };
+    $('peW').onchange = () => { const v = $('peW').value; if(v !== '') apply(o => { o.lw = +v; }); };
+    $('peSd').onchange = () => apply(o => { o.d = $('peSd').value.trim(); });
+    $('peSa').onclick = async () => { W.desc = $('peD').value; try{ const u = await CT.build(W); shareOrDownload(new Blob([u], { type: 'application/octet-stream' }), name + '.ctb', 'application/octet-stream'); log('Đã xuất ' + name + '.ctb (chép vào thư mục Plot Styles của AutoCAD để dùng).'); }catch(err){ say('Không xuất được .ctb: ' + (err.message || err)); } };
+    // dạng bảng: mỗi cột một kiểu in, bấm ô để sửa
+    const ROWS = [['n', 'Tên'], ['d', 'Mô tả'], ['c', 'Màu'], ['dt', 'Bật dither'], ['g', 'Chuyển xám'], ['pn', 'Số bút'], ['vp', 'Bút ảo'], ['sc', 'Độ đậm'], ['lt', 'Kiểu nét'], ['ad', 'Thích ứng'], ['lw', 'Bề rộng nét'], ['es', 'Kiểu đầu nét'], ['js', 'Kiểu nối nét'], ['fs', 'Kiểu tô']];
+    const cellT = (k, i) => { const s = stOf(i); return k === 'n' ? 'Color_' + i : k === 'd' ? s.d || '' : k === 'c' ? colT(s.c) : k === 'g' ? (s.g ? 'Bật' : 'Tắt') : k === 'sc' ? String(s.sc != null ? s.sc : 100) : k === 'lw' ? lwT(s.lw) : k === 'dt' || k === 'ad' ? 'Bật' : k === 'pn' || k === 'vp' ? 'Tự động' : 'Dùng của đối tượng'; };
+    const EDK = new Set(['d', 'c', 'g', 'sc', 'lw']);
+    function renderTV(){ let h = '<table><thead><tr><th class="k" style="position:sticky;left:0;z-index:3">Tên</th>'; for(let i = 1; i <= 255; i++) h += '<th><span class="sw" style="display:inline-block;width:9px;height:9px;margin-right:4px;background:' + (typeof aciHex === 'function' ? aciHex(i) : '#888') + '"></span>Color_' + i + '</th>'; h += '</tr></thead><tbody>';
+      for(const [k, t] of ROWS.slice(1)){ h += '<tr><td class="k">' + t + '</td>'; for(let i = 1; i <= 255; i++) h += '<td' + (EDK.has(k) ? ' class="ed"' : ' style="opacity:.55"') + ' data-k="' + k + '" data-i="' + i + '">' + esc(cellT(k, i)) + '</td>'; h += '</tr>'; }
+      $('peTV').innerHTML = h + '</tbody></table>'; }
+    $('peTV').addEventListener('click', e => { const td = e.target.closest('td.ed'); if(!td || td.querySelector('select,input')) return; const k = td.dataset.k, i = +td.dataset.i, s = stOf(i);
+      let ctl; if(k === 'c'){ ctl = document.createElement('select'); ctl.innerHTML = PSC.filter(x => x[0] !== 'x').map(([v, t]) => '<option value="' + v + '"' + ((s.c || 'o') === v ? ' selected' : '') + '>' + t + '</option>').join('') + (s.c && !PSC.some(x => x[0] === s.c) ? '<option value="' + s.c + '" selected>' + s.c + '</option>' : ''); }
+      else if(k === 'g'){ ctl = document.createElement('select'); ctl.innerHTML = '<option value="0">Tắt</option><option value="1"' + (s.g ? ' selected' : '') + '>Bật</option>'; }
+      else if(k === 'lw'){ ctl = document.createElement('select'); ctl.innerHTML = lwOpts.map(([v, t]) => '<option value="' + v + '"' + (String(s.lw > 0 ? s.lw : 0) === v ? ' selected' : '') + '>' + t + '</option>').join(''); }
+      else { ctl = document.createElement('input'); ctl.value = k === 'sc' ? (s.sc != null ? s.sc : 100) : s.d || ''; if(k === 'sc') ctl.type = 'number'; }
+      td.textContent = ''; td.appendChild(ctl); ctl.focus();
+      const done = () => { const v = ctl.value; setSt(i, o => { if(k === 'c') o.c = v === 'o' ? null : v; else if(k === 'g') o.g = v === '1' ? 1 : 0; else if(k === 'lw') o.lw = +v; else if(k === 'sc'){ const n = num(v); if(n != null) o.sc = Math.max(0, Math.min(100, n)); } else o.d = String(v).trim(); }); td.textContent = cellT(k, i); $('peN').textContent = Object.keys(W.st).length; };
+      ctl.addEventListener('change', () => ctl.blur()); ctl.addEventListener('blur', done, { once: true }); ctl.addEventListener('keydown', ev => { ev.stopPropagation(); if(ev.key === 'Enter'){ ev.preventDefault(); ctl.blur(); } }); });
+    renderPL(); loadForm(); return d; }
+  A.plotStyleEditor = plotStyleEditor; A.ctbEditor = n => n ? plotStyleEditor(n) : stylesManager();
+  function stylesManager(){ let cur = '';
+    const html = '<div class="acw" style="width:560px"><div class="acw-lab">Bảng kiểu in theo màu (.ctb) trong DVDCAD:</div><div class="tile-v" id="smV" style="height:250px"></div>' +
+      '<div class="acw-row" style="margin-top:6px">' + K.btn('smEd', 'Sửa…') + K.btn('smImp', 'Nhập .ctb…') + K.btn('smExp', 'Xuất .ctb…') + K.btn('smRn', 'Đổi tên…') + K.btn('smDel', 'Xoá') + '</div><div class="acw-note" id="smI" style="margin-top:4px"></div></div>';
+    const d = A.dialog({ title: 'Kiểu in (Plot Styles)', cls: 'acw-free', help: 'STYLESMANAGER', html, noCancel: true, okText: 'Đóng' });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    function render(){ const all = CT.all(), N = Object.keys(all).sort(); if(cur && !all[cur]) cur = '';
+      $('smV').innerHTML = '<div class="tl" data-w="1"><span class="ic">🧙</span>Trình thêm bảng kiểu in</div>' + N.map(n => '<div class="tl' + (n === cur ? ' on' : '') + '" data-n="' + esc(n) + '"><span class="ic">🖨</span>' + esc(n) + '.ctb</div>').join('');
+      for(const id of ['smEd', 'smExp', 'smRn', 'smDel']) $(id).disabled = !cur; const T = cur ? all[cur] : null;
+      $('smI').textContent = T ? cur + '.ctb — ' + (T.desc || '(không mô tả)') + ' · ' + Object.keys(T.st || {}).length + ' kiểu khác mặc định' : 'Bấm đúp một bảng để sửa, hoặc "Trình thêm bảng kiểu in" để tạo bảng mới.'; }
+    $('smV').addEventListener('click', e => { const t = e.target.closest('.tl'); if(!t) return; if(t.dataset.w) return; cur = t.dataset.n; render(); });
+    $('smV').addEventListener('dblclick', async e => { const t = e.target.closest('.tl'); if(!t) return; if(t.dataset.w){ const n = await addPlotStyleWizard(); if(n){ cur = n; render(); } return; } plotStyleEditor(t.dataset.n); });
+    $('smEd').onclick = () => cur && plotStyleEditor(cur);
+    $('smImp').onclick = async () => { const f = await pickF('.ctb'); if(!f) return; try{ const T = await CT.parse(await f.arrayBuffer()); cur = f.name.replace(/\.ctb$/i, ''); CT.put(cur, T); plotOptsRefresh(); render(); log('Đã nhập ' + f.name + ' (' + Object.keys(T.st).length + ' kiểu).'); }catch(err){ say('Không đọc được ' + f.name + ': ' + (err.message || err)); } };
+    $('smExp').onclick = async () => { if(!cur) return; try{ const u = await CT.build(CT.get(cur)); shareOrDownload(new Blob([u], { type: 'application/octet-stream' }), cur + '.ctb', 'application/octet-stream'); }catch(err){ say('Không xuất được: ' + (err.message || err)); } };
+    $('smRn').onclick = async () => { if(!cur) return; const n = await askStr('Đổi tên bảng kiểu in', 'Tên mới:', cur); if(!n || n === cur) return; const all = CT.all(); if(all[n]){ say('Đã có bảng "' + n + '".'); return; } CT.put(n, all[cur]); CT.del(cur);
+      if(A.PS && A.PS.style === 'ctb:' + cur) A.PS.style = 'ctb:' + n; cur = n; plotOptsRefresh(); render(); };
+    $('smDel').onclick = () => { if(!cur || !confirm('Xoá bảng kiểu in "' + cur + '.ctb"?')) return; CT.del(cur); cur = ''; plotOptsRefresh(); render(); };
+    render(); return d; }
+  if(CT){ plain(['STYLESMANAGER', 'PLOTSTYLE', 'CTB', 'CONVERTCTB', 'KIEUIN'], 'Kiểu in (Plot Styles): bảng kiểu in theo màu .ctb — Trình thêm bảng kiểu in, Trình sửa bảng kiểu in (Chung / Dạng bảng / Dạng biểu mẫu), nhập / xuất .ctb của AutoCAD', () => { if(A.busy && A.busy()) A.cancel(true); stylesManager(); });
+    // nút ✎ cạnh "Kiểu in" trong PLOT mở trình sửa mới
+    const _dl = A.dialog; A.dialog = function(o){ const d = _dl.apply(this, arguments); try{ const b = d && d.root && d.root.querySelector('#plCtbEd'); if(b){ const s = d.root.querySelector('#plStyle'); b.onclick = () => { const v = s && s.value || ''; if(v.startsWith('ctb:')) plotStyleEditor(v.slice(4)); else stylesManager(); }; } }catch(_){} return d; }; }
+
+  /* ---------- VISUALSTYLES — Visual Styles Manager · VSCURRENT · VSSAVE ---------- */
+  const VSL = [['2d', '2D khung dây', 'Đối tượng hiện bằng đường thẳng và đường cong (bản vẽ 2D)'], ['wire', 'Khung dây', 'Khung dây 3D: hiện mọi cạnh, không tô mặt'], ['hidden', 'Khuất nét', 'Khung dây có che khuất nét phía sau'],
+    ['real', 'Thực tế', 'Tô bóng mượt, vật liệu, bóng đổ'], ['shade', 'Tô bóng', 'Tô bóng mượt, không cạnh'], ['shedge', 'Tô bóng + cạnh', 'Tô bóng mượt kèm cạnh'], ['xray', 'Xuyên thấu (X-quang)', 'Mặt trong suốt một phần (độ mờ 50%)']];
+  const VSU = 'dvd:vsuser';
+  const vsUser = () => lsGet(VSU, {});
+  const vsCur = () => { try{ if(!A.view3D) return '2d'; const s = A.view3D.ov.querySelector('select[data-a="style"]'); return s ? s.value : (localStorage.getItem('dvd:3dstyle') || 'shedge'); }catch(_){ return '2d'; } };
+  async function vsApply(k){ const U = vsUser(); if(U[k]) k = U[k].base; if(k === '2d'){ if(A.view3D && A.close3D) A.close3D(); log('VSCURRENT: 2D khung dây.'); return; }
+    try{ localStorage.setItem('dvd:3dstyle', k); }catch(_){} if(!A.view3D && A.open3D) await A.open3D(); if(A.view3D && A.view3D.setStyle) A.view3D.setStyle(k); log('VSCURRENT: ' + ((VSL.find(x => x[0] === k) || [, k])[1])); }
+  A.vsApply = vsApply;
+  function vsThumb(c, k){ const g = c.getContext('2d'), W = c.width, H = c.height; g.clearRect(0, 0, W, H); const x = W / 2, y = H / 2 + 2, r = Math.min(W, H) * 0.34;
+    if(k === '2d' || k === 'wire' || k === 'hidden'){ g.strokeStyle = '#cfd6e0'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI); g.stroke();
+      if(k !== '2d') for(const s of [0.35, 0.7]){ g.beginPath(); g.ellipse(x, y, r, r * s, 0, 0, k === 'hidden' ? Math.PI : 2 * Math.PI); g.stroke(); g.beginPath(); g.ellipse(x, y, r * s, r, 0, k === 'hidden' ? -Math.PI / 2 : 0, k === 'hidden' ? Math.PI / 2 : 2 * Math.PI); g.stroke(); }
+      if(k === '2d'){ g.beginPath(); g.moveTo(x - r, y); g.lineTo(x + r, y); g.moveTo(x, y - r); g.lineTo(x, y + r); g.stroke(); } return; }
+    const gr = g.createRadialGradient(x - r * 0.4, y - r * 0.45, r * 0.1, x, y, r); gr.addColorStop(0, k === 'real' ? '#f6e3c4' : '#e8eef7'); gr.addColorStop(1, k === 'real' ? '#7a5a34' : '#4a5a70');
+    g.globalAlpha = k === 'xray' ? 0.5 : 1; g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI); g.fill(); g.globalAlpha = 1;
+    if(k === 'shedge' || k === 'xray'){ g.strokeStyle = '#1b2028'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI); g.stroke(); g.beginPath(); g.ellipse(x, y, r, r * 0.35, 0, 0, 2 * Math.PI); g.stroke(); }
+    if(k === 'real'){ g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(x + r * 0.3, y + r * 1.02, r * 0.8, r * 0.16, 0, 0, 2 * Math.PI); g.fill(); } }
+  const VSP = { '2d': [['Kiểu mặt', 'Không'], ['Kiểu cạnh', 'Cạnh 2D'], ['Bóng đổ', 'Tắt'], ['Độ mờ', '—']], wire: [['Kiểu mặt', 'Không'], ['Kiểu cạnh', 'Đường đẳng tham số'], ['Bóng đổ', 'Tắt'], ['Độ mờ', '—']], hidden: [['Kiểu mặt', 'Không'], ['Kiểu cạnh', 'Cạnh mặt, che khuất'], ['Bóng đổ', 'Tắt'], ['Độ mờ', '—']],
+    real: [['Kiểu mặt', 'Thực tế'], ['Vật liệu', 'Bật'], ['Bóng đổ', 'Bóng đổ đầy đủ'], ['Độ mờ', 'Tắt']], shade: [['Kiểu mặt', 'Thực tế'], ['Kiểu cạnh', 'Không'], ['Bóng đổ', 'Tắt'], ['Độ mờ', 'Tắt']], shedge: [['Kiểu mặt', 'Thực tế'], ['Kiểu cạnh', 'Cạnh mặt'], ['Bóng đổ', 'Tắt'], ['Độ mờ', 'Tắt']], xray: [['Kiểu mặt', 'Thực tế'], ['Kiểu cạnh', 'Cạnh mặt'], ['Bóng đổ', 'Tắt'], ['Độ mờ', '50%']] };
+  function vsManager(){ let cur = vsCur(); const U0 = vsUser(); if(!VSL.some(x => x[0] === cur) && !U0[cur]) cur = '2d';
+    const html = '<div class="acw" style="width:470px"><div class="acw-lab">Kiểu hiển thị có trong bản vẽ</div><div class="tile-v" id="vsV" style="height:200px"></div>' +
+      '<div class="acw-row" style="margin-top:4px">' + K.btn('vsNew', 'Tạo kiểu mới…') + K.btn('vsApp', 'Áp dụng cho khung nhìn hiện hành', { def: 1 }) + K.btn('vsDel', 'Xoá kiểu') + '</div>' +
+      '<div class="acw-lab" id="vsN" style="margin-top:6px"></div><div class="lm-grid" style="height:120px"><table class="acw-cmp"><thead><tr><th>Thuộc tính</th><th>Giá trị</th></tr></thead><tbody id="vsP"></tbody></table></div><div class="acw-note" id="vsD" style="margin-top:4px"></div></div>';
+    const d = A.dialog({ title: 'Trình quản lý kiểu hiển thị', cls: 'acw-free', help: 'VISUALSTYLES', html, modeless: true, noCancel: true, okText: 'Đóng' });
+    const root = d.root, $ = id => root.querySelector('#' + id);
+    function render(){ const U = vsUser(), L = VSL.map(x => ({ k: x[0], t: x[1], d: x[2], base: x[0] })).concat(Object.keys(U).map(n => ({ k: n, t: n, d: 'Kiểu riêng dựa trên ' + ((VSL.find(x => x[0] === U[n].base) || [, U[n].base])[1]), base: U[n].base, user: 1 })));
+      $('vsV').innerHTML = L.map(s => '<div class="tl' + (s.k === cur ? ' on' : '') + '" data-k="' + esc(s.k) + '" title="' + esc(s.d) + '"><canvas width="80" height="60" data-b="' + s.base + '"></canvas>' + esc(s.t) + '</div>').join('');
+      $('vsV').querySelectorAll('canvas').forEach(c => vsThumb(c, c.dataset.b)); const s = L.find(x => x.k === cur) || L[0];
+      $('vsN').textContent = 'Thuộc tính: ' + s.t + (s.k === vsCur() ? ' (đang dùng)' : ''); $('vsP').innerHTML = (VSP[s.base] || []).map(([a, b]) => '<tr><td>' + esc(a) + '</td><td>' + esc(b) + '</td></tr>').join(''); $('vsD').textContent = s.d; $('vsDel').disabled = !s.user; }
+    $('vsV').addEventListener('click', e => { const t = e.target.closest('.tl'); if(!t) return; cur = t.dataset.k; render(); });
+    $('vsV').addEventListener('dblclick', e => { const t = e.target.closest('.tl'); if(t) vsApply(t.dataset.k).then(render); });
+    $('vsApp').onclick = () => vsApply(cur).then(render);
+    $('vsNew').onclick = async () => { const n = await askStr('Tạo kiểu hiển thị mới', 'Tên:', 'Kiểu ' + (Object.keys(vsUser()).length + 1)); if(!n) return; if(VSL.some(x => x[1] === n)){ say('Trùng tên kiểu có sẵn.'); return; } const U = vsUser(); const b = VSL.some(x => x[0] === cur) ? cur : (U[cur] && U[cur].base) || 'shedge'; U[n] = { base: b }; lsSet(VSU, U); cur = n; render(); };
+    $('vsDel').onclick = () => { const U = vsUser(); if(!U[cur]) return; delete U[cur]; lsSet(VSU, U); cur = '2d'; render(); };
+    render(); return d; }
+  plain(['VISUALSTYLES'], 'Trình quản lý kiểu hiển thị (Visual Styles Manager): 2D khung dây, khung dây, khuất nét, thực tế, tô bóng, tô bóng + cạnh, X-quang, kiểu riêng', () => { if(document.querySelector('.dvd-dlg[data-cmd="VISUALSTYLES"]')) return; vsManager(); });
+  ecmd(['VSCURRENT', 'VS', 'SHADEMODE'], 'Đặt kiểu hiển thị cho khung nhìn hiện hành (2D khung dây / Khung dây / Khuất nét / Thực tế / Tô bóng / tô bóng + Cạnh / X-quang)', async () => {
+    const U = vsUser(); const kw = [{ k: '2', t: '2D khung dây' }, { k: 'W', t: 'Khung dây' }, { k: 'H', t: 'Khuất nét' }, { k: 'R', t: 'Thực tế' }, { k: 'S', t: 'Tô bóng' }, { k: 'E', t: 'Tô bóng + cạnh' }, { k: 'X', t: 'Xuyên thấu (X-quang)' }].concat(Object.keys(U).length ? [{ k: 'O', t: 'Kiểu khác' }] : []);
+    const cur = vsCur(); const r = await A.getKw('Nhập tuỳ chọn', { kw, def: (VSL.find(x => x[0] === cur) || VSL[0])[1] }); const m = { 2: '2d', W: 'wire', H: 'hidden', R: 'real', S: 'shade', E: 'shedge', X: 'xray' };
+    if(r.kw === 'O'){ const s = await A.getStr('Tên kiểu hiển thị (' + Object.keys(U).join(', ') + ')'); if(s.str && U[s.str]) await vsApply(s.str); else if(s.str) log('Không có kiểu "' + s.str + '".'); return; }
+    if(r.kw && m[r.kw]) await vsApply(m[r.kw]); });
+  ecmd(['VSSAVE'], 'Lưu kiểu hiển thị hiện hành thành kiểu có tên (Save Visual Style)', async () => { const s = await A.getStr('Lưu kiểu hiển thị với tên'); const n = String(s.str || '').trim(); if(!n) return; if(VSL.some(x => x[1] === n)){ log('Trùng tên kiểu có sẵn.'); return; } const U = vsUser(); U[n] = { base: vsCur() }; lsSet(VSU, U); log('VSSAVE: đã lưu kiểu "' + n + '".'); });
+
+  /* ---------- ATTACH — chọn tệp tham chiếu rồi mở lệnh gắn tương ứng ---------- */
+  let pendFile = null;
+  { const _click = HTMLInputElement.prototype.click; HTMLInputElement.prototype.click = function(){ if(this.type === 'file' && pendFile){ const f = pendFile; pendFile = null;
+      try{ const dt = new DataTransfer(); dt.items.add(f); this.files = dt.files; }catch(_){ return _click.apply(this, arguments); } setTimeout(() => this.dispatchEvent(new Event('change', { bubbles: true })), 0); return; } return _click.apply(this, arguments); }; }
+  // chạy một lệnh có hộp chọn tệp với tệp đã chọn sẵn (tệp được trao cho hộp chọn tệp đầu tiên lệnh mở)
+  A.runWithFile = (c, f) => { pendFile = f; setTimeout(() => { pendFile = null; }, 5000); DVDCmd.run(c); };
+  plain(['ATTACH'], 'Gắn tham chiếu (Attach): chọn tệp DWG / DXF, ảnh hoặc PDF rồi mở hộp gắn tương ứng', () => { if(A.busy && A.busy()) A.cancel(true);
+    const i = document.createElement('input'); i.type = 'file'; i.accept = '.dwg,.dxf,.pdf,.png,.jpg,.jpeg,.bmp,.gif,.webp,.tif,.tiff'; i.onchange = () => { const f = i.files[0]; if(!f) return; const n = f.name.toLowerCase();
+      const c = /\.(dwg|dxf)$/.test(n) ? 'XATTACH' : /\.pdf$/.test(n) ? 'PDFATTACH' : /\.(png|jpe?g|bmp|gif|webp|tiff?)$/.test(n) ? 'IMAGEATTACH' : null; if(!c){ say('Loại tệp chưa hỗ trợ.'); return; } log('ATTACH: ' + f.name + ' → ' + c); A.runWithFile(c, f); }; i.click(); });
+
+  /* ---------- REINIT — Re-initialization ---------- */
+  plain(['REINIT'], 'Khởi tạo lại (Re-initialization): nạp lại tệp PGP (lệnh tắt), nạp lại giao diện', () => {
+    const html = '<div class="acw" style="width:380px">' + K.grp('Khởi tạo cổng vào / ra', K.chk('riD', 'Bàn số hoá', 0, { dis: 1 }) + '<br>' + K.chk('riP', 'Máy vẽ', 0, { dis: 1 })) +
+      K.grp('Khởi tạo thiết bị và tệp', K.chk('riD2', 'Bàn số hoá', 0, { dis: 1 }) + '<br>' + K.chk('riP2', 'Máy vẽ', 0, { dis: 1 }) + '<br>' + K.chk('riG', 'Tệp PGP (lệnh tắt)', 1) + '<br>' + K.chk('riU', 'Giao diện DVDCAD (nạp lại trang — thay đổi chưa lưu sẽ mất)', 0)) + '</div>';
+    A.dialog({ title: 'Khởi tạo lại', cls: 'acw-free', help: 'REINIT', html, ok: r => {
+      if(K.on(r, 'riG') && A.applyAlias){ const D = new Set(lsGet('dvd:aliasdel', []).map(String)); let n = 0; for(const [a, c] of (A.ACAD_PGP || [])) if(!D.has(a) && A.applyAlias(a, c)) n++; for(const [a, c] of Object.entries(lsGet('dvd:alias', {}) || {})) if(A.applyAlias(a, c)) n++; log('REINIT: đã nạp lại ' + n + ' lệnh tắt (acad.pgp + lệnh tắt riêng).'); }
+      if(K.on(r, 'riU')) setTimeout(() => { try{ location.reload(); }catch(_){} }, 50); } }); });
+
+  /* ---------- TEXTSCR / HISTORY — Cửa sổ văn bản · DBLIST ---------- */
+  function textWin(title, text, help){ const html = '<div class="acw" style="width:760px"><div class="acw-row" style="margin-bottom:4px">' + K.btn('twC', 'Sao chép') + K.btn('twH', 'Sao chép tất cả') + K.btn('twP', 'Dán vào dòng lệnh') + '<span class="l"></span>' + K.txt('twF', '', { ph: 'Tìm…' }) + K.btn('twN', 'Tìm tiếp') + '</div><textarea class="txw-t" id="twT" rows="22" readonly spellcheck="false" style="height:360px;min-height:360px"></textarea></div>';
+    const d = A.dialog({ title, cls: 'acw-free', help: help || 'TEXTSCR', html, modeless: true, noCancel: true, okText: 'Đóng' }); const $ = id => d.root.querySelector('#' + id), t = $('twT'); t.value = text; t.scrollTop = t.scrollHeight;
+    const cp = s => { try{ navigator.clipboard.writeText(s).then(() => say('Đã sao chép'), () => {}); }catch(_){ t.select(); document.execCommand('copy'); } };
+    $('twC').onclick = () => cp(t.value.slice(t.selectionStart, t.selectionEnd) || t.value); $('twH').onclick = () => cp(t.value);
+    $('twP').onclick = () => { const s = t.value.slice(t.selectionStart, t.selectionEnd).split(/\r?\n/)[0].replace(/^.*?:\s*/, '').trim(); const i = document.querySelector('#dvdCmd input'); if(!i || !s) return; i.value = s; i.dispatchEvent(new Event('input', { bubbles: true })); i.focus(); };
+    let at = 0; const find = () => { const q = $('twF').value.toLowerCase(); if(!q) return; const v = t.value.toLowerCase(); let k = v.indexOf(q, at); if(k < 0) k = v.indexOf(q); if(k < 0){ say('Không tìm thấy "' + $('twF').value + '"'); return; } t.focus(); t.setSelectionRange(k, k + q.length); at = k + q.length; const ln = v.slice(0, k).split('\n').length; t.scrollTop = Math.max(0, (ln - 5) * 15); };
+    $('twN').onclick = find; $('twF').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); e.stopPropagation(); find(); } }); return d; }
+  A.textWin = textWin;
+  const docNm = () => { try{ return currentName || 'Drawing1.dwg'; }catch(_){ return 'Drawing1.dwg'; } };
+  plain(['TEXTSCR', 'HISTORY', 'COMMANDHISTORY'], 'Cửa sổ văn bản (Text Window): lịch sử dòng lệnh, sao chép, dán vào dòng lệnh, tìm', () => textWin('Cửa sổ văn bản DVDCAD - ' + docNm(), (DVDCmd.history ? DVDCmd.history() : []).slice(-3000).join('\n')));
+  const F4 = v => { const f = A.fmt ? A.fmt(+v || 0) : (+v || 0).toFixed(4); return String(f).padStart(10); };
+  function listOf(e, i){ const t = e.rgn ? 'REGION' : e.type === 'TEXT' && e.mt ? 'MTEXT' : e.type === 'POLYLINE' ? 'LWPOLYLINE' : e.type, P = (l, s) => ' '.repeat(Math.max(0, 22 - l.length)) + l + s;
+    const L = ['', P(t, '   Lớp: "' + (e.layer || '0') + '"'), P('', '   Không gian: Mô hình'), P('Màu: ', e.bl ? 'BYLAYER' : String(e.col || '')) + (e.lt ? '   Kiểu nét: "' + e.lt + '"' : '') + (e.blk ? '   Khối: ' + e.blk : ''), P('Thẻ (handle) = ', (i + 1).toString(16).toUpperCase())];
+    if(e.type === 'LINE'){ L.push(P('từ điểm, ', 'X=' + F4(e.x1) + '  Y=' + F4(e.y1) + '  Z=' + F4(0)), P('đến điểm, ', 'X=' + F4(e.x2) + '  Y=' + F4(e.y2) + '  Z=' + F4(0)), P('Dài = ', F4(Math.hypot(e.x2 - e.x1, e.y2 - e.y1)).trim() + ',  Góc trong mặt XY = ' + r6(((Math.atan2(e.y2 - e.y1, e.x2 - e.x1) * 180 / Math.PI) + 360) % 360))); }
+    else if(e.type === 'CIRCLE') L.push(P('tâm ', 'X=' + F4(e.cx) + '  Y=' + F4(e.cy)), P('bán kính ', F4(e.r).trim()), P('chu vi ', F4(2 * Math.PI * e.r).trim()), P('diện tích ', F4(Math.PI * e.r * e.r).trim()));
+    else if(e.type === 'ARC') L.push(P('tâm ', 'X=' + F4(e.cx) + '  Y=' + F4(e.cy)), P('bán kính ', F4(e.r).trim()), P('góc đầu ', String(r6(e.a1))), P('góc cuối ', String(r6(e.a2))));
+    else if(e.type === 'POLYLINE'){ const c = A.G && A.G.curveOf ? A.G.curveOf(e) : null; L.push(P(e.closed ? 'Kín' : 'Hở', ''), P('chiều dài ', F4(c ? c.len : 0).trim()) + (e.closed && A.G ? '   diện tích ' + F4(Math.abs(A.G.area(e.vertices || []))).trim() : '')); for(const v of (e.vertices || []).slice(0, 200)) L.push(P('tại điểm ', 'X=' + F4(v.x) + '  Y=' + F4(v.y))); }
+    else if(e.type === 'TEXT') L.push(P('Kiểu chữ = ', '"' + (e.style || 'Standard') + '"'), P('điểm đặt, ', 'X=' + F4(e.x) + '  Y=' + F4(e.y)), P('cao ', F4(e.h || 0).trim()), P('chữ ', String(e.text || '').replace(/\n/g, '\\P').slice(0, 200)), P('góc xoay ', String(r6(e.rot || 0))));
+    else if(e.type === 'ELLIPSE') L.push(P('tâm ', 'X=' + F4(e.cx) + '  Y=' + F4(e.cy)));
+    else if(e.type === 'POINT') L.push(P('tại điểm, ', 'X=' + F4(e.x) + '  Y=' + F4(e.y)));
+    return L.join('\n'); }
+  plain(['DBLIST'], 'Liệt kê thông tin mọi đối tượng trong bản vẽ (Database List) vào cửa sổ văn bản', () => { const E = modelEntities.filter(Boolean), N = Math.min(E.length, 5000);
+    const out = ['Lệnh: DBLIST — ' + E.length + ' đối tượng' + (E.length > N ? ' (hiện ' + N + ' đối tượng đầu)' : '')]; for(let i = 0; i < N; i++) out.push(listOf(E[i], i)); textWin('DBLIST - ' + docNm(), out.join('\n'), 'DBLIST'); log('DBLIST: ' + E.length + ' đối tượng.'); });
+
+  /* ---------- CENTERMARK / CENTERLINE liên kết + CENTERRESET / CENTERDISASSOCIATE / CENTERREASSOCIATE ---------- */
+  const CEN = Object.assign({ exe: 0, lt: 'CENTER', lay: '.' }, lsGet('dvd:center', {}));
+  const cenSave = () => lsSet('dvd:center', CEN);
+  const cTxt = () => A.dimTxt ? A.dimTxt() : 2.5;
+  const cenExe = () => CEN.exe > 0 ? CEN.exe : cTxt() * 1.2;
+  const ltIf = n => { try{ if(!n || n === 'BYLAYER' || n === '.') return null; if(LTYPES[n]) return n; if(A.loadLT && A.loadLT(n)) return n; }catch(_){} return null; };
+  const segOf = e => [{ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }];
+  const near = (p, q, s) => Math.hypot(p.x - q.x, p.y - q.y) <= 1e-7 * (1 + s);
+  const simil = (P0, P1, Q0, Q1) => { const dx = P1.x - P0.x, dy = P1.y - P0.y, ex = Q1.x - Q0.x, ey = Q1.y - Q0.y, d2 = dx * dx + dy * dy || 1, a = (ex * dx + ey * dy) / d2, b = (ey * dx - ex * dy) / d2;
+    return { f: p => ({ x: Q0.x + a * (p.x - P0.x) - b * (p.y - P0.y), y: Q0.y + b * (p.x - P0.x) + a * (p.y - P0.y) }), k: Math.hypot(a, b) }; };
+  function cmLines(d){ const c = d.c, s = d.s, ext = d.r + d.e, L = [[c.x - s, c.y, c.x + s, c.y], [c.x, c.y - s, c.x, c.y + s]]; for(const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) L.push([c.x + dx * s * 1.4, c.y + dy * s * 1.4, c.x + dx * ext, c.y + dy * ext]); return L; }
+  function clLine(d){ const a = d.a; let b1 = d.b[0], b2 = d.b[1]; if((a[1].x - a[0].x) * (b2.x - b1.x) + (a[1].y - a[0].y) * (b2.y - b1.y) < 0){ const t = b1; b1 = b2; b2 = t; }
+    const p = { x: (a[0].x + b1.x) / 2, y: (a[0].y + b1.y) / 2 }, q = { x: (a[1].x + b2.x) / 2, y: (a[1].y + b2.y) / 2 }, L = Math.hypot(q.x - p.x, q.y - p.y) || 1, ux = (q.x - p.x) / L, uy = (q.y - p.y) / L;
+    return [p.x - ux * d.e, p.y - uy * d.e, q.x + ux * d.e, q.y + uy * d.e]; }
+  const cenLayer = () => { const n = String(CEN.lay || '.'); if(n === '.' || !n) return null; if(!A.layerNames().includes(n)) A.addLayer(n); return n; };
+  function cenProps(x){ A.newProps(x); const L = cenLayer(); if(L){ x.layer = L; x.bl = 1; x.col = A.layerHex(L); } return x; }
+  const setLn = (x, q) => { x.x1 = q[0]; x.y1 = q[1]; x.x2 = q[2]; x.y2 = q[3]; return x; };
+  function cmNew(o, keep){ const d = { c: { x: o.cx, y: o.cy }, r: o.r, s: Math.min(o.r * 0.25, cTxt() * 1.2), e: cenExe() }, gid = (keep && keep.grp) || A.newGroupId('CM'), lt = ltIf(CEN.lt);
+    return cmLines(d).map((q, i) => { const x = keep && keep.props ? Object.assign({ type: 'LINE' }, keep.props) : cenProps({ type: 'LINE' }); setLn(x, q); x.cmi = i; x.grp = gid; x.blk = '*CENTERMARK'; if(i >= 2 && lt && !(keep && keep.props)) x.lt = lt; if(i === 0) x.cmk = d; return x; }); }
+  function clNew(a, b){ const d = { a: segOf(a), b: segOf(b), e: cenExe() }, x = setLn(cenProps({ type: 'LINE' }), clLine(d)); const lt = ltIf(CEN.lt); if(lt) x.lt = lt; x.cln = d; x.grp = A.newGroupId('CL'); x.blk = '*CENTERLINE'; return x; }
+  // dời / xoay / co giãn dấu tâm, đường tâm: cập nhật dữ liệu theo nét thực tế · sửa đường tròn / đường thẳng gốc: dựng lại dấu tâm, đường tâm bám theo
+  function cenSync(w){ if(!w || w.type !== 'LINE') return;
+    if(w.cmk && w.cmi === 0){ const q = cmLines(w.cmk)[0], P = segOf(w); if(near(P[0], { x: q[0], y: q[1] }, Math.abs(q[0]) + Math.abs(q[1])) && near(P[1], { x: q[2], y: q[3] }, Math.abs(q[2]) + Math.abs(q[3]))) return;
+      const T = simil({ x: q[0], y: q[1] }, { x: q[2], y: q[3] }, P[0], P[1]), d = w.cmk = deep(w.cmk); d.c = T.f(d.c); d.r *= T.k; d.s *= T.k; d.e *= T.k; }
+    if(w.cln){ const q = clLine(w.cln), P = segOf(w); if(near(P[0], { x: q[0], y: q[1] }, Math.abs(q[0]) + Math.abs(q[1])) && near(P[1], { x: q[2], y: q[3] }, Math.abs(q[2]) + Math.abs(q[3]))) return;
+      const T = simil({ x: q[0], y: q[1] }, { x: q[2], y: q[3] }, P[0], P[1]), d = w.cln = deep(w.cln); d.a = d.a.map(T.f); d.b = d.b.map(T.f); d.e *= T.k; } }
+  function cenAssoc(ch){ if(!ch) return ch; for(const e of ch.add || []) cenSync(e); for(const x of ch.rep || []) if(x && x[1]) cenSync(x[1]);
+    const src = (ch.rep || []).filter(x => x && x[0] && x[1] && /^(CIRCLE|ARC|LINE)$/.test(x[0].type)); if(!src.length) return ch;
+    const car = modelEntities.filter(e => e && ((e.cmk && e.cmi === 0) || e.cln) && !(e.cmk || e.cln).na); if(!car.length) return ch;
+    const olds = new Set(); for(const x of ch.rep || []) if(x && x[0]) olds.add(x[0]); for(const e of ch.del || []) olds.add(e);
+    const extra = [];
+    for(const [o, w] of src){
+      if((o.type === 'CIRCLE' || o.type === 'ARC') && (w.type === 'CIRCLE' || w.type === 'ARC')){ const sc = Math.abs(o.cx) + Math.abs(o.cy) + o.r;
+        for(const k of car){ const d = k.cmk; if(!d || olds.has(k) || !near(d.c, { x: o.cx, y: o.cy }, sc) || Math.abs(d.r - o.r) > 1e-7 * (1 + o.r) || A.isLocked(k)) continue;
+          const nd = deep(d), kk = o.r > 0 ? w.r / o.r : 1; nd.c = { x: w.cx, y: w.cy }; nd.r = w.r; nd.s *= kk; const L = cmLines(nd);
+          for(const m of A.groupMembers(k.grp)){ if(m.cmi == null || olds.has(m) || !L[m.cmi]) continue; const mw = deep(m); delete mw.userAdded; setLn(mw, L[m.cmi]); if(m.cmi === 0) mw.cmk = nd; extra.push([m, mw]); olds.add(m); } } }
+      else if(o.type === 'LINE' && w.type === 'LINE'){ const os = segOf(o), sc = Math.abs(o.x1) + Math.abs(o.y1) + Math.abs(o.x2) + Math.abs(o.y2), same = s2 => (near(s2[0], os[0], sc) && near(s2[1], os[1], sc)) || (near(s2[0], os[1], sc) && near(s2[1], os[0], sc));
+        for(const k of car){ const d = k.cln; if(!d || olds.has(k) || A.isLocked(k)) continue; let nd = null; if(same(d.a)){ nd = deep(d); nd.a = segOf(w); } else if(same(d.b)){ nd = deep(d); nd.b = segOf(w); } if(!nd) continue;
+          const kw = setLn(deep(k), clLine(nd)); delete kw.userAdded; kw.cln = nd; extra.push([k, kw]); olds.add(k); } } }
+    return extra.length ? Object.assign({}, ch, { rep: (ch.rep || []).concat(extra) }) : ch; }
+  { const _c = A.commit; A.commit = function(ch, msg){ try{ ch = cenAssoc(ch); }catch(err){ console.warn('center assoc', err); } return _c.apply(this, [ch, msg].concat([].slice.call(arguments, 2))); }; }
+  ecmd(['CENTERMARK', 'CM', 'DIMCENTER', 'DCE'], 'Dấu tâm liên kết (Center Mark) cho đường tròn / cung — bám theo khi dời, đổi bán kính', async () => {
+    for(;;){ const r = await A.getEnt('Chọn đường tròn hoặc cung để thêm dấu tâm', { filter: e => e.type === 'CIRCLE' || e.type === 'ARC' }); const e = r.ent; if(!e) return; A.commit({ add: cmNew(e) }, 'Dấu tâm'); } });
+  ecmd(['CENTERLINE', 'CL'], 'Đường tâm liên kết (Centerline) giữa 2 đường thẳng — bám theo khi sửa đường', async () => {
+    const r1 = await A.getEnt('Chọn đường thứ nhất', { filter: e => e.type === 'LINE' && !e.cln && e.cmi == null }); if(!r1.ent) return;
+    const r2 = await A.getEnt('Chọn đường thứ hai', { filter: e => e.type === 'LINE' && e !== r1.ent && !e.cln && e.cmi == null }); if(!r2.ent) return; A.commit({ add: [clNew(r1.ent, r2.ent)] }, 'Đường tâm'); });
+  const isCen = e => e && e.type === 'LINE' && (e.cmi != null || e.cln || e.blk === '*CENTERMARK' || e.blk === '*CENTERLINE');
+  // gom các dấu tâm / đường tâm đã chọn thành { kind, carrier, members }
+  function cenItems(sel){ const out = [], seen = new Set(); for(const e of sel){ if(!isCen(e)) continue; const key = e.grp || e; if(seen.has(key)) continue; seen.add(key);
+      if(e.cln || e.blk === '*CENTERLINE') out.push({ k: 'cl', c: e, m: [e] }); else { const M = e.grp ? A.groupMembers(e.grp) : [e]; out.push({ k: 'cm', c: M.find(x => x.cmi === 0 && x.cmk) || null, m: M }); } } return out; }
+  async function cenSel(pr, cur){ let sel = cur && cur.pre && cur.pre.length ? cur.pre : null; if(cur) cur.pre = []; if(!sel){ const s = await A.getSel(pr, { filter: isCen }); sel = s.sel || []; } return cenItems(sel.filter(e => !A.isLocked(e))); }
+  ecmd(['CENTERDISASSOCIATE'], 'Bỏ liên kết dấu tâm / đường tâm với đối tượng gốc', async (_, cur) => { const I = (await cenSel('Chọn dấu tâm hoặc đường tâm', cur)).filter(x => x.c && !(x.c.cmk || x.c.cln).na); if(!I.length){ log('Không có dấu tâm / đường tâm liên kết nào.'); return; }
+    const rep = I.map(x => { const w = deep(x.c); delete w.userAdded; (w.cmk || w.cln).na = 1; return [x.c, w]; }); A.commit({ rep }, 'CENTERDISASSOCIATE: ' + rep.length); log('Đã bỏ liên kết ' + rep.length + ' dấu tâm / đường tâm.'); });
+  ecmd(['CENTERREASSOCIATE'], 'Liên kết lại dấu tâm / đường tâm với đường tròn, cung hoặc 2 đường thẳng', async () => {
+    const r = await A.getEnt('Chọn dấu tâm hoặc đường tâm', { filter: isCen }); if(!r.ent) return; const it = cenItems([r.ent])[0]; if(!it) return;
+    if(it.k === 'cm'){ const s = await A.getEnt('Chọn đường tròn hoặc cung', { filter: e => e.type === 'CIRCLE' || e.type === 'ARC' }); if(!s.ent) return; const p0 = it.m[0];
+      const N = cmNew(s.ent, { grp: p0.grp, props: { layer: p0.layer, col: p0.col, bl: p0.bl, lw: p0.lw } }); N.forEach((x, i) => { const o = it.m.find(m => m.cmi === i) || it.m[i]; if(o && o.lt) x.lt = o.lt; else if(i >= 2){ const lt = ltIf(CEN.lt); if(lt) x.lt = lt; } for(const k of Object.keys(x)) if(x[k] == null) delete x[k]; });
+      A.commit({ del: it.m, add: N }, 'CENTERREASSOCIATE'); log('Đã liên kết lại dấu tâm.'); return; }
+    const a = await A.getEnt('Chọn đường thứ nhất', { filter: e => e.type === 'LINE' && !isCen(e) }); if(!a.ent) return; const b = await A.getEnt('Chọn đường thứ hai', { filter: e => e.type === 'LINE' && e !== a.ent && !isCen(e) }); if(!b.ent) return;
+    const w = deep(it.c); delete w.userAdded; w.cln = { a: segOf(a.ent), b: segOf(b.ent), e: (it.c.cln && it.c.cln.e) || cenExe() }; setLn(w, clLine(w.cln)); w.blk = '*CENTERLINE'; if(!w.grp) w.grp = A.newGroupId('CL'); A.commit({ rep: [[it.c, w]] }, 'CENTERREASSOCIATE'); log('Đã liên kết lại đường tâm.'); });
+  ecmd(['CENTERRESET'], 'Đặt lại đường kéo dài của dấu tâm / đường tâm theo CENTEREXE', async (_, cur) => { const I = (await cenSel('Chọn dấu tâm hoặc đường tâm', cur)).filter(x => x.c); if(!I.length){ log('Không có dấu tâm / đường tâm nào.'); return; } const e0 = cenExe(), rep = [];
+    for(const x of I){ if(x.k === 'cl'){ const w = deep(x.c); delete w.userAdded; w.cln.e = e0; setLn(w, clLine(w.cln)); rep.push([x.c, w]); continue; } const d = deep(x.c.cmk); d.e = e0; const L = cmLines(d); for(const m of x.m){ if(m.cmi == null || !L[m.cmi]) continue; const w = deep(m); delete w.userAdded; setLn(w, L[m.cmi]); if(m.cmi === 0) w.cmk = d; rep.push([m, w]); } }
+    A.commit({ rep }, 'CENTERRESET'); log('CENTERRESET: đã đặt lại ' + I.length + ' dấu tâm / đường tâm.'); });
+  if(A.sysvar && A.sysvar.def){ A.sysvar.def('CENTEREXE', { d: 'Độ dài đường kéo dài của dấu tâm / đường tâm (0 = theo cao chữ kích thước)', get: () => CEN.exe || 0, set: v => { if(+v >= 0){ CEN.exe = +v; cenSave(); } } });
+    A.sysvar.def('CENTERLTYPE', { d: 'Kiểu nét của dấu tâm / đường tâm (CENTER, CENTER2…, "." = theo lớp)', s: 1, get: () => CEN.lt, set: v => { CEN.lt = String(v || '.').toUpperCase(); cenSave(); } });
+    A.sysvar.def('CENTERLAYER', { d: 'Lớp vẽ dấu tâm / đường tâm ("." = lớp hiện hành)', s: 1, get: () => CEN.lay, set: v => { CEN.lay = String(v || '.').trim() || '.'; cenSave(); } }); }
+
+  /* ---------- BSAVEAS · EXPORTLAYOUT · TREESTAT · COMPARECLOSE ---------- */
+  plain(['BSAVEAS'], 'Lưu khối đang sửa thành khối mới (Save Block As): tên, mô tả, lưu ra tệp bản vẽ', () => { const R = A.refeditLocal ? A.refeditLocal() : null; if(!R){ log('Không có khối nào đang sửa (BEDIT / REFEDIT).'); return; }
+    const N = blockNames(); const html = '<div class="acw" style="width:480px"><div class="acw-cols"><div class="c1">' + K.row('Tên khối:', K.txt('bsN', R.name + '_1')) + K.list('bsL', N.map(n => ({ v: n, t: n })), '', 'height:150px') + '</div><div class="c2"><div class="acw-lab">Xem trước</div>' + K.canvas('bsP', 150, 120) + '</div></div>' +
+      K.vrow('Mô tả:', '<textarea id="bsD" rows="2" style="width:100%;box-sizing:border-box"></textarea>') + K.chk('bsF', 'Lưu định nghĩa khối ra tệp bản vẽ (.dxf)', 0) + '</div>';
+    const d = A.dialog({ title: 'Lưu khối thành', cls: 'acw-free', help: 'BSAVEAS', html, ok: r => { const n = String(K.val(r, 'bsN') || '').trim(); if(!n || /[<>\/\\":;?*|,=`]/.test(n)){ say('Tên khối không hợp lệ.'); return false; }
+        const lib = A.blockLib(); if((lib[n] || N.includes(n)) && !confirm('Khối "' + n + '" đã có. Ghi đè định nghĩa trong thư viện?')) return false;
+        lib[n] = { base: { x: 0, y: 0 }, ents: deep(R.ents), desc: K.val(r, 'bsD') || '' }; A.saveBlockLib(lib); log('BSAVEAS: đã lưu khối "' + n + '" (' + R.ents.length + ' đối tượng) vào thư viện — khối "' + R.name + '" đang sửa giữ nguyên.');
+        if(K.on(r, 'bsF')){ try{ shareOrDownload(new Blob([entitiesToDXF(deep(R.ents))], { type: 'application/dxf' }), n + '.dxf', 'application/dxf'); }catch(err){ console.warn(err); } } } });
+    K.bindList(d.root.querySelector('#bsL'), v => { d.root.querySelector('#bsN').value = v; }); K.paint(d.root.querySelector('#bsP'), deep(R.ents).map(e => { e.col = e.col || '#cfd6e0'; return e; })); });
+  function clipSeg(p, q, r){ let t0 = 0, t1 = 1; const dx = q.x - p.x, dy = q.y - p.y, P = [-dx, dx, -dy, dy], Q = [p.x - r.x0, r.x1 - p.x, p.y - r.y0, r.y1 - p.y];
+    for(let i = 0; i < 4; i++){ if(P[i] === 0){ if(Q[i] < 0) return null; } else { const t = Q[i] / P[i]; if(P[i] < 0){ if(t > t1) return null; if(t > t0) t0 = t; } else { if(t < t0) return null; if(t < t1) t1 = t; } } }
+    return [{ x: p.x + t0 * dx, y: p.y + t0 * dy }, { x: p.x + t1 * dx, y: p.y + t1 * dy }]; }
+  plain(['EXPORTLAYOUT'], 'Xuất layout hiện hành ra bản vẽ mới ở không gian mô hình (DXF): khung tên, nét trong khung nhìn đã cắt theo khung', async () => {
+    let L = null; try{ L = dwgLayouts[currentLayout]; }catch(_){} if(!L || L.isModel){ log('EXPORTLAYOUT chỉ dùng được khi đang ở một layout (không phải Model).'); return; }
+    const out = []; let cut = 0;
+    for(const e of entities){ if(!e || e.vpf || (A.isHiddenE && A.isHiddenE(e))) continue; const c = e.clip; const w = deep(e); delete w.userAdded; delete w.clip;
+      if(!c){ out.push(w); continue; } const R = { x0: c.x, y0: c.y, x1: c.x + c.w, y1: c.y + c.h }, bb = entBBox(e); if(bb && (bb.x1 < R.x0 || bb.x0 > R.x1 || bb.y1 < R.y0 || bb.y0 > R.y1)) continue;
+      if(e.type === 'LINE'){ const s = clipSeg({ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }, R); if(!s) continue; w.x1 = s[0].x; w.y1 = s[0].y; w.x2 = s[1].x; w.y2 = s[1].y; out.push(w); cut++; continue; }
+      if(e.type === 'POLYLINE' && !(e.vertices || []).some(v => v.b)){ const V = e.vertices || [], n = V.length, M = e.closed ? n : n - 1; let run = null; const flush = () => { if(run && run.length > 1){ const p = deep(w); p.vertices = run; p.closed = false; out.push(p); } run = null; };
+        for(let i = 0; i < M; i++){ const s = clipSeg(V[i], V[(i + 1) % n], R); if(!s){ flush(); continue; } if(run && near(run[run.length - 1], s[0], 1)) run.push(s[1]); else { flush(); run = [s[0], s[1]]; } } flush(); cut++; continue; }
+      out.push(w); }
+    if(!out.length){ log('Layout không có đối tượng nhìn thấy.'); return; }
+    let txt; try{ txt = entitiesToDXF(out); }catch(err){ console.error(err); log('Không tạo được DXF.'); return; }
+    const base = docNm().replace(/\.[^.]+$/, ''); await shareOrDownload(new Blob([txt], { type: 'application/dxf' }), base + '_' + String(L.name || 'Layout').replace(/[\\/:*?"<>|]+/g, '_') + '.dxf', 'application/dxf');
+    log('EXPORTLAYOUT: đã xuất ' + out.length + ' đối tượng của layout "' + L.name + '" ra không gian mô hình (' + cut + ' nét trong khung nhìn đã cắt theo khung).'); });
+  plain(['TREESTAT'], 'Thống kê chỉ mục không gian của bản vẽ (số đối tượng, phạm vi, mật độ ô lưới)', () => { const E = entities.filter(Boolean); let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const B = [];
+    for(const e of E){ const b = entBBox(e); if(!b) continue; B.push(b); if(b.x0 < x0) x0 = b.x0; if(b.y0 < y0) y0 = b.y0; if(b.x1 > x1) x1 = b.x1; if(b.y1 > y1) y1 = b.y1; }
+    if(!B.length){ log('TREESTAT: bản vẽ trống.'); return; } const N = 16, cw = (x1 - x0) / N || 1, ch = (y1 - y0) / N || 1, cnt = new Array(N * N).fill(0);
+    for(const b of B){ const i0 = Math.max(0, Math.min(N - 1, Math.floor((b.x0 - x0) / cw))), i1 = Math.max(0, Math.min(N - 1, Math.floor((b.x1 - x0) / cw))), j0 = Math.max(0, Math.min(N - 1, Math.floor((b.y0 - y0) / ch))), j1 = Math.max(0, Math.min(N - 1, Math.floor((b.y1 - y0) / ch))); for(let i = i0; i <= i1; i++) for(let j = j0; j <= j1; j++) cnt[j * N + i]++; }
+    const used = cnt.filter(v => v > 0), mx = Math.max(...cnt), avg = used.reduce((a, b) => a + b, 0) / (used.length || 1); const T = new Map(); for(const e of E) T.set(e.type, (T.get(e.type) || 0) + 1);
+    const lines = ['TREESTAT — ' + docNm(), 'Không gian: ' + (modelEntities === entities ? 'Mô hình' : 'Layout') + ' · ' + E.length + ' đối tượng (' + B.length + ' có phạm vi)', 'Phạm vi: (' + r6(x0) + ', ' + r6(y0) + ') → (' + r6(x1) + ', ' + r6(y1) + ')',
+      'Lưới chỉ mục ' + N + '×' + N + ': ' + used.length + ' ô có đối tượng, trung bình ' + r6(avg) + ' / ô, nhiều nhất ' + mx + ' / ô', 'Theo loại: ' + [...T.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => k + ' ' + v).join(', ')];
+    for(const l of lines) log(l); if(DVDCmd.toggleHistory) DVDCmd.toggleHistory(true); });
+  plain(['COMPARECLOSE'], 'Thoát chế độ so sánh bản vẽ (DWG Compare)', () => { let on = false; try{ on = !!(compareOn || cmpA || cmpB); compareOn = false; cmpA = null; cmpB = null; cmpName = ''; }catch(_){} try{ draw(); }catch(_){} log(on ? 'Đã thoát so sánh bản vẽ.' : 'Không ở chế độ so sánh.'); });
 })();

@@ -206,16 +206,14 @@
   }
   plain(['SAVEDWG', 'DWGOUT'], 'Lưu ra file DWG: DWG 2000 gốc (không cần ODA) hoặc DWG 2004–2018 qua ODA File Converter', saveDWG);
   plain(['DWGSERVER'], 'Cài đặt lưu DWG: DWG 2000 gốc hoặc phiên bản mới hơn qua ODA File Converter / máy chủ chuyển đổi', async () => {
-    const c = cfg(), dk = DK(); let oda = null; if(dk && dk.odaInfo){ try{ oda = await dk.odaInfo(); }catch(_){} }
-    A.dialog({ title: 'Lưu DWG (DWGSERVER)', okText: 'Lưu cài đặt', html:
-      '<label class="dvd-field">Phiên bản DWG</label><select id="dwV" class="dvd-sel" style="width:100%">' + DWG_VERS.map(v => '<option value="' + v + '"' + (v === c.ver ? ' selected' : '') + '>' + VLAB(v) + '</option>').join('') + '</select>' +
-      '<p class="dvd-note">DWG 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (AutoCAD 2000 trở lên đều mở được). Phiên bản mới hơn cần ODA File Converter (hoặc máy chủ) — nếu không có, DVDCAD tự ghi DWG 2000.</p>' +
-      (dk ? '<label class="dvd-field">ODA File Converter trên máy</label><div style="display:flex;gap:6px;align-items:center"><input id="dwO" readonly style="flex:1" value="' + esc(oda && oda.path || '') + '" placeholder="Chưa tìm thấy — bấm Chọn…"><button type="button" id="dwOp">Chọn…</button></div>' +
-        '<p class="dvd-note">Bản Windows tự chuyển DXF → DWG bằng ODA File Converter (miễn phí, tải tại opendesign.com). Không cần mạng.</p>' : '') +
-      '<label class="dvd-field">Máy chủ chuyển đổi (tuỳ chọn)</label><input id="dwU" style="width:100%" placeholder="http://localhost:8787/convert" value="' + esc(c.url) + '">' +
-      '<p class="dvd-note">Máy chủ: chạy <b>node server-dwg.js</b> trên máy có ODA File Converter (xem hướng dẫn trong file).</p><div><button type="button" id="dwT">Thử kết nối</button> <span id="dwS"></span></div>',
+    const c = cfg(), dk = DK(), K = A.acw; let oda = null; if(dk && dk.odaInfo){ try{ oda = await dk.odaInfo(); }catch(_){} }
+    // bố cục hộp thoại kiểu AutoCAD: nhóm "Định dạng lưu", "Bộ chuyển đổi trên máy", "Máy chủ chuyển đổi"
+    const html = '<div class="acw" style="width:500px">' +
+      K.grp('Định dạng lưu', K.row('Phiên bản DWG:', K.sel('dwV', DWG_VERS.map(v => [v, VLAB(v)]), c.ver)) + '<div class="acw-note" style="white-space:normal">DWG 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (AutoCAD 2000 trở lên đều mở được). Phiên bản mới hơn cần ODA File Converter (hoặc máy chủ) — nếu không có, DVDCAD tự ghi DWG 2000.</div>') +
+      (dk ? K.grp('ODA File Converter trên máy', '<div class="acw-row">' + K.txt('dwO', oda && oda.path || '', { dis: 1, ph: 'Chưa tìm thấy — bấm Chọn…' }) + K.btn('dwOp', 'Chọn…') + '</div><div class="acw-note" style="white-space:normal">Bản Windows tự chuyển DXF → DWG bằng ODA File Converter (miễn phí, tải tại opendesign.com). Không cần mạng.</div>') : '') +
+      K.grp('Máy chủ chuyển đổi (tuỳ chọn)', K.row('Địa chỉ:', K.txt('dwU', c.url, { ph: 'http://localhost:8787/convert' })) + '<div class="acw-row">' + K.btn('dwT', 'Thử kết nối') + '<span id="dwS" style="margin-left:6px"></span></div><div class="acw-note" style="white-space:normal">Máy chủ: chạy node server-dwg.js trên máy có ODA File Converter (xem hướng dẫn trong file).</div>') + '</div>';
+    A.dialog({ title: 'Lưu DWG', cls: 'acw-free', help: 'DWGSERVER', html, okText: 'Lưu cài đặt',
       onOpen: root => {
-        root.querySelectorAll('input,select').forEach(i => i.addEventListener('keydown', e => e.stopPropagation()));
         const op = root.querySelector('#dwOp'); if(op) op.onclick = async () => { const r = await dk.odaPick(); if(r && r.path) root.querySelector('#dwO').value = r.path; };
         root.querySelector('#dwT').onclick = async () => { const s = root.querySelector('#dwS'), u = root.querySelector('#dwU').value.trim(); if(!u){ s.textContent = 'Chưa nhập địa chỉ.'; return; }
           s.textContent = 'Đang thử…'; try{ const r = await fetch(u, { method: 'GET' }); s.textContent = r.ok ? '✓ Máy chủ đang chạy' : 'Máy chủ trả lỗi ' + r.status; }catch(err){ s.textContent = '✗ Không kết nối được'; } };

@@ -1,4 +1,4 @@
-# DVDCAD v5o — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5p — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,32 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Lệnh mới và hộp thoại như AutoCAD 2027 (v5p)
+- **HATCH / HATCHEDIT** (hộp Hatch and Gradient) đủ các mục trước đây còn mờ:
+  - Loại **Định sẵn / Tự định nghĩa (_USER)**: khoảng cách nét và **Hai chiều** (lưới ô vuông) cho mẫu tự định nghĩa.
+  - **Gốc mẫu**: Dùng gốc hiện hành, hoặc Chỉ định gốc mới (bấm điểm, hay Mặc định theo phạm vi biên: dưới trái / dưới phải / trên phải / trên trái / tâm), Lưu làm gốc mặc định.
+  - Tuỳ chọn: **Chú thích theo tỉ lệ**, **Liên kết** với biên, **Tạo hatch riêng** cho từng vùng, **Thứ tự vẽ** (Không gán / Dưới cùng / Trên cùng / Sau biên / Trước biên).
+  - Khi sửa hatch: thêm biên (bấm điểm / chọn đối tượng), **Bỏ biên** (đảo), **Dựng lại biên** (tạo đa tuyến biên, hỏi có liên kết không).
+  - **HATCHSETORIGIN** (HSO) đặt lại gốc mẫu cho hatch đã chọn. Biến mới: HPORIGIN, HPNAME, HPSCALE, HPANG, HPSPACE, HPDOUBLE, HPASSOC, HPANNOTATIVE, HPSEPARATE, HPDRAWORDER.
+- **Bảng**: kiểu ô có **viền đôi** (Double line + Spacing trong tab Đường viền của TABLESTYLE).
+  - **TINSERT** chèn khối vào ô bảng: tên khối, xem trước, tỉ lệ hoặc **Tự khớp**, góc, căn lề trong ô; khối đi theo bảng khi sửa / dời bảng; "Bỏ khối khỏi ô".
+- **PLOTSTAMP** (hộp Plot Stamp): trường dấu in (tên bản vẽ, layout, ngày giờ, tên đăng nhập, thiết bị, khổ giấy, tỉ lệ in), 2 **trường người dùng** (Thêm / Sửa), tệp tham số **.pss** (Nạp / Lưu thành), xem trước vị trí.
+  - **Nâng cao…**: vị trí (4 góc), hướng ngang / dọc, dấu in lộn ngược, dời X / Y theo vùng in được hoặc mép giấy, phông, cao chữ, một dòng, đơn vị (mm / inch / pixel), tệp nhật ký in (tải / xoá).
+  - Hộp **PLOT**: bật **Bật dấu in** (nút ⚙ mở PLOTSTAMP) và **In lộn ngược** (xoay bản in 180°). Biến **LOGINNAME**.
+- **STANDARDS** (Configure Standards): gắn tệp chuẩn **DXF** (hoặc .dws lưu dạng DXF) với bản vẽ, + Thêm / − Bỏ / ↑ ↓ (tệp trên được ưu tiên khi trùng tên), mô tả tệp; tab **Trình cắm**: Kiểu kích thước, Lớp, Kiểu nét, Kiểu chữ.
+  - **Cài đặt…**: tắt thông báo / hiện cảnh báo khi có vi phạm / biểu tượng ⚖ trên thanh trạng thái; tự động sửa thuộc tính không chuẩn; hiện lỗi đã bỏ qua; tệp chuẩn ưu tiên để thay thế.
+  - **CHECKSTANDARDS** (CHK): từng **Vấn đề**, danh sách **Thay bằng** (✓ = gợi ý), **Xem trước thay đổi** (thuộc tính / giá trị hiện tại / giá trị chuẩn), **Sửa lỗi**, **Lỗi tiếp theo**, **Đánh dấu bỏ qua**, bảng kết quả khi xong.
+  - Sửa được: thuộc tính lớp (màu, kiểu nét, bề rộng nét), lớp không chuẩn (chuyển đối tượng sang lớp chuẩn rồi xoá lớp cũ), kiểu nét (thay / định nghĩa lại), kiểu chữ (thay / sửa phông, hệ số rộng), kiểu kích thước (thay / sửa và dựng lại kích thước).
+- **STYLESMANAGER** (Kiểu in): các bảng .ctb dạng biểu tượng + **Trình thêm bảng kiểu in** (bắt đầu từ đầu / dùng bảng có sẵn / mẫu / nhập .ctb của AutoCAD), Sửa, Nhập / Xuất .ctb, Đổi tên, Xoá.
+  - **Trình sửa bảng kiểu in** (Plot Style Table Editor): tab Tổng quát (mô tả, thông tin tệp), **Dạng bảng** (mỗi cột một kiểu, bấm ô để sửa), **Dạng biểu mẫu** (chọn nhiều kiểu bằng Ctrl / Shift; màu, **chuyển xám**, độ đậm, bề rộng nét, mô tả; Lưu thành… .ctb). Chuyển xám áp dụng khi in và ghi vào tệp .ctb.
+- **VISUALSTYLES** (Visual Styles Manager, bảng nổi): ảnh mẫu 2D khung dây / Khung dây / Khuất nét / Thực tế / Tô bóng / Tô bóng + cạnh / Xuyên thấu, thuộc tính, Áp dụng cho khung nhìn hiện hành, Tạo kiểu mới, Xoá kiểu.
+  - **VSCURRENT** (VS, SHADEMODE) hỏi theo dòng lệnh như AutoCAD; **VSSAVE** lưu kiểu hiện hành thành kiểu có tên.
+- **CENTERMARK / CENTERLINE** giờ là đối tượng **liên kết**: dời, đổi bán kính đường tròn / sửa đường thẳng gốc thì dấu tâm, đường tâm bám theo; dời / xoay / co giãn cùng nhau vẫn giữ liên kết.
+  - **CENTERDISASSOCIATE**, **CENTERREASSOCIATE**, **CENTERRESET**; biến **CENTEREXE**, **CENTERLTYPE**, **CENTERLAYER**.
+- Hộp thoại làm lại theo bố cục AutoCAD: **PTYPE** (Point Style), **ATTACH** (chọn tệp DWG / DXF / ảnh / PDF rồi mở lệnh gắn tương ứng), **REINIT** (Re-initialization: nạp lại acad.pgp), **TEXTSCR / HISTORY** (Cửa sổ văn bản: sao chép, dán vào dòng lệnh, tìm), **DBLIST** (liệt kê mọi đối tượng vào cửa sổ văn bản), **DWGSERVER**, **ABOUT**, **SPELLBROWSER**.
+- Lệnh nhỏ: **BSAVEAS** (lưu khối đang sửa thành khối mới, có thể lưu ra .dxf), **EXPORTLAYOUT** (xuất layout ra không gian mô hình của bản vẽ mới, nét trong khung nhìn cắt theo khung), **TREESTAT**, **COMPARECLOSE**.
+- Chưa làm: **CHSPACE** — layout của DVDCAD được dựng từ khung nhìn (không có đối tượng riêng ở không gian giấy để chuyển qua lại).
 
 ## Lệnh mới và hộp thoại như AutoCAD 2027 (v5o)
 - **TABLESTYLE** (hộp Table Style): danh sách kiểu, xem trước, Đặt hiện hành / Mới… / Sửa… / Xoá (không xoá được kiểu đang dùng).

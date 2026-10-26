@@ -6,6 +6,16 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5p: hatch đủ tuỳ chọn, TINSERT, PLOTSTAMP, STANDARDS / CHECKSTANDARDS, Plot Style Table Editor, dấu tâm liên kết
+- Hatch: `PATS._USER` (mẫu tự định nghĩa: `e.usp` khoảng cách, `e.udbl` hai chiều), gốc mẫu `e.porg` (`A.hatchOrigin`, HATCHSETORIGIN), `e.hanno` chú thích, `e.nassoc` không liên kết, thứ tự vẽ (`A.hatchDrawOrder`). DXF ghi đúng mã 76 / 41 / 77 cho mẫu _USER.
+- Bảng: viền `{ dbl, sp }` (viền đôi) trong kiểu ô; khối trong ô `tbld.cb['r,c'] = { name, src, sc, fit, rot, al }` (TINSERT), dựng lại cùng bảng (`_keep`).
+- In: `A.plotPost(R, forPreview)` chạy sau `plotRender` — in lộn ngược (`PS.ud`) và dấu in (`PS.stamp`, cài đặt `dvd:plotstamp`, nhật ký `dvd:plotlog`). Biến LOGINNAME.
+- Chuẩn CAD: tệp chuẩn theo bản vẽ ở `dvd:standards` (bảng LAYER / LTYPE / STYLE / DIMSTYLE đọc từ DXF bằng `A.dxfStdTables`), cài đặt `dvd:stdset`, lỗi bỏ qua `dvd:stdign`; `A.stdProblems()` liệt kê lỗi, biểu tượng ⚖ trên thanh trạng thái.
+- Kiểu in .ctb: thêm thuộc tính `g` (chuyển xám, `color_policy` bit 2) và `d` (mô tả kiểu) khi đọc / ghi .ctb; Plot Style Table Editor mới (`A.plotStyleEditor`).
+- Dấu tâm: đường số 0 của nhóm `*CENTERMARK` giữ `cmk = { c, r, s, e, na }` (+ `cmi` thứ tự nét); đường tâm `*CENTERLINE` giữ `cln = { a, b, e, na }`. Gói `A.commit` dựng lại khi đối tượng gốc đổi, cập nhật dữ liệu khi dấu tâm bị dời / xoay / co giãn.
+- `A.runWithFile(cmd, file)` chạy một lệnh có hộp chọn tệp với tệp đã chọn sẵn (ATTACH). `A.refeditLocal()` lấy hình khối đang sửa ở toạ độ khối (BSAVEAS). `A.textWin(title, text)` cửa sổ văn bản (TEXTSCR, DBLIST).
+- Kiểu hiển thị riêng (VSSAVE / Tạo kiểu mới) ở `dvd:vsuser`. Mọi hộp thoại còn kiểu cũ đã chuyển sang `A.acw`.
+
 ## v5o: lệnh mới và hộp thoại như AutoCAD 2027 (TABLESTYLE, COUNT, Action Recorder, hyperlink…)
 - Tệp mới `dvd-acad-dlg2.js` (nạp sau `dvd-acad-dlg.js`), dùng bộ dựng hộp thoại `A.acw`.
 - Kiểu bảng: thư viện `A.TBS` (localStorage `dvd:tblstyle`). Bảng mang ảnh chụp kiểu `tbld.tss` (+ `ts` tên kiểu, `rs` kiểu ô từng hàng, `cs` kiểu ô từng ô, `tsf` hệ số SCALE).

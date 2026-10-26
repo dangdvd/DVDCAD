@@ -56,7 +56,7 @@
     for(const m of blocks){ const idx = +m[1]; if(idx > 254) continue; const aci = idx + 1; const b = m[2]; const num = k => { const r = new RegExp('\\b' + k + '\\s*=\\s*(-?[\\d.]+)').exec(b); return r ? parseFloat(r[1]) : null; };
       const o = {}; const c = num('color'); if(c != null){ const u = c >>> 0; if((u >>> 24) !== 0xC3) o.c = '#' + (u & 0xFFFFFF).toString(16).padStart(6, '0'); }
       const li = num('lineweight'); if(li != null && li !== 255 && li < 255){ const mm = lwt[li] != null ? lwt[li] : null; if(mm != null) o.lw = Math.round(mm * 100); }
-      const sc = num('screen'); if(sc != null && sc < 100) o.sc = Math.max(0, sc);
+      const sc = num('screen'); if(sc != null && sc < 100) o.sc = Math.max(0, sc); const cp = num('color_policy'); if(cp != null && (cp & 2)) o.g = 1; const ds = /\bdescription="?([^\r\n]*)/.exec(b); if(ds && ds[1].replace(/"$/, '').trim()) o.d = ds[1].replace(/"$/, '').trim();
       if(Object.keys(o).length) st[aci] = o; }
     return { st, desc: desc.replace(/^"|"$/g, ''), src: 'ctb' };
   }
@@ -70,7 +70,7 @@
     L.push('}', 'plot_style{');
     for(let i = 0; i < 255; i++){ const st = T.st[i + 1] || {}; let col = -1006632961; if(st.c){ const n = parseInt(st.c.slice(1), 16) & 0xFFFFFF; col = (0xC2000000 | n) | 0; }
       let li = 255; if(st.lw > 0){ let bi = 0, bd = Infinity; LWMM.forEach((mm, k) => { const d = Math.abs(mm * 100 - st.lw); if(d < bd){ bd = d; bi = k; } }); li = bi; }
-      L.push(' ' + i + '{', '  name="Color_' + (i + 1), '  localized_name="Color_' + (i + 1), '  description="', '  color=' + col, '  mode_color=' + col, '  color_policy=1', '  physical_pen_number=0', '  virtual_pen_number=0', '  screen=' + Math.round(st.sc != null ? st.sc : 100), '  linepattern_size=0.5', '  linetype=31', '  adaptive_linetype=TRUE', '  lineweight=' + li, '  fill_style=73', '  end_style=4', '  join_style=5', ' }'); }
+      L.push(' ' + i + '{', '  name="Color_' + (i + 1), '  localized_name="Color_' + (i + 1), '  description="' + String(st.d || '').replace(/[\r\n"]/g, ' '), '  color=' + col, '  mode_color=' + col, '  color_policy=' + (1 | (st.g ? 2 : 0)), '  physical_pen_number=0', '  virtual_pen_number=0', '  screen=' + Math.round(st.sc != null ? st.sc : 100), '  linepattern_size=0.5', '  linetype=31', '  adaptive_linetype=TRUE', '  lineweight=' + li, '  fill_style=73', '  end_style=4', '  join_style=5', ' }'); }
     L.push('}', 'custom_lineweight_table{'); LWMM.forEach((mm, k) => L.push(' ' + k + '=' + mm.toFixed(2))); L.push('}');
     return L.join('\n') + '\n';
   }

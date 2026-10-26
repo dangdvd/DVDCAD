@@ -1612,15 +1612,22 @@
     BRICK: { name: 'BRICK (gạch xây)', brick: { h: 6.35, w: 12.7 } },
     DOTS: { name: 'DOTS (chấm)', dots: 3.175 },
     'AR-CONC': { name: 'AR-CONC (bê tông)', conc: 6 },
-    EARTH: { name: 'EARTH (đất)', earth: 6.35 }
+    EARTH: { name: 'EARTH (đất)', earth: 6.35 },
+    _USER: { name: 'Tự định nghĩa (_USER)', user: true }
   };
   const HS = A.HS = Object.assign({ pat: 'ANSI31', scale: 0, ang: 0, col: '' }, (() => { try{ return JSON.parse(localStorage.getItem('dvd:hatch') || '{}'); }catch(_){ return {}; } })());
   const hsSave = () => { try{ localStorage.setItem('dvd:hatch', JSON.stringify(HS)); }catch(_){} };
   A.setHatchPattern = p => { if(!PATS[p]) return false; HS.pat = p; HS.gmode = 0; hsSave(); return true; };
   function hash01(i, j, k){ let h = (i * 374761393 + j * 668265263 + k * 1274126177) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
   // đoạn thẳng mẫu (toạ độ thế giới) trong hộp bb — dùng cả để vẽ lẫn xuất DXF
+  // tỉ lệ mẫu thực: hatch chú thích (e.hanno) nhân theo tỉ lệ chú thích hiện hành
+  const hatchSc = e => (e.psc || 1) * (e.hanno && A.ANNO && A.ANNO.N > 0 ? A.ANNO.N : 1);
+  A.hatchSc = hatchSc;
   function patternSegs(e, bb, maxN){
-    const P = PATS[e.pat] || PATS.ANSI31; const sc = e.psc || 1, rot = (e.pang || 0) * D2R; const segs = [], dots = [];
+    if(e.porg && (e.porg.x || e.porg.y)){ const o = e.porg, r = patternSegs(Object.assign({}, e, { porg: null }), { x0: bb.x0 - o.x, y0: bb.y0 - o.y, x1: bb.x1 - o.x, y1: bb.y1 - o.y }, maxN); if(!r) return r;   // gốc mẫu (HATCHSETORIGIN)
+      return { segs: r.segs.map(s => [s[0] + o.x, s[1] + o.y, s[2] + o.x, s[3] + o.y]), dots: r.dots.map(d => [d[0] + o.x, d[1] + o.y]) }; }
+    if(e.pat === '_USER'){ const sp = (e.usp > 0 ? e.usp : 1) * (e.hanno && A.ANNO && A.ANNO.N > 0 ? A.ANNO.N : 1); e = Object.assign({}, e, { pat: '_UFAM', psc: 1, hanno: 0, _fam: [{ a: 0, sp }].concat(e.udbl ? [{ a: 90, sp }] : []) }); }
+    const P = e._fam ? { fam: e._fam } : (PATS[e.pat] || PATS.ANSI31); const sc = e._fam ? 1 : hatchSc(e), rot = (e.pang || 0) * D2R; const segs = [], dots = [];
     const diag = Math.hypot(bb.x1 - bb.x0, bb.y1 - bb.y0), cx = (bb.x0 + bb.x1) / 2, cy = (bb.y0 + bb.y1) / 2;
     const family = (aDeg, sp, off) => { const a = aDeg * D2R + rot, ux = Math.cos(a), uy = Math.sin(a), nx = -uy, ny = ux; const S = sp * sc; if(!(S > 0)) return true;
       const c0 = cx * nx + cy * ny; const k0 = Math.floor((c0 - diag / 2 - (off || 0) * sc) / S), k1 = Math.ceil((c0 + diag / 2 - (off || 0) * sc) / S);
@@ -1670,7 +1677,7 @@
     const vb = viewWorldAABB(), hb = entBBox(e); if(!hb){ ctx.restore(); return; }
     const bb = { x0: Math.max(vb.minX, hb.x0), y0: Math.max(vb.minY, hb.y0), x1: Math.min(vb.maxX, hb.x1), y1: Math.min(vb.maxY, hb.y1) };
     if(bb.x1 <= bb.x0 || bb.y1 <= bb.y0){ ctx.restore(); return; }
-    const P = PATS[e.pat] || PATS.ANSI31; const base = (P.fam ? Math.min(...P.fam.map(f => f.sp)) : P.brick ? P.brick.h : (P.dots || P.conc || P.earth)) * (e.psc || 1);
+    const P = PATS[e.pat] || PATS.ANSI31; const base = e.pat === '_USER' ? (e.usp > 0 ? e.usp : 1) * (e.hanno && A.ANNO ? A.ANNO.N : 1) : (P.fam ? Math.min(...P.fam.map(f => f.sp)) : P.brick ? P.brick.h : (P.dots || P.conc || P.earth)) * hatchSc(e);
     if(base * view.scale < 2.2){ ctx.fillStyle = hexA(col, 0.35); ctx.fill('evenodd'); ctx.restore(); return; }   // quá dày -> tô mờ
     const r = patternSegs(e, bb, 3000);
     if(!r){ ctx.fillStyle = hexA(col, 0.35); ctx.fill('evenodd'); ctx.restore(); return; }
@@ -1780,12 +1787,17 @@
     return [1, 2, 2.5, 5, 10].map(m => m * pw).find(v => v >= raw) || 10 * pw;
   }
   function makeHatch(loops){
-    const sc = niceScale(loops); if(!(HS.scale > 0)){ HS.scale = sc; hsSave(); log('Tỉ lệ mẫu tự chọn = ' + sc + ' (đổi bằng tuỳ chọn Tỉ lệ)'); }
+    const sc = niceScale(loops); if(!(HS.scale > 0) && HS.pat !== '_USER'){ HS.scale = sc; hsSave(); log('Tỉ lệ mẫu tự chọn = ' + sc + ' (đổi bằng tuỳ chọn Tỉ lệ)'); }
     const e = A.newProps({ type: 'HATCH', loops: loops.map(l => l.map(p => ({ x: p.x, y: p.y }))), solid: HS.pat === 'SOLID', pat: HS.pat, psc: HS.scale, pang: HS.ang || 0 });
     if(HS.col){ e.col = HS.col; delete e.bl; }
+    if(HS.pat === '_USER'){ e.usp = HS.usp > 0 ? HS.usp : 1; if(HS.udbl) e.udbl = 1; e.psc = 1; }
+    if(HS.anno) e.hanno = 1; if(HS.noassoc) e.nassoc = 1;
+    { const o = A.hatchOrigin ? A.hatchOrigin(loops) : null; if(o) e.porg = o; }
+    if(A.hatchDrawOrder) A.hatchDrawOrder(e);
     if(HS.gmode && HS.grad){ e.solid = true; e.grad = Object.assign({}, HS.grad); e.col = HS.grad.c1; delete e.bl; }   // Gradient (GRADIENT / tab Gradient)
     return e;
   }
+  A.hatchClosedLoop = e => hatchClosedLoop(e);
   function hatchClosedLoop(e){
     const c = G.curveOf(e); if(!c) return null;
     if(c.pieces[0] && c.pieces[0].t === 'a'){ const p = c.pieces[0], k = 96, o = []; for(let i = 0; i < k; i++){ const t = p.a0 + p.sw * i / k; o.push({ x: p.cx + p.r * Math.cos(t), y: p.cy + p.r * Math.sin(t) }); } return o; }
@@ -1808,6 +1820,7 @@
       if(r.kw === 'S'){
         const s = await A.getSel('Chọn đường kín (đa tuyến kín, tròn, elip)', { pre: false, filter: e => { const c = G.curveOf(e); return !!(c && c.closed && e.type !== 'HATCH'); } });
         const loops = (s.sel || []).map(hatchClosedLoop).filter(Boolean); if(!loops.length){ log('Không có đường kín.'); continue; }
+        if(HS.sep && loops.length > 1){ A.commit({ add: loops.map(l => makeHatch([l])) }, 'Đã tô ' + loops.length + ' hatch riêng'); continue; }   // Tạo hatch riêng từng vùng
         A.commit({ add: [makeHatch(loops)] }, 'Đã tô ' + loops.length + ' vùng'); continue;
       }
       if(!r.pt) return;
@@ -1819,7 +1832,7 @@
   }
   function openHatchDialog(){
     return new Promise(res => {
-      const keys = Object.keys(PATS);
+      const keys = Object.keys(PATS).filter(k => !PATS[k].user);
       A.dialog({ title: 'Cài đặt Hatch', wide: true, html:
         '<div class="dvd-pats">' + keys.map(k => '<button type="button" class="dvd-pat' + (k === HS.pat ? ' on' : '') + '" data-p="' + k + '"><canvas width="64" height="44"></canvas><span>' + escapeHtml(PATS[k].name) + '</span></button>').join('') + '</div>' +
         '<div class="dvd-form">' + row('Tỉ lệ mẫu (0 = tự động)', '<input id="hsScale" type="number" step="any" value="' + (HS.scale || 0) + '">') + row('Góc (độ)', '<input id="hsAng" type="number" step="any" value="' + (HS.ang || 0) + '">') +
