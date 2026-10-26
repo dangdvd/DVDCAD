@@ -239,7 +239,7 @@
     const sv = { ctx, rtw: _RTW, rth: _RTH, dpr: window.devicePixelRatio, plot: plotMode, lw: showLW, style: _plotStyle, cpm: _plotCssPerMM, v: { scale: view.scale, offsetX: view.offsetX, offsetY: view.offsetY, rot: view.rot }, grid: window.drawGrid, sb: window.drawScaleBar };
     _exporting = true; ctx = octx; _RTW = Wmm * CSS_PER_MM; _RTH = Hmm * CSS_PER_MM; view.rot = 0; plotMode = true;
     _plotStyle = PS.style === 'color' ? '' : PS.style; showLW = !!PS.lw; _plotCssPerMM = PS.lw ? CSS_PER_MM : 0;
-    window.drawGrid = () => {}; window.drawScaleBar = () => {};
+    window.drawGrid = () => { try{ if(!LYT() && A.geomapPlotDraw) A.geomapPlotDraw(); }catch(_){} }; window.drawScaleBar = () => {};   // không in lưới; bản đồ nền (GEOMAP) đã chụp cho vùng in thì in dưới bản vẽ
     const _oh = OBJ_HIDE; if(LYT()){ const h = new Set(OBJ_HIDE || []); for(const e of entities) if(e.vpf) h.add(e); OBJ_HIDE = h; }   // khung nhìn & mép giấy: không in
     try{
       Object.defineProperty(window, 'devicePixelRatio', { value: dpr, configurable: true });
@@ -276,11 +276,15 @@
     const fire = () => { try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(_){ say('Trình duyệt không cho in trực tiếp — hãy xuất PDF.'); } setTimeout(() => { try{ fr.remove(); }catch(_){} }, 2000); };
     const im = d.querySelector('img'); if(im.complete) setTimeout(fire, 150); else im.onload = () => setTimeout(fire, 120);
   }
+  // bản đồ nền đang hiện (GEOMAP, Model): tải ô bản đồ cho vùng in trước khi vẽ (độ phân giải ~200 dpi trên giấy, tối đa 4096 điểm ảnh)
+  async function mapPrep(){ if(LYT() || !A.geomapPlotPrep) return false; try{ const G = A.plotGeom(), mm = Math.max(G.area.x1 - G.area.x0, G.area.y1 - G.area.y0) * G.k; return await A.geomapPlotPrep(G.area, Math.round(mm / 25.4 * 200)); }catch(_){ return false; } }
+  A.plotMapPrep = mapPrep;
   async function doPlot(fmt){
     say('Đang tạo bản in…'); await new Promise(r => setTimeout(r, 40));
     if(fmt === 'plt'){ try{ const txt = A.hpglPlot ? A.hpglPlot() : null; if(!txt){ say('Không tạo được tệp HPGL/2.'); return; } const nm = ((typeof exportFilename === 'function') ? exportFilename('pdf') : 'banve.pdf').replace(/\.pdf$/i, '.plt');
         await shareOrDownload(new Blob([txt.data], { type: 'application/vnd.hp-hpgl' }), nm, 'application/vnd.hp-hpgl'); log('Đã in ra ' + nm + ' (HPGL/2, ' + txt.pens + ' bút, khổ ' + PS.paper + ').'); }catch(err){ console.error(err); say('Không tạo được tệp HPGL/2.'); } return; }
     try{
+      await mapPrep();
       const r = plotRender(fmt === 'png' ? 200 : 300, false);
       const name = (typeof exportFilename === 'function') ? exportFilename(fmt === 'png' ? 'png' : 'pdf') : 'banve.' + fmt;
       if(fmt === 'pdf'){ const blob = await canvasToPDFPaper(r.canvas, r.pagePt); await shareOrDownload(blob, name, 'application/pdf'); }
@@ -318,8 +322,8 @@
       ok: () => { read(); if(PS.area === 'window' && !PS.win){ say('Chưa chọn khung in.'); return false; } const f = g('plDev').value; setTimeout(() => doPlot(f), 0); } });
     const root = d.root; root.querySelector('.modal').classList.add('pl-modal');
     const g = id => root.querySelector('#' + id);
-    const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; const dep = A.plotDepth ? A.plotDepth(PS.dev) : 'tc', depT = dep === 'tc' ? '' : ' · ' + ((A.PLOT_DEPTHS || []).find(x => x[0] === dep) || ['', dep])[1]; g('plDevP').disabled = !(PS.dev === 'png' || PS.dev === 'pdf');
-      g('plDevN').textContent = PS.dev === 'pdf' ? 'Xuất file PDF' + depT : PS.dev === 'png' ? 'Xuất ảnh PNG' + depT : PS.dev === 'plt' ? 'Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in' : 'Mở hộp in của hệ điều hành'; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit; psSave(); };
+    const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; const dep = A.plotDepth ? A.plotDepth(PS.dev) : 'tc', depT = dep === 'tc' ? '' : ' · ' + ((A.PLOT_DEPTHS || []).find(x => x[0] === dep) || ['', dep])[1]; g('plDevP').disabled = !(PS.dev === 'png' || PS.dev === 'pdf' || PS.dev === 'print');
+      g('plDevN').textContent = PS.dev === 'pdf' ? 'Xuất file PDF' + depT : PS.dev === 'png' ? 'Xuất ảnh PNG' + depT : PS.dev === 'plt' ? 'Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in' : 'Mở hộp in của hệ điều hành' + depT; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit; psSave(); };
     g('plStampB').onclick = () => { try{ DVDCmd.run('PLOTSTAMP'); }catch(_){} };
     g('plDevP').onclick = () => { read(); if(A.plotterProps) A.plotterProps(PS.dev, () => { psSave(); preview(); }); };
     let pvT = 0;
@@ -328,13 +332,14 @@
       try{ const r = plotRender(Math.max(20, s * 25.4 * 1.6), true); c.width = Math.round(Wmm * s * 1.6); c.height = Math.round(Hmm * s * 1.6); c.style.width = Math.round(Wmm * s) + 'px'; c.style.height = Math.round(Hmm * s) + 'px';
         const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height); cx.drawImage(r.canvas, 0, 0, c.width, c.height);
         const mg = +PS.margin || 0; cx.strokeStyle = 'rgba(30,120,220,.55)'; cx.setLineDash([4, 3]); cx.strokeRect(mg * s * 1.6, mg * s * 1.6, (Wmm - 2 * mg) * s * 1.6, (Hmm - 2 * mg) * s * 1.6);
+        mapPrep().then(v => { if(v === 2) preview(); });   // bản đồ nền vừa tải xong → vẽ lại bản xem trước
         const inf = plotInfo(); if(LYT()){ g('plInfo').innerHTML = 'Đang in <b>layout "' + esc(LYT().name) + '"</b>: khổ ' + LYT().paper + ' ' + Wmm + '×' + Hmm + ' mm, tỉ lệ 1:1 trên giấy (tỉ lệ khung nhìn đặt trong layout).'; return; } g('plInfo').innerHTML = 'Khổ ' + PS.paper + ' ' + (PS.land ? 'ngang' : 'dọc') + ' · ' + Wmm + '×' + Hmm + ' mm<br>Tỉ lệ ' + (PS.fit ? 'khít giấy ≈ <b>1:' + (+inf.N.toPrecision(4)) + '</b>' : '<b>1:' + PS.scale + '</b>') + ' · hình in ' + Math.round(inf.wmm) + '×' + Math.round(inf.hmm) + ' mm' + (!inf.fits ? '<br><span style="color:#ffb347">⚠ Hình lớn hơn khổ giấy — sẽ bị cắt. Chọn tỉ lệ nhỏ hơn hoặc khổ lớn hơn.</span>' : '') + (mmPerUnit() === 1 && !unitToMM() ? '<br><span style="color:#8f99a8">Bản vẽ không ghi đơn vị — coi 1 đơn vị = 1 mm.</span>' : '');
       }catch(err){ console.warn(err); }
     }, 60); };
     root.querySelectorAll('select,input').forEach(el => { el.addEventListener('change', preview); el.addEventListener('input', preview); });
     g('plScale').disabled = PS.fit;
     g('plWin').onclick = () => { read(); d.close(); pickWindow(); };
-    g('plPv').onclick = () => { read(); try{ const [Wmm, Hmm] = paperMM(); const r = plotRender(Math.max(40, 1100 / Math.max(Wmm, Hmm) * 25.4), true); const c = r.canvas; const k = Math.min((innerWidth * 0.8) / c.width, (innerHeight * 0.75) / c.height, 1);
+    g('plPv').onclick = async () => { read(); await mapPrep(); try{ const [Wmm, Hmm] = paperMM(); const r = plotRender(Math.max(40, 1100 / Math.max(Wmm, Hmm) * 25.4), true); const c = r.canvas; const k = Math.min((innerWidth * 0.8) / c.width, (innerHeight * 0.75) / c.height, 1);
       const pd = A.dialog({ title: 'Xem trước bản in', wide: true, cls: 'acw-free', help: false, html: '<div style="background:#3a414d;padding:12px;display:grid;place-items:center"><canvas id="plBig" style="position:static;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.5);width:' + Math.round(c.width * k) + 'px;height:' + Math.round(c.height * k) + 'px"></canvas></div>', noOk: true, cancelText: 'Đóng' });
       const bc = pd.root.querySelector('#plBig'); bc.width = c.width; bc.height = c.height; const x = bc.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(c, 0, 0); }catch(err){ say('Không dựng được bản xem trước.'); } };
     preview();

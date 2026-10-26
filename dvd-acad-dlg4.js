@@ -168,7 +168,8 @@
   const tileUrl = (mode, z, x, y) => (mode === 'aerial' ? GEOMAPURL : (mode === 'custom' ? GEOMAPURL : OSM)).replace('{z}', z).replace('{x}', x).replace('{y}', y).replace('{s}', 'abc'[(x + y) % 3]);
   function tileImg(url){ let im = TILE.get(url); if(im) return im; im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { clearTimeout(gmTimer); gmTimer = setTimeout(() => { try{ draw(); }catch(_){} }, 60); }; im.onerror = () => { im._bad = 1; }; im.src = url; TILE.set(url, im); if(TILE.size > 600){ const k = TILE.keys().next().value; TILE.delete(k); } return im; }
   const mapMode = () => { try{ const g = A.geoGet ? A.geoGet() : null; return g && g.map ? g.map : null; }catch(_){ return null; } };
-  function drawMap(){ const g = A.geoGet ? A.geoGet() : null; if(!g || !g.map || plotMode || (typeof _exporting !== 'undefined' && _exporting)) return; try{ if(!isModelView()) return; }catch(_){ return; }
+  // xuất ảnh / in theo màn hình (renderExport) cũng vẽ bản đồ bằng các ô đã tải; PLOT vẽ ảnh chụp vùng in (geomapPlotDraw)
+  function drawMap(){ const g = A.geoGet ? A.geoGet() : null; if(!g || !g.map) return; try{ if(!isModelView()) return; }catch(_){ return; }
     if(g.map !== 'road' && !GEOMAPURL) return;
     const F = frame(g), bb = viewWorldAABB(); const C = [{ x: bb.minX, y: bb.minY }, { x: bb.maxX, y: bb.minY }, { x: bb.maxX, y: bb.maxY }, { x: bb.minX, y: bb.maxY }].map(p => toLL(F, p));
     const la0 = Math.min(...C.map(c => c.lat)), la1 = Math.max(...C.map(c => c.lat)), lo0 = Math.min(...C.map(c => c.lon)), lo1 = Math.max(...C.map(c => c.lon)); if(!(la1 > -85 && la0 < 85)) return;
@@ -215,6 +216,15 @@
   async function mapImageEnt(g, box, mode, res){ const r = await mapImage(g, box, mode, GMI_RES[res] || 2048); if(!r || !r.ok) return null;
     const blob = await new Promise(q => r.cv.toBlob(q, 'image/jpeg', 0.9)); const im = await A.imgAdd(blob, 'GeoMapImage.jpg'); return { id: im.id, r }; }
   const gmiMode = g => g.map || 'road';
+  /* ---- in bản đồ nền đang hiện (PLOT ra PDF / PNG / máy in Windows): chụp ô bản đồ cho vùng in rồi vẽ dưới bản vẽ ---- */
+  let PLOTMAP = null;   // { key, box, cv }
+  A.geomapPlotPrep = async (box, maxPx) => { const g = A.geoGet ? A.geoGet() : null; let mv = true; try{ mv = isModelView(); }catch(_){}
+    if(!g || !g.map || (g.map !== 'road' && !GEOMAPURL) || !box || !mv){ PLOTMAP = null; return false; }
+    const key = [g.map, g.lat, g.lon, g.north, box.x0, box.y0, box.x1, box.y1, maxPx].join('|'); if(PLOTMAP && PLOTMAP.key === key) return 1;   // 1 = đã có, 2 = vừa tải
+    const r = await mapImage(g, box, g.map, Math.max(256, Math.min(4096, maxPx | 0))); PLOTMAP = r && r.ok ? { key, box: Object.assign({}, box), cv: r.cv } : null; return PLOTMAP ? 2 : false; };
+  A.geomapPlotDraw = () => { const g = A.geoGet ? A.geoGet() : null; if(!PLOTMAP || !g || !g.map || maskOn) return; try{ if(!isModelView()) return; }catch(_){}
+    const B = PLOTMAP.box, a = toScreen(B.x0, B.y1), b = toScreen(B.x1, B.y0), dpr = window.devicePixelRatio || 1;
+    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 0.92; try{ ctx.drawImage(PLOTMAP.cv, a.x, a.y, b.x - a.x, b.y - a.y); }catch(_){} ctx.restore(); };
   ecmd(['GEOMAPIMAGE'], 'Chụp một vùng bản đồ nền thành ảnh trong bản vẽ (in được, lưu kèm DXF / DWG): 2 góc hoặc Khung nhìn, độ phân giải', async () => {
     const g = A.geoGet ? A.geoGet() : null; if(!g){ log('Bản vẽ chưa có vị trí địa lý — dùng GEOGRAPHICLOCATION trước.'); return; }
     const mode = gmiMode(g); if(mode !== 'road' && !GEOMAPURL){ log('Chưa có dịch vụ ảnh vệ tinh (đặt biến GEOMAPURL) — dùng GEOMAP để chọn bản đồ.'); return; }
@@ -298,7 +308,7 @@
      PNG ghi đúng ảnh bảng màu (color type 3, 8 / 1 bit), PDF nhúng ảnh đã giảm màu.
      ================================================================== */
   const DEPTHS = [['tc', '24-bit (True color)'], ['8', '256 màu (8-bit, bảng màu AutoCAD)'], ['1', 'Đen trắng (1-bit)']];
-  const PC3 = { png: 'PublishToWeb PNG.pc3', pdf: 'DWG To PDF.pc3' };
+  const PC3 = { png: 'PublishToWeb PNG.pc3', pdf: 'DWG To PDF.pc3', print: 'Default Windows System Printer.pc3' };   // máy in Windows: in ảnh đã giảm màu
   const depthOf = dev => { const m = (A.PS || {}).cdep || {}; return PC3[dev] && m[dev] && m[dev] !== 'tc' ? String(m[dev]) : 'tc'; };
   A.plotDepth = depthOf; A.PLOT_DEPTHS = DEPTHS;
   const ctbOn = () => { const P = A.PS || {}; return typeof P.style === 'string' && P.style.startsWith('ctb:') && A.ctb ? A.ctb.get(P.style.slice(4)) : null; };
