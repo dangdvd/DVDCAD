@@ -357,6 +357,14 @@
     A.commit({ add: [e] }, 'Đã chèn trường đếm khối "' + name + '"');
   });
 
+  // duyệt bản chèn đang đếm như nút ◀ ▶ của thanh đếm
+  function countStep(dir){ if(!CNT.name){ say('Chưa đếm khối nào — dùng COUNT.'); return; } const L = refsOf(CNT.name); if(!L.length){ say('Không còn bản chèn nào của "' + CNT.name + '".'); return; }
+    CNT.i = ((CNT.i < 0 ? (dir > 0 ? -1 : 0) : CNT.i) + dir + L.length) % L.length; selRefs([L[CNT.i]]); zoomRef(L[CNT.i]);
+    if(!CNT.bar) showBar(); const i = CNT.bar && CNT.bar.querySelector('.i'); if(i) i.textContent = (CNT.i + 1) + '/' + L.length; log('"' + CNT.name + '": bản chèn ' + (CNT.i + 1) + '/' + L.length); }
+  plain(['COUNTNEXT'], 'Phóng tới bản chèn kế tiếp của khối đang đếm', () => countStep(1));
+  plain(['COUNTPREV'], 'Phóng tới bản chèn trước của khối đang đếm', () => countStep(-1));
+  plain(['COUNTREFRESH'], 'Đếm lại: cập nhật thanh đếm, bảng Count, trường và bảng đếm', () => { cntRefresh(); if(CNT.name){ const L = refsOf(CNT.name); selRefs(L); showBar(); log('"' + CNT.name + '": ' + L.length + ' bản chèn.'); } else log('Đã cập nhật bảng Count và trường đếm.'); });
+
   /* ==================================================================
      BREPLACE — Thay khối (Express Tools): thay mọi bản chèn khối A bằng khối B (giữ điểm chèn, tỉ lệ, góc, lớp)
      ================================================================== */

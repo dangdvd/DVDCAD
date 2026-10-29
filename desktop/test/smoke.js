@@ -109,6 +109,7 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
 
   console.log('7. Lệnh phục hồi (x3 / x4 / x5) + lưu DWG');
   check(await win.evaluate(() => ['DRAWORDER', 'WIPEOUT', 'CANNOSCALE', 'GCHORIZONTAL', 'DCALIGNED', 'PARAMETERS', 'BPARAMETER', 'BDYN', 'SAVEDWG'].every(n => DVDCmd.commands.some(c => c.k.includes(n)))), 'có DRAWORDER, WIPEOUT, CANNOSCALE, GC*/DC*, PARAMETERS, BPARAMETER, BDYN, SAVEDWG');
+  check(await win.evaluate(() => ['BCONVERT', 'VIEWBASE', 'VIEWSECTION', 'VIEWDETAIL', 'GCSYMMETRIC', 'DCCONVERT', 'GEOMARKPOINT', '3DPOLY', 'SHAPE', 'PSOUT', 'WMFOUT', 'PUBLISHTOWEB', 'DWGCONVERT', 'BVSTATE', 'PSETUPIN', 'SYSVARMONITOR'].every(n => DVDCmd.commands.some(c => c.k.includes(n)))), 'có lệnh v5v: BCONVERT, VIEWBASE / VIEWSECTION / VIEWDETAIL, GCSYMMETRIC, DCCONVERT, GEOMARK, 3DPOLY, SHAPE, PSOUT, WMFOUT, PUBLISHTOWEB, DWGCONVERT, BVSTATE, PSETUPIN, SYSVARMONITOR');
   {
     const stubSave = p => app.evaluate(({ dialog }, p) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: p }); }, p);
     const head = p => { try{ return fs.readFileSync(p, 'latin1').slice(0, 6); }catch(_){ return ''; } };
@@ -143,6 +144,8 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       add(A.makeDimAng({ x: 300, y: 0 }, 0, Math.PI / 3, { x: 340, y: 15 })); add(A.makeDimLinear({ x: 0, y: 50 }, { x: 80, y: 90 }, { x: 40, y: 110 }, 0));
       add([{ type: 'HATCH', loops: [[{ x: 0, y: 200 }, { x: 50, y: 200 }, { x: 50, y: 250 }, { x: 0, y: 250 }]], pat: 'ANSI31', psc: 1, pang: 0 }, { type: 'HATCH', loops: [[{ x: 60, y: 200 }, { x: 110, y: 200 }, { x: 85, y: 250 }]], pat: 'SOLID', solid: true },
         { type: 'TEXT', x: 0, y: -30, h: 5, text: 'Chữ tiếng Việt: ĐƯỜNG ỐNG Ø100', rot: 15 }, { type: 'TEXT', x: 0, y: -60, h: 3.5, text: 'Dòng một\nDòng hai', mt: 1 }, { type: 'ELLIPSE', cx: 400, cy: 0, mx: 30, my: 0, ratio: 0.5, p1: 0, p2: Math.PI }]);
+      add([{ type: 'POLYLINE', p3: 1, closed: false, vertices: [{ x: 0, y: -100, z: 0 }, { x: 50, y: -100, z: 20 }, { x: 100, y: -80, z: 5 }] },   // đa tuyến 3D (3DPOLY) + mặt 3D có cạnh ẩn (EDGE)
+        { type: 'SOLID', face: 1, pts: [{ x: 200, y: -100 }, { x: 250, y: -100 }, { x: 250, y: -50 }, { x: 200, y: -50 }], zs: [0, 0, 10, 10], ie: 5 }]);
       for(const s of ['BOX\n700,0\n740,40\n25\n', 'WIPEOUT\n100,500\n140,500\n140,540\n100,540\n\n']){ await A.runScript(s); await w(300); for(let i = 0; i < 5 && A.busy(); i++){ A.cancel(); await w(60); } }
       { const c = document.createElement('canvas'); c.width = 40; c.height = 30; const g = c.getContext('2d'); g.fillStyle = '#08f'; g.fillRect(0, 0, 40, 30);   // ảnh → IMAGE + IMAGEDEF
         const im = await A.imgAdd(await new Promise(r => c.toBlob(r, 'image/jpeg')), 'anh-nen.jpg'); add({ type: 'IMAGE', x: 600, y: 300, w: 80, h: 60, rot: 0, img: im.id, name: 'anh-nen.jpg', op: 0.8 }); }
@@ -153,15 +156,19 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
         A.commit({ rep: mem.map((e, i) => { const q = JSON.parse(JSON.stringify(e)); q.dyn = { st: 'Mo', L: { Dai: 100 }, fx: 0, fy: 0 }; if(i === 2) q.dvs = ['Mo']; if(i === 3){ q.dvs = ['Dong']; q.vh = 1; } return [e, q]; }) });
         A.dynSetState(mem[0].grp, { st: 'Dong', L: { Dai: 150 }, fx: 1 }); }
       const dsig = () => modelEntities.filter(e => e.bm && e.bm.name === 'CUA_DONG').map(e => (e.vh ? 'h' : 'v') + ((e.dyn || {}).st || '') + ((e.dyn && e.dyn.L) || {}).Dai + ((e.dyn || {}).fx ? 'F' : '') + (e.dvs || []).join('/') + '@' + Math.round(Math.min(e.x1, e.x2)) + ':' + Math.round(Math.max(e.x1, e.x2)) + (e.bm.a < 0 ? '-' : '+')).sort().join(',');
-      const sig = () => modelEntities.map(e => e.type + (e.blk ? '*' : '') + (e.wipe ? 'W' : '') + '|' + (e.layer || '0') + '|' + (e.lt || '') + '|' + (e.text || '')).sort().join('\n');
+      const sig = () => modelEntities.map(e => e.type + (e.blk ? '*' : '') + (e.wipe ? 'W' : '') + (e.p3 ? 'P3:' + e.vertices.map(v => v.z || 0).join('/') : '') + (e.face ? 'F' + (e.ie || 0) + ':' + (e.zs || []).join('/') : '') + '|' + (e.layer || '0') + '|' + (e.lt || '') + '|' + (e.text || '')).sort().join('\n');
       const s0 = sig(), d0 = dsig(), ents = modelEntities.slice(), res = {};
       for(const v of ['R2018', 'R2013', 'R2010', 'R2004', 'R2000']){ const dwg = A.dwgNative(ents, { version: v }); await loadDWG(dwg.slice().buffer, 'tong-hop.dwg'); await w(300);
         let bin = ''; for(let i = 0; i < dwg.length; i += 0x8000) bin += String.fromCharCode.apply(null, dwg.subarray(i, i + 0x8000));
         res[v] = { same: sig() === s0, dyn: d0.length > 0 && dsig() === d0, n: modelEntities.length, s3d: modelEntities.some(e => e.type === 'SOLID3D'), wipe: modelEntities.some(e => e.wipe), b64: btoa(bin) }; }
       return res; });
     for(const v of Object.keys(syn)){ const q = syn[v];
-      check(q.same && q.s3d && q.wipe && q.dyn, 'bản vẽ tổng hợp (kích thước, hatch, chữ Việt, kiểu nét chữ/hình, khối 3D, vùng che, ảnh, khối động) → DWG ' + v.slice(1) + ' → mở lại giống hệt (' + q.n + ' đối tượng)');
+      check(q.same && q.s3d && q.wipe && q.dyn, 'bản vẽ tổng hợp (kích thước, hatch, chữ Việt, kiểu nét chữ/hình, khối 3D, vùng che, ảnh, khối động, đa tuyến 3D, mặt 3D cạnh ẩn) → DWG ' + v.slice(1) + ' → mở lại giống hệt (' + q.n + ' đối tượng)');
       if(outDir){ fs.mkdirSync(outDir, { recursive: true }); fs.writeFileSync(path.join(outDir, 'tong-hop-' + v + '.dwg'), Buffer.from(q.b64, 'base64')); } }
+    // DWGCONVERT: đổi tệp trong khung ẩn (?dwgconvert=1) — bản vẽ đang mở giữ nguyên
+    const cv = await win.evaluate(async () => { const A = DVDAcad, n0 = modelEntities.length, nm = currentName; const f = new File([A.dxfR2000(modelEntities)], 'chuyen-doi.dxf');
+      const r = await A.dwgConvertFiles([f], 'R2013'), o = r.out[0]; return { bad: r.bad.map(x => x.join(': ')), head: o ? String.fromCharCode.apply(null, o.data.slice(0, 6)) : '', n: o ? o.n : 0, n0, same: modelEntities.length === n0 && currentName === nm, frames: document.querySelectorAll('iframe').length }; });
+    check(cv.head === 'AC1027' && cv.n === cv.n0 && cv.same && !cv.bad.length && !cv.frames, 'DWGCONVERT: DXF → DWG 2013 trong khung ẩn, đủ ' + cv.n + '/' + cv.n0 + ' đối tượng, bản vẽ đang mở giữ nguyên' + (cv.bad.length ? ' — ' + cv.bad.join('; ') : ''));
     // ảnh: lưu bản vẽ có ảnh → IMAGE + IMAGEDEF ".\tên" và tệp ảnh ghi kèm cạnh bản vẽ (AutoCAD thấy ảnh)
     const dwgImg = path.join(tmp, 'co-anh.dwg'); await stubSave(dwgImg);
     await win.evaluate(async () => { const A = DVDAcad, c = document.createElement('canvas'); c.width = 64; c.height = 32; const g = c.getContext('2d'); g.fillStyle = '#c00'; g.fillRect(0, 0, 64, 32);

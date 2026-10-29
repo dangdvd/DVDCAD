@@ -575,5 +575,40 @@
     I.GOTOSTART = '<path d="M4 11l8-7 8 7v9H4z"/><path class="a" d="M10 20v-5h4v5"/>'; I.FILETAB = '<rect x="3" y="7" width="18" height="13"/><path class="a" d="M3 7l2-3h6l2 3"/>'; I.FILETABCLOSE = I.FILETAB + BX;
     I.EXTERNALREFERENCESCLOSE = (I.XREF || '') + BX; I.VISUALSTYLESCLOSE = (I.VISUALSTYLES || '') + BX; I.PARAMETERSCLOSE = (I.PARAMETERS || '') + BX; I.ADCCLOSE = (I.ADCENTER || '') + BX; I.DRAWINGRECOVERYHIDE = (I.RECOVER || '') + BX;
     I.ACTSTOP = I.ACTSTOP; I.ADJUST = I.IMAGEADJUST || ''; I.PDFADJUST = I.ADJUST; I.BSAVE = (I.BEDIT || I.REFEDIT || '') + BOK; }
+  // v5v: Smart Blocks, hình chiếu, ràng buộc, GEOMARK, 3D poly, SHP, xuất file
+  { const has = k => I[k] || '', NX = '<path class="y" d="M14 19.5h7M18.5 17l2.5 2.5-2.5 2.5"/>', PV = '<path class="y" d="M20 19.5h-7M15.5 17L13 19.5l2.5 2.5"/>';
+    I.BCONVERT = '<path stroke-dasharray="2 1.4" d="M3 3h8v8H3z"/>' + AR(8, 13, 13, 18, 'y') + '<rect class="fa" x="12" y="12" width="9" height="9"/><rect class="a" x="12" y="12" width="9" height="9"/>';
+    I.SMARTBLOCKSDETECT = has('BLOCK') + BSTAR; I.SMARTBLOCKSCONVERT = I.BCONVERT;
+    I.COUNTNEXT = has('COUNT') + NX; I.COUNTPREV = has('COUNT') + PV; I.COUNTREFRESH = has('COUNT') + BOK;
+    const VW = '<rect class="fd" x="2.5" y="11" width="9" height="9"/><rect x="2.5" y="11" width="9" height="9"/>';
+    I.VIEWBASE = I.VIEWBASE || VW;
+    I.VIEWPROJ = VW + '<rect class="a" x="13.5" y="11" width="8" height="9"/><rect class="a" x="2.5" y="2.5" width="9" height="7"/>';
+    I.VIEWSECTION = VW + '<path class="r" d="M7 4v18" stroke-dasharray="3 1.5"/><path class="a" d="M14 11h7v9h-7zM14 14l3-3M14 18l7-7M17 20l4-4"/>';
+    I.VIEWDETAIL = VW + '<circle class="r" cx="9" cy="13.5" r="3"/><circle class="a" cx="17.5" cy="7" r="4.5"/><path class="y" d="M11.5 11.8l2.6-2.4"/>';
+    I.VIEWEDIT = I.VIEWBASE + BSTAR; I.VIEWUPDATE = I.VIEWBASE + BOK; I.VIEWSTD = I.VIEWBASE + BGEAR;
+    I.VIEWSECTIONSTYLE = I.VIEWSECTION + BGEAR; I.VIEWDETAILSTYLE = I.VIEWDETAIL + BGEAR;
+    I.GCSYMMETRIC = '<path class="y" d="M12 2v20" stroke-dasharray="2.5 1.5"/><path class="a" d="M4 7l5 5-5 5M20 7l-5 5 5 5"/>';
+    I.DCDISPLAY = has('DCHORIZONTAL') + '<circle class="y" cx="18" cy="18" r="2.2"/>'; I.DCFORM = has('DCHORIZONTAL') + BSTAR;
+    I.DCCONVERT = has('DIMLINEAR') + AR(14, 20, 21, 20, 'y'); I.CONSTRAINTSETTINGS = (I.GCPARALLEL || has('PARAMETERS')) + BGEAR;
+    const PIN = '<path class="fa" d="M12 21s-6-6.2-6-11a6 6 0 0 1 12 0c0 4.8-6 11-6 11z"/><path class="a" d="M12 21s-6-6.2-6-11a6 6 0 0 1 12 0c0 4.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/>';
+    I.GEOMARKPOINT = PIN; I.GEOMARK = PIN; I.GEOMARKPOSITION = PIN + BSTAR; I.GEOMARKLATLONG = PIN + '<path class="y" d="M14 17h8M14 20h8"/>';
+    I.GEOMARKME = PIN + '<circle cx="18" cy="18" r="3" fill="#3b82f6" stroke="#fff"/>'; I.GEOLOCATEME = '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="#3b82f6" stroke="#fff"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/>';
+    I.GEOREORIENTMARKER = PIN + '<path class="y" d="M15 20a4 4 0 1 0 4-4"/>';
+    I['3DPOLY'] = '<path class="a" d="M3 19l6-4 3 4 5-10 4 2"/>' + P(3, 19) + P(9, 15) + P(12, 19) + P(17, 9) + P(21, 11) + '<path class="y" d="M17 9v-6" stroke-dasharray="1.5 1.2"/>';
+    I['3P'] = I['3DPOLY']; I.PFACE = (I['3DFACE'] || has('MESH')) + BSTAR; I['3DMESH'] = has('MESH');
+    I.EDGE = '<path class="fd" d="M4 18l4-12h12l-4 12z"/><path d="M4 18l4-12h12"/><path class="r" d="M20 6l-4 12H4" stroke-dasharray="2 1.5"/>';
+    const SHP = '<path class="a" d="M5 19V6l7 7 7-7v13"/>';
+    I.SHAPE = SHP + O(5, 19); I.LOAD = DOC + '<path class="a" d="M8 18V11l4 4 4-4v7"/>'; I.COMPILE = DOC + '<path class="a" d="M8 11l-2 3 2 3M16 11l2 3-2 3"/>' + BGEAR;
+    const EXPF = t => DOC + '<text x="12" y="17" font-size="5.5" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">' + t + '</text>';
+    I.PSOUT = EXPF('EPS'); I.EXPORTEPS = I.PSOUT; I.WMFOUT = EXPF('WMF');
+    I.PUBLISHTOWEB = '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c-3 3-3 14 0 17M12 3.5c3 3 3 14 0 17"/>' + AR(15, 21, 21, 15, 'y');
+    I.DWGCONVERT = EXPF('DWG') + '<path class="y" d="M19 13a4 4 0 0 1-4 4"/>';
+    I.REFSET = has('REFEDIT') + BSTAR; I.BVSTATE = has('BPARAMETER') + BGEAR; I.BVSHOW = has('BPARAMETER') + BOK; I.BVHIDE = has('BPARAMETER') + BX;
+    I.CLOSEALLOTHER = has('CLOSEALL') || has('CLOSE'); I.ATTREDEF = has('ATTDEF') + BOK;
+    I.PSETUPIN = (I.LAYOUTS || has('PLOT')) + AR(14, 20, 21, 20, 'y'); I.PARTIALOPEN = (I.OPEN || DOC) + '<path class="y" d="M14 15h7v6h-7z" stroke-dasharray="2 1.2"/>'; I.PARTIALOAD = I.PARTIALOPEN + BSTAR;
+    I.SYSVARMONITOR = has('SYSVAR') + '<circle class="y" cx="18" cy="18" r="3.2"/><path class="y" d="M18 16v2l1.4 1"/>';
+    I.QUICKPROPERTIES = has('PROPERTIES') + BSTAR; I.QP = I.QUICKPROPERTIES;
+    I.MVSETUP = '<rect x="2.5" y="4" width="19" height="16"/><path class="a" d="M12 15h9.5M12 15v5M16 15v5"/><rect class="fa" x="5" y="6.5" width="5" height="5"/>';
+    I.GEOREMOVE = I.GEOREMOVE || has('GEOGRAPHICLOCATION') + BX; I.PLOTTERMANAGER = has('PLOT') + BGEAR; I.UPDATETHUMBSNOW = '<rect x="2.5" y="5" width="8" height="6"/><rect x="13.5" y="5" width="8" height="6"/><rect x="2.5" y="13" width="8" height="6"/>' + REGENAR; }
   window.DVDIcons = I;
 })();

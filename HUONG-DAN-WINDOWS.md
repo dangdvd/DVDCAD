@@ -1,7 +1,7 @@
 # DVDCAD cho Windows — cài đặt và dùng offline
 
 DVDCAD bản Windows là một phần mềm cài trên máy, chạy **hoàn toàn offline**: không cần mạng, không cần trình duyệt, không cần máy chủ.
-Giao diện và cách dùng như bản web kiểu AutoCAD: ribbon, dòng lệnh, Quick Access Toolbar, tab bản vẽ, thanh trạng thái, bảng Properties / Layer, và hơn 500 lệnh (hơn 900 tên lệnh kể cả lệnh tắt) như `L`, `PL`, `C`, `TR`, `O`, `H`, `DLI`.
+Giao diện và cách dùng như bản web kiểu AutoCAD: ribbon, dòng lệnh, Quick Access Toolbar, tab bản vẽ, thanh trạng thái, bảng Properties / Layer, và hơn 700 lệnh (hơn 1100 tên lệnh kể cả lệnh tắt) như `L`, `PL`, `C`, `TR`, `O`, `H`, `DLI`.
 
 ## Tải và cài đặt
 
@@ -29,6 +29,8 @@ Gỡ cài đặt: **Settings → Apps → DVDCAD → Uninstall**.
 | Nhiều bản vẽ | Tab file phía trên khung vẽ, **Ctrl+Tab** chuyển tab, **Ctrl+F4** đóng tab |
 | Phím chức năng | F1 trợ giúp, F2 lịch sử lệnh, F3 OSNAP, F7 GRID, F8 ORTHO, F9 SNAP, F10 POLAR, F11 OTRACK, F12 DYN |
 | In | `PLOT` / **Ctrl+P**: xuất PDF đúng khổ giấy và tỉ lệ, hoặc in ra máy in |
+| Đổi phiên bản DWG hàng loạt | `DWGCONVERT`: thêm nhiều file DWG / DXF, chọn DWG 2018 / 2013 / 2010 / 2004 / 2000 hoặc DXF → tải về một file .zip. Bản vẽ đang mở không bị ảnh hưởng |
+| Hình chiếu từ mô hình 3D | Tab **Bố cục**: `VIEWBASE` (hình chiếu cơ sở + hình chiếu phụ), `VIEWSECTION` (mặt cắt), `VIEWDETAIL` (hình trích), `VIEWUPDATE` sau khi sửa mô hình |
 
 **Lệnh tắt như AutoCAD:** bảng lệnh tắt mặc định giống `acad.pgp`, ví dụ `L`, `C`, `CO`/`CP`, `TR`, `EX`, `O`, `F`, `H`, `DLI`, `T` = MTEXT, `DT` = TEXT, `DO` = DONUT, `PA` = PASTESPEC, `RE` / `REA`.
 File `acad.pgp` riêng của bạn nhập được bằng lệnh `ALIASEDIT`. Khi gõ lệnh, danh sách gợi ý hiện kèm biểu tượng như AutoComplete của AutoCAD.

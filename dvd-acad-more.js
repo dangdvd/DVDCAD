@@ -206,6 +206,13 @@
   const SCALES = [1, 2, 5, 10, 20, 25, 50, 75, 100, 125, 150, 200, 250, 500, 1000, 2000, 5000];
   const PS = Object.assign({ paper: 'A3', land: true, area: 'extents', fit: true, scale: 100, center: true, style: 'mono', lw: true, margin: 5, win: null, fmt: 'pdf' }, (() => { try{ return JSON.parse(localStorage.getItem('dvd:plot') || '{}'); }catch(_){ return {}; } })());
   PS.win = null;
+  // thiết lập trang có tên (Page Setup) theo bản vẽ — PLOT chọn / thêm; PSETUPIN nhập từ bản vẽ khác
+  const PSU_KEYS = ['paper', 'land', 'area', 'fit', 'scale', 'center', 'style', 'lw', 'margin', 'dev', 'ud'];
+  const psuKey = () => 'dvd:psetups::' + ((typeof currentName === 'string' && currentName) || '');
+  A.pageSetups = () => { try{ return JSON.parse(localStorage.getItem(psuKey()) || '{}') || {}; }catch(_){ return {}; } };
+  A.pageSetupsSave = o => { try{ if(o && Object.keys(o).length) localStorage.setItem(psuKey(), JSON.stringify(o)); else localStorage.removeItem(psuKey()); }catch(_){} };
+  A.pageSetupOf = () => { const o = {}; for(const k of PSU_KEYS) if(PS[k] !== undefined) o[k] = PS[k]; return o; };
+  A.pageSetupApply = o => { for(const k of PSU_KEYS) if(o && o[k] !== undefined) PS[k] = o[k]; psSave(); };
   const psSave = () => { try{ const o = Object.assign({}, PS); delete o.win; localStorage.setItem('dvd:plot', JSON.stringify(o)); }catch(_){} };
   const mmPerUnit = () => { try{ return unitToMM() || 1; }catch(_){ return 1; } };   // không rõ đơn vị: coi là mm
   const LYT = () => { try{ const U = A.curUserLayout && A.curUserLayout(); return U ? U.def : null; }catch(_){ return null; } };   // layout giấy do người dùng tạo
@@ -300,7 +307,7 @@
     const F = (t, h, st) => '<fieldset class="acw-grp"' + (st ? ' style="' + st + '"' : '') + '><legend>' + t + '</legend>' + h + '</fieldset>', R = (l, c) => '<label class="dvd-frow"><span>' + l + '</span><span class="v">' + c + '</span></label>';
     const dev = PS.dev || 'pdf';
     const html = '<div class="pl-wrap"><div class="pl-left">' +
-      F('Thiết lập trang', R('Tên:', '<select disabled><option>&lt;Không&gt;</option></select> <button type="button" class="acw-btn" disabled>Thêm…</button>')) +
+      F('Thiết lập trang', R('Tên:', '<select id="plSetup" style="max-width:180px">' + opt('', '<Không>', true) + Object.keys(A.pageSetups()).map(n => opt(n, n, false)).join('') + '</select> <button type="button" class="acw-btn" id="plSetupAdd">Thêm…</button> <button type="button" class="acw-btn" id="plSetupIn" title="Nhập thiết lập trang từ bản vẽ khác (PSETUPIN)">Nhập…</button>')) +
       F('Máy in / máy vẽ', R('Tên:', '<select id="plDev">' + opt('pdf', 'DWG To PDF.pc3', dev === 'pdf') + opt('print', 'Máy in Windows (hệ thống)', dev === 'print') + opt('png', 'PublishToWeb PNG.pc3', dev === 'png') + opt('plt', 'HP DesignJet (HPGL/2).pc3', dev === 'plt') + '</select>') +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px"><div class="acw-note" id="plDevN" style="margin:0 0 2px"></div><button type="button" class="acw-btn" id="plDevP" title="Trình sửa cấu hình máy vẽ: độ sâu màu">Thuộc tính…</button></div><label class="acw-ck dis"><input type="checkbox" disabled checked><span>In ra file</span></label>') +
       '<div style="display:flex;gap:8px">' + F('Khổ giấy', '<select id="plPaper" style="width:100%">' + Object.keys(PAPERS).map(k => opt(k, 'ISO ' + k + ' (' + PAPERS[k][0] + '.00 x ' + PAPERS[k][1] + '.00 MM)', k === PS.paper)).join('') + '</select>', 'flex:1') +
@@ -325,6 +332,14 @@
     const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; const dep = A.plotDepth ? A.plotDepth(PS.dev) : 'tc', depT = dep === 'tc' ? '' : ' · ' + ((A.PLOT_DEPTHS || []).find(x => x[0] === dep) || ['', dep])[1]; g('plDevP').disabled = !(PS.dev === 'png' || PS.dev === 'pdf' || PS.dev === 'print');
       g('plDevN').textContent = PS.dev === 'pdf' ? 'Xuất file PDF' + depT : PS.dev === 'png' ? 'Xuất ảnh PNG' + depT : PS.dev === 'plt' ? 'Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in' : 'Mở hộp in của hệ điều hành' + depT; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit; psSave(); };
     g('plStampB').onclick = () => { try{ DVDCmd.run('PLOTSTAMP'); }catch(_){} };
+    // thiết lập trang: chọn → điền các ô; Thêm… → lưu giá trị đang chọn thành thiết lập có tên
+    const fillSetup = o => { if(!o) return; if(o.paper && g('plPaper').querySelector('option[value="' + o.paper + '"]')) g('plPaper').value = o.paper; if(o.dev) g('plDev').value = o.dev; if(o.area) g('plArea').value = o.area; if(o.fit != null) g('plFit').checked = !!o.fit; if(o.scale) g('plScale').value = o.scale;
+      if(o.center != null) g('plCenter').checked = !!o.center; if(o.margin != null) g('plMargin').value = o.margin; if(o.style) g('plStyle').value = o.style; if(o.lw != null) g('plLw').checked = !!o.lw; if(o.land != null){ const r0 = root.querySelector('input[name=plLand][value="' + (o.land ? '1' : '0') + '"]'); if(r0) r0.checked = true; } preview(); };
+    g('plSetup').onchange = () => { const n = g('plSetup').value; if(n) fillSetup(A.pageSetups()[n]); };
+    const setupList = sel => { const L = A.pageSetups(); g('plSetup').innerHTML = opt('', '<Không>', !sel) + Object.keys(L).map(n => opt(n, n, n === sel)).join(''); };
+    g('plSetupAdd').onclick = () => { read(); A.dialog({ title: 'Thiết lập trang mới', html: '<div class="acw" style="width:320px"><label class="dvd-frow"><span>Tên thiết lập:</span><span class="v"><input id="psuN" value="Thiết lập ' + (Object.keys(A.pageSetups()).length + 1) + '"></span></label></div>',
+      ok: r => { const n = r.querySelector('#psuN').value.trim(); if(!n) return false; const L = A.pageSetups(); L[n] = A.pageSetupOf(); A.pageSetupsSave(L); setupList(n); log('Đã lưu thiết lập trang "' + n + '".'); } }); };
+    g('plSetupIn').onclick = async () => { if(!A.psetupIn) return; const r = await A.psetupIn(); if(r && r.length) setupList(r[0]); };
     g('plDevP').onclick = () => { read(); if(A.plotterProps) A.plotterProps(PS.dev, () => { psSave(); preview(); }); };
     let pvT = 0;
     const preview = () => { clearTimeout(pvT); pvT = setTimeout(() => {

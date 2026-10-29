@@ -180,6 +180,21 @@
   cmd(['REFEDIT', 'BEDIT', 'BE'], 'Sửa khối tại chỗ (mọi khối cùng tên được cập nhật)', async () => {
     const r = await A.getEnt('Chọn khối cần sửa', { filter: e => !!e.bm }); if(!r.ent) return; setTimeout(() => startRefedit(r.ent), 0);
   });
+  // REFSET: thêm / bớt đối tượng của bộ đang sửa (REFEDIT) — đối tượng thêm vào thuộc khối, đối tượng bớt ra thành đối tượng thường
+  cmd(['REFSET'], 'Thêm / bớt đối tượng của khối đang sửa tại chỗ (REFEDIT)', async () => {
+    if(!RE){ log('REFSET chỉ dùng khi đang sửa khối (REFEDIT / BEDIT).'); return; }
+    const k = await A.getKw('Chuyển đối tượng giữa bộ sửa và bản vẽ', { kw: [{ k: 'A', t: 'Thêm' }, { k: 'R', t: 'Bớt' }], def: 'Thêm' }); const add = k.kw !== 'R';
+    if(add){ const hid = OBJ_HIDE; OBJ_HIDE = R0Hide(); try{ draw(); }catch(_){} let sel;
+      try{ const s = await A.getSel('Chọn đối tượng thêm vào khối', { filter: e => e.grp !== RE.gid && !e.att, pre: false }); sel = (s.sel || []).filter(e => e.grp !== RE.gid && !e.att); } finally { OBJ_HIDE = hid; }
+      const rep = sel.map(e => { const w = deep(e); delete w.userAdded; w.grp = RE.gid; w.blk = RE.name; w.bm = RE.bm; if(RE.bip) w.bip = RE.bip; return [e, w]; });
+      if(rep.length){ A.commit({ rep }, 'REFSET: thêm ' + rep.length + ' đối tượng'); if(OBJ_HIDE) for(const [, w] of rep) OBJ_HIDE.delete(w); }
+      log('REFSET: thêm ' + rep.length + ' đối tượng vào khối "' + RE.name + '".'); try{ draw(); }catch(_){} return; }
+    const s = await A.getSel('Chọn đối tượng bớt ra khỏi khối', { filter: e => e.grp === RE.gid, pre: false }); const sel = (s.sel || []).filter(e => e.grp === RE.gid && !e.att);
+    const rep = sel.map(e => { const w = deep(e); delete w.userAdded; delete w.grp; delete w.blk; delete w.bm; delete w.bip; delete w.l0; return [e, w]; });
+    if(rep.length){ A.commit({ rep }, 'REFSET: bớt ' + rep.length + ' đối tượng'); if(OBJ_HIDE) for(const [, w] of rep) OBJ_HIDE.add(w); }
+    log('REFSET: bớt ' + rep.length + ' đối tượng khỏi khối "' + RE.name + '" (thành đối tượng thường).'); try{ draw(); }catch(_){}
+  });
+  const R0Hide = () => (RE && RE.hide0) || null;
   plain(['REFCLOSE', 'BCLOSE'], 'Kết thúc sửa khối (lưu / huỷ)', () => { if(!RE){ log('Không có khối nào đang sửa.'); return; } if(A.busy()) A.cancel(true); const ok = confirm('Lưu thay đổi cho mọi khối "' + RE.name + '"?\nOK = Lưu · Cancel = Huỷ thay đổi'); endRefedit(ok); });
   const _onLoadRE = A.onLoad; A.onLoad = function(){ if(RE){ RE = null; if(reBar){ reBar.remove(); reBar = null; } } if(_onLoadRE) _onLoadRE.apply(this, arguments); };
 

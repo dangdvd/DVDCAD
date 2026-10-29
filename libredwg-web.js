@@ -6437,7 +6437,18 @@ class LibreEntityConverter {
       entity,
       "extrusion"
     ).data;
-    const vertices = libredwg.dwg_entity_polyline_3d_get_vertices(object);
+    const vertices = libredwg.dwg_entity_polyline_3d_get_vertices(object) || [];
+    // DVDCAD: R13–R2000 — libredwg đếm đỉnh từ first_vertex tới trước last_vertex (thiếu đỉnh cuối); lấy thêm đỉnh cuối qua last_vertex
+    try {
+      const lref = libredwg.dwg_dynapi_entity_value(entity, "last_vertex").data;
+      if (lref) {
+        const lobj = libredwg.dwg_ref_get_object(lref);
+        const ltio = lobj ? libredwg.dwg_object_to_entity_tio(lobj) : 0;
+        const lp = ltio ? libredwg.dwg_dynapi_entity_value(ltio, "point").data : null;
+        const q = vertices.length ? vertices[vertices.length - 1].point : null;
+        if (lp && isFinite(lp.x) && (!q || Math.hypot(q.x - lp.x, q.y - lp.y, (q.z || 0) - (lp.z || 0)) > 1e-12 || vertices.length === 1)) vertices.push({ point: lp, flag: libredwg.dwg_dynapi_entity_value(ltio, "flag").data });
+      }
+    } catch (_) {}
     return {
       type: "POLYLINE3D",
       ...commonAttrs,

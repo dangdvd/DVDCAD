@@ -1,4 +1,4 @@
-# DVDCAD v5u — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5v — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,64 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v5v)
+- Ribbon có thêm tab **Bố cục** (*Layout*): **Hình chiếu**, **Layout**, **Thiết lập trang**. Các lệnh mới khác nằm trong tab Chèn, Tham số, Hiển thị, Quản lý, Xuất và tab Trang chủ của không gian 3D.
+- **Smart Blocks**:
+  - `BCONVERT` (`SMARTBLOCKSCONVERT`): chọn một bản chèn khối làm mẫu, hoặc **Đối tượng** để tạo khối mới từ các nét rời. DVDCAD tìm các nhóm nét rời có cùng hình (kể cả đã xoay, khác tỉ lệ nếu bật) rồi hiện danh sách để chọn. **Đổi** thay các nhóm đó bằng bản chèn khối.
+  - `SMARTBLOCKSDETECT`: chỉ tìm và chọn các vị trí giống khối.
+  - **Cài đặt tìm**: có xoay, có khác tỉ lệ, dung sai.
+- **Đếm**: `COUNTNEXT` / `COUNTPREV` phóng tới bản chèn kế tiếp / trước của khối đang đếm. `COUNTREFRESH` đếm lại thanh đếm, bảng Count, trường và bảng đếm.
+- **Hình chiếu từ mô hình 3D** (*Model Documentation*, tab Bố cục):
+  - `VIEWBASE`: hình chiếu cơ sở từ khối 3D. Tuỳ chọn: hướng (Trên / Dưới / Trái / Phải / Trước / Sau / ISO), nét khuất, tỉ lệ, kiểu chiếu. Đặt xong là đặt tiếp các **hình chiếu phụ**: sang phải / trái / trên / dưới, kéo chéo là hình ISO.
+  - `VIEWPROJ`: thêm hình chiếu phụ từ một hình chiếu có sẵn.
+  - `VIEWSECTION`: mặt cắt toàn phần qua 2 điểm. Có đường cắt, mũi tên, chữ A, B…, mặt cắt gạch ANSI31 và nhãn **MẶT CẮT A-A**.
+  - `VIEWDETAIL`: hình trích. Khoanh vùng tròn / chữ nhật, phóng theo hệ số; nhãn **HÌNH TRÍCH B** và **TỈ LỆ 2 : 1**.
+  - `VIEWEDIT` sửa tỉ lệ / nét khuất / ký hiệu. `VIEWUPDATE` dựng lại sau khi sửa mô hình 3D; vị trí đã dời được giữ, hình chiếu con đi theo hình chiếu cha.
+  - `VIEWSTD`: góc chiếu thứ nhất (TCVN / ISO, mặc định) hoặc thứ ba (ANSI). `VIEWSECTIONSTYLE`, `VIEWDETAILSTYLE`: kiểu mặt cắt / hình trích.
+  - Nét nằm trên các lớp `MD_Visible`, `MD_Hidden` (nét HIDDEN), `MD_Annotation`, `MD_Hatch`. Liên kết hình chiếu – mô hình lưu cùng bản vẽ (DXF / DWG của DVDCAD).
+- **Ràng buộc**:
+  - `GCSYMMETRIC`: hai đối tượng (hoặc hai điểm, tuỳ chọn **Điểm**) đối xứng qua một đường thẳng.
+  - `DCCONVERT`: đổi kích thước thường (thẳng, ngang, dọc, bán kính, đường kính, góc) thành ràng buộc kích thước.
+  - `DCDISPLAY`: hiện / ẩn ràng buộc kích thước.
+  - `DCFORM`: dạng **Động** (chỉ trên màn hình) hoặc **Chú thích** (vẽ như kích thước, in ra được).
+  - `CONSTRAINTSETTINGS`: 3 thẻ **Hình học** / **Kích thước** / **Tự ràng buộc**. `AUTOCONSTRAIN` dùng các loại và dung sai chọn ở thẻ Tự ràng buộc (có cả song song, vuông góc).
+- **Điểm đánh dấu vị trí** (*Position Marker*, cần vị trí địa lý `GEOGRAPHICLOCATION`):
+  - Tạo: `GEOMARKPOINT` / `GEOMARKPOSITION` (điểm trên bản vẽ), `GEOMARKLATLONG` (nhập vĩ / kinh độ, nhận cả dạng 21°01'42"N), `GEOMARKME` (vị trí hiện tại của máy).
+  - `GEOLOCATEME`: chấm xanh theo dõi vị trí hiện tại.
+  - `GEOREORIENTMARKER`: đổi điểm mốc và hướng bắc mà giữ nguyên vĩ / kinh độ; điểm đánh dấu dời theo.
+  - Mở DXF có POSITIONMARKER của AutoCAD: hiện điểm và ghi chú.
+- **3D**:
+  - `3DPOLY` (`3P`): đa tuyến 3D, mỗi đỉnh một cao độ. Lưu DXF / DWG là POLYLINE 3D thật, AutoCAD mở đúng.
+  - `PFACE`: lưới đa diện. `3DMESH`: lưới M × N.
+  - `EDGE`: ẩn / hiện cạnh của mặt 3D. Cạnh ẩn ghi vào mã 70 của 3DFACE.
+- **Shape**:
+  - `LOAD` nạp tệp hình `.shx` (hoặc `.shp`). `COMPILE` dịch `.shp` → `.shx` thật (*AutoCAD-86 shapes 1.0*) và tải về.
+  - `SHAPE` chèn hình: tên, điểm, cỡ, góc.
+  - Mở DXF có SHAPE: hình hiện ra khi đã `LOAD` tệp hình đó. Tệp đã nạp được nhớ lại cho lần sau.
+- **Xuất file**:
+  - `PSOUT` (`EXPORTEPS`): PostScript đóng gói `.eps`, theo thiết lập PLOT.
+  - `WMFOUT`: Windows Metafile `.wmf` của các đối tượng chọn.
+  - `PUBLISHTOWEB`: chọn layout, kiểu ảnh, độ phân giải → `.zip` gồm `index.html` + ảnh.
+  - `DWGCONVERT`: đổi hàng loạt DWG / DXF sang DWG 2018 / 2013 / 2010 / 2004 / 2000 hoặc DXF. Bản vẽ đang mở không bị ảnh hưởng; nhiều tệp thì tải về một `.zip`.
+- **Khối động**: `BVSTATE` (hộp *Trạng thái hiển thị*: mới, đổi tên, xoá, lên / xuống, mặc định, đặt hiện hành), `BVSHOW` / `BVHIDE` (hiện / ẩn nét chọn ở trạng thái hiện hành hoặc mọi trạng thái).
+- **Lệnh nhỏ**:
+  - `REFSET`: thêm / bớt đối tượng khi đang `REFEDIT`.
+  - `ATTREDEF`: định nghĩa lại khối có thuộc tính, giữ giá trị theo thẻ.
+  - `CLOSEALLOTHER`: đóng mọi bản vẽ khác.
+  - `PSETUPIN`: nhập thiết lập trang có tên từ bản vẽ khác.
+  - Thiết lập trang có tên trong hộp `PLOT`: nút **Thêm…** / **Nhập…**; lưu cùng bản vẽ.
+  - `PARTIALOPEN` / `PARTIALOAD`: mở một phần bản vẽ theo lớp, nạp thêm lớp sau.
+  - `SYSVARMONITOR`: theo dõi biến hệ thống, báo khi khác giá trị mong muốn, **Đặt lại tất cả**.
+  - `QUICKPROPERTIES` (`QP`, biến `QPMODE`): bảng thuộc tính nhanh cạnh đối tượng chọn.
+  - `MVSETUP`: khung bản vẽ + khung tên 180 × 56 theo khổ A0–A4 và tỉ lệ.
+  - `PLOTTERMANAGER`: danh sách máy in / máy vẽ và thuộc tính.
+  - `UPDATETHUMBSNOW`: cập nhật ảnh thu nhỏ của bản vẽ.
+- **Chưa có**:
+  - Lệnh: `SYSWINDOWS`, `ALIGNSPACE`, `GCSMOOTH`, `WMFIN`.
+  - Mặt cắt chỉ có loại toàn phần (chưa có nửa / bậc / xoay).
+  - Phông chữ SHX cho chữ: `LOAD` báo đó là phông, không phải tệp hình.
+  - `PSETUPIN` đọc được tệp DXF / DWG do DVDCAD lưu và DXF của AutoCAD. Với DWG do AutoCAD lưu: lưu thành DXF trong AutoCAD rồi nhập.
 
 ## Bổ sung như AutoCAD 2027 (v5u)
 - **Khối động: lật và kéo giãn là tham số thật của AutoCAD** (DXF / DWG 2018):

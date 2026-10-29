@@ -17,7 +17,7 @@
   const hexRGB = h => { let s = String(h || '').replace('#', ''); if(s.length === 3) s = s.split('').map(c => c + c).join(''); const n = parseInt(s, 16); return /^[0-9a-f]{6}$/i.test(s) ? n : null; };
   const isAciColor = h => { const n = hexRGB(h); if(n == null) return true; const a = A.aciNear(h); return (ACI_RGB[a] >>> 0) === n; };
   // thuộc tính riêng của DVDCAD ghi kèm (XDATA) để mở lại trong DVDCAD còn nguyên
-  const XKEYS = ['cid', 'dord', 'anno', 'fld', 'url', 'urld', 'urlsub', 'ascl', 'gns', 'gdsc', 'dyn', 'dvs', 'mt', 'rt', 'rtx', 'cols', 'mtp', 'mtwk'];   // rt / cols: chữ có định dạng, cột (đọc lại đúng trong DVDCAD)
+  const XKEYS = ['cid', 'dord', 'anno', 'fld', 'url', 'urld', 'urlsub', 'ascl', 'gns', 'gdsc', 'dyn', 'dvs', 'mt', 'rt', 'rtx', 'cols', 'mtp', 'mtwk', 'dvw', 'gmk', 'shp', 'shpx'];   // dvw: thuộc hình chiếu (VIEWBASE…)   // rt / cols: chữ có định dạng, cột (đọc lại đúng trong DVDCAD)
 
   let UTF8 = false;   // DXF R2007+: chữ ghi thẳng UTF-8 (không cần mã \U+)
   function dxfStr(s){ if(UTF8) return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[\x00-\x1f]/g, ' '); return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }
@@ -36,6 +36,8 @@
     if(full) try{ const g = A.geoGet ? A.geoGet() : null; if(g) o.geo = g; }catch(_){}
     try{ const im = {}; for(const e of ents) if(e.type === 'IMAGE' && e.img && !im[e.img] && A.imgDataURL){ const u = A.imgDataURL(e.img); if(u) im[e.img] = u; } if(Object.keys(im).length) o.imgs = im; }catch(_){}   // dữ liệu ảnh nhúng (IMAGEATTACH, GEOMAPIMAGE)   // vị trí địa lý (cả hệ toạ độ, điểm thiết kế, bản đồ nền)
     try{ const D = A.dynDefs ? A.dynDefs() : null; if(D){ const names = new Set(); for(const e of ents){ if(e.blk) names.add(e.blk); if(e.bm && e.bm.name) names.add(e.bm.name); } const dd = {}; for(const n of names) if(D[n]) dd[n] = D[n]; if(Object.keys(dd).length) o.dyn = dd; } }catch(_){}
+    try{ const V = A.dviewsGet ? A.dviewsGet() : null; if(V && ents.some(e => e.dvw != null)) o.dvw = V; }catch(_){}
+    if(full) try{ const U = A.pageSetups ? A.pageSetups() : null; if(U && Object.keys(U).length) o.psu = U; }catch(_){}   // thiết lập trang có tên (PAGESETUP / PSETUPIN)   // thông số hình chiếu (Model Documentation)
     return Object.keys(o).length ? JSON.stringify(o) : null;
   }
   // mở lại: áp dữ liệu DVDCAD (trước khi các mô-đun nạp ràng buộc)
@@ -44,6 +46,8 @@
         if(o.dyn && A.dynDefs){ Object.assign(A.dynDefs(), o.dyn); try{ localStorage.setItem('dvd:dynblk', JSON.stringify(A.dynDefs())); }catch(_){} }
         if(o.lay && o.lay.length && A.seedLayoutDefs) A.seedLayoutDefs(o.lay);
         if(o.geo && A.geoSet) A._geoFromFile = o.geo;
+        if(o.dvw) A._dvwFromFile = o.dvw;
+        if(o.psu && typeof o.psu === 'object') try{ localStorage.setItem('dvd:psetups::' + nm, JSON.stringify(o.psu)); }catch(_){}
         if(o.imgs && A.imgPut) for(const [id, u] of Object.entries(o.imgs)) fetch(u).then(r => r.blob()).then(b => A.imgPut(id, b)).then(() => { try{ draw(); }catch(_){} }).catch(() => {}); } }catch(err){ console.warn(err); }
       // khung đa tuyến mang thông số ảnh (imgx) → ảnh IMAGE như trước khi lưu
       try{ if(typeof modelEntities !== 'undefined') for(const e of modelEntities){ if((e.type !== 'POLYLINE' && e.type !== 'IMAGE') || !e.imgx) continue; const q = e.imgx; delete e.imgx; delete e.vertices; delete e.closed; delete e.bulges; e.type = 'IMAGE'; Object.assign(e, q); } }catch(_){}
@@ -287,7 +291,11 @@
         case 'CIRCLE': head('CIRCLE', 'AcDbCircle'); P(10, e.cx); P(20, e.cy); P(30, 0); P(40, e.r); break;
         case 'ARC': head('ARC', 'AcDbCircle'); P(10, e.cx); P(20, e.cy); P(30, 0); P(40, e.r); P(100, 'AcDbArc'); P(50, e.a1); P(51, e.a2); break;
         case 'POINT': head('POINT', 'AcDbPoint'); P(10, e.x); P(20, e.y); P(30, 0); break;
-        case 'POLYLINE': { if(e.pw && e.wq && e.wq.length){ const B = (A.bvOf && A.bvOf(e)) || e.vertices || []; if(B.length === e.pw.length && B.length >= 2){   // đa tuyến rộng dạng gốc: đỉnh + cung + độ rộng 40/41 từng đỉnh
+        case 'POLYLINE': { if(e.p3 && (e.vertices || []).length >= 2){   // đa tuyến 3D (3DPOLY): POLYLINE cờ 8 + VERTEX 3D + SEQEND
+            const hp = head('POLYLINE', 'AcDb3dPolyline'); P(66, 1); P(10, 0); P(20, 0); P(30, 0); P(70, 8 | (e.closed ? 1 : 0)); xd(); wrote = false;
+            for(const v of e.vertices){ const hv = H(); if(o.hs) o.hs.push(hv); P(0, 'VERTEX'); P(5, hv); P(330, hp); P(100, 'AcDbEntity'); if(curPS) P(67, 1); P(8, ly); P(100, 'AcDbVertex'); P(100, 'AcDb3dPolylineVertex'); P(10, v.x); P(20, v.y); P(30, v.z || 0); P(70, 32); }
+            { const hs = H(); if(o.hs) o.hs.push(hs); P(0, 'SEQEND'); P(5, hs); P(330, hp); P(100, 'AcDbEntity'); if(curPS) P(67, 1); P(8, ly); } break; }
+          if(e.pw && e.wq && e.wq.length){ const B = (A.bvOf && A.bvOf(e)) || e.vertices || []; if(B.length === e.pw.length && B.length >= 2){   // đa tuyến rộng dạng gốc: đỉnh + cung + độ rộng 40/41 từng đỉnh
               head('LWPOLYLINE', 'AcDbPolyline'); P(90, B.length); P(70, e.closed ? 1 : 0); B.forEach((v, k) => { P(10, v.x); P(20, v.y); P(40, e.pw[k][2] || 0); P(41, e.pw[k][3] || 0); if(v.bulge) P(42, v.bulge); }); break; } }
           if(e.wq && e.wq.length && (e.vertices || []).length >= 2){ widthPoly(e); break; } if(e.wipe && !o.inBlock && (e.vertices || []).length >= 3){ wipeout(e, head); break; } const bv = A.bvOf ? A.bvOf(e) : null; lwpoly(bv && bv.length >= 2 ? bv : (e.vertices || []), !!e.closed); break; }
         case 'IMAGE': { const D = !o.inBlock && !o.dimBlock && imgDefs.get(e.img); if(D){ imageEnt(e, D, head); break; }
@@ -304,7 +312,7 @@
             head('MTEXT', 'AcDbMText'); P(10, e.x); P(20, e.y); P(30, 0); P(40, e.h || 2.5); P(41, 0); P(71, ap); P(72, 1); const s = mtStr(txt); for(let k = 0; k < s.length; k += 250){ const part = s.slice(k, k + 250); if(k + 250 < s.length) P(3, part); else P(1, part); } if(!s.length) P(1, '');
             if(e.style && stUsed.has(e.style)) P(7, dxfStr(e.style)); const r = (e.rot || 0) * D2R; P(11, Math.cos(r)); P(21, Math.sin(r)); P(31, 0); P(73, 1); P(44, 1); break; }
           head('TEXT', 'AcDbText'); const { vj } = textBody(e, txt); P(100, 'AcDbText'); if(vj) P(73, vj); break; }
-        case 'SOLID': if(e.face){ const p = e.pts || []; if(p.length >= 3){ const zs = e.zs || []; head('3DFACE', 'AcDbFace'); for(let j = 0; j < 4; j++){ const q = p[Math.min(j, p.length - 1)]; P(10 + j, q.x); P(20 + j, q.y); P(30 + j, zs[Math.min(j, p.length - 1)] || 0); } } break; } { const p = e.pts || []; if(p.length >= 3){ head('SOLID', 'AcDbTrace'); P(10, p[0].x); P(20, p[0].y); P(30, 0); P(11, p[1].x); P(21, p[1].y); P(31, 0); P(12, p[2].x); P(22, p[2].y); P(32, 0); const q = p[3] || p[2]; P(13, q.x); P(23, q.y); P(33, 0); } break; }
+        case 'SOLID': if(e.face){ const p = e.pts || []; if(p.length >= 3){ const zs = e.zs || []; head('3DFACE', 'AcDbFace'); for(let j = 0; j < 4; j++){ const q = p[Math.min(j, p.length - 1)]; P(10 + j, q.x); P(20 + j, q.y); P(30 + j, zs[Math.min(j, p.length - 1)] || 0); } if(e.ie) P(70, e.ie & 15); } break; } { const p = e.pts || []; if(p.length >= 3){ head('SOLID', 'AcDbTrace'); P(10, p[0].x); P(20, p[0].y); P(30, 0); P(11, p[1].x); P(21, p[1].y); P(31, 0); P(12, p[2].x); P(22, p[2].y); P(32, 0); const q = p[3] || p[2]; P(13, q.x); P(23, q.y); P(33, 0); } break; }
         case 'ELLIPSE': { let p1 = e.p1 || 0, p2 = e.p2 == null ? TAU : e.p2; head('ELLIPSE', 'AcDbEllipse'); P(10, e.cx); P(20, e.cy); P(30, 0); P(11, e.mx); P(21, e.my); P(31, 0); P(210, 0); P(220, 0); P(230, 1); P(40, e.ratio || 1); P(41, p1); P(42, p2); break; }
         case 'XLINE': { const Lx = Math.hypot(e.dx, e.dy) || 1; head(e.ray ? 'RAY' : 'XLINE', e.ray ? 'AcDbRay' : 'AcDbXline'); P(10, e.x); P(20, e.y); P(30, 0); P(11, e.dx / Lx); P(21, e.dy / Lx); P(31, 0); break; }
         case 'HATCH': hatch(e, head); break;

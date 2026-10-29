@@ -162,6 +162,8 @@
   const frame = g => { const th = (g.north || 0) * Math.PI / 180; return { N: { x: -Math.sin(th), y: Math.cos(th) }, E: { x: Math.cos(th), y: Math.sin(th) }, u: mpu(), D: { x: g.dx || 0, y: g.dy || 0 }, lat0: g.lat, lon0: g.lon, c0: Math.cos(g.lat * Math.PI / 180) }; };
   const toLL = (F, p) => { const vx = p.x - F.D.x, vy = p.y - F.D.y; const e = (vx * F.E.x + vy * F.E.y) * F.u, nn = (vx * F.N.x + vy * F.N.y) * F.u; return { lat: F.lat0 + nn / R_E * 180 / Math.PI, lon: F.lon0 + e / (R_E * F.c0) * 180 / Math.PI }; };
   const fromLL = (F, lat, lon) => { const nn = (lat - F.lat0) * Math.PI / 180 * R_E, e = (lon - F.lon0) * Math.PI / 180 * R_E * F.c0; return { x: F.D.x + (e * F.E.x + nn * F.N.x) / F.u, y: F.D.y + (e * F.E.y + nn * F.N.y) / F.u }; };
+  A.geoToLL = p => { const g = A.geoGet ? A.geoGet() : null; return g ? toLL(frame(g), p) : null; };   // điểm bản vẽ → vĩ độ / kinh độ (GEOMARK…)
+  A.geoFromLL = (lat, lon) => { const g = A.geoGet ? A.geoGet() : null; return g ? fromLL(frame(g), lat, lon) : null; };
   const lon2t = (lon, z) => (lon + 180) / 360 * 2 ** z, lat2t = (lat, z) => { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z; };
   const t2lon = (x, z) => x / 2 ** z * 360 - 180, t2lat = (y, z) => { const n = Math.PI - 2 * Math.PI * y / 2 ** z; return 180 / Math.PI * Math.atan(Math.sinh(n)); };
   const TILE = new Map(); let gmTimer = 0; A.geomapTiles = TILE;
@@ -254,30 +256,17 @@
      MÁY VẼ HPGL/2 (.plt): nét, cung (theo dây cung), kiểu nét, vùng tô / chữ (đa giác FP), bề rộng nét (PW), màu bút (PC)
      Bút = bút vật lý (physical pen) của bảng kiểu in → bút ảo (virtual pen) → số màu ACI
      ================================================================== */
-  function hpglPlot(){ if(!A.plotGeom) return null; const G = A.plotGeom(), PSx = A.PS || {}, k = G.k, PLU = 40;
-    const X = x => Math.round((G.ox + (x - G.area.x0) * k) * PLU), Y = y => Math.round((G.Hmm - G.oy - (G.area.y1 - y) * k) * PLU);
-    const sv = { plot: plotMode, st: _plotStyle }; plotMode = true; _plotStyle = PSx.style === 'color' ? '' : (PSx.style || 'mono');
-    const out = ['IN;', 'BP1,"DVDCAD";', 'PS' + Math.round(G.Wmm * PLU) + ',' + Math.round(G.Hmm * PLU) + ';', 'RO0;', 'IP;', 'SC;', 'NP256;', 'CR0,255,0,255,0,255;', 'PA;', 'LA1,4,2,4;', 'FT1;', 'WU0;',
-      'IW' + X(G.area.x0) + ',' + Y(G.area.y0) + ',' + X(G.area.x1) + ',' + Y(G.area.y1) + ';'];
-    const pens = new Map(); let curPen = -1, curW = -1;
-    const rgbOf = c => { c = String(c || '#000'); let m = /^#([0-9a-f]{3})$/i.exec(c); if(m) c = '#' + m[1].split('').map(x => x + x).join(''); m = /^#([0-9a-f]{6})/i.exec(c); if(m){ const n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; } m = /rgba?\(([^)]+)\)/.exec(c); if(m){ const q = m[1].split(',').map(v => parseFloat(v)); return [q[0] | 0, q[1] | 0, q[2] | 0]; } return [0, 0, 0]; };
+  /* bộ duyệt nét vectơ theo thiết lập in (dùng chung: HPGL/2, PSOUT EPS, WMFOUT): nét / vùng tô theo toạ độ bản vẽ, bút + màu + bề rộng theo bảng kiểu in */
+  const vecRgb = c => { c = String(c || '#000'); let m = /^#([0-9a-f]{3})$/i.exec(c); if(m) c = '#' + m[1].split('').map(x => x + x).join(''); m = /^#([0-9a-f]{6})/i.exec(c); if(m){ const n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; } m = /rgba?\(([^)]+)\)/.exec(c); if(m){ const q = m[1].split(',').map(v => parseFloat(v)); return [q[0] | 0, q[1] | 0, q[2] | 0]; } return [0, 0, 0]; };
+  A.vecRgb = vecRgb;
+  function vecWalk(G, list, B){ const rgbOf = vecRgb; const PSx = A.PS || {}, k = G.k;
     const penOf = e => { const src = e.col || A.layerHex(e.layer || '0'); let aci = 7; try{ aci = A.aciOf ? A.aciOf(src) : A.aciNear(src); }catch(_){} const st = A.ctbStyleOf ? A.ctbStyleOf(e) : null;
       const pen = Math.max(1, Math.min(255, st && st.pn > 0 ? st.pn : st && st.vp > 0 ? st.vp : (aci || 7))); let col = '#000000'; try{ col = plotColor(src); }catch(_){}
       const lw = st && st.lw > 0 ? st.lw : (PSx.lw ? (lwOf(e) || 25) : 25); return { pen, rgb: rgbOf(col), w: Math.max(0.05, lw / 100), st }; };
-    const sel = P => { if(!pens.has(P.pen)){ pens.set(P.pen, P.rgb); out.push('PC' + P.pen + ',' + P.rgb.join(',') + ';'); } if(P.pen !== curPen){ out.push('SP' + P.pen + ';'); curPen = P.pen; curW = -1; } if(Math.abs(P.w - curW) > 1e-6){ out.push('PW' + (+P.w.toFixed(3)) + ',' + P.pen + ';'); curW = P.w; } };
     // kiểu nét: mẫu bảng kiểu in (mm) hoặc kiểu nét của đối tượng (đơn vị bản vẽ → mm giấy)
     const dashOf = (e, P) => { if(P.st && P.st.lt != null && A.PSLT && A.PSLT[P.st.lt]){ const pat = A.PSLT[P.st.lt][1]; return pat && pat.length ? pat.map(v => Math.abs(v) || 0.1).map((v, i) => i % 2 ? -v : v) : null; }
       let n = null; try{ n = ltNameOf(e); }catch(_){} if(!n) return null; const d = ltDef(n); if(!d || !d.pat || !d.pat.length) return null; const s0 = (typeof LTSCALE !== 'undefined' ? LTSCALE : 1) * (e.lts || 1) * k; return d.pat.map(v => v * s0); };
-    const stroke = (pts, closed, P, dash) => { if(pts.length < 2) return; sel(P); const Q = pts.map(p => [X(p.x), Y(p.y)]); if(closed) Q.push(Q[0]);
-      if(!dash){ out.push('PU' + Q[0].join(',') + ';PD' + Q.slice(1).map(q => q.join(',')).join(',') + ';'); return; }
-      const pat = dash.map(v => v * PLU), tot = pat.reduce((a, v) => a + Math.max(Math.abs(v), 1), 0); if(!(tot > 2)){ out.push('PU' + Q[0].join(',') + ';PD' + Q.slice(1).map(q => q.join(',')).join(',') + ';'); return; }
-      let pi = 0, left = Math.max(Math.abs(pat[0]), pat[0] === 0 ? 2 : 0), on = pat[0] >= 0, buf = [];
-      const flush = () => { if(buf.length >= 2) out.push('PU' + buf[0].join(',') + ';PD' + buf.slice(1).map(q => q.join(',')).join(',') + ';'); buf = []; };
-      for(let i = 1; i < Q.length; i++){ let [ax, ay] = Q[i - 1]; const [bx, by] = Q[i]; let L = Math.hypot(bx - ax, by - ay); if(on && !buf.length) buf.push([ax, ay]);
-        while(L > 1e-9){ const d = Math.min(L, left); const t = d / L; const nx = Math.round(ax + (bx - ax) * t), ny = Math.round(ay + (by - ay) * t); if(on) buf.push([nx, ny]); ax = nx; ay = ny; L -= d; left -= d;
-          if(left <= 1e-9){ if(on) flush(); pi = (pi + 1) % pat.length; on = pat[pi] >= 0; left = Math.abs(pat[pi]) || 2; if(on) buf.push([ax, ay]); } } }
-      if(on) flush(); };
-    const fill = (loops, P) => { const L = loops.filter(l => l && l.length >= 3); if(!L.length) return; sel(P); L.forEach((l, i) => { const Q = l.map(p => [X(p.x), Y(p.y)]); out.push((i ? 'PM1;' : 'PU' + Q[0].join(',') + ';PM0;') + (i ? 'PU' + Q[0].join(',') + ';' : '') + 'PD' + Q.slice(1).map(q => q.join(',')).join(',') + ',' + Q[0].join(',') + ';'); }); out.push('PM2;FP0;'); };
+    const stroke = (pts, closed, P, dash) => B.stroke(pts, closed, P, dash), fill = (loops, P) => B.fill(loops, P);
     const sample = e => { const c = A.G && A.G.curveOf ? A.G.curveOf(e) : null; if(!c || !c.at) return null; const lenMM = (c.len || 0) * k, n = Math.max(8, Math.min(4000, Math.max(Math.ceil(lenMM / 0.3), (e.vertices || []).length * 2))); const P = []; for(let i = 0; i <= n; i++) P.push(c.at(c.u0 + (c.u1 - c.u0) * i / n)); return P; };
     const one = (e, P) => { const t = e.type;
       if(t === 'LINE'){ stroke([{ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }], false, P, dashOf(e, P)); return; }
@@ -292,9 +281,31 @@
       if(e.wq && e.wq.length){ fill(e.wq, P); return; }
       const pts = sample(e); if(pts) stroke(pts, false, P, dashOf(e, P)); };
     let n = 0;
-    try{ for(const e of entities){ if(!e || e.vpf || e.vh || e.xh || e.avh || (A.isHiddenE && A.isHiddenE(e))) continue; let bb = null; try{ bb = entBBox(e); }catch(_){} if(bb && (bb.x1 < G.area.x0 || bb.x0 > G.area.x1 || bb.y1 < G.area.y0 || bb.y0 > G.area.y1)) continue;
+    { for(const e of list){ if(!e || e.vpf || e.vh || e.xh || e.avh || (A.isHiddenE && A.isHiddenE(e))) continue; let bb = null; try{ bb = entBBox(e); }catch(_){} if(bb && (bb.x1 < G.area.x0 || bb.x0 > G.area.x1 || bb.y1 < G.area.y0 || bb.y0 > G.area.y1)) continue;
         const P = penOf(e); const parts = e.clip && A.clipToRegion ? A.clipToRegion(Object.assign({}, e, { clip: undefined }), e.clip) : [e];
         for(const x of parts){ try{ one(x, P); n++; }catch(err){ console.warn('hpgl', err); } } } }
+    return n; }
+  A.vecWalk = vecWalk;
+  function hpglPlot(){ if(!A.plotGeom) return null; const G = A.plotGeom(), PSx = A.PS || {}, k = G.k, PLU = 40;
+    const X = x => Math.round((G.ox + (x - G.area.x0) * k) * PLU), Y = y => Math.round((G.Hmm - G.oy - (G.area.y1 - y) * k) * PLU);
+    const sv = { plot: plotMode, st: _plotStyle }; plotMode = true; _plotStyle = PSx.style === 'color' ? '' : (PSx.style || 'mono');
+    const out = ['IN;', 'BP1,"DVDCAD";', 'PS' + Math.round(G.Wmm * PLU) + ',' + Math.round(G.Hmm * PLU) + ';', 'RO0;', 'IP;', 'SC;', 'NP256;', 'CR0,255,0,255,0,255;', 'PA;', 'LA1,4,2,4;', 'FT1;', 'WU0;',
+      'IW' + X(G.area.x0) + ',' + Y(G.area.y0) + ',' + X(G.area.x1) + ',' + Y(G.area.y1) + ';'];
+    const pens = new Map(); let curPen = -1, curW = -1;
+    const rgbOf = c => A.vecRgb(c);
+    const sel = P => { if(!pens.has(P.pen)){ pens.set(P.pen, P.rgb); out.push('PC' + P.pen + ',' + P.rgb.join(',') + ';'); } if(P.pen !== curPen){ out.push('SP' + P.pen + ';'); curPen = P.pen; curW = -1; } if(Math.abs(P.w - curW) > 1e-6){ out.push('PW' + (+P.w.toFixed(3)) + ',' + P.pen + ';'); curW = P.w; } };
+    const stroke = (pts, closed, P, dash) => { if(pts.length < 2) return; sel(P); const Q = pts.map(p => [X(p.x), Y(p.y)]); if(closed) Q.push(Q[0]);
+      if(!dash){ out.push('PU' + Q[0].join(',') + ';PD' + Q.slice(1).map(q => q.join(',')).join(',') + ';'); return; }
+      const pat = dash.map(v => v * PLU), tot = pat.reduce((a, v) => a + Math.max(Math.abs(v), 1), 0); if(!(tot > 2)){ out.push('PU' + Q[0].join(',') + ';PD' + Q.slice(1).map(q => q.join(',')).join(',') + ';'); return; }
+      let pi = 0, left = Math.max(Math.abs(pat[0]), pat[0] === 0 ? 2 : 0), on = pat[0] >= 0, buf = [];
+      const flush = () => { if(buf.length >= 2) out.push('PU' + buf[0].join(',') + ';PD' + buf.slice(1).map(q => q.join(',')).join(',') + ';'); buf = []; };
+      for(let i = 1; i < Q.length; i++){ let [ax, ay] = Q[i - 1]; const [bx, by] = Q[i]; let L = Math.hypot(bx - ax, by - ay); if(on && !buf.length) buf.push([ax, ay]);
+        while(L > 1e-9){ const d = Math.min(L, left); const t = d / L; const nx = Math.round(ax + (bx - ax) * t), ny = Math.round(ay + (by - ay) * t); if(on) buf.push([nx, ny]); ax = nx; ay = ny; L -= d; left -= d;
+          if(left <= 1e-9){ if(on) flush(); pi = (pi + 1) % pat.length; on = pat[pi] >= 0; left = Math.abs(pat[pi]) || 2; if(on) buf.push([ax, ay]); } } }
+      if(on) flush(); };
+    const fill = (loops, P) => { const L = loops.filter(l => l && l.length >= 3); if(!L.length) return; sel(P); L.forEach((l, i) => { const Q = l.map(p => [X(p.x), Y(p.y)]); out.push((i ? 'PM1;' : 'PU' + Q[0].join(',') + ';PM0;') + (i ? 'PU' + Q[0].join(',') + ';' : '') + 'PD' + Q.slice(1).map(q => q.join(',')).join(',') + ',' + Q[0].join(',') + ';'); }); out.push('PM2;FP0;'); };
+    let n = 0;
+    try{ n = vecWalk(G, entities, { stroke, fill }); }
     finally { plotMode = sv.plot; _plotStyle = sv.st; }
     out.push('PU;SP0;PG;');
     return { data: out.join('\n') + '\n', pens: pens.size, ents: n }; }

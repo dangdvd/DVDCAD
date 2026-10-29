@@ -6,6 +6,52 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5v: Smart Blocks, hình chiếu từ mô hình 3D, ràng buộc đối xứng + DCCONVERT, GEOMARK, 3DPOLY / PFACE / 3DMESH / EDGE, SHP / SHX, EPS / WMF / web / DWGCONVERT
+- Tệp mới nạp sau `dvd-acad-dlg4.js`: `dvd-acad-x18.js` … `dvd-acad-x22.js` (có trong danh sách cache của `sw.js`). Ribbon có thêm tab `layout` (*Bố cục*) trong cả 2 không gian làm việc.
+- `dvd-acad-x18.js` (Smart Blocks):
+  - Hình của khối → các đoạn mẫu. Tìm theo lưới băm các nét rời.
+  - Mỗi ứng viên: ghép 2 điểm mốc → phép đồng dạng (`simM`), rồi so khớp từng đoạn theo dung sai.
+  - API: `A.bconvertSearch(name, src, opt, pool)` / `A.bconvertApply(name, src, list)`. Cài đặt lưu ở `dvd:bconvert`.
+- `dvd-acad-x19.js` (hình chiếu):
+  - Sổ hình chiếu `A._dvRegistry` lưu trong DVDCAD_DATA (`dvw`). Nét mang XDATA `dvw` = `id` hoặc `id/a` (chú thích vẽ trên hình cha).
+  - Hình con lấy hướng theo hình cha: ngang `d' = k·sh·r`, dọc `d' = k·sv·u`, với k = −1 (góc chiếu thứ nhất) / +1 (thứ ba). Hình có hướng nằm ngang giữ trục Z hướng lên.
+  - Toạ độ tính từ gốc thế giới nên `VIEWUPDATE` giữ được vị trí đã dời; hình con dời theo hình cha.
+- `dvd-acad-3d.js` `flatshot(o)` có thêm:
+  - `o.dir` / `o.up`: hướng chiếu bất kỳ.
+  - `o.hidden`: trả `out.hid` (nét khuất).
+  - `o.caps`: mặt cắt đưa vào lượt chiều sâu.
+  - `out.B` = {r, u, c}: hệ trục của hình chiếu.
+  - `setCutPlane(n, o)`: mặt cắt tổng quát, giữ phía n·(P − o) ≥ 0. `buildCaps()` gộp vùng cắt theo từng đối tượng.
+- `dvd-acad-x4.js` (ràng buộc):
+  - Thêm loại `sym` cho bộ giải.
+  - Cài đặt `dvd:conset` gồm `fmt`, `show` và `ac {coin, hv, par, perp, tolD, tolA}`.
+  - Ràng buộc có thêm `c.hide` (`DCDISPLAY`) và `c.ann` (`DCFORM`, vẽ cả khi in).
+  - `DCCONVERT` tìm đối tượng tại điểm định nghĩa của kích thước.
+- `dvd-acad-x20.js`:
+  - **GEOMARK**: nhóm `*GEOMARK` (POINT + CIRCLE + 2 LINE + TEXT) mang XDATA `gmk` {id, lat, lon, z, note}. `A.geoToLL` / `A.geoFromLL` nằm trong `dvd-acad-dlg4.js`.
+  - **3DPOLY**: POLYLINE có `p3` (đỉnh có z).
+    - DXF: AcDb3dPolyline (70 = 8) + VERTEX (70 = 32) + SEQEND.
+    - DWG: `POLYLINE_3D` (16) / `VERTEX_3D` (11) + SEQEND trong `dvd-dwg.js`.
+    - `libredwg-web.js` thêm đỉnh cuối qua `last_vertex`. LibreDWG bỏ sót đỉnh này khi đọc R13–R2000.
+  - **EDGE**: đổi bit `e.ie` của 3DFACE (DXF mã 70). Chọn 3DFACE trong core theo đúng thứ tự đỉnh.
+  - **SHP / SHX**:
+    - Đọc: `parseSHP`, `parseSHX`. Ghi: `compileSHX`. Trình thông dịch mã hình 0–14 với vectơ 16 hướng.
+    - SHAPE trong DXF → POINT mang `shpx`, dựng lại khi `LOAD` (`applyPending`).
+    - Tệp đã nạp lưu ở `dvd:shx:<TÊN>`.
+- `dvd-acad-x21.js`:
+  - `A.epsOut`: điểm = mm × 72 / 25,4.
+  - `A.wmfOut(list, opt)`: header placeable 0x9AC6CDD7, 254 đơn vị / inch.
+  - `A.publishWeb(...)`.
+  - `A.dwgConvertFiles(files, tgt, onEach, onLoaded)`:
+    - Mở từng tệp trong iframe ẩn `?dwgconvert=1`, đọc bằng đúng bộ đọc của app, rồi ghi bằng `A.dwgNative` / DXF.
+    - `PARTIALOAD` và `PSETUPIN` (với tệp DWG) cũng dùng iframe này.
+  - `dvd-acad-dlg4.js` tách vòng vẽ vectơ của máy vẽ HPGL thành `A.vecWalk` / `A.vecRgb` (HPGL ra giống hệt từng byte).
+- `dvd-acad-x22.js`: `CLOSEALLOTHER`, `ATTREDEF`, `PSETUPIN` (`A.setupsFromDXF` đọc đối tượng PLOTSETTINGS), `PARTIALOPEN` / `PARTIALOAD`, `SYSVARMONITOR` (`dvd:svmon`), `QUICKPROPERTIES` (`QPMODE`), `MVSETUP`, `PLOTTERMANAGER`, `UPDATETHUMBSNOW`.
+- Thiết lập trang có tên:
+  - `dvd-acad-more.js`: `A.pageSetups()` / `A.pageSetupApply()`; hộp PLOT có `#plSetup`.
+  - Lưu trong DVDCAD_DATA (`psu`). Khi mở bản vẽ, các thiết lập này được chép vào `dvd:psetups::<tên>`.
+- Khối động (`dvd-acad-x5.js`): `BVSTATE` / `BVSHOW` / `BVHIDE`. Thêm `REFSET` vào `dvd-acad-ext.js`.
+
 ## v5u: lật / kéo giãn là tham số AutoCAD, IMAGE + IMAGEDEF thật, in bản đồ nền + máy in có độ sâu màu, DWG 2007 → 2004
 - `dvd-acad-dxf.js` `dynGraph(B, d)`: đồ thị đánh giá tổng quát (nút `{ t, h, i, id }`, cạnh `[từ, tới, số liên kết]`, danh sách vào / ra tự tính) cho tham số hiển thị, tuyến tính (`BLOCKLINEARPARAMETER` + `BLOCKLINEARGRIP` + `UpdatedEndX/Y` + `BLOCKSTRETCHACTION`: khung t > L0/2, LINE / LWPOLYLINE dời theo đỉnh, nét khác chỉ khi nằm trọn trong khung) và 2 tham số lật (`BLOCKFLIPPARAMETER` + `BLOCKFLIPGRIP` + `UpdatedFlip` / `UpdatedBaseX/Y` + `BLOCKFLIPACTION` chọn mọi nét, tham số / grip khác và các STRETCH như khối Door của AutoCAD; FLIP → STRETCH).
   - Bản chèn đang lật: INSERT = `bm · S` (không lật), *U = S · hình đã kéo; XDATA `dfl: [sx, sy]` → bộ đọc dựng `bm = Mi · S`.

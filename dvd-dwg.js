@@ -160,7 +160,7 @@
   function headerVars(rec){ const m = new Map(); if(!rec) return m; let k = null; for(const x of rec.g){ if(x[0] === 9){ k = x[1]; m.set(k, new Rec(k)); } else if(k) m.get(k).g.push(x); } return m; }
 
   /* ---------------- mã kiểu đối tượng DWG ---------------- */
-  const T = { TEXT: 1, ATTRIB: 2, ATTDEF: 3, BLOCK: 4, ENDBLK: 5, SEQEND: 6, INSERT: 7, ARC: 17, CIRCLE: 18, LINE: 19,
+  const T = { TEXT: 1, ATTRIB: 2, ATTDEF: 3, BLOCK: 4, ENDBLK: 5, SEQEND: 6, INSERT: 7, VERTEX_3D: 11, POLYLINE_3D: 16, ARC: 17, CIRCLE: 18, LINE: 19,
     DIM_LIN: 21, DIM_ALI: 22, DIM_ANG3: 23, DIM_RAD: 25, DIM_DIA: 26, POINT: 27, FACE3D: 28, SOLID: 31, VIEWPORT: 34, ELLIPSE: 35, RAY: 40, XLINE: 41,
     DICT: 42, MTEXT: 44, BLOCK_CONTROL: 48, BLOCK_HEADER: 49, LAYER_CONTROL: 50, LAYER: 51, STYLE_CONTROL: 52, STYLE: 53,
     LTYPE_CONTROL: 56, LTYPE: 57, VIEW_CONTROL: 60, UCS_CONTROL: 62, VPORT_CONTROL: 64, VPORT: 65, APPID_CONTROL: 66, APPID: 67,
@@ -344,7 +344,7 @@
     }
 
     /* ---------- thực thể: gom theo khối ---------- */
-    const SUP = new Set(['LINE', 'CIRCLE', 'ARC', 'POINT', 'LWPOLYLINE', 'TEXT', 'MTEXT', 'SOLID', '3DFACE', 'ELLIPSE', 'XLINE', 'RAY', 'HATCH', 'INSERT', 'ATTDEF', 'DIMENSION', 'WIPEOUT', 'VIEWPORT', 'IMAGE']);
+    const SUP = new Set(['LINE', 'CIRCLE', 'ARC', 'POINT', 'LWPOLYLINE', 'TEXT', 'MTEXT', 'SOLID', '3DFACE', 'ELLIPSE', 'XLINE', 'RAY', 'HATCH', 'INSERT', 'ATTDEF', 'DIMENSION', 'WIPEOUT', 'VIEWPORT', 'IMAGE', 'POLYLINE']);
     const blocks = []; { let cur = null;
       for(const r of (S.BLOCKS || [])){
         if(r.type === 'BLOCK'){ cur = { blk: r, ents: [], end: null, br: ref(r.plain().get(330)) }; blocks.push(cur); continue; }
@@ -355,12 +355,16 @@
     const brEnts = new Map(); for(const b of blocks) brEnts.set(b.br, b.ents.slice());
     if(!brEnts.has(hMS)) brEnts.set(hMS, []); if(!brEnts.has(hPS)) brEnts.set(hPS, []);
     { let lastOw = hMS;   // ATTRIB / SEQEND (chủ = INSERT) đi theo INSERT đứng trước
-      for(const r of (S.ENTITIES || [])){ const ow = (r.type === 'ATTRIB' || r.type === 'SEQEND') ? lastOw : r.int(67) === 1 ? hPS : (ownerOf(r) || hMS); lastOw = ow; if(!brEnts.has(ow)) brEnts.set(ow, []); brEnts.get(ow).push(r); } }
+      for(const r of (S.ENTITIES || [])){ const ow = (r.type === 'ATTRIB' || r.type === 'SEQEND' || r.type === 'VERTEX') ? lastOw : r.int(67) === 1 ? hPS : (ownerOf(r) || hMS); lastOw = ow; if(!brEnts.has(ow)) brEnts.set(ow, []); brEnts.get(ow).push(r); } }
     // thực thể chính của mỗi khối + ATTRIB/SEQEND gắn vào INSERT
     const entH = new Set(), blockInfo = new Map();
     for(const [br, list] of brEnts){
-      const main = [], attOf = new Map(); let lastIns = null;
+      const main = [], attOf = new Map(); let lastIns = null, lastPl = null;
       for(const r of list){
+        // đa tuyến 3D: VERTEX … SEQEND đi theo POLYLINE đứng trước
+        if(lastPl && (r.type === 'VERTEX' || r.type === 'SEQEND')){ const a = attOf.get(lastPl); if(r.type === 'VERTEX') a.verts.push(r); else { a.seq = r; lastPl = null; } continue; }
+        if(r.type === 'VERTEX') continue;
+        if(r.type === 'POLYLINE'){ if(!(r.int(70) & 8)) continue; main.push(r); attOf.set(r, { verts: [], seq: 0, atts: [] }); lastPl = r; lastIns = null; continue; }
         if(r.type === 'ATTRIB' || r.type === 'SEQEND'){ if(lastIns){ const a = attOf.get(lastIns) || { atts: [], seq: 0 }; attOf.set(lastIns, a); if(r.type === 'ATTRIB') a.atts.push(r); else { a.seq = r; lastIns = null; } } continue; }
         if(!SUP.has(r.type)) continue;
         if(r.type === 'HATCH' && !r.has(91)) continue;
@@ -506,6 +510,13 @@
           A.atts.forEach((a, i) => { const oa = obj(T.ATTRIB, hs[i]); entCommon(oa, { props: entProps(a), mode: 0, owner: h, prev: i ? hs[i - 1] : 0, next: i + 1 < hs.length ? hs[i + 1] : 0 });
             const s2 = a.after('AcDbAttribute'); textData(oa, a, s2); attData(oa, s2); if(R10) oa.d.RC(0); oa.hd.H(5, styleH(a)); });
           const os = obj(T.SEQEND, hq); entCommon(os, { props: A.seq ? entProps(A.seq) : P, mode: 0, owner: h }); } }
+      else if(t === 'POLYLINE'){ const P3 = att || { verts: [] }; const V = P3.verts; o = obj(T.POLYLINE_3D, h, r); entCommon(o, c);   // đa tuyến 3D: kiểu đường cong (75), cờ (70: bit 1 = kín)
+        o.d.RC(r.int(75)); o.d.RC(r.int(70) & 1); if(R04) o.d.BL(V.length);
+        const hs = V.map(v => ref(v.get(5)) || newH()); let hq = P3.seq ? ref(P3.seq.get(5)) : 0; if(!hq) hq = newH();
+        if(R04) for(const x of hs) o.hd.H(3, x); else { o.hd.H(4, hs[0] || 0); o.hd.H(4, hs[hs.length - 1] || 0); } o.hd.H(3, hq);
+        // R2000: chuỗi trước / sau VERTEX … SEQEND (đỉnh cuối trỏ tới SEQEND như AutoCAD — bộ đọc đi theo chuỗi này)
+        V.forEach((v, i) => { const ov = obj(T.VERTEX_3D, hs[i]); entCommon(ov, { props: entProps(v), mode: 0, owner: h, prev: i ? hs[i - 1] : 0, next: i + 1 < hs.length ? hs[i + 1] : hq }); ov.d.RC(v.int(70, 32)); ov.d.BD3(v.pt(10)); });
+        const os = obj(T.SEQEND, hq); entCommon(os, { props: P3.seq ? entProps(P3.seq) : P, mode: 0, owner: h, prev: hs.length ? hs[hs.length - 1] : 0 }); }
       else if(t === 'DIMENSION'){ dimension(r, h, c); return; }
       return o;
     }
@@ -785,8 +796,8 @@
       const secSummary = (() => { const F = new BW(256); for(const s of ['', '', '', '', '', 'DVDCAD', '', '']) T16(F, s);
         F.RL(0); F.RL(0); F.RL(jd[0]); F.RL(jd[1]); F.RL(jd[0]); F.RL(jd[1]); F.RS(0); F.RL(0); F.RL(0); return F.bytes(); })();
       const secAppInfo = (() => { const F = new BW(1024), z16 = () => { for(let i = 0; i < 16; i++) F.RC(0); };
-        F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.14.1'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
-        U16(F, '<ProductInformation name ="DVDCAD" build_version="5.14.1" registry_version="5.14" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
+        F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.15.0'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
+        U16(F, '<ProductInformation name ="DVDCAD" build_version="5.15.0" registry_version="5.15" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
       const secRev = Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0);
       const up32 = (n, q) => Math.max(q, Math.ceil(n / q) * q);
       // --- trang dữ liệu: đầu 32 byte (mã hoá XOR theo địa chỉ) + dữ liệu (nén / nguyên) + lấp dãy MAGIC tới bội 0x20 ---

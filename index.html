@@ -1163,6 +1163,8 @@ function parseDXF(text){
       case 'ARC': return {type,layer,cx:num(g,10),cy:num(g,20),r:num(g,40),a1:num(g,50),a2:num(g,51)};
       case 'ELLIPSE': return {type,layer,cx:num(g,10),cy:num(g,20),mx:num(g,11),my:num(g,21),ratio:num(g,40)??1,p1:num(g,41)??0,p2:num(g,42)??(2*Math.PI)};
       case 'POINT': return {type,layer,x:num(g,10),y:num(g,20)};
+      case 'SHAPE': return {type:'POINT',layer,x:num(g,10),y:num(g,20),shpx:{name:String(str(g,2)||'').toUpperCase(),size:num(g,40)||1,rot:num(g,50)||0,wf:num(g,41)||1,ob:num(g,51)||0}};   // hình (SHAPE): dựng nét khi đã nạp tệp hình (LOAD)
+      case 'POSITIONMARKER':{ const t=str(g,1); const x=num(g,10), y=num(g,20); return t ? {type:'TEXT',layer,x,y,h:(num(g,40)||1)*2,text:decodeCAD(t),rot:0,mt:true,gmkx:1} : {type:'POINT',layer,x,y}; }   // điểm đánh dấu vị trí (GEOMARK…) của AutoCAD
       case 'TEXT':{ const ha=num(g,72)||0, va=num(g,73)||0, alt=num(g,11); const useAlt=!(ha===0&&va===0)&&alt!=null&&isFinite(alt); const x=useAlt?alt:num(g,10), y=useAlt?num(g,21):num(g,20); const _xs=(num(g,41)||1)*((num(g,71)&2)?-1:1); const _t={type,layer,x,y,h:num(g,40)||10,text:decodeCAD(str(g,1)||''),rot:num(g,50)||0,ha:tAlignH(ha),va:tBaseV(ha,va)}; if(Math.abs(_xs-1)>1e-6) _t.xs=_xs; if((num(g,71)||0)&4) _t.ud=1; { const _ob=num(g,51); if(_ob&&isFinite(_ob)&&Math.abs(_ob)>1e-9) _t.obl=_ob>180?_ob-360:_ob; } return _t; }
       case 'MTEXT':{
         let t=''; for(const it of g){ if(it.code===3) t+=it.value; else if(it.code===1) t+=it.value; }
@@ -1199,7 +1201,7 @@ function parseDXF(text){
       case 'SOLID': case '3DFACE':{
         const pts=[], zs=[];
         [[10,20,30],[11,21,31],[12,22,32],[13,23,33]].forEach(([a,b,c])=>{const x=num(g,a),y=num(g,b);if(x!==undefined&&y!==undefined){pts.push({x,y}); zs.push(num(g,c)||0);}});
-        if(type==='3DFACE'){ const o={type:'SOLID',layer,pts,face:1,zs}; const xi=g.findIndex(it=>it.code===1001&&it.value.trim()==='DVDCAD');   // mặt 3D: lưu cao độ từng đỉnh
+        if(type==='3DFACE'){ const o={type:'SOLID',layer,pts,face:1,zs}; { const ie=(num(g,70)||0)&15; if(ie) o.ie=ie; }   /* cạnh ẩn (EDGE) */ const xi=g.findIndex(it=>it.code===1001&&it.value.trim()==='DVDCAD');   // mặt 3D: lưu cao độ từng đỉnh
           if(xi>=0){ let tag='', js='', n=0; for(let k=xi+1;k<g.length&&g[k].code!==1001;k++){ const c=g[k].code; if(c===1000){ if(!tag) tag=g[k].value.trim(); else js+=g[k].value; } else if(c===1071||c===1070) n=parseInt(g[k].value,10)||0; } if(tag==='S3D'&&n>0) o._x3={n,d:js}; }
           return o; }
         return {type:'SOLID',layer,pts};
@@ -1264,7 +1266,7 @@ function parseDXF(text){
         }
         const plFlag=num(header,70)||0, plClosed=(plFlag&1)===1;
         if(plFlag&(64|16)){ const _m=dxfPolyMesh(plFlag,header,verts,num); if(_m){ _m.layer=str(header,8)||'0'; _m.aci=num(header,62); entExtra(_m,header); out.push(_m); } i=j; continue; }
-        const _pe={type:'POLYLINE',layer:str(header,8)||'0',vertices:expandPolyline(verts,plClosed),closed:false,aci:num(header,62)}; if(!(plFlag&8)) plBV(_pe,verts,plClosed); dvdXD(_pe,header); entExtra(_pe,header); out.push(_pe);
+        const _pe=(plFlag&8)?{type:'POLYLINE',layer:str(header,8)||'0',p3:1,vertices:verts.filter(v=>!(v.fl&16)).map(v=>({x:v.x,y:v.y,z:v.z||0})),closed:plClosed,aci:num(header,62)}:{type:'POLYLINE',layer:str(header,8)||'0',vertices:expandPolyline(verts,plClosed),closed:false,aci:num(header,62)}; if(!(plFlag&8)) plBV(_pe,verts,plClosed); dvdXD(_pe,header); entExtra(_pe,header); out.push(_pe);
         i=j;
       } else {
         let j=i+1; const g=[];
@@ -1519,13 +1521,13 @@ function transformPrim(e,M){
   const L=e.layer;
   switch(e.type){
     case 'LINE':{const a=mApply(M,e.x1,e.y1),b=mApply(M,e.x2,e.y2);return {type:'LINE',layer:L,x1:a.x,y1:a.y,x2:b.x,y2:b.y};}
-    case 'POLYLINE': { const o={type:'POLYLINE',layer:L,closed:e.closed,vertices:e.vertices.map(p=>mApply(M,p.x,p.y)),_img:e._img,wipe:e.wipe,dord:e.dord,wq:e.wq?e.wq.map(q=>q.map(p=>mApply(M,p.x,p.y))):undefined};
+    case 'POLYLINE': { const o={type:'POLYLINE',layer:L,closed:e.closed,p3:e.p3,vertices:e.vertices.map(p=>{ const q=mApply(M,p.x,p.y); if(p.z!=null) q.z=p.z; return q; }),_img:e._img,wipe:e.wipe,dord:e.dord,wq:e.wq?e.wq.map(q=>q.map(p=>mApply(M,p.x,p.y))):undefined};
       if(e.rgn){ o.rgn=1; if(e._rgnG) o._rgnG=e._rgnG; }
       if(e.pw){ const sc=Math.sqrt(Math.abs(M.a*M.d-M.b*M.c))||1; o.pw=e.pw.map(q=>{ const a=mApply(M,q[0],q[1]); return [a.x,a.y,q[2]*sc,q[3]*sc]; }); }
       if(e.bv&&window.DVDAcad&&DVDAcad.bvSig){ const s1=M.a*M.a+M.b*M.b, s2=M.c*M.c+M.d*M.d, det=M.a*M.d-M.b*M.c; if(Math.abs(s1-s2)<=1e-9*Math.max(s1,s2)&&Math.abs(M.a*M.c+M.b*M.d)<=1e-9*Math.max(s1,1e-300)){ o.bv=e.bv.map(p=>{ const q=mApply(M,p.x,p.y); const r={x:q.x,y:q.y}; if(p.bulge) r.bulge=det<0?-p.bulge:p.bulge; return r; }); o.bvs=DVDAcad.bvSig(o.vertices); } }
       return o; }
-    case 'POINT':{const a=mApply(M,e.x,e.y);return {type:'POINT',layer:L,x:a.x,y:a.y};}
-    case 'SOLID': { const o={type:'SOLID',layer:L,pts:e.pts.map(p=>mApply(M,p.x,p.y))}; if(e.face){ o.face=1; o.zs=e.zs; } return o; }
+    case 'POINT':{const a=mApply(M,e.x,e.y);const o={type:'POINT',layer:L,x:a.x,y:a.y}; if(e.shpx){ const k=Math.hypot(M.a,M.b)||1; o.shpx=Object.assign({},e.shpx,{size:(e.shpx.size||1)*k,rot:(e.shpx.rot||0)+Math.atan2(M.b,M.a)*180/Math.PI}); } return o;}
+    case 'SOLID': { const o={type:'SOLID',layer:L,pts:e.pts.map(p=>mApply(M,p.x,p.y))}; if(e.face){ o.face=1; o.zs=e.zs; if(e.ie) o.ie=e.ie; } return o; }
     case 'SOLID3D': { const o=JSON.parse(JSON.stringify(e)); const sc=Math.hypot(M.a,M.b); xfV3(o,p=>mApply(M,p.x,p.y),sc,(M.a*M.d-M.b*M.c)<0); if(o.pts) o.pts=o.pts.map(p=>mApply(M,p.x,p.y)); if(o.holes) o.holes=o.holes.map(h=>h.map(p=>mApply(M,p.x,p.y))); if(o.cx!=null){ const c=mApply(M,o.cx,o.cy); o.cx=c.x; o.cy=c.y; o.r*=sc; if(o.r2!=null) o.r2*=sc; } o.layer=L; return o; }
     case 'TEXT':{const a=mApply(M,e.x,e.y),ys=Math.hypot(M.c,M.d)||1,xsM=Math.hypot(M.a,M.b)||1,rotAdd=Math.atan2(M.b,M.a)*180/Math.PI;const o={type:'TEXT',layer:L,x:a.x,y:a.y,h:(e.h||10)*ys,text:e.text,rot:(e.rot||0)+rotAdd,ha:e.ha,va:e.va,mt:e.mt,xs:e.xs,ew:(e.ew||0)*xsM};if(e.ff)o.ff=e.ff;if(e.rt){o.rt=e.rt;if(e.mtwk)o.mtwk=e.mtwk;}if(e.ud)o.ud=1;if(e.obl)o.obl=e.obl;return o;}
     case 'CIRCLE': if(mIsId(M)) return e; if(mSim(M)){ const c=mApply(M,e.cx,e.cy); return {type:'CIRCLE',layer:L,cx:c.x,cy:c.y,r:e.r*Math.hypot(M.a,M.b)}; } return {type:'POLYLINE',layer:L,closed:true,vertices:smpCircle(e.cx,e.cy,e.r).map(p=>mApply(M,p.x,p.y))};
@@ -2228,7 +2230,7 @@ function drawEntityBody(e,col){
       else strokePts(e.vertices,e.closed);
       break;
     case 'SOLID3D': drawSolid3DPlan(e,col); break;
-    case 'SOLID':{const pts=e.pts;if(e.face&&pts.length>=3){ ctx.beginPath(); const a=toScreen(pts[0].x,pts[0].y); ctx.moveTo(a.x,a.y); for(let k=1;k<pts.length;k++){const q=toScreen(pts[k].x,pts[k].y);ctx.lineTo(q.x,q.y);} ctx.closePath(); ctx.stroke(); break; }
+    case 'SOLID':{const pts=e.pts;if(e.face&&pts.length>=3){ ctx.beginPath(); if(e.ie){ for(let k=0;k<pts.length;k++){ if(e.ie&(1<<k)) continue; const a=toScreen(pts[k].x,pts[k].y), q=toScreen(pts[(k+1)%pts.length].x,pts[(k+1)%pts.length].y); ctx.moveTo(a.x,a.y); ctx.lineTo(q.x,q.y); } ctx.stroke(); break; } const a=toScreen(pts[0].x,pts[0].y); ctx.moveTo(a.x,a.y); for(let k=1;k<pts.length;k++){const q=toScreen(pts[k].x,pts[k].y);ctx.lineTo(q.x,q.y);} ctx.closePath(); ctx.stroke(); break; }
       if(pts.length>=3){const o=pts.length===4?[pts[0],pts[1],pts[3],pts[2]]:pts;ctx.fillStyle=plotMode?col:hexA(col,.2);ctx.beginPath();const a=toScreen(o[0].x,o[0].y);ctx.moveTo(a.x,a.y);for(let k=1;k<o.length;k++){const q=toScreen(o[k].x,o[k].y);ctx.lineTo(q.x,q.y);}ctx.closePath();if(FILLMODE)ctx.fill();ctx.stroke();}break;}
     case 'POINT':{const p=toScreen(e.x,e.y);ctx.save();ctx.fillStyle=col;if(PDMODE&&!e.light&&!e.cam3){drawPointStyle(p,col);}else{ctx.beginPath();ctx.arc(p.x,p.y,2,0,2*Math.PI);ctx.fill();}
       if(e.light){ ctx.strokeStyle=col; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(p.x,p.y,7,0,2*Math.PI); ctx.stroke(); for(let k=0;k<8;k++){ const a=k*Math.PI/4; ctx.moveTo(p.x+Math.cos(a)*10,p.y+Math.sin(a)*10); ctx.lineTo(p.x+Math.cos(a)*14,p.y+Math.sin(a)*14); } ctx.stroke(); }
@@ -4594,7 +4596,9 @@ function dwgEntity(e){
     case 'ARC': return e.center?{type:'ARC',layer,cx:e.center.x,cy:e.center.y,r:e.radius,a1:deg(e.startAngle||0),a2:deg(e.endAngle||0)}:null;
     case 'ELLIPSE': return (e.center&&e.majorAxisEndPoint)?{type:'ELLIPSE',layer,cx:e.center.x,cy:e.center.y,mx:e.majorAxisEndPoint.x,my:e.majorAxisEndPoint.y,ratio:e.axisRatio??1,p1:e.startAngle??0,p2:e.endAngle??(2*Math.PI)}:null;
     case 'POINT': return e.position?{type:'POINT',layer,x:e.position.x,y:e.position.y}:null;
-    case 'LWPOLYLINE': case 'POLYLINE2D': case 'POLYLINE3D': { const cw=e.constantWidth||0; const raw=(e.vertices||[]).map(p=>({x:p.x,y:p.y,bulge:p.bulge||0,sw:(p.startWidth||cw||0),ew:(p.endWidth||cw||0)})).filter(p=>isFinite(p.x)&&isFinite(p.y)); if(!raw.length) return null; const fl=e.flag||0; const cl=(fl&512)!==0 || (fl&1)!==0; const verts=expandPolyline(raw, cl); if(verts.length<2) return null; if(raw.some(p=>p.sw>0||p.ew>0)) return widePoly(raw, cl, {layer}); return plBV({type:'POLYLINE',layer,vertices:verts,closed:cl},raw,cl); }
+    case 'POLYLINE3D': if(e.vertices&&e.vertices.length>=2&&e.vertices.every(p=>isFinite(p.x)&&isFinite(p.y))) return {type:'POLYLINE',layer,p3:1,vertices:e.vertices.filter(p=>!((p.flag||0)&16)).map(p=>({x:p.x,y:p.y,z:p.z||0})),closed:((e.flag||0)&1)!==0};   // đa tuyến 3D: giữ cao độ
+    // falls through
+    case 'LWPOLYLINE': case 'POLYLINE2D': { const cw=e.constantWidth||0; const raw=(e.vertices||[]).map(p=>({x:p.x,y:p.y,bulge:p.bulge||0,sw:(p.startWidth||cw||0),ew:(p.endWidth||cw||0)})).filter(p=>isFinite(p.x)&&isFinite(p.y)); if(!raw.length) return null; const fl=e.flag||0; const cl=(fl&512)!==0 || (fl&1)!==0; const verts=expandPolyline(raw, cl); if(verts.length<2) return null; if(raw.some(p=>p.sw>0||p.ew>0)) return widePoly(raw, cl, {layer}); return plBV({type:'POLYLINE',layer,vertices:verts,closed:cl},raw,cl); }
     case 'TEXT':{ if(!e.startPoint) return null; const ha=e.halign||0, va=e.valign||0, a=((ha===0&&va===0)||!e.endPoint)?e.startPoint:e.endPoint; return {type:'TEXT',layer,x:a.x,y:a.y,h:e.textHeight||e.height||10,text:decodeCAD(e.text||'',e.styleName),rot:deg(e.rotation||0),ha:tAlignH(ha),va:tBaseV(ha,va),xs:styleXScale(e.styleName),...(((e.generationFlag||0)&4)?{ud:1}:{}),...(e.obliqueAngle&&Math.abs(e.obliqueAngle)>1e-9?{obl:(()=>{const d=deg(e.obliqueAngle);return d>180?d-360:d;})()}:{})}; }
     case 'MTEXT': { if(!e.insertionPoint) return null; const ap=e.attachmentPoint||1, h=e.textHeight||10; let t=decodeCAD(e.text||'',e.styleName); t=mtextWrap(t, e.rectWidth||0, h); const o={type:'TEXT',layer,mt:true,x:e.insertionPoint.x,y:e.insertionPoint.y,h:h,text:t,rot:deg(e.rotation||0),ha:mtAlign(ap),va:mtBase(ap),xs:styleXScale(e.styleName),ew:(e.extentsWidth>0?e.extentsWidth:0)};
       try{ const R=window.DVDAcad&&DVDAcad.mtextRuns&&DVDAcad.mtextRuns(e.text); if(R){ o.rt=R; if(e.rectWidth>0) o.mtwk=e.rectWidth/h; } }catch(_){}   // đậm / nghiêng / gạch chân của AutoCAD
@@ -4603,7 +4607,7 @@ function dwgEntity(e){
       try{ if(a instanceof Uint8Array||ArrayBuffer.isView(a)) r=DVDAcis.fromSAB(new Uint8Array(a.buffer||a, a.byteOffset||0, a.byteLength||a.length));
         else if(typeof a==='string'){ if(/^ACIS BinaryFile|^ASM BinaryFile/.test(a)){ const u=new Uint8Array(a.length); for(let k=0;k<a.length;k++) u[k]=a.charCodeAt(k)&255; r=DVDAcis.fromSAB(u); } else r=DVDAcis.fromSAT(a.split(/\r?\n/)); } }catch(_){ r=null; }
       if(r) r.layer=layer; return r; }
-    case 'SOLID': case '3DFACE': { const cc=[e.corner1,e.corner2,e.corner3,e.corner4||e.corner3].filter(Boolean); const c=cc.map(p=>({x:p.x,y:p.y})); if(c.length<3) return null; return e.type==='3DFACE'?{type:'SOLID',layer,pts:c,face:1,zs:cc.map(p=>p.z||0)}:{type:'SOLID',layer,pts:c}; }
+    case 'SOLID': case '3DFACE': { const cc=[e.corner1,e.corner2,e.corner3,e.corner4||e.corner3].filter(Boolean); const c=cc.map(p=>({x:p.x,y:p.y})); if(c.length<3) return null; return e.type==='3DFACE'?Object.assign({type:'SOLID',layer,pts:c,face:1,zs:cc.map(p=>p.z||0)},(e.flag&15)?{ie:e.flag&15}:{}):{type:'SOLID',layer,pts:c}; }
     case 'INSERT':{ if(!e.name) return null; const o={type:'INSERT',layer,name:e.name,ix:(e.insertionPoint?e.insertionPoint.x:0),iy:(e.insertionPoint?e.insertionPoint.y:0),sx:(e.xScale??1),sy:(e.yScale??1),rot:deg(e.rotation||0),cols:e.columnCount||1,rows:e.rowCount||1,csp:e.columnSpacing||0,rsp:e.rowSpacing||0}; const xk=e.ownerDictionaryHardId&&String(e.ownerDictionaryHardId).toUpperCase(); if(_dwgXcl&&xk&&_dwgXcl.has(xk)) o.xc=_dwgXcl.get(xk); return o; }
     case 'DIMENSION': { if(!e.name) return null; const P=q=>(q&&isFinite(q.x)&&isFinite(q.y))?{x:q.x,y:q.y}:null;
       return {type:'INSERT',layer,name:e.name,ix:0,iy:0,sx:1,sy:1,rot:0,cols:1,rows:1,csp:0,rsp:0,_dim:true,_dd:{t:(e.dimensionType||0)&7,p1:P(e.subDefinitionPoint1),p2:P(e.subDefinitionPoint2),L:P(e.definitionPoint),ov:String(e.text||''),meas:e.measurement}}; }
@@ -6162,6 +6166,11 @@ if('serviceWorker' in navigator && !window.dvdDesktop){
 <script src="./dvd-acad-dlg2.js"></script>
 <script src="./dvd-acad-dlg3.js"></script>
 <script src="./dvd-acad-dlg4.js"></script>
+<script src="./dvd-acad-x18.js"></script>
+<script src="./dvd-acad-x19.js"></script>
+<script src="./dvd-acad-x20.js"></script>
+<script src="./dvd-acad-x21.js"></script>
+<script src="./dvd-acad-x22.js"></script>
 <script src="./dvd-lisp.js"></script>
 <script src="./dvd-addins.js"></script>
 <script src="./dvd-acad-pgp.js"></script>

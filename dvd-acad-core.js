@@ -110,7 +110,7 @@
           at: u => ({ x: e.cx + e.r * Math.cos(u), y: e.cy + e.r * Math.sin(u) }),
           sub: (a, b) => { const o = clone(e); o.type = 'ARC'; o.a1 = a * R2D; o.a2 = b * R2D; delete o.r; o.r = e.r; return o; } };
       case 'POLYLINE': case 'SOLID': {
-        let v = (e.type === 'POLYLINE' ? e.vertices : solidOrder(e.pts)) || []; const closed = e.type === 'SOLID' ? true : !!e.closed;
+        let v = (e.type === 'POLYLINE' ? e.vertices : e.face ? e.pts : solidOrder(e.pts)) || [];   /* mặt 3D (3DFACE): đỉnh theo thứ tự cạnh, không phải thứ tự SOLID 2D */ const closed = e.type === 'SOLID' ? true : !!e.closed;
         if(v.length < 2) return null;
         const pieces = []; let s = 0;
         const nseg = closed ? v.length : v.length - 1;
