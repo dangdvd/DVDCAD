@@ -1,4 +1,4 @@
-# DVDCAD v6a — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v6b — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,25 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v6b)
+- **Plot Preview** (nút **Xem trước…** trong hộp PLOT, bấm vào hình xem trước nhỏ, hoặc lệnh `PREVIEW` / `PRE`):
+  - Trang in vẽ bằng **nét vector** — phóng to bao nhiêu chữ và đường nét vẫn sắc nét, bề dày nét đúng như khi in.
+  - **Lăn chuột**: phóng to / thu nhỏ quanh con trỏ. **Kéo chuột trái** (chế độ Pan) hoặc **chuột giữa**: dời hình. Bấm đúp: phóng to ×2.
+  - Thanh công cụ và **menu chuột phải** như AutoCAD: **In** (= OK), **Pan**, **Zoom** (kéo lên / xuống), **Zoom Window** (kéo khung), **Zoom Original** (vừa trang), **Thoát**.
+  - Phím: **Esc / Enter** thoát, `+` / `-` phóng to / thu nhỏ, `Home` vừa trang. Màn hình cảm ứng: chụm hai ngón để zoom.
+- **Máy in / máy vẽ** như danh sách của AutoCAD:
+  - `DWG To PDF.pc3`, `AutoCAD PDF (General Documentation / High Quality Print / Smallest File / Web and Mobile).pc3`, `Default Windows System Printer.pc3`, `PublishToWeb PNG / JPG.pc3`, HPGL/2.
+  - **Bản Windows**: thêm **mọi máy in đã cài trong Windows** (theo tên, như AutoCAD). Chọn máy in rồi OK là in thẳng nét vector ra máy đó, không qua hộp in của Windows. Ô **Số bản** dùng được.
+  - **Máy in Windows (hộp in hệ thống)**: vẫn mở hộp in của Windows để chọn máy và tuỳ chọn.
+- **Khổ giấy đầy đủ như DWG To PDF.pc3** (89 khổ, chia nhóm):
+  - ISO A (4A0, 2A0, A0 → A6), ISO B (B0 → B5), ISO C (C0 → C6); **ISO full bleed** (không lề); **ISO expand** (A0 → A4).
+  - ANSI A → F, ARCH A → E3, mỗi loại có bản **full bleed** và **expand**; JIS B4 / B5, Legal; khổ tự chọn.
+  - Chọn khổ thì ô **Lề** tự đặt theo khổ: full bleed 0 mm, expand 3 mm, ISO 5 mm, ANSI / ARCH 6,35 mm (sửa lại được).
+  - Tên khổ ghi vào DWG / DXF đúng tên chuẩn của AutoCAD (vd `ISO_A3_(420.00_x_297.00_MM)`, `ISO_full_bleed_A1_(...)`); `PSETUPIN` đọc lại đúng khổ.
+- **Mọi cách xuất PDF đều là PDF vector** (đường nét + chữ nhúng phông, phóng to vẫn sắc nét):
+  - PLOT với các máy in PDF, nút **Xuất → PDF** (chọn khổ A4 → A0 / khít nội dung), **Xuất mọi layout ra PDF**, `PUBLISH`.
+  - Trước đây nút Xuất → PDF và PUBLISH bản cũ ghi ảnh JPEG 300 dpi (phóng to bị mờ).
 
 ## Bổ sung như AutoCAD 2027 (v6a)
 - **Lưu DWG 2007 gốc (AC1021), không cần ODA File Converter**:

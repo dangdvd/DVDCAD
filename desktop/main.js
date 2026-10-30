@@ -273,6 +273,27 @@ ipcMain.handle('dwg:convert', async (_e, dxf, ver) => {
   finally{ fs.promises.rm(work, { recursive: true, force: true }).catch(() => {}); }
 });
 
+/* ---------------- máy in Windows (danh sách Printer/plotter như AutoCAD) ---------------- */
+ipcMain.handle('print:list', async e => {
+  try{ const l = await e.sender.getPrintersAsync(); return l.map(p => ({ name: p.name, display: p.displayName || p.name, isDefault: !!p.isDefault, desc: p.description || '' })); }
+  catch(_){ return []; }
+});
+// in trang SVG vector thẳng ra máy in đã chọn (như OK trong hộp Plot của AutoCAD — không qua hộp in của Windows):
+// khổ giấy đúng mm, không lề trang (lề đã nằm trong bản vẽ), số bản. deviceName rỗng + silent = máy in mặc định.
+ipcMain.handle('print:svg', async (_e, o = {}) => {
+  const html = String(o.html || ''), W = +o.wmm || 297, H = +o.hmm || 210; if(!html) return { ok: false, error: 'trang in trống' };
+  const tmp = path.join(app.getPath('temp'), 'dvdcad-in-' + process.pid + '-' + Date.now() + '.html');
+  await fs.promises.writeFile(tmp, html, 'utf8');
+  const w = new BrowserWindow({ show: false, webPreferences: { javascript: false, sandbox: true, contextIsolation: true } });
+  try{
+    await w.loadFile(tmp);
+    const land = W > H, opt = { silent: o.silent !== false, printBackground: true, deviceName: String(o.deviceName || ''), copies: Math.max(1, Math.min(999, Math.round(+o.copies || 1))),
+      margins: { marginType: 'none' }, landscape: land, pageSize: { width: Math.round(Math.min(W, H) * 1000), height: Math.round(Math.max(W, H) * 1000) } };
+    return await new Promise(res => w.webContents.print(opt, (ok, reason) => res({ ok: !!ok, error: ok ? '' : String(reason || '') })));
+  }catch(e){ return { ok: false, error: String(e && e.message || e) }; }
+  finally{ setTimeout(() => { try{ w.destroy(); }catch(_){} fs.promises.rm(tmp, { force: true }).catch(() => {}); }, 1500); }
+});
+
 ipcMain.handle('shell:external', (_e, url) => { if(/^(https?:|mailto:)/i.test(String(url))) shell.openExternal(String(url)); return true; });
 ipcMain.handle('shell:reveal', (_e, p) => { if(canRead.has(key(p))) shell.showItemInFolder(norm(p)); return true; });
 

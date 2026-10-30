@@ -94,6 +94,9 @@
 "\" style=\"width:200px\" placeholder=\"mặc định\">": [
 "dvd-acad-dlg3.js"
 ],
+"\" style=\"width:60px\" title=\"Số bản in (máy in Windows)\">": [
+"dvd-acad-more.js"
+],
 "\" sẽ được thay bằng \"": [
 "dvd-acad-dlg2.js"
 ],
@@ -458,6 +461,10 @@
 ],
 "(mô hình) =": [
 "dvd-acad-x16.js"
+],
+"(mặc định)": [
+"dvd-acad-more.js",
+"dvd-acad-x22.js"
 ],
 "(mặt": [
 "dvd-acad-x7.js"
@@ -1977,6 +1984,9 @@
 ],
 "Bấm để mở bản vẽ": [
 "dvd-acad-x23.js"
+],
+"Bấm để mở cửa sổ xem trước (phóng to / dời được)": [
+"dvd-acad-more.js"
 ],
 "Bấm để thêm điểm (": [
 "index.html"
@@ -7148,6 +7158,9 @@
 "Dời hình": [
 "dvd-acad-dlg4.js"
 ],
+"Dời hình (Pan) — kéo chuột": [
+"dvd-acad-more.js"
+],
 "Dời khối 3D (cả theo phương đứng Z)": [
 "dvd-acad-3dx.js"
 ],
@@ -9009,6 +9022,9 @@
 "Hộp bao": [
 "dvd-acad-x9.js"
 ],
+"Hộp in của hệ điều hành": [
+"dvd-acad-x22.js"
+],
 "Hộp thoại Insert cổ điển: tên khối, điểm chèn, tỉ lệ, góc, phá khối": [
 "dvd-acad-dlg.js"
 ],
@@ -9148,8 +9164,14 @@
 "In theo kiểu in": [
 "dvd-acad-more.js"
 ],
+"In thẳng nét vector ra": [
+"dvd-acad-more.js"
+],
 "In và xuất bản": [
 "dvd-acad-dlg.js"
+],
+"In với thiết lập này (như OK)": [
+"dvd-acad-more.js"
 ],
 "In đen, bề rộng nét theo màu như thói quen văn phòng VN (1 đỏ 0.13 · 2 vàng 0.18 · 3 lá 0.25 · 4 lam 0.35 · 5 xanh 0.50 · 6 tím 0.30 · 7 trắng 0.20 · 8/9 0.09)": [
 "dvd-acad-x9.js"
@@ -10688,6 +10710,9 @@
 "Khổ giấy PDF": [
 "index.html:html"
 ],
+"Khổ khác": [
+"dvd-acad-more.js"
+],
 "Khổ tự chọn…": [
 "dvd-acad-more.js"
 ],
@@ -11286,6 +11311,9 @@
 ],
 "Kéo khung khi bấm vào chỗ trống": [
 "dvd-acad-dlg.js"
+],
+"Kéo khung để phóng to": [
+"dvd-acad-more.js"
 ],
 "Kéo màn hình": [
 "dvd-acad-ui.js"
@@ -12694,12 +12722,22 @@
 "Máy in / máy vẽ": [
 "dvd-acad-more.js"
 ],
+"Máy in Windows": [
+"dvd-acad-more.js",
+"dvd-acad-x22.js"
+],
 "Máy in Windows (hệ thống)": [
 "dvd-acad-dlg.js",
-"dvd-acad-dlg2.js",
+"dvd-acad-dlg2.js"
+],
+"Máy in Windows (hộp in hệ thống)": [
+"dvd-acad-more.js",
+"dvd-acad-x22.js"
+],
+"Máy in báo lỗi:": [
 "dvd-acad-more.js"
 ],
-"Máy in của hệ điều hành": [
+"Máy in mặc định của Windows": [
 "dvd-acad-x22.js"
 ],
 "Máy in theo thiết lập trang": [
@@ -13259,7 +13297,7 @@
 "dvd-acad-core.js",
 "dvd-acad-x4.js"
 ],
-"Mở hộp in của hệ điều hành": [
+"Mở hộp in của hệ điều hành (in vector)": [
 "dvd-acad-more.js"
 ],
 "Mở khoá": [
@@ -13580,6 +13618,9 @@
 ],
 "Nhạt": [
 "dvd-acad-dlg.js"
+],
+"Nhấn ESC hoặc ENTER để thoát, hoặc bấm chuột phải để hiện menu.": [
+"dvd-acad-more.js"
 ],
 "Nhận dạng nhóm": [
 "dvd-acad-dlg2.js"
@@ -14395,6 +14436,18 @@
 ],
 "PDF vector, ảnh nén nhỏ": [
 "dvd-acad-more.js"
+],
+"PDF vectơ cho web / điện thoại": [
+"dvd-acad-x22.js"
+],
+"PDF vectơ, tài liệu chung": [
+"dvd-acad-x22.js"
+],
+"PDF vectơ, ảnh nén nhỏ": [
+"dvd-acad-x22.js"
+],
+"PDF vectơ, ảnh độ phân giải cao": [
+"dvd-acad-x22.js"
 ],
 "PDF → nét vẽ, chữ": [
 "dvd-acad-x16.js"
@@ -15260,6 +15313,9 @@
 "Số bản (kể cả bản gốc)": [
 "dvd-acad-x2.js",
 "dvd-acad-x6.js"
+],
+"Số bản in (máy in Windows)": [
+"dvd-acad-more.js:attr"
 ],
 "Số bản không hợp lệ": [
 "index.html"
@@ -19052,6 +19108,9 @@
 "Vừa toàn bản vẽ": [
 "dvd-acad-pro.js:attr"
 ],
+"Vừa trang giấy": [
+"dvd-acad-more.js"
+],
 "WBLOCK: đã ghi": [
 "dvd-acad-x6.js"
 ],
@@ -19163,8 +19222,13 @@
 "dvd-acad-x7.js"
 ],
 "Xem trước bản in": [
-"dvd-acad-more.js",
+"dvd-acad-more.js"
+],
+"Xem trước bản in (Plot Preview): nét vector, lăn chuột phóng to / thu nhỏ, kéo để dời": [
 "dvd-acad-x15.js"
+],
+"Xem trước bản in: lăn chuột để phóng to / thu nhỏ, kéo để dời, chuột phải để hiện menu, Esc để thoát.": [
+"dvd-acad-more.js"
 ],
 "Xem trước khi kéo": [
 "dvd-acad-ui.js"
@@ -19631,7 +19695,8 @@
 ],
 "Xuất ảnh JPG": [
 "dvd-acad-more.js",
-"dvd-acad-ui.js"
+"dvd-acad-ui.js",
+"dvd-acad-x22.js"
 ],
 "Xuất ảnh PNG": [
 "dvd-acad-more.js",
@@ -19699,6 +19764,9 @@
 ],
 "Z thấp nhất": [
 "dvd-cmd.js"
+],
+"Zoom thời gian thực — kéo lên / xuống": [
+"dvd-acad-more.js"
 ],
 "Zoom vùng": [
 "index.html:attr"
@@ -19828,6 +19896,9 @@
 ],
 "bản · ↶ Hoàn tác để khôi phục": [
 "index.html"
+],
+"bản, tỉ lệ": [
+"dvd-acad-more.js"
 ],
 "bản.": [
 "dvd-acad-ext.js"
@@ -20377,6 +20448,9 @@
 "không lấy được vị trí": [
 "dvd-acad-x20.js"
 ],
+"không rõ": [
+"dvd-acad-more.js"
+],
 "không tên": [
 "dvd-acad-dlg2.js"
 ],
@@ -20696,6 +20770,12 @@
 "màu có thiết lập)": [
 "dvd-acad-x9.js"
 ],
+"máy in mặc định của Windows": [
+"dvd-acad-more.js"
+],
+"máy in này": [
+"dvd-acad-more.js"
+],
 "mây, cung": [
 "dvd-acad-x11.js"
 ],
@@ -20707,6 +20787,9 @@
 ],
 "mặc định": [
 "dvd-acad-dlg3.js:attr"
+],
+"mặc định của Windows": [
+"dvd-acad-more.js"
 ],
 "mặt": [
 "dvd-acad-x15.js"
@@ -22654,6 +22737,9 @@
 "Đã in ra": [
 "dvd-acad-more.js"
 ],
+"Đã in vector ra máy in": [
+"dvd-acad-more.js"
+],
 "Đã in: khổ": [
 "dvd-acad-more.js"
 ],
@@ -22804,6 +22890,9 @@
 ],
 "Đã mở": [
 "dvd-acad-x15.js"
+],
+"Đã mở hộp in (vector): khổ": [
+"dvd-acad-more.js"
 ],
 "Đã mở từ Google Drive:": [
 "dvd-cloud.js"
@@ -23560,6 +23649,9 @@
 ],
 "Đóng cửa sổ lịch sử dòng lệnh (về màn hình vẽ)": [
 "dvd-acad-x15.js"
+],
+"Đóng cửa sổ xem trước (Esc)": [
+"dvd-acad-more.js"
 ],
 "Đóng gói bản vẽ kèm ảnh, file tham chiếu thành .zip để gửi": [
 "dvd-acad-x16.js"

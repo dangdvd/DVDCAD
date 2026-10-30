@@ -456,11 +456,11 @@
     dict(hPsetD, hRoot, psets.map(q => [dxfStr(q.name), q.h]));
     // thiết lập DVDCAD → mã AutoCAD: máy in (.pc3), khổ ISO (ngang), xoay 90° = dọc, vùng in (74), cờ 70: 4 giữa trang, 16 tỉ lệ chuẩn (75 = 0: vừa giấy), 32 + 128 in nét dày, 1024 cho Model
     const ISO = { A0: [1189, 841], A1: [841, 594], A2: [594, 420], A3: [420, 297], A4: [297, 210] };
-    const DEV = { pdf: 'DWG To PDF.pc3', pdfhq: 'AutoCAD PDF (High Quality Print).pc3', pdfsm: 'AutoCAD PDF (Smallest File).pc3', png: 'PublishToWeb PNG.pc3', jpg: 'PublishToWeb JPG.pc3', plt: 'DesignJet 750C C4708B.pc3' };
+    const DEV = { pdf: 'DWG To PDF.pc3', pdfgd: 'AutoCAD PDF (General Documentation).pc3', pdfhq: 'AutoCAD PDF (High Quality Print).pc3', pdfsm: 'AutoCAD PDF (Smallest File).pc3', pdfwm: 'AutoCAD PDF (Web and Mobile).pc3', defprn: 'Default Windows System Printer.pc3', png: 'PublishToWeb PNG.pc3', jpg: 'PublishToWeb JPG.pc3', plt: 'DesignJet 750C C4708B.pc3' };
     for(const q of psets){ const S = q.P, fit = S.fit !== false, sc = +S.scale > 0 ? +S.scale : 1; const PZ = A.PAPER_SIZES && A.PAPER_SIZES[S.paper];
       const pk = ISO[S.paper] ? S.paper : 'A3'; let [W, Hh] = ISO[pk]; if(PZ){ W = Math.max(PZ.w, PZ.h); Hh = Math.min(PZ.w, PZ.h); } else if(S.paper === 'custom' && S.cw > 0 && S.ch > 0){ W = Math.max(S.cw, S.ch); Hh = Math.min(S.cw, S.ch); }
       const media = A.paperMedia && (PZ || S.paper === 'custom') ? A.paperMedia(S.paper, S.cw, S.ch) : 'ISO_full_bleed_' + pk + '_(' + W.toFixed(2) + '_x_' + Hh.toFixed(2) + '_MM)';
-      const dev = DEV[S.dev] || 'none_device';
+      const dev = DEV[S.dev] || (/^sys:/.test(S.dev || '') ? S.dev.slice(4) : 'none_device');   // máy in Windows: tên máy in như AutoCAD ghi
       P(0, 'PLOTSETTINGS'); P(5, q.h); P(102, '{ACAD_REACTORS'); P(330, hPsetD); P(102, '}'); P(330, hPsetD); P(100, 'AcDbPlotSettings');
       P(1, dxfStr(q.name)); P(2, dev); P(4, media); P(6, ''); P(40, 0); P(41, 0); P(42, 0); P(43, 0); P(44, W); P(45, Hh); P(46, 0); P(47, 0); P(48, 0); P(49, 0); P(140, 0); P(141, 0);
       P(142, 1); P(143, fit ? 1 : sc); P(70, 1024 | 32 | (S.lw === false ? 0 : 128) | (S.center === false ? 0 : 4) | (fit ? 16 : 0)); P(72, 1); P(73, S.land === false ? 1 : 0); P(74, S.area === 'display' ? 0 : S.area === 'window' ? 4 : 1);

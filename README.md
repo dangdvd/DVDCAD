@@ -6,6 +6,17 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6b: Plot Preview vector zoom / pan, máy in Windows đã cài, khổ giấy như DWG To PDF.pc3, mọi PDF là vector
+- **`plotPreview(onPlot)`** (`dvd-acad-more.js`, `A.plotPreview`, lệnh `PREVIEW`): `plotRender(0, false, 'svg')` → SVG đặt vào lớp phủ toàn màn hình;
+  camera `{x, y, s}` đổi `viewBox` (không co giãn ảnh → luôn sắc nét). Lăn chuột `zoomAt`, kéo = Pan, chuột giữa = Pan, Zoom thời gian thực, Zoom Window (`zoomRect`), Zoom Original (`fit`), chụm hai ngón.
+  Vùng bản vẽ `translate="no"` để bộ dịch giao diện không đổi chữ trong bản vẽ.
+- **Khổ giấy** `PAPER_SIZES` sinh từ bảng ISO A / B / C, ANSI, ARCH (+ full bleed, expand), JIS, Legal: mỗi khổ có `media` (tên chuẩn AutoCAD), `mg` (lề mặc định), `grp` (nhóm trong `<optgroup>`).
+  `A.paperMedia(k)` / `A.paperFromMedia(tên)` đổi qua lại; khổ `A3` nay ghi `ISO_A3_(420.00_x_297.00_MM)` (full bleed là `FB_A3`).
+- **Máy in**: `DEVICES` thêm `pdfgd`, `pdfwm`, `defprn`; máy in Windows đã cài = `sys:<tên>`.
+  `desktop/main.js`: `print:list` (`webContents.getPrintersAsync()`), `print:svg` (cửa sổ ẩn nạp trang SVG → `webContents.print({ silent, deviceName, copies, pageSize µm, landscape, margins none })`).
+  `preload.js`: `dvdDesktop.printers()`, `dvdDesktop.printSVG(o)`. Thiết bị `sys:` / `defprn` → `doPlot('sys')`; trình duyệt (không có cầu nối) → hộp in.
+- **PDF vector ở mọi đường xuất**: `renderForPDF(paper, region, vec)` (index.html) vẽ vào `DVDAcad.PdfCtx` thay canvas; `pagesToPDF(pages)` ghép bằng `pdfBuild`. PUBLISH bản cũ (`x2`) cũng dùng `plotRender(…, true)`.
+
 ## v6a: DWG 2007 gốc (AC1021), in vector cho máy in giảm màu
 - **`dvd-dwg.js` `pack2007(secs, o)`** — vỏ tệp AC1021 (kiểm từng byte với tệp AutoCAD trong bộ thử LibreDWG):
   - 0x80 byte đầu như 2004; 0x80: khối 0x400 byte = header 0x110 byte (34 số 64 bit, nén LZ 2007) + CRC, mã RS(255,239) ×3 xen kẽ (trường 0x169, nghiệm α¹…α¹⁶); cuối file chép lại khối này.

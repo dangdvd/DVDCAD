@@ -204,17 +204,30 @@
   /* ===================== PLOT (in theo khổ giấy & tỉ lệ như AutoCAD) ===================== */
   const PAPERS = { A4: [210, 297], A3: [297, 420], A2: [420, 594], A1: [594, 841], A0: [841, 1189] };
   // khổ giấy như DWG To PDF.pc3 (mm, theo chiều dọc) + tên chuẩn của AutoCAD (canonical media name)
-  const IN = 25.4, PAPER_SIZES = {};
-  for(const k of ['A0', 'A1', 'A2', 'A3', 'A4']) PAPER_SIZES[k] = { w: PAPERS[k][0], h: PAPERS[k][1], label: 'ISO ' + k, iso: 1 };
-  PAPER_SIZES.A5 = { w: 148, h: 210, label: 'ISO A5', iso: 1 };
-  for(const [k, w, h] of [['A', 8.5, 11], ['B', 11, 17], ['C', 17, 22], ['D', 22, 34], ['E', 34, 44]]) PAPER_SIZES['ANSI_' + k] = { w: w * IN, h: h * IN, label: 'ANSI ' + k, inch: [w, h] };
-  for(const [k, w, h] of [['A', 9, 12], ['B', 12, 18], ['C', 18, 24], ['D', 24, 36], ['E1', 30, 42], ['E', 36, 48]]) PAPER_SIZES['ARCH_' + k] = { w: w * IN, h: h * IN, label: 'ARCH ' + k, inch: [w, h] };
-  const f2 = v => (+v).toFixed(2);
+  // danh sách như DWG To PDF.pc3: ISO A / B / C, ISO full bleed (không lề), ISO expand (lề hẹp), ANSI, ARCH (+ full bleed / expand), JIS, Legal
+  // mg: lề in mặc định (mm) của khổ — chọn khổ trong hộp PLOT thì đặt lại ô Lề; media: tên chuẩn của AutoCAD (mã 4 của PLOTSETTINGS)
+  const IN = 25.4, PAPER_SIZES = {}, f2 = v => (+v).toFixed(2);
+  const addP = (key, w, h, label, grp, pre, nm, mg, inch) => { PAPER_SIZES[key] = { w, h, label, grp, mg, inch, media: pre + nm + '_(' + (inch ? f2(Math.max(...inch)) + '_x_' + f2(Math.min(...inch)) + '_Inches)' : f2(Math.max(w, h)) + '_x_' + f2(Math.min(w, h)) + '_MM)') }; };
+  const ISO_A = [['4A0', 1682, 2378], ['2A0', 1189, 1682], ['A0', 841, 1189], ['A1', 594, 841], ['A2', 420, 594], ['A3', 297, 420], ['A4', 210, 297], ['A5', 148, 210], ['A6', 105, 148]];
+  const ISO_B = [['B0', 1000, 1414], ['B1', 707, 1000], ['B2', 500, 707], ['B3', 353, 500], ['B4', 250, 353], ['B5', 176, 250]];
+  const ISO_C = [['C0', 917, 1297], ['C1', 648, 917], ['C2', 458, 648], ['C3', 324, 458], ['C4', 229, 324], ['C5', 162, 229], ['C6', 114, 162]];
+  const ANSI = [['A', 8.5, 11], ['B', 11, 17], ['C', 17, 22], ['D', 22, 34], ['E', 34, 44], ['F', 28, 40]], ARCH = [['A', 9, 12], ['B', 12, 18], ['C', 18, 24], ['D', 24, 36], ['E', 36, 48], ['E1', 30, 42], ['E2', 26, 38], ['E3', 27, 39]];
+  for(const [k, w, h] of [...ISO_A, ...ISO_B, ...ISO_C]) addP(k, w, h, 'ISO ' + k, 'ISO', 'ISO_', k, 5);
+  for(const [k, w, h] of [...ISO_A, ...ISO_B, ...ISO_C]) if(k !== 'A6') addP('FB_' + k, w, h, 'ISO full bleed ' + k, 'ISO full bleed', 'ISO_full_bleed_', k, 0);
+  for(const [k, w, h] of ISO_A.slice(2, 7)) addP('EX_' + k, w, h, 'ISO expand ' + k, 'ISO expand', 'ISO_expand_', k, 3);
+  for(const [T, L] of [['ANSI', ANSI], ['ARCH', ARCH]]){
+    for(const [k, w, h] of L) addP(T + '_' + k, w * IN, h * IN, T + ' ' + k, T, T + '_', k, 6.35, [w, h]);
+    for(const [k, w, h] of L) addP(T + '_FB_' + k, w * IN, h * IN, T + ' full bleed ' + k, T + ' full bleed', T + '_full_bleed_', k, 0, [w, h]);
+    for(const [k, w, h] of L) if(k !== 'F' && !/E\d/.test(k)) addP(T + '_EX_' + k, w * IN, h * IN, T + ' expand ' + k, T + ' expand', T + '_expand_', k, 3, [w, h]); }
+  addP('JIS_B4', 257, 364, 'JIS B4', 'Khổ khác', 'JIS_', 'B4', 5); addP('JIS_B5', 182, 257, 'JIS B5', 'Khổ khác', 'JIS_', 'B5', 5); addP('LEGAL', 8.5 * IN, 14 * IN, 'Legal', 'Khổ khác', '', 'Legal', 6.35, [8.5, 14]);
   const paperName = () => PS.paper === 'custom' ? 'tự chọn' : ((PAPER_SIZES[PS.paper] || {}).label || PS.paper).replace(/^ISO /, '');
-  const paperLabel = k => { const P = PAPER_SIZES[k]; if(!P) return k; return P.label + (P.inch ? ' (' + f2(P.inch[0]) + ' x ' + f2(P.inch[1]) + ' Inches)' : ' (' + f2(P.w) + ' x ' + f2(P.h) + ' MM)'); };
+  // nhãn như AutoCAD: "ISO A3 (420.00 x 297.00 MM)", "ANSI D (34.00 x 22.00 Inches)" — cạnh dài trước, hướng chọn riêng
+  const paperLabel = k => { const P = PAPER_SIZES[k]; if(!P) return k; return P.label + (P.inch ? ' (' + f2(Math.max(...P.inch)) + ' x ' + f2(Math.min(...P.inch)) + ' Inches)' : ' (' + f2(Math.max(P.w, P.h)) + ' x ' + f2(Math.min(P.w, P.h)) + ' MM)'); };
   // tên khổ của AutoCAD (mã 4 của PLOTSETTINGS), theo hướng ngang như DWG To PDF
-  A.paperMedia = (k, cw, ch) => { const P = PAPER_SIZES[k]; if(!P){ const W = Math.max(cw || 420, ch || 297), H = Math.min(cw || 420, ch || 297); return 'User_(' + f2(W) + '_x_' + f2(H) + '_MM)'; }
-    const t = k.replace(/_.*/, ''); return P.inch ? t + '_full_bleed_' + k.slice(t.length + 1) + '_(' + f2(P.inch[1]) + '_x_' + f2(P.inch[0]) + '_Inches)' : 'ISO_full_bleed_' + k + '_(' + f2(P.h) + '_x_' + f2(P.w) + '_MM)'; };
+  A.paperMedia = (k, cw, ch) => { const P = PAPER_SIZES[k]; if(!P){ const W = Math.max(cw || 420, ch || 297), H = Math.min(cw || 420, ch || 297); return 'User_(' + f2(W) + '_x_' + f2(H) + '_MM)'; } return P.media; };
+  // tên khổ AutoCAD → khổ DVDCAD (so phần tên trước kích thước, không phân biệt hoa thường)
+  A.paperFromMedia = m => { const b = x => String(x || '').toLowerCase().replace(/_\(.*$/, '').replace(/^(iso|ansi|arch|jis)_/, '$1_'); const t = b(m); if(!t) return null; for(const k in PAPER_SIZES) if(b(PAPER_SIZES[k].media) === t) return k; return null; };
+  A.paperLabel = paperLabel;
   A.PAPER_SIZES = PAPER_SIZES;
   const SCALES = [1, 2, 5, 10, 20, 25, 50, 75, 100, 125, 150, 200, 250, 500, 1000, 2000, 5000];
   const PS = Object.assign({ paper: 'A3', land: true, area: 'extents', fit: true, scale: 100, center: true, style: 'mono', lw: true, margin: 5, win: null, fmt: 'pdf' }, (() => { try{ return JSON.parse(localStorage.getItem('dvd:plot') || '{}'); }catch(_){ return {}; } })());
@@ -255,7 +268,7 @@
     const MAX = forPreview ? 400000 : 30000000; let sc = 1; if(!vec && pxW * pxH > MAX){ sc = Math.sqrt(MAX / (pxW * pxH)); pxW = Math.round(pxW * sc); pxH = Math.round(pxH * sc); }
     const realPxPerMM = vec ? CSS_PER_MM : pxW / Wmm, dpr = vec ? 1 : realPxPerMM / CSS_PER_MM;
     const VQ = kind === 'svg' && A.plotVecQuant ? A.plotVecQuant(CSS_PER_MM * 0.254) : null;   // máy in giảm màu: màu bảng máy in + chấm dither vector (ô 0,254 mm)
-    const out = kind === 'svg' ? new A.SvgCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, { flip: !!PS.ud, imgMax: 4e6, q: VQ }).canvas : kind ? new A.PdfCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, 72 / 25.4 / CSS_PER_MM, { flip: !!PS.ud, imgMax: PS.dev === 'pdfsm' ? 1.5e6 : 16e6 }).canvas : document.createElement('canvas'); if(!vec){ out.width = pxW; out.height = pxH; }
+    const out = kind === 'svg' ? new A.SvgCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, { flip: !!PS.ud, imgMax: 4e6, q: VQ }).canvas : kind ? new A.PdfCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, 72 / 25.4 / CSS_PER_MM, { flip: !!PS.ud, imgMax: PS.dev === 'pdfsm' || PS.dev === 'pdfwm' ? 1.5e6 : 16e6 }).canvas : document.createElement('canvas'); if(!vec){ out.width = pxW; out.height = pxH; }
     const octx = out.getContext('2d'); let mask = null;
     const aw = area.x1 - area.x0, ah = area.y1 - area.y0;
     // vị trí vùng in trên giấy (mm, gốc trên-trái)
@@ -306,9 +319,10 @@
     const fire = () => { try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(_){ say('Trình duyệt không cho in trực tiếp — hãy xuất PDF.'); } setTimeout(() => { try{ fr.remove(); }catch(_){} }, 2000); };
     const im = d.querySelector('img'); if(im.complete) setTimeout(fire, 150); else im.onload = () => setTimeout(fire, 120);
   }
+  const svgPage = (svg, Wmm, Hmm) => '<!doctype html><html><head><meta charset="utf-8"><style>@page{size:' + Wmm + 'mm ' + Hmm + 'mm;margin:0}html,body{margin:0;padding:0}svg{display:block;width:' + Wmm + 'mm;height:' + Hmm + 'mm}</style></head><body>' + svg + '</body></html>';
   function printSVG(svg, Wmm, Hmm){
     const fr = document.createElement('iframe'); fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden'; document.body.appendChild(fr);
-    const d = fr.contentWindow.document; d.open(); d.write('<!doctype html><html><head><meta charset="utf-8"><style>@page{size:' + Wmm + 'mm ' + Hmm + 'mm;margin:0}html,body{margin:0;padding:0}svg{display:block;width:' + Wmm + 'mm;height:' + Hmm + 'mm}</style></head><body>' + svg + '</body></html>'); d.close();
+    const d = fr.contentWindow.document; d.open(); d.write(svgPage(svg, Wmm, Hmm)); d.close();
     A._lastPrintSVG = svg;
     setTimeout(() => { try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(_){ say('Trình duyệt không cho in trực tiếp — hãy xuất PDF.'); } setTimeout(() => { try{ fr.remove(); }catch(_){} }, 2000); }, 200);
   }
@@ -327,6 +341,11 @@
         log('Đã in PDF vector: khổ ' + PS.paper + (PS.land ? ' ngang' : ' dọc') + ', tỉ lệ ' + (PS.fit ? 'khít giấy' : '1:' + PS.scale) + (I.fonts && I.fonts.length ? ', phông nhúng: ' + [...new Set(I.fonts)].join(', ') : '') + (I.rasterText ? ' (' + I.rasterText + ' đoạn chữ thiếu phông vẽ thành ảnh)' : '') + '.'); return; }
       // máy in Windows: in nét vector (SVG — đường nét và chữ sắc nét, tệp in nhỏ); máy in giảm màu: màu theo bảng máy in, dither = mẫu chấm vector
       if(fmt === 'print' && A.SvgCtx && !PS.printRaster){ const rs = plotRender(0, false, 'svg'); printSVG(rs.svg, rs.Wmm, rs.Hmm); log('Đã gửi bản in vector ra máy in: khổ ' + paperName() + (PS.land ? ' ngang' : ' dọc') + ', tỉ lệ ' + (PS.fit ? 'khít giấy' : '1:' + PS.scale) + '.'); return; }
+      if(fmt === 'sys' && A.SvgCtx){ const rs = plotRender(0, false, 'svg'), D = window.dvdDesktop, name = /^sys:/.test(PS.dev) ? PS.dev.slice(4) : '', cp = Math.max(1, Math.min(999, PS.copies | 0 || 1));
+        if(!D || !D.printSVG){ printSVG(rs.svg, rs.Wmm, rs.Hmm); log('Đã mở hộp in (vector): khổ ' + paperName() + '.'); return; }
+        const res = await D.printSVG({ html: svgPage(rs.svg, rs.Wmm, rs.Hmm), wmm: rs.Wmm, hmm: rs.Hmm, deviceName: name, copies: cp, silent: true });
+        if(res && res.ok) log('Đã in vector ra máy in ' + (name ? '"' + name + '"' : 'mặc định của Windows') + ': khổ ' + paperName() + (PS.land ? ' ngang' : ' dọc') + ', ' + cp + ' bản, tỉ lệ ' + (PS.fit ? 'khít giấy' : '1:' + PS.scale) + '.');
+        else say('Máy in báo lỗi: ' + ((res && res.error) || 'không rõ') + '.'); return; }
       const r = plotRender(fmt === 'png' || fmt === 'jpg' ? 200 : 300, false);
       if(fmt === 'pdf'){ const blob = await canvasToPDFPaper(r.canvas, r.pagePt); await shareOrDownload(blob, name, 'application/pdf'); }
       else if(fmt === 'jpg'){ const blob = await new Promise(res => r.canvas.toBlob(res, 'image/jpeg', 0.92)); await shareOrDownload(blob, name.replace(/\.pdf$/i, '.jpg'), 'image/jpeg'); }
@@ -336,9 +355,14 @@
     }catch(err){ console.error(err); say('Không tạo được bản in.'); }
   }
   // máy in / máy vẽ như danh sách của AutoCAD (.pc3)
-  const DEVICES = [['pdf', 'DWG To PDF.pc3'], ['pdfhq', 'AutoCAD PDF (High Quality Print).pc3'], ['pdfsm', 'AutoCAD PDF (Smallest File).pc3'], ['print', 'Máy in Windows (hệ thống)'], ['png', 'PublishToWeb PNG.pc3'], ['jpg', 'PublishToWeb JPG.pc3'], ['plt', 'HP DesignJet (HPGL/2).pc3']];
+  const DEVICES = [['pdf', 'DWG To PDF.pc3'], ['pdfgd', 'AutoCAD PDF (General Documentation).pc3'], ['pdfhq', 'AutoCAD PDF (High Quality Print).pc3'], ['pdfsm', 'AutoCAD PDF (Smallest File).pc3'], ['pdfwm', 'AutoCAD PDF (Web and Mobile).pc3'],
+    ['defprn', 'Default Windows System Printer.pc3'], ['print', 'Máy in Windows (hộp in hệ thống)'], ['png', 'PublishToWeb PNG.pc3'], ['jpg', 'PublishToWeb JPG.pc3'], ['plt', 'HP DesignJet (HPGL/2).pc3']];
   A.PLOT_DEVICES = DEVICES;
-  const devFmt = (d, toFile) => /^pdf/.test(d) || (d === 'print' && toFile) ? 'pdf' : d;   // máy in Windows + In ra file → tệp PDF
+  // máy in Windows đã cài (bản desktop): "sys:<tên máy in>" — in thẳng bằng nét vector như chọn máy in trong hộp Plot của AutoCAD
+  const isPrn = d => d === 'print' || d === 'defprn' || /^sys:/.test(d || '');
+  A.plotIsPrinter = isPrn;
+  A.sysPrinters = async () => { const D = window.dvdDesktop; if(!D || !D.printers) return []; try{ return A._sysPrn = await D.printers() || []; }catch(_){ return A._sysPrn || []; } };
+  const devFmt = (d, toFile) => /^pdf/.test(d) || (isPrn(d) && toFile) ? 'pdf' : d === 'defprn' || /^sys:/.test(d) ? 'sys' : d;   // máy in Windows + In ra file → tệp PDF
   const layName = () => { try{ const L = dwgLayouts[currentLayout]; return !L || L.isModel ? 'Model' : 'layout "' + L.name + '"'; }catch(_){ return 'Model'; } };
   const layKey = () => { let n = 'Model'; try{ const L = dwgLayouts[currentLayout]; if(L && !L.isModel) n = L.name; }catch(_){} return 'dvd:lplot::' + ((typeof currentName === 'string' && currentName) || '') + '::' + n; };
   const lsGetL = k => { try{ return JSON.parse(localStorage.getItem(k) || 'null'); }catch(_){ return null; } }, lsSetL = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(_){} };
@@ -350,11 +374,11 @@
     const dev = PS.dev || 'pdf';
     const html = '<div class="pl-wrap"><div class="pl-left">' +
       F('Thiết lập trang', R('Tên:', '<select id="plSetup" style="min-width:120px;max-width:180px">' + opt('', '<Không>', true) + Object.keys(A.pageSetups()).map(n => opt(n, n, false)).join('') + '</select> <button type="button" class="acw-btn" id="plSetupAdd">Thêm…</button> <button type="button" class="acw-btn" id="plSetupIn" title="Nhập thiết lập trang từ bản vẽ khác (PSETUPIN)">Nhập…</button>')) +
-      F('Máy in / máy vẽ', R('Tên:', '<select id="plDev">' + DEVICES.map(([v, t]) => opt(v, t, dev === v)).join('') + '</select>') +
+      F('Máy in / máy vẽ', R('Tên:', '<select id="plDev" style="max-width:250px">' + DEVICES.map(([v, t]) => opt(v, t, dev === v)).join('') + (/^sys:/.test(dev) ? '<optgroup label="Máy in Windows" id="plSys">' + opt(dev, dev.slice(4), true) + '</optgroup>' : '') + '</select>') +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px"><div class="acw-note" id="plDevN" style="margin:0 0 2px"></div><button type="button" class="acw-btn" id="plDevP" title="Trình sửa cấu hình máy vẽ: độ sâu màu">Thuộc tính…</button></div><label class="acw-ck"><input type="checkbox" id="plFile"' + (PS.toFile ? ' checked' : '') + '><span>In ra file</span></label>') +
-      '<div style="display:flex;gap:8px">' + F('Khổ giấy', '<select id="plPaper" style="width:100%">' + Object.keys(PAPER_SIZES).map(k => opt(k, paperLabel(k), k === PS.paper)).join('') + opt('custom', 'Khổ tự chọn…', PS.paper === 'custom') + '</select>' +
+      '<div style="display:flex;gap:8px">' + F('Khổ giấy', '<select id="plPaper" style="width:100%">' + [...new Set(Object.values(PAPER_SIZES).map(P => P.grp))].map(gr => '<optgroup label="' + esc(gr) + '">' + Object.keys(PAPER_SIZES).filter(k => PAPER_SIZES[k].grp === gr).map(k => opt(k, paperLabel(k), k === PS.paper)).join('') + '</optgroup>').join('') + opt('custom', 'Khổ tự chọn…', PS.paper === 'custom') + '</select>' +
           '<div id="plCus" style="display:' + (PS.paper === 'custom' ? 'flex' : 'none') + ';gap:4px;align-items:center;margin-top:4px">Rộng <input id="plCw" inputmode="decimal" style="width:60px" value="' + esc(PS.cw || 420) + '"> × Cao <input id="plCh" inputmode="decimal" style="width:60px" value="' + esc(PS.ch || 297) + '"> mm</div>', 'flex:1') +
-        F('Số bản', '<input type="number" value="1" disabled style="width:60px">', 'flex:0 0 auto') + '</div>' +
+        F('Số bản', '<input type="number" id="plCopies" min="1" max="999" value="' + (PS.copies | 0 || 1) + '" style="width:60px" title="Số bản in (máy in Windows)">', 'flex:0 0 auto') + '</div>' +
       '<div style="display:flex;gap:8px">' + F('Vùng in', R('In gì:', '<select id="plArea">' + opt('extents', 'Phạm vi (Extents)', PS.area === 'extents') + opt('display', 'Màn hình (Display)', PS.area === 'display') + opt('window', 'Khung (Window)', PS.area === 'window') + '</select>') +
           '<button type="button" class="acw-btn" id="plWin">Khung&lt;</button>', 'flex:1') +
         F('Tỉ lệ in', '<label class="acw-ck"><input type="checkbox" id="plFit"' + (PS.fit ? ' checked' : '') + '><span>Khít khổ giấy</span></label>' +
@@ -372,14 +396,15 @@
       ok: () => { read(); if(PS.area === 'window' && !PS.win){ say('Chưa chọn khung in.'); return false; } const f = g('plDev').value; setTimeout(() => doPlot(devFmt(f, PS.toFile)), 0); } });
     const root = d.root; root.querySelector('.modal').classList.add('pl-modal');
     const g = id => root.querySelector('#' + id);
-    const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; const dep = A.plotDepth ? A.plotDepth(PS.dev) : 'tc', depT = dep === 'tc' ? '' : ' · ' + ((A.PLOT_DEPTHS || []).find(x => x[0] === dep) || ['', dep])[1]; g('plDevP').disabled = !(PS.dev === 'png' || PS.dev === 'pdf' || PS.dev === 'print');
-      g('plDevN').textContent = /^pdf/.test(PS.dev) ? (PS.dev === 'pdfsm' ? 'PDF vector, ảnh nén nhỏ' : 'PDF vector — đường nét và chữ, phóng to vẫn sắc nét') : PS.dev === 'jpg' ? 'Xuất ảnh JPG' + depT : PS.dev === 'png' ? 'Xuất ảnh PNG' + depT : PS.dev === 'plt' ? 'Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in' : 'Mở hộp in của hệ điều hành' + depT; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit;
+    let lastFD = null; const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; const dep = A.plotDepth ? A.plotDepth(PS.dev) : 'tc', depT = dep === 'tc' ? '' : ' · ' + ((A.PLOT_DEPTHS || []).find(x => x[0] === dep) || ['', dep])[1]; g('plDevP').disabled = !(PS.dev === 'png' || PS.dev === 'pdf' || isPrn(PS.dev)); const dsk = !!(window.dvdDesktop && window.dvdDesktop.printSVG);
+      g('plDevN').textContent = /^pdf/.test(PS.dev) ? (PS.dev === 'pdfsm' || PS.dev === 'pdfwm' ? 'PDF vector, ảnh nén nhỏ' : 'PDF vector — đường nét và chữ, phóng to vẫn sắc nét') : PS.dev === 'jpg' ? 'Xuất ảnh JPG' + depT : PS.dev === 'png' ? 'Xuất ảnh PNG' + depT : PS.dev === 'plt' ? 'Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in' : PS.dev !== 'print' && dsk ? 'In thẳng nét vector ra ' + (PS.dev === 'defprn' ? 'máy in mặc định của Windows' : 'máy in này') + depT : 'Mở hộp in của hệ điều hành (in vector)' + depT; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit;
       PS.tp = g('plTp').checked; PS.ps = g('plPs').checked; g('plStyle').disabled = !PS.ps; PS.slw = g('plSlw').checked; g('plSlw').disabled = PS.fit || !!LYT();
       const cw = parseFloat(String(g('plCw').value).replace(',', '.')), ch = parseFloat(String(g('plCh').value).replace(',', '.')); if(cw >= 10 && cw <= 10000) PS.cw = cw; if(ch >= 10 && ch <= 10000) PS.ch = ch; g('plCus').style.display = PS.paper === 'custom' ? 'flex' : 'none';
-      const fileDev = PS.dev !== 'print'; g('plFile').disabled = fileDev; if(fileDev) g('plFile').checked = true; else PS.toFile = g('plFile').checked; psSave(); };
+      const fileDev = !isPrn(PS.dev); g('plFile').disabled = fileDev; if(fileDev) g('plFile').checked = true; else { if(lastFD) g('plFile').checked = false; PS.toFile = g('plFile').checked; } lastFD = fileDev;   // đổi từ thiết bị ra tệp sang máy in: bỏ In ra file
+      const cp = parseInt(g('plCopies').value, 10); PS.copies = cp >= 1 ? Math.min(cp, 999) : 1; g('plCopies').disabled = !(isPrn(PS.dev) && PS.dev !== 'print' && !PS.toFile && dsk); psSave(); };
     g('plStampB').onclick = () => { try{ DVDCmd.run('PLOTSTAMP'); }catch(_){} };
     // thiết lập trang: chọn → điền các ô; Thêm… → lưu giá trị đang chọn thành thiết lập có tên
-    const fillSetup = o => { if(!o) return; if(o.paper && g('plPaper').querySelector('option[value="' + o.paper + '"]')) g('plPaper').value = o.paper; if(o.dev) g('plDev').value = o.dev; if(o.area) g('plArea').value = o.area; if(o.fit != null) g('plFit').checked = !!o.fit; if(o.scale) g('plScale').value = o.scale;
+    const fillSetup = o => { if(!o) return; if(o.paper && g('plPaper').querySelector('option[value="' + o.paper + '"]')) g('plPaper').value = o.paper; if(o.dev && g('plDev').querySelector('option[value="' + CSS.escape(o.dev) + '"]')) g('plDev').value = o.dev; if(o.area) g('plArea').value = o.area; if(o.fit != null) g('plFit').checked = !!o.fit; if(o.scale) g('plScale').value = o.scale;
       if(o.cw) g('plCw').value = o.cw; if(o.ch) g('plCh').value = o.ch; if(o.tp != null) g('plTp').checked = !!o.tp; if(o.ps != null) g('plPs').checked = !!o.ps; if(o.slw != null) g('plSlw').checked = !!o.slw;
       if(o.center != null) g('plCenter').checked = !!o.center; if(o.margin != null) g('plMargin').value = o.margin; if(o.style) g('plStyle').value = o.style; if(o.lw != null) g('plLw').checked = !!o.lw; if(o.land != null){ const r0 = root.querySelector('input[name=plLand][value="' + (o.land ? '1' : '0') + '"]'); if(r0) r0.checked = true; } preview(); };
     g('plSetup').onchange = () => { const n = g('plSetup').value; if(n) fillSetup(A.pageSetups()[n]); };
@@ -391,6 +416,12 @@
       ok: r => { const n = r.querySelector('#psuN').value.trim(); if(!n) return false; const L = A.pageSetups(); L[n] = A.pageSetupOf(); A.pageSetupsSave(L); setupList(n); log('Đã lưu thiết lập trang "' + n + '".'); } }); };
     g('plSetupIn').onclick = async () => { if(!A.psetupIn) return; const r = await A.psetupIn(); if(r && r.length) setupList(r[0]); };
     g('plDevP').onclick = () => { read(); if(A.plotterProps) A.plotterProps(PS.dev, () => { psSave(); preview(); }); };
+    // máy in Windows đã cài (bản desktop): thêm vào danh sách như AutoCAD (tên máy in của hệ thống)
+    A.sysPrinters().then(L => { if(!L.length || !g('plDev')) return; const cur = g('plDev').value; let G = g('plSys'); if(G) G.remove();
+      G = document.createElement('optgroup'); G.label = 'Máy in Windows'; G.id = 'plSys'; G.setAttribute('translate', 'no'); G.innerHTML = L.map(q => opt('sys:' + q.name, (q.display || q.name) + (q.isDefault ? ' (mặc định)' : ''), cur === 'sys:' + q.name)).join('');
+      g('plDev').appendChild(G); if(/^sys:/.test(cur) && !L.some(q => 'sys:' + q.name === cur)) g('plDev').value = 'pdf'; else g('plDev').value = cur; read(); });
+    // đổi khổ giấy: lề in theo khổ (full bleed = 0, expand = lề hẹp) như vùng in được của DWG To PDF.pc3
+    g('plPaper').addEventListener('change', () => { const P = PAPER_SIZES[g('plPaper').value]; if(P && P.mg != null) g('plMargin').value = P.mg; });
     let pvT = 0;
     const preview = () => { clearTimeout(pvT); pvT = setTimeout(() => {
       read(); const c = g('plPrev'); if(!c) return; const [Wmm, Hmm] = paperMM(); const box = 300; const s = Math.min(box / Wmm, (box * 0.78) / Hmm);
@@ -404,9 +435,9 @@
     root.querySelectorAll('select,input').forEach(el => { el.addEventListener('change', preview); el.addEventListener('input', preview); });
     g('plScale').disabled = PS.fit;
     g('plWin').onclick = () => { read(); d.close(); pickWindow(); };
-    g('plPv').onclick = async () => { read(); await mapPrep(); try{ const [Wmm, Hmm] = paperMM(); const r = plotRender(Math.max(40, 1100 / Math.max(Wmm, Hmm) * 25.4), true); const c = r.canvas; const k = Math.min((innerWidth * 0.8) / c.width, (innerHeight * 0.75) / c.height, 1);
-      const pd = A.dialog({ title: 'Xem trước bản in', wide: true, cls: 'acw-free', help: false, html: '<div style="background:#3a414d;padding:12px;display:grid;place-items:center"><canvas id="plBig" style="position:static;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.5);width:' + Math.round(c.width * k) + 'px;height:' + Math.round(c.height * k) + 'px"></canvas></div>', noOk: true, cancelText: 'Đóng' });
-      const bc = pd.root.querySelector('#plBig'); bc.width = c.width; bc.height = c.height; const x = bc.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(c, 0, 0); }catch(err){ say('Không dựng được bản xem trước.'); } };
+    // Xem trước… → cửa sổ Plot Preview (nét vector, zoom / dời như AutoCAD); nút In trong đó = OK của hộp này
+    g('plPv').onclick = () => { read(); plotPreview(() => { read(); if(PS.area === 'window' && !PS.win){ say('Chưa chọn khung in.'); return; } const f = g('plDev').value; d.close(); setTimeout(() => doPlot(devFmt(f, PS.toFile)), 0); }); };
+    g('plPrev').title = 'Bấm để mở cửa sổ xem trước (phóng to / dời được)'; g('plPrev').style.cursor = 'zoom-in'; g('plPrev').onclick = () => g('plPv').click();
     preview();
   }
   function pickWindow(){
@@ -418,6 +449,63 @@
     });
   }
   A.openPlot = openPlot;
+  /* Plot Preview như AutoCAD: trang in vẽ bằng nét vector (SVG, đổi viewBox khi zoom nên phóng to bao nhiêu vẫn sắc nét)
+     lăn chuột: phóng to / thu nhỏ quanh con trỏ · kéo chuột trái (Dời) hoặc chuột giữa: dời · Zoom: kéo lên / xuống · Zoom Window: kéo khung
+     Zoom Original: vừa trang · chuột phải: menu Thoát / In / Dời / Zoom / Zoom Window / Zoom Original · Esc / Enter: thoát · chạm hai ngón: zoom */
+  async function plotPreview(onPlot){
+    if(!hasDoc()){ say('Mở bản vẽ trước.'); return; }
+    if(!A.SvgCtx){ say('Không dựng được bản xem trước.'); return; }
+    if(PS.area === 'window' && !PS.win && !LYT()){ say('Chưa chọn khung in.'); return; }
+    await mapPrep(); let rs; try{ rs = plotRender(0, false, 'svg'); }catch(err){ console.error(err); say('Không dựng được bản xem trước.'); return; }
+    const W = rs.Wmm * 96 / 25.4, H = rs.Hmm * 96 / 25.4;
+    const BT = [['plot', 'In', 'In với thiết lập này (như OK)'], ['pan', 'Pan', 'Dời hình (Pan) — kéo chuột'], ['zoom', 'Zoom', 'Zoom thời gian thực — kéo lên / xuống'], ['zwin', 'Zoom Window', 'Kéo khung để phóng to'], ['zorg', 'Zoom Original', 'Vừa trang giấy'], ['close', 'Đóng', 'Đóng cửa sổ xem trước (Esc)']].filter(b => b[0] !== 'plot' || onPlot);
+    const ov = document.createElement('div'); ov.className = 'pv-ov'; ov.tabIndex = -1;
+    ov.innerHTML = '<div class="pv-bar"><b>Xem trước bản in</b>' + BT.map(([k, t, h]) => '<button type="button" class="acw-btn" data-k="' + k + '" title="' + esc(h) + '">' + esc(t) + '</button>').join('') + '<span class="pv-inf" translate="no"></span></div><div class="pv-stage" translate="no"></div><div class="pv-st">Nhấn ESC hoặc ENTER để thoát, hoặc bấm chuột phải để hiện menu.</div>';
+    document.body.appendChild(ov); const stage = ov.querySelector('.pv-stage'), inf = ov.querySelector('.pv-inf');
+    stage.innerHTML = rs.svg; const svg = stage.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+    svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%'); svg.setAttribute('preserveAspectRatio', 'none'); svg.style.display = 'block';
+    const mk = (t, a) => { const e = document.createElementNS(NS, t); for(const k in a) e.setAttribute(k, a[k]); return e; }, d0 = Math.max(W, H) * 0.004;
+    const first = svg.querySelector('defs') ? svg.querySelector('defs').nextSibling : svg.firstChild;
+    svg.insertBefore(mk('rect', { x: d0, y: d0, width: W, height: H, fill: 'rgba(0,0,0,.45)' }), first); svg.insertBefore(mk('rect', { x: 0, y: 0, width: W, height: H, fill: '#fff' }), first);
+    let sw = 1, sh = 1, cam = { x: 0, y: 0, s: 1 }, fitS = 1, mode = 'pan', raf = 0;
+    const size = () => { const r = stage.getBoundingClientRect(); sw = Math.max(1, r.width); sh = Math.max(1, r.height); };
+    const apply = () => { if(raf) return; raf = requestAnimationFrame(() => { raf = 0; svg.setAttribute('viewBox', [cam.x, cam.y, sw / cam.s, sh / cam.s].map(v => +v.toFixed(4)).join(' ')); inf.textContent = rs.Wmm + '×' + rs.Hmm + ' mm · ' + Math.round(cam.s * 100) + '%'; }); };
+    const fit = () => { size(); fitS = Math.min((sw - 40) / W, (sh - 40) / H); cam = { s: fitS, x: W / 2 - sw / 2 / fitS, y: H / 2 - sh / 2 / fitS }; apply(); };
+    const zoomAt = (px, py, f) => { const u = cam.x + px / cam.s, v = cam.y + py / cam.s; cam.s = Math.max(fitS * 0.25, Math.min(fitS * 2000, cam.s * f)); cam.x = u - px / cam.s; cam.y = v - py / cam.s; apply(); };
+    const zoomRect = (x0, y0, x1, y1) => { const a = Math.min(x0, x1), b = Math.min(y0, y1), w = Math.abs(x1 - x0), h = Math.abs(y1 - y0); if(w < 4 || h < 4) return; const u = cam.x + (a + w / 2) / cam.s, v = cam.y + (b + h / 2) / cam.s; cam.s = Math.min(fitS * 2000, cam.s * Math.min(sw / w, sh / h)); cam.x = u - sw / 2 / cam.s; cam.y = v - sh / 2 / cam.s; apply(); };
+    const setMode = m => { mode = m; stage.dataset.m = m; ov.querySelectorAll('.pv-bar button').forEach(b => b.classList.toggle('on', b.dataset.k === m)); };
+    const loc = e => { const r = stage.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    let menu = null; const unmenu = () => { if(menu){ menu.remove(); menu = null; } };
+    const close = () => { unmenu(); cancelAnimationFrame(raf); removeEventListener('resize', onRs); document.removeEventListener('keydown', onKey, true); ov.remove(); A._pv = null; };
+    const act = k => { unmenu(); if(k === 'close') close(); else if(k === 'plot'){ close(); onPlot(); } else if(k === 'zorg') fit(); else setMode(k); };
+    ov.querySelector('.pv-bar').addEventListener('click', e => { const b = e.target.closest('button'); if(b) act(b.dataset.k); });
+    stage.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = loc(e); zoomAt(x, y, Math.exp(-Math.max(-300, Math.min(300, e.deltaY * (e.deltaMode === 1 ? 33 : 1))) * 0.0018)); }, { passive: false });
+    const P = new Map(); let drag = null, box = null;
+    stage.addEventListener('pointerdown', e => { unmenu(); if(e.button === 2) return; stage.setPointerCapture(e.pointerId); const p = loc(e); P.set(e.pointerId, p);
+      if(P.size === 2){ const [a, b] = [...P.values()]; drag = { k: 'pinch', d: Math.hypot(a[0] - b[0], a[1] - b[1]), m: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }; if(box){ box.remove(); box = null; } return; }
+      const k = e.button === 1 ? 'pan' : mode; drag = { k, p, c: { ...cam } }; if(e.button === 1) e.preventDefault();
+      if(k === 'zwin'){ box = document.createElement('div'); box.className = 'pv-box'; stage.appendChild(box); } });
+    stage.addEventListener('pointermove', e => { if(!drag || !P.has(e.pointerId)) return; const p = loc(e); P.set(e.pointerId, p);
+      if(drag.k === 'pinch' && P.size === 2){ const [a, b] = [...P.values()], dd = Math.hypot(a[0] - b[0], a[1] - b[1]), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; cam.x -= (m[0] - drag.m[0]) / cam.s; cam.y -= (m[1] - drag.m[1]) / cam.s; zoomAt(m[0], m[1], dd / Math.max(1, drag.d)); drag.d = dd; drag.m = m; return; }
+      if(drag.k === 'pan'){ cam.x = drag.c.x - (p[0] - drag.p[0]) / cam.s; cam.y = drag.c.y - (p[1] - drag.p[1]) / cam.s; apply(); }
+      else if(drag.k === 'zoom'){ cam = { ...drag.c }; zoomAt(drag.p[0], drag.p[1], Math.exp(-(p[1] - drag.p[1]) * 0.01)); }
+      else if(drag.k === 'zwin' && box){ const a = Math.min(p[0], drag.p[0]), b = Math.min(p[1], drag.p[1]); Object.assign(box.style, { left: a + 'px', top: b + 'px', width: Math.abs(p[0] - drag.p[0]) + 'px', height: Math.abs(p[1] - drag.p[1]) + 'px' }); } });
+    const up = e => { if(!P.has(e.pointerId)) return; P.delete(e.pointerId); if(!drag) return; if(drag.k === 'zwin'){ const p = loc(e); if(box){ box.remove(); box = null; } zoomRect(drag.p[0], drag.p[1], p[0], p[1]); setMode('pan'); } drag = null; };
+    stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+    stage.addEventListener('auxclick', e => { if(e.button === 1) e.preventDefault(); });
+    stage.addEventListener('dblclick', e => { const [x, y] = loc(e); zoomAt(x, y, 2); });
+    ov.addEventListener('contextmenu', e => { e.preventDefault(); unmenu(); menu = document.createElement('div'); menu.className = 'pv-menu';
+      menu.innerHTML = [['close', 'Thoát'], ...(onPlot ? [['plot', 'In']] : []), ['pan', 'Pan'], ['zoom', 'Zoom'], ['zwin', 'Zoom Window'], ['zorg', 'Zoom Original']].map(([k, t]) => '<div data-k="' + k + '"' + (k === mode ? ' class="on"' : '') + '>' + esc(t) + '</div>').join('');
+      menu.style.left = Math.min(e.clientX, innerWidth - 170) + 'px'; menu.style.top = Math.min(e.clientY, innerHeight - 170) + 'px'; ov.appendChild(menu);
+      menu.addEventListener('click', ev => { const it = ev.target.closest('[data-k]'); if(it) act(it.dataset.k); }); });
+    const onKey = e => { if(e.key === 'Escape' || e.key === 'Enter'){ e.preventDefault(); e.stopPropagation(); if(menu) unmenu(); else close(); }
+      else if(e.key === '+' || e.key === '='){ e.preventDefault(); zoomAt(sw / 2, sh / 2, 1.5); } else if(e.key === '-'){ e.preventDefault(); zoomAt(sw / 2, sh / 2, 1 / 1.5); } else if(e.key === 'Home' || e.key === '0'){ e.preventDefault(); fit(); } };
+    document.addEventListener('keydown', onKey, true);
+    const onRs = () => { const cx = cam.x + sw / 2 / cam.s, cy = cam.y + sh / 2 / cam.s; size(); cam.x = cx - sw / 2 / cam.s; cam.y = cy - sh / 2 / cam.s; apply(); }; addEventListener('resize', onRs);
+    setMode('pan'); fit(); ov.focus();
+    A._pv = { get cam(){ return { ...cam }; }, get fitS(){ return fitS; }, svg, zoomAt, zoomRect, fit, close, act, W, H };
+    log('Xem trước bản in: lăn chuột để phóng to / thu nhỏ, kéo để dời, chuột phải để hiện menu, Esc để thoát.'); }
+  A.plotPreview = () => plotPreview(() => doPlot(devFmt(PS.dev || 'pdf', PS.toFile)));
   plain(['PLOT', 'PRINT'], 'In bản vẽ theo khổ giấy & tỉ lệ (PDF / máy in / PNG) — Ctrl+P', () => { if(A.busy()) A.cancel(true); if(A.deskUI && A.deskUI()) openPlot(); else { const b = document.getElementById('exportBtn'); if(b) b.click(); } });
   const plotCSS = document.createElement('style'); plotCSS.textContent = `
   .pl-modal{max-width:840px !important;width:min(840px,calc(100vw - 24px))}
@@ -429,7 +517,18 @@
   .pl-prev canvas{position:static !important;box-shadow:0 3px 12px rgba(0,0,0,.5);background:#fff}
   .pl-info{font:12px system-ui,sans-serif;color:#cfd6e0;line-height:1.5}
   .pl-btns{display:flex;gap:6px;flex-wrap:wrap}
-  .pl-btns button{flex:1;padding:9px 10px}`;
+  .pl-btns button{flex:1;padding:9px 10px}
+  .pv-ov{position:fixed;inset:0;z-index:100000;background:#4a505a;display:flex;flex-direction:column;outline:none;font:12px system-ui,sans-serif;color:#dfe5ee}
+  .pv-bar{display:flex;align-items:center;gap:6px;padding:6px 10px;background:#2b3038;border-bottom:1px solid #1c2026;flex:0 0 auto;flex-wrap:wrap}
+  .pv-bar b{margin-right:8px;font-weight:600}
+  .pv-bar button.on{background:#3d6fb6;border-color:#5b8ad0;color:#fff}
+  .pv-inf{margin-left:auto;color:#9aa6ba}
+  .pv-stage{position:relative;flex:1 1 auto;overflow:hidden;touch-action:none;cursor:grab;user-select:none}
+  .pv-stage[data-m=zoom]{cursor:ns-resize}.pv-stage[data-m=zwin]{cursor:crosshair}
+  .pv-box{position:absolute;border:1px dashed #1e78dc;background:rgba(30,120,220,.12);pointer-events:none}
+  .pv-st{flex:0 0 auto;padding:4px 10px;background:#2b3038;color:#9aa6ba;border-top:1px solid #1c2026}
+  .pv-menu{position:fixed;z-index:100001;background:#2b3038;border:1px solid #1c2026;box-shadow:0 4px 14px rgba(0,0,0,.5);padding:3px 0;min-width:150px}
+  .pv-menu div{padding:5px 14px;cursor:default}.pv-menu div:hover{background:#3d6fb6;color:#fff}.pv-menu div.on::before{content:'✓ ';margin-left:-10px}`;
   document.head.appendChild(plotCSS);
 
   /* ===================== CÔ LẬP / ẨN ĐỐI TƯỢNG (ISOLATEOBJECTS / HIDEOBJECTS) ===================== */

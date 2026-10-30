@@ -263,8 +263,8 @@
     A.dialog({ title: 'In hàng loạt (PUBLISH)', html, okText: 'Xuất PDF', ok: root => {
       const idx = [...root.querySelectorAll('input[data-i]:checked')].map(x => +x.dataset.i); if(!idx.length){ say('Chưa chọn trang nào.'); return false; }
       (async () => { const cur = currentLayout, pages = []; say('Đang in ' + idx.length + ' trang…');
-        try{ for(const i of idx){ switchLayout(i); await new Promise(r => setTimeout(r, 60)); const r = A.plotRender(200, false); pages.push({ canvas: r.canvas, pagePt: r.pagePt }); }
-          const blob = await canvasesToPDF(pages); const nm = String(currentName || 'banve').replace(/\.[^.]+$/, '') + '_layouts.pdf'; await shareOrDownload(blob, nm, 'application/pdf'); log('PUBLISH: ' + pages.length + ' trang → ' + nm);
+        try{ for(const i of idx){ switchLayout(i); await new Promise(r => setTimeout(r, 60)); const r = A.plotRender(200, false, !!A.pdfBuild); pages.push(r.pdf ? { ctx: r.pdf } : { canvas: r.canvas, pagePt: r.pagePt }); }
+          const blob = pages[0] && pages[0].ctx ? await A.pdfBuild(pages, { title: String(currentName || ''), version: A.version || '' }) : await canvasesToPDF(pages); const nm = String(currentName || 'banve').replace(/\.[^.]+$/, '') + '_layouts.pdf'; await shareOrDownload(blob, nm, 'application/pdf'); log('PUBLISH: ' + pages.length + ' trang → ' + nm);
         }catch(err){ console.error(err); say('Không in được: ' + (err.message || err)); }
         finally { switchLayout(cur); } })();
     } });

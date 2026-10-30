@@ -71,7 +71,7 @@
   alias(['QUIT', 'EXIT'], 'CLOSEALL', 'Đóng bản vẽ (hỏi lưu nếu có thay đổi)');
   alias(['QQUIT'], 'CLOSEALL', 'Đóng nhanh bản vẽ');
   alias(['SAVEALL'], 'QSAVE', 'Lưu bản vẽ đang mở');
-  alias(['PREVIEW'], 'PLOT', 'Xem trước bản in');
+  plain(['PREVIEW'], 'Xem trước bản in (Plot Preview): nét vector, lăn chuột phóng to / thu nhỏ, kéo để dời', () => { if(A.plotPreview) A.plotPreview(); else DVDCmd.run('PLOT'); });
   plain(['REVERT'], 'Mở lại bản vẽ như lúc mở file, bỏ mọi thay đổi chưa lưu', async () => {
     const name = typeof currentName === 'string' ? currentName : ''; if(!name){ say('Chưa mở bản vẽ.'); return; }
     let rec = null; try{ rec = (await idbAll()).filter(f => f.name === name).sort((a, b) => b.savedAt - a.savedAt)[0]; }catch(_){}

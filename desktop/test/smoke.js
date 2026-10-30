@@ -150,7 +150,24 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       out.pdf = String.fromCharCode.apply(null, u.slice(0, 8)) === '%PDF-1.7' && u.length > 1000; out.info = bl.dvdInfo; out.ui = (A.PLOT_DEVICES || []).length; return out; }, process.platform === 'win32' ? 'Arial' : 'DejaVu Sans');
     check(v5y.font, 'cầu nối dvdDesktop.font: đọc được phông hệ thống (' + (process.platform === 'win32' ? 'Arial' : 'DejaVu Sans') + ')');
     check(v5y.pdf && v5y.info && v5y.info.fonts.length >= 1 && v5y.info.rasterText === 0, 'PLOT DWG To PDF: PDF vector, chữ tiếng Việt nhúng phông ' + ((v5y.info && v5y.info.fonts) || []).join(', '));
-    check(v5y.ui === 7, 'hộp PLOT có 7 máy in / máy vẽ (DWG To PDF, AutoCAD PDF, máy in Windows, PNG, JPG, HPGL/2)');
+    check(v5y.ui === 10, 'hộp PLOT có 10 máy in / máy vẽ .pc3 như AutoCAD (DWG To PDF, 4 kiểu AutoCAD PDF, máy in Windows, PNG, JPG, HPGL/2)');
+  }
+  {
+    // v6b: máy in Windows đã cài (getPrintersAsync), in thẳng theo tên máy in, Plot Preview vector zoom / pan, bảng Xuất PDF vector, khổ giấy đầy đủ
+    const v6b = await win.evaluate(async () => { const A = DVDAcad, D = window.dvdDesktop, w = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      const L = await D.printers(); out.list = Array.isArray(L); out.n = L.length;
+      const r = await D.printSVG({ html: '<svg xmlns="http://www.w3.org/2000/svg" width="10mm" height="10mm"></svg>', wmm: 210, hmm: 297, deviceName: 'DVDCAD khong co may in nay', silent: true }); out.bad = r && r.ok === false;
+      out.papers = Object.keys(A.PAPER_SIZES).length; out.media = A.paperMedia('FB_A1') === 'ISO_full_bleed_A1_(841.00_x_594.00_MM)' && A.paperFromMedia('ANSI_expand_D_(34.00_x_22.00_Inches)') === 'ANSI_EX_D';
+      A.newDrawing(); await w(600); try{ A.hideStart && A.hideStart(); }catch(_){}
+      A.commit({ add: [A.newProps({ type: 'LINE', x1: 0, y1: 0, x2: 200, y2: 100 }), A.newProps({ type: 'TEXT', x: 10, y: 50, h: 5, text: 'Xem trước' })] });
+      Object.assign(A.PS, { paper: 'A3', land: true, fit: true, dev: 'pdf', area: 'extents' }); await A.plotPreview(); await w(300);
+      const P = A._pv; out.pv = !!P && !P.svg.querySelector('image') && /Xem trước/.test(P.svg.innerHTML);   // chữ bản vẽ không bị bộ dịch giao diện đổi out.pvd = P ? [P.svg.querySelectorAll('*').length, P.fitS, P.svg.innerHTML.length] : 'không mở'; if(P){ P.zoomAt(100, 100, 40); await w(100); out.zoom = P.cam.s / P.fitS > 30; P.close(); }
+      const pg = renderForPDF('a3l', null, true); out.exp = !!pg.pdf; return out; });
+    check(v6b.list, 'máy in Windows đã cài: ' + v6b.n + ' máy (getPrintersAsync)');
+    check(v6b.bad, 'in thẳng tới máy in không có → báo lỗi, không treo');
+    check(v6b.papers >= 85 && v6b.media, 'khổ giấy như DWG To PDF.pc3: ' + v6b.papers + ' khổ (ISO / full bleed / expand / B / C, ANSI, ARCH, JIS), tên khổ chuẩn AutoCAD');
+    check(v6b.pv && v6b.zoom, 'Plot Preview: trang SVG vector, phóng to ×40 vẫn là nét vector (' + JSON.stringify(v6b.pvd) + ')');
+    check(v6b.exp, 'bảng Xuất → PDF: trang vector (không còn ảnh JPEG)');
   }
   {
     // v5x: MTEXT nhiều phông (\F SHX / \f TrueType), thiết lập trang có tên → PLOTSETTINGS, khung nhìn xoay (VIEWTWIST) → DWG đọc lại
@@ -167,7 +184,7 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       out.dwg = {}; for(const v of ['R2018', 'R2007', 'R2000']){ const d = A.dwgNative(modelEntities, { version: v }); let bin = ''; for(let i = 0; i < d.length; i += 0x8000) bin += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000));
         await loadDWG(d.slice().buffer, 'layout-xoay.dwg'); await w(500);
         const F = (dwgLayouts._file || []).find(x => !x.isModel && x.paper && x.paper.viewports.length), q = (window._dwgPageSetups || []).find(x => x && x.name === 'Ban in A3');
-        out.dwg[v] = { tw: !!F && Math.abs(F.paper.viewports[0].tw - Math.PI / 6) < 1e-9, ps: !!q && q.media === 'ISO_full_bleed_A3_(420.00_x_297.00_MM)' && q.printer === 'DWG To PDF.pc3', b64: btoa(bin) }; }
+        out.dwg[v] = { tw: !!F && Math.abs(F.paper.viewports[0].tw - Math.PI / 6) < 1e-9, ps: !!q && q.media === 'ISO_A3_(420.00_x_297.00_MM)' && q.printer === 'DWG To PDF.pc3', b64: btoa(bin) }; }
       A.pageSetupsSave({}); return out; });
     check(v5x.runs, 'MTEXT nhiều phông: đọc mã \\F (SHX) / \\f (TrueType) thành đoạn có phông riêng');
     check(v5x.tw && v5x.dxf, 'khung nhìn xoay nhìn 30° + thiết lập trang có tên → DXF có PLOTSETTINGS');

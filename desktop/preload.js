@@ -32,6 +32,9 @@ contextBridge.exposeInMainWorld('dvdDesktop', {
   // phông hệ thống (theo tên họ phông) để nhúng vào PDF vector khi in
   font: (fam, bold, italic) => call('font:find', fam, !!bold, !!italic),
   odaPick: () => call('dwg:odaPick'),
+  // máy in Windows đã cài; in SVG vector thẳng ra máy in theo tên (deviceName), khổ mm, số bản
+  printers: () => call('print:list'),
+  printSVG: o => call('print:svg', o || {}),
   openExternal: url => call('shell:external', url),
   reveal: p => call('shell:reveal', p)
 });

@@ -46,7 +46,7 @@
   /* PSETUPIN — nhập thiết lập trang có tên từ bản vẽ khác (DXF: PLOTSETTINGS / LAYOUT; bản vẽ DVDCAD: DVDCAD_DATA) */
   const PAPERS_RE = /(?:^|_)A(\d)(?:_|$)/i;
   // một thiết lập in (mã nhóm DXF: 2 máy in, 4 khổ giấy, 7 bảng kiểu in, 70 cờ, 73 xoay, 74 vùng in, 75 tỉ lệ chuẩn, 142 / 143 tỉ lệ) → thiết lập trang DVDCAD
-  function psFrom(cur){ const P = {}; const paper = cur[4] || ''; const m = PAPERS_RE.exec(paper.replace(/ISO_(full_bleed_|expand_)?/i, '')); if(m) P.paper = 'A' + m[1];
+  function psFrom(cur){ const P = {}; const paper = cur[4] || ''; const pk = A.paperFromMedia && A.paperFromMedia(paper); const m = pk ? null : PAPERS_RE.exec(paper.replace(/ISO_(full_bleed_|expand_)?/i, '')); if(pk) P.paper = pk; else if(m) P.paper = 'A' + m[1];
     else { const q = /^(ANSI|ARCH)_(?:full_bleed_|expand_)?(E1|[A-E])_/i.exec(paper); if(q && A.PAPER_SIZES && A.PAPER_SIZES[q[1].toUpperCase() + '_' + q[2].toUpperCase()]) P.paper = q[1].toUpperCase() + '_' + q[2].toUpperCase();
       else { const d = /\(([\d.]+)_x_([\d.]+)_(MM|Inches|Pixels)\)/i.exec(paper), k = d && /inch/i.test(d[3]) ? 25.4 : 1; if(d && !/pixel/i.test(d[3])){ P.paper = 'custom'; P.cw = +(+d[1] * k).toFixed(2); P.ch = +(+d[2] * k).toFixed(2); } } }
     const dims = /\(([\d.]+)_x_([\d.]+)_(MM|Inches)\)/i.exec(paper); const wide = dims ? +dims[1] >= +dims[2] : (cur.pw > 0 && cur.ph > 0 ? cur.pw >= cur.ph : true); const rot = +(cur[73] || 0); P.land = (rot % 2 === 1) ? !wide : wide;
@@ -56,7 +56,7 @@
     const num = +(cur[142] || 1), den = +(cur[143] || 1), std = +(cur[75] || 0), f147 = +(cur[147] || 0);
     if((fl & 16) && std === 0) P.fit = true; else { P.fit = false; const sc = (fl & 16) ? (f147 > 0 ? 1 / f147 : null) : (num > 0 ? den / num : null); if(sc > 0) P.scale = +sc.toPrecision(6); }
     const ctb = String(cur[7] || '').toLowerCase(); P.style = /mono/.test(ctb) ? 'mono' : /gray/.test(ctb) ? 'gray' : ctb ? 'mono' : 'color';
-    const dev = String(cur[2] || '').toLowerCase(); P.dev = /high quality/.test(dev) ? 'pdfhq' : /smallest/.test(dev) ? 'pdfsm' : /pdf/.test(dev) ? 'pdf' : /jpg|jpeg/.test(dev) ? 'jpg' : /png|publishtoweb/.test(dev) ? 'png' : /hpgl|designjet|\.pc3/.test(dev) && !/pdf|png/.test(dev) ? 'plt' : 'print';
+    const dev = String(cur[2] || '').toLowerCase(); P.dev = /high quality/.test(dev) ? 'pdfhq' : /smallest/.test(dev) ? 'pdfsm' : /general doc/.test(dev) ? 'pdfgd' : /web and mobile/.test(dev) ? 'pdfwm' : /default windows/.test(dev) ? 'defprn' : /pdf/.test(dev) ? 'pdf' : /jpg|jpeg/.test(dev) ? 'jpg' : /png|publishtoweb/.test(dev) ? 'png' : /hpgl|designjet|\.pc3/.test(dev) && !/pdf|png/.test(dev) ? 'plt' : dev && !/none_device/.test(dev) ? 'sys:' + String(cur[2]) : 'print';   // tên máy in Windows
     return P; }
   // DXF: PLOTSETTINGS (thiết lập trang có tên) + thiết lập riêng của từng LAYOUT (tên *Layout1* như Page Setup Manager của AutoCAD)
   function setupsFromDXF(text, opt){
@@ -214,12 +214,15 @@
 
   /* PLOTTERMANAGER — danh sách máy in / máy vẽ (.pc3), mở trình sửa cấu hình */
   plain(['PLOTTERMANAGER'], 'Quản lý máy vẽ (Plotter Manager): các cấu hình máy in / máy vẽ .pc3 và thuộc tính (độ sâu màu)', () => {
-    const DEV = [['pdf', 'DWG To PDF.pc3', 'Xuất PDF vectơ'], ['png', 'PublishToWeb PNG.pc3', 'Xuất ảnh PNG'], ['print', 'Default Windows System Printer.pc3', 'Máy in của hệ điều hành'], ['plt', 'HP DesignJet (HPGL/2).pc3', 'Tệp .plt cho máy vẽ HPGL/2']];
+    const DEV = [['pdf', 'DWG To PDF.pc3', 'Xuất PDF vectơ'], ['pdfgd', 'AutoCAD PDF (General Documentation).pc3', 'PDF vectơ, tài liệu chung'], ['pdfhq', 'AutoCAD PDF (High Quality Print).pc3', 'PDF vectơ, ảnh độ phân giải cao'], ['pdfsm', 'AutoCAD PDF (Smallest File).pc3', 'PDF vectơ, ảnh nén nhỏ'], ['pdfwm', 'AutoCAD PDF (Web and Mobile).pc3', 'PDF vectơ cho web / điện thoại'], ['png', 'PublishToWeb PNG.pc3', 'Xuất ảnh PNG'], ['jpg', 'PublishToWeb JPG.pc3', 'Xuất ảnh JPG'], ['defprn', 'Default Windows System Printer.pc3', 'Máy in mặc định của Windows'], ['print', 'Máy in Windows (hộp in hệ thống)', 'Hộp in của hệ điều hành'], ['plt', 'HP DesignJet (HPGL/2).pc3', 'Tệp .plt cho máy vẽ HPGL/2']];
     let sel = 'pdf';
-    const html = '<div class="acw" style="width:440px"><div class="acw-list" id="pmL" style="height:150px">' + DEV.map(([k, n, t]) => '<div class="it' + (k === sel ? ' on' : '') + '" data-v="' + k + '"><span translate="no">🖨 ' + esc(n) + '</span> <span style="color:#9aa6ba">— ' + esc(t) + '</span></div>').join('') + '</div>' +
+    const html = '<div class="acw" style="width:440px"><div class="acw-list" id="pmL" style="height:230px">' + DEV.map(([k, n, t]) => '<div class="it' + (k === sel ? ' on' : '') + '" data-v="' + k + '"><span translate="no">🖨 ' + esc(n) + '</span> <span style="color:#9aa6ba">— ' + esc(t) + '</span></div>').join('') + '</div>' +
       '<div class="acw-row" style="margin-top:6px">' + K.btn('pmP', 'Thuộc tính…') + K.btn('pmU', 'Dùng khi in (PLOT)') + '</div><div class="acw-note" style="white-space:normal">Cấu hình máy vẽ dùng trong PLOT, PUBLISH và thiết lập trang. Độ sâu màu / dither chỉnh ở Thuộc tính.</div></div>';
     const d = A.dialog({ title: 'Quản lý máy vẽ', cls: 'acw-free', help: 'PLOTTERMANAGER', html, noOk: true, cancelText: 'Đóng' });
     const root = d.root; K.bindList(root.querySelector('#pmL'), v => { sel = v; }, v => { sel = v; root.querySelector('#pmP').click(); });
+    // máy in Windows đã cài (bản desktop)
+    if(A.sysPrinters) A.sysPrinters().then(L => { const box = root.querySelector('#pmL'); if(!box || !L.length) return; for(const q of L){ DEV.push(['sys:' + q.name, q.display || q.name, 'Máy in Windows' + (q.isDefault ? ' (mặc định)' : '')]);
+      box.insertAdjacentHTML('beforeend', '<div class="it" data-v="' + esc('sys:' + q.name) + '"><span translate="no">🖨 ' + esc(q.display || q.name) + '</span> <span style="color:#9aa6ba">— ' + esc(DEV[DEV.length - 1][2]) + '</span></div>'); } });   // bindList bắt sự kiện trên cả danh sách: mục thêm sau vẫn chọn được
     root.querySelector('#pmP').onclick = () => { if(A.plotterProps && sel !== 'plt') A.plotterProps(sel, () => {}); else log('Máy vẽ HPGL/2: số bút / bút ảo đặt trong bảng kiểu in (STYLESMANAGER).'); };
     root.querySelector('#pmU').onclick = () => { if(A.PS){ A.PS.dev = sel; try{ localStorage.setItem('dvd:plot', JSON.stringify(Object.assign({}, A.PS, { win: undefined }))); }catch(_){} } log('PLOT dùng máy: ' + (DEV.find(x => x[0] === sel) || [0, sel])[1]); };
   });

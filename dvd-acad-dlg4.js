@@ -323,7 +323,8 @@
      ================================================================== */
   const DEPTHS = [['tc', '24-bit (True color)'], ['8', '256 màu (8-bit, bảng màu AutoCAD)'], ['1', 'Đen trắng (1-bit)']];
   const PC3 = { png: 'PublishToWeb PNG.pc3', pdf: 'DWG To PDF.pc3', print: 'Default Windows System Printer.pc3' };   // máy in Windows: in ảnh đã giảm màu
-  const depthOf = dev => { const m = (A.PS || {}).cdep || {}; return PC3[dev] && m[dev] && m[dev] !== 'tc' ? String(m[dev]) : 'tc'; };
+  const pc3 = dev => PC3[dev] || (dev === 'defprn' ? PC3.print : /^sys:/.test(dev || '') ? dev.slice(4) : null);   // máy in Windows đã cài: tên máy in
+  const depthOf = dev => { const m = (A.PS || {}).cdep || {}; return pc3(dev) && m[dev] && m[dev] !== 'tc' ? String(m[dev]) : 'tc'; };
   A.plotDepth = depthOf; A.PLOT_DEPTHS = DEPTHS;
   const ctbOn = () => { const P = A.PS || {}; return typeof P.style === 'string' && P.style.startsWith('ctb:') && A.ctb ? A.ctb.get(P.style.slice(4)) : null; };
   let maskOn = false;
@@ -424,7 +425,7 @@
     return new Blob(parts, { type: 'image/png' }); }
   A.pngIndexed = pngIndexed;
   // nút "Thuộc tính…" cạnh máy in trong hộp PLOT: Trình sửa cấu hình máy vẽ (chỉ mục Độ sâu màu)
-  A.plotterProps = (dev, done) => { const name = PC3[dev]; if(!name){ say('Thiết bị này không có thuộc tính tuỳ chỉnh.'); return; }
+  A.plotterProps = (dev, done) => { const name = pc3(dev); if(!name){ say('Thiết bị này không có thuộc tính tuỳ chỉnh.'); return; }
     const P = A.PS || {}, K = A.acw, cur = depthOf(dev);
     const html = '<div class="acw" style="width:420px">' + K.row('Máy vẽ:', '<b>' + esc(name) + '</b>') + K.grp('Thuộc tính tuỳ chỉnh — Độ sâu màu', DEPTHS.map(([v, t]) => K.rad('ppD', v, t, v === cur)).join('<br>')) +
       '<div class="acw-note">Khi giảm màu, mục "Bật dither" của từng màu trong bảng kiểu in (.ctb) có tác dụng: bật — giả màu bằng chấm (Floyd–Steinberg), tắt — lấy màu gần nhất, nét đặc.</div></div>';

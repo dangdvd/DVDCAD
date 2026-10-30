@@ -5631,7 +5631,7 @@ function renderExport(scale, region, forceWhite){
     if(bbDirty||bbN!==entities.length) buildBBoxCache();
     draw();
   } finally {
-    ctx=savedCtx; _RTW=savedRTW; _RTH=savedRTH; _exporting=false; plotMode=savedPlot;
+    ctx=savedCtx; _RTW=savedRTW; _RTH=savedRTH; _exporting=false; [window.__txtMax, window.__txtBar, window.__txtSkip]=_tm; plotMode=savedPlot;
     view.scale=savedView.scale; view.offsetX=savedView.offsetX; view.offsetY=savedView.offsetY; view.rot=savedView.rot;
     Object.defineProperty(window,'devicePixelRatio',{value:savedDpr,configurable:true});
   }
@@ -5712,7 +5712,9 @@ const PAPER_MM={ a4p:[210,297], a4l:[297,210], a3p:[297,420], a3l:[420,297], a2l
 const PT_PER_MM=72/25.4;
 // Render nội dung hiện tại (theo vùng nhìn của màn hình, hoặc 1 vùng chọn) vào canvas có TỈ LỆ KHUNG GIẤY, ở DPI cao.
 // Trả {canvas, pagePt:[wpt,hpt]} — pagePt là khổ trang PDF tính bằng point (để in đúng khổ).
-function renderForPDF(paper, region){
+// vec: ghi trang PDF vector (DVDAcad.PdfCtx: đường nét + chữ nhúng phông, phóng to vẫn sắc nét) thay cho ảnh 300 dpi
+function renderForPDF(paper, region, vec){
+  const PC=vec&&window.DVDAcad&&DVDAcad.PdfCtx&&DVDAcad.pdfBuild?DVDAcad.PdfCtx:null;
   const srcW = region? Math.max(1,region.w) : cv.clientWidth;
   const srcH = region? Math.max(1,region.h) : cv.clientHeight;
   const srcX = region? region.x : 0;
@@ -5741,15 +5743,15 @@ function renderForPDF(paper, region){
   else { pxW=Math.round(pageWmm/25.4*targetDPI); pxH=Math.round(pageHmm/25.4*targetDPI); }
   const MAXPIX=10_000_000;
   let sc=1; if(pxW*pxH>MAXPIX){ sc=Math.sqrt(MAXPIX/(pxW*pxH)); pxW=Math.round(pxW*sc); pxH=Math.round(pxH*sc); }
-  const out=document.createElement('canvas'); out.width=pxW; out.height=pxH;
-  const octx=out.getContext('2d');
+  const out=PC?new PC(cropW, cropH, pagePt[0]/cropW).canvas:document.createElement('canvas'); if(!PC){ out.width=pxW; out.height=pxH; }
+  const octx=out.getContext('2d'); const _tm=[window.__txtMax, window.__txtBar, window.__txtSkip];
   // map: vùng world hiển thị trong crop -> pixel ảnh. Dùng lại draw() bằng cách đặt view phù hợp.
   const savedCtx=ctx, savedRTW=_RTW, savedRTH=_RTH, savedDpr=window.devicePixelRatio;
   const savedView={scale:view.scale,offsetX:view.offsetX,offsetY:view.offsetY,rot:view.rot};
   _exporting=true; ctx=octx; view.rot=0;          // PDF theo hướng gốc (không xoay)
   // toạ độ "CSS" ảo của canvas xuất = kích thước crop (theo px màn hình), dpr = pxW/cropW
-  const dpr = pxW/cropW;
-  _RTW=cropW; _RTH=cropH;
+  const dpr = PC?1:pxW/cropW;
+  _RTW=cropW; _RTH=cropH; if(PC){ window.__txtMax=1e7; window.__txtBar=0; window.__txtSkip=0.02; }   // PDF vector: chữ nhỏ vẫn là chữ (phóng to đọc được)
   try{
     Object.defineProperty(window,'devicePixelRatio',{value:dpr,configurable:true});
     // dời view: điểm (cropX,cropY) trên màn hình hiện tại trở thành (0,0) của canvas xuất
@@ -5761,7 +5763,12 @@ function renderForPDF(paper, region){
     view.scale=savedView.scale; view.offsetX=savedView.offsetX; view.offsetY=savedView.offsetY; view.rot=savedView.rot;
     Object.defineProperty(window,'devicePixelRatio',{value:savedDpr,configurable:true});
   }
-  return {canvas:out, pagePt};
+  return PC?{ctx:octx, pdf:octx, canvas:out, pagePt}:{canvas:out, pagePt};
+}
+// trang → PDF: trang vector (ctx) ghép bằng DVDAcad.pdfBuild, trang ảnh → JPEG
+async function pagesToPDF(pages){
+  if(pages.length && pages.every(p=>p.pdf) && window.DVDAcad && DVDAcad.pdfBuild) return DVDAcad.pdfBuild(pages.map(p=>({ctx:p.pdf})), {title:String(currentName||'').replace(/\.[^.]+$/,''), version:DVDAcad.version||''});
+  return pages.length===1?canvasToPDFPaper(pages[0].canvas, pages[0].pagePt):canvasesToPDF(pages);
 }
 async function canvasToPDFPaper(canvas, pagePt){
   const W=canvas.width, H=canvas.height;
@@ -5834,8 +5841,7 @@ async function doExport(fmt, region){
 async function exportPDFWithPaper(paper, region){
   toast('Đang tạo PDF…'); await new Promise(r=>setTimeout(r,30));
   try{
-    const {canvas,pagePt}=renderForPDF(paper, region||null);
-    const blob=await canvasToPDFPaper(canvas, pagePt);
+    const blob=await pagesToPDF([renderForPDF(paper, region||null, true)]);
     await shareOrDownload(blob, exportFilename('pdf'), 'application/pdf');
   }catch(err){ console.error(err); toast('Không tạo được PDF.'); }
 }
@@ -5852,10 +5858,10 @@ async function renderAllLayoutsPDF(paper){
     for(const {L} of sheets){
       entities=buildPaperEntities(L); bbDirty=true; snapDirty=true;
       computeBounds(); fitView();                                   // canh khít layout vào màn hình
-      const r=renderForPDF(paper, null); pages.push(r);
+      const r=renderForPDF(paper, null, true); pages.push(r);
       await new Promise(res=>setTimeout(res,10));
     }
-    const blob=await canvasesToPDF(pages);
+    const blob=await pagesToPDF(pages);
     await shareOrDownload(blob, exportFilename('pdf'), 'application/pdf');
     toast('Đã tạo PDF '+pages.length+' trang');
   }catch(err){ console.error(err); toast('Không tạo được PDF nhiều trang.'); }

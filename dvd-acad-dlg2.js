@@ -1393,9 +1393,9 @@
   function stampFields(S, R){ const P = A.PS || {}, F = S.fields || {}, out = [];
     let lay = 'Model'; try{ const L = dwgLayouts[currentLayout]; if(L && L.name) lay = L.name; }catch(_){}
     let sc = '1:' + (P.scale || 1); if(userLay()) sc = '1:1'; else if(P.fit && R && R.k > 0){ let mm = 1; try{ mm = unitToMM() || 1; }catch(_){} sc = '1:' + r6(mm / R.k); }
-    const paper = R ? (userLay() ? '' : 'ISO ' + (P.paper || 'A3') + ' ') + '(' + r6(R.Wmm) + ' x ' + r6(R.Hmm) + ' mm)' : 'ISO ' + (P.paper || 'A3');
+    const pl = ((A.PAPER_SIZES || {})[P.paper] || {}).label || (P.paper === 'custom' ? 'User' : 'ISO ' + (P.paper || 'A3')); const paper = R ? (userLay() ? '' : pl + ' ') + '(' + r6(R.Wmm) + ' x ' + r6(R.Hmm) + ' mm)' : pl;
     let dwg = 'Drawing1.dwg'; try{ if(currentName) dwg = currentName; }catch(_){}
-    const V = { dwg, layout: lay, date: new Date().toLocaleString(), login: loginName(), device: DEVN[P.dev || 'pdf'] || String(P.dev || ''), paper, scale: sc };
+    const V = { dwg, layout: lay, date: new Date().toLocaleString(), login: loginName(), device: ((A.PLOT_DEVICES || []).find(d => d[0] === (P.dev || 'pdf')) || [])[1] || DEVN[P.dev || 'pdf'] || String(P.dev || '').replace(/^sys:/, ''), paper, scale: sc };
     for(const [k] of SF) if(F[k]) out.push(V[k]);
     for(const n of [S.u1, S.u2]) if(n && S.user.includes(n)) out.push(n);
     return out; }
