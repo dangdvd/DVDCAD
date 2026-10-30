@@ -1076,6 +1076,8 @@
         recs.length, crcJ(sm, sm.length, s2), smP.comp.length, smId2, smId1, sm.length, crcJ(smP.comp, smP.comp.length, s2), smRep, 0, 0x60100, 0, 0, rnd(), 0].forEach((v, i) => L64(hd, i * 8, F[i] != null && [4, 28, 31, 32].includes(i) ? F[i] : v));
       L64(hd, 0x108, crc64(hd, 0x110));
       const hc = r21Comp(hd, true), pre = new Uint8Array(3 * 239), dv = new DataView(pre.buffer);
+      // đầu khối: cặp "CRC + khoá" (AutoCAD / ODA kiểm cặp này, không phụ thuộc nội dung header) — dùng một cặp hợp lệ của AutoCAD
+      L64(pre, 0, 0xc0730c2b38f28956n); L64(pre, 8, 0x11541ab5ef6c671bn);
       L64(pre, 16, crc64(hc, hc.length)); dv.setInt32(24, hc.length, true); pre.set(hc, 32); if(o.pre) pre.set(o.pre.subarray(0, 16), 0);
       const blk = new Uint8Array(0x400); RS(0x169, 239).enc(pre, 3, blk, 0); if(o.check) blk.set(o.check.subarray(0, 0x28), 0x3d8);
       // 0x80 byte đầu file

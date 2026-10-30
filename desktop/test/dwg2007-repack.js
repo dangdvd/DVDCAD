@@ -24,6 +24,6 @@ secs.sort((a, b) => a.first - b.first);
 const list = secs.map(s => [s.name, s.data]), base = { dwgv: u[0x11], maint: u[0x12] };
 const V = { '': {} };
 if(process.argv.includes('--bien-the')) Object.assign(V, { '-dau': { pre: pre.slice(0, 16) }, '-kt': { check: u.slice(0x458, 0x480) }, '-hg': { fields: { 4: HB(4), 28: HB(28), 31: HB(31), 32: HB(32) } },
-  '-lap': { pmRep: H(3), smRep: H(27) }, '-tatca': { pre: pre.slice(0, 16), check: u.slice(0x458, 0x480), fields: { 4: HB(4), 28: HB(28), 31: HB(31), 32: HB(32) }, pmRep: H(3), smRep: H(27) } });
+  '-lap': { pmRep: H(3), smRep: H(27) }, '-ngaunhien': { pre: Uint8Array.from({ length: 16 }, () => Math.random() * 256 | 0) }, '-tatca': { pre: pre.slice(0, 16), check: u.slice(0x458, 0x480), fields: { 4: HB(4), 28: HB(28), 31: HB(31), 32: HB(32) }, pmRep: H(3), smRep: H(27) } });
 for(const [suf, o] of Object.entries(V)){ const fn = outp.replace(/\.dwg$/i, suf + '.dwg'); fs.writeFileSync(fn, D.pack2007(list, Object.assign({}, base, o))); console.log('đóng gói lại ' + path.basename(inp) + ' → ' + path.basename(fn)); }
 console.log('  section: ' + secs.map(s => s.name.replace('AcDb:', '') + ' ' + s.data.length).join(', '));
