@@ -27,6 +27,22 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v6e) — chạy bộ tiện ích LISP của AutoCAD
+- **Nạp cả bộ tiện ích**: `APPLOAD` › **Nạp cả thư mục…** (chọn thư mục cài bộ LISP) hoặc **Nạp file…** chọn gói **.zip** / nhiều tệp cùng lúc.
+  - Mọi tệp `.lsp`, `.dcl`, `.lin`, `.pat`, `.csv`, `.mnl`… được chép vào **thư mục hỗ trợ** của DVDCAD (như Support File Search Path của AutoCAD). Lệnh `SUPPORTFILES` để xem / xoá.
+  - Hộp thoại liệt kê các tệp `.lsp` để chọn tệp nào **nạp ngay và tự nạp khi mở DVDCAD** (Startup Suite).
+  - `acad.lsp`, `acaddoc.lsp`, `*.mnl` tự chạy khi mở DVDCAD, rồi Startup Suite, rồi `S::STARTUP` (thứ tự như AutoCAD). `(autoload "tep" '("LENH"))` nạp tệp khi gõ lệnh lần đầu.
+  - Tệp soạn trên Windows theo bảng mã ANSI tiếng Việt (Windows-1258) đọc đúng dấu.
+  - Tệp `.fas` / `.vlx` / `.dll` / `.arx` trong bộ được liệt kê và bỏ qua, có giải thích (xem cuối mục).
+- **Hộp thoại DCL**: `load_dialog`, `new_dialog`, `start_dialog`, `action_tile`, `set_tile`, `get_tile`, `mode_tile`, `start_list` / `add_list` / `end_list`, `start_image` / `fill_image` / `vector_image`, `done_dialog`… Tile: hàng / cột / khung, `edit_box`, `popup_list`, `list_box`, `toggle`, `radio_button`, `button`, `slider`, `image`, `image_button`, `text`, `ok_cancel`… Enter = nút mặc định, Esc = Huỷ.
+- **ActiveX (vla- / vlax-)**: `vlax-get-acad-object`, `vla-get-ActiveDocument`, `vla-get-ModelSpace`, `vla-AddLine` / `AddCircle` / `AddLightWeightPolyline` / `AddText` / `AddBlockReference`…, `vla-get-` / `vla-put-` thuộc tính (Layer, Color, Length, Area, Coordinates, TextString…), `vla-Move` / `Rotate` / `ScaleEntity` / `Mirror` / `Offset` / `Delete`, `vlax-for` duyệt lớp / khối, safearray / variant, `:vlax-true` / `:vlax-false`.
+- **vlax-curve-**: chiều dài, điểm, tham số, điểm gần nhất, đạo hàm, diện tích cho đoạn thẳng, cung, tròn, elip, đa tuyến có cung. Tham số giống AutoCAD (đa tuyến = chỉ số đỉnh).
+- **Hàm khác**: đọc / ghi tệp (`open`, `read-line`, `write-line`, `close`, `findfile`, `vl-file-…`), `getfiled`, `grread` (phím, di chuột, bấm chuột), `grdraw` / `grvecs`, `tblnext`, `tblobjname`, `entmake` INSERT (chèn khối), `entmakex`, `textbox`, `cvunit`, `acad_colordlg`, `vl-registry-…`, `getcfg` / `setcfg`, một số hàm Express Tools (`acet-…`) hay dùng. Danh sách đầy đủ: `ADDIN-API.md` (lệnh `ADDINAPI`).
+- **Không chạy được**:
+  - `.fas` / `.vlx`: LISP đã **biên dịch và mã hoá** cho riêng máy ảo LISP của AutoCAD, không có mã nguồn để đọc. Nhiều bộ tiện ích thương mại chỉ phát hành dạng này (kèm khoá bản quyền), nên cần xin tác giả bản `.lsp` hoặc bản dành cho DVDCAD.
+  - `.dll` / `.arx` / `.crx` / `.dvb`: chương trình Windows (.NET, ObjectARX, VBA) chạy **bên trong tiến trình AutoCAD**, gọi thẳng thư viện của Autodesk. Phần mềm khác không nạp được.
+  - Reactor (`vlr-…`) tạo được nhưng chưa phát sinh sự kiện; `trans` / `osnap` trả nguyên điểm; `entmake` HATCH / DIMENSION / định nghĩa khối chưa có (dùng `command`).
+
 ## Bổ sung như AutoCAD 2027 (v6d)
 - **Độ trong suốt theo lớp** (Layer Transparency):
   - Cột **Độ trong suốt** trong bảng Lớp (bấm để nhập 0–90). `-LAYER` có tuỳ chọn **Trong suốt** (TR).
@@ -861,7 +877,7 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 
 ## Bổ sung (v5d) — add-in: AutoLISP và JavaScript
 **`APPLOAD` (`AP`)** (ribbon › thẻ **Add-ins** › Nạp ứng dụng): nạp add-in giống AutoCAD.
-- **Nạp file…**: chọn `.lsp` (AutoLISP) hoặc `.js` (JavaScript); nạp được nhiều file một lần. Có thể nạp từ đường link.
+- **Nạp file…**: chọn `.lsp` (AutoLISP) hoặc `.js` (JavaScript); nạp được nhiều file một lần. Có thể nạp từ đường link. Bộ tiện ích nhiều tệp (`.lsp` + `.dcl`): **Nạp cả thư mục…** hoặc gói `.zip` (từ v6e).
 - Cột **Khởi động** (Startup Suite): add-in tự nạp mỗi khi mở DVDCAD. **Nạp lại** / **Gỡ** từng add-in.
 - **Add-in mẫu**, bấm **Cài**:
   - *QS — khối lượng*: `TONGDAI` (tổng chiều dài theo lớp), `TONGDT` (tổng diện tích vùng kín). Kết quả chèn bảng vào bản vẽ hoặc tải file CSV mở bằng Excel.
@@ -888,11 +904,11 @@ Trên mặt bằng, khối hiện dạng hình chiếu. MOVE, COPY, ROTATE, SCAL
 Xem `ADDIN-API.md`.
 
 **Không chạy được:**
-- `.fas` / `.vlx` (LISP đã biên dịch);
+- `.fas` / `.vlx` (LISP đã biên dịch và mã hoá);
 - `.dll` / `.arx` (.NET, ObjectARX);
 - `.dvb` (VBA).
 
-Đây là add-in Windows chỉ chạy trong AutoCAD. Với add-in .NET, cần viết lại phần xử lý bằng JavaScript.
+Đây là mã chỉ chạy trong AutoCAD. Cần bản mã nguồn `.lsp`; với add-in .NET, cần viết lại phần xử lý bằng JavaScript. Hộp thoại DCL và hàm `vla-` / `vlax-` dùng được từ v6e.
 
 ## Bổ sung (v5c) — ngôn ngữ giao diện đồng bộ
 - Bấm nút **Không gian làm việc** (cạnh nút Lưu) › **Ngôn ngữ giao diện** để chọn **English** hoặc **Tiếng Việt**. Lựa chọn áp dụng cho toàn bộ giao diện:
@@ -1353,7 +1369,7 @@ Trên điện thoại vẫn dùng nút Xuất như cũ (PDF xuất ra cũng là 
 - Mặt lưới RULESURF / TABSURF / REVSURF / EDGESURF / PLANESURF là khối lưới tam giác: lưu DXF thành 3DFACE và UNION / SUBTRACT không dùng cho mặt hở. Đường 2D của DVDCAD luôn nằm trên mặt bằng XY (cao độ theo ELEV), nên RULESURF / EDGESURF giữa các đường 2D ra mặt phẳng.
 - POLYSOLID vẽ theo điểm có tuỳ chọn **Cung** (cung tiếp tuyến đoạn trước, hoặc qua Điểm thứ hai) và **Đường thẳng** để quay lại đoạn thẳng, như AutoCAD.
 - Giao diện English dịch từ chuỗi tiếng Việt gốc khi hiển thị. Một vài câu ghép có thể đọc chưa trơn như AutoCAD bản tiếng Anh. Chữ do lệnh ghi vào bản vẽ (trường ngày tháng, nhãn ký hiệu, khung tên mẫu) vẫn là tiếng Việt.
-- AutoLISP của DVDCAD chạy mã nguồn `.lsp`. Chưa có: hàm `vla-` / `vlax-` (ActiveX), hộp thoại DCL, `grread`, `entmake` cho khối / hatch, reactor. Add-in lưu trên từng máy (trong trình duyệt), không đi kèm bản vẽ hay Google Drive.
+- AutoLISP của DVDCAD chạy mã nguồn `.lsp` kèm hộp thoại `.dcl` và các hàm `vla-` / `vlax-` / `vlax-curve-` thường dùng. Không chạy được `.fas` / `.vlx` (đã biên dịch, mã hoá) và `.dll` / `.arx` (chương trình chạy trong AutoCAD). Reactor chưa phát sinh sự kiện; `entmake` HATCH / DIMENSION / định nghĩa khối chưa có. Add-in và thư mục hỗ trợ lưu trên từng máy (trong trình duyệt), không đi kèm bản vẽ hay Google Drive.
 - Độ trong suốt đặt cho từng đối tượng. Độ trong suốt theo lớp: cột Độ trong suốt trong bảng Lớp, `-LAYER` › Trong suốt; đọc / ghi DXF và DWG như AutoCAD (XDATA AcCmTransparency). THICKEN chỉ làm dày được mặt phẳng; mặt cong (REVSURF…) chưa làm dày được. 3DFACE nằm ở cao độ ELEV (chưa nhập Z riêng từng đỉnh).
 - Lớp đóng băng riêng khung nhìn (VPLAYER, LAYVPI) và đường cắt khung nhìn (VPCLIP) ghi vào DXF / DWG. ETRANSMIT / ARCHIVE đóng gói bản vẽ DWG (chọn phiên bản 2018 → 2000) hoặc DXF, nén .zip. MKLTYPE chỉ tạo kiểu nét đơn giản (nét, khoảng hở, chấm), chưa có chữ / hình trong nét.
 - XCLIP: khối có đường cắt đảo ngược khi lưu DXF được ghi thành các đối tượng rời (phần nhìn thấy), không còn là khối có đường cắt, vì AutoCAD không nhận đường cắt đảo ngược do phần mềm khác tạo. Lưu DXF R12 chỉ ghi phần nhìn thấy. Trên iPhone / iPad (không giữ nhóm khối để tiết kiệm bộ nhớ), phần ngoài đường cắt bị bỏ hẳn khi mở file. Chưa có Clipdepth (cắt theo chiều sâu 3D).

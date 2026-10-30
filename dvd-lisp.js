@@ -498,6 +498,9 @@
     eval: async src => { let r; await runTop(async () => { r = await loadSource(src); }); return r; },
     evalToString: async src => { let r; const ok = await runTop(async () => { const f = parse(src); for(const x of f) r = await ev(x); return true; }); return ok ? str(r) : null; },
     load: (src, name) => runTop(() => loadSource(src, name), name),
-    commandLine, str, parse, sym, stop: () => { stopFlag = true; }, get commands(){ return [...cmdFns.keys()]; }, get files(){ return [...files.keys()]; }, G
+    commandLine, str, parse, sym, stop: () => { stopFlag = true; }, get commands(){ return [...cmdFns.keys()]; }, get files(){ return [...files.keys()]; }, G,
+    // cho phần mở rộng (dvd-lisp2.js: DCL, vla / vlax, tệp…)
+    ext: { BI, SPECIAL, G, ev, apply, progn, withBindings, toFn, Sym, LI, DP, Ename, SS, Fn, LispErr, Quit, T, mkInt, toReal, toInt, toStr, pt, lpt, L, nv, isNum, truthy, str, sym,
+      entsOf, ename, entget, ME, typeName, ask, files, gc, out, flushOut, loadSource, runTop, getv, setv, parse }
   };
 })();

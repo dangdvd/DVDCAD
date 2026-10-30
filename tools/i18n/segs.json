@@ -63,6 +63,9 @@
 "\" list=\"ltL\" style=\"width:100%\" placeholder=\"(giữ nguyên)\">": [
 "dvd-acad-x11.js"
 ],
+"\" là LISP đã biên dịch của AutoCAD (.fas / .vlx) — DVDCAD chỉ chạy được mã nguồn .lsp.": [
+"dvd-lisp2.js"
+],
 "\" lên Google Drive (mở được bằng AutoCAD).": [
 "dvd-cloud.js"
 ],
@@ -134,6 +137,9 @@
 "\" trong các tệp đã nạp.": [
 "dvd-acad-x20.js"
 ],
+"\" trong thư mục hỗ trợ": [
+"dvd-addins.js"
+],
 "\" trên DVDCAD. Mở tại:": [
 "dvd-cloud.js"
 ],
@@ -194,6 +200,9 @@
 ],
 "\" — dùng x,y · @dx,dy · dài<góc": [
 "dvd-acad-core.js"
+],
+"\" — nạp tệp .dcl cùng tệp .lsp (APPLOAD › Thư mục hỗ trợ).": [
+"dvd-lisp2.js"
 ],
 "\" — sửa trực tiếp ở Model. VPMIN để quay lại layout.": [
 "dvd-acad-x12.js"
@@ -256,7 +265,8 @@
 "dvd-acad-x11.js"
 ],
 "\">Xoá": [
-"dvd-acad-x2.js"
+"dvd-acad-x2.js",
+"dvd-addins.js"
 ],
 "\"? (thay đổi đã tự lưu trên máy)": [
 "dvd-acad-ext.js"
@@ -267,7 +277,7 @@
 "' ' (Cách)": [
 "dvd-acad-dlg.js"
 ],
-"', noCancel: true, ok: () => {} }); }catch(_){ window.alert(s); } return null; }); BI(['EXIT', 'QUIT'], () => { throw new Quit('quit / exit abort'); }); BI('VL-LOAD-COM', () => null); BI('VL-CATCH-ALL-ERROR-P', x => x && x.catchErr ? T : null); BI('VL-CATCH-ALL-ERROR-MESSAGE', x => x && x.catchErr ? x.catchErr : null); BI('GETENV', n => { try{ return localStorage.getItem('dvd:lispenv:' + toStr(n)); }catch(_){ return null; } }); BI('SETENV', (n, v) => { try{ localStorage.setItem('dvd:lispenv:' + toStr(n), toStr(v)); }catch(_){} return v; }); BI('ATOMS-FAMILY', () => null); BI('SET', (s, v) => { if(!(s instanceof Sym)) throw new LispErr('bad argument type: symbolp'); setv(s, v); return v; }); BI('GETCNAME', s => { const n = toStr(s).replace(/^[_.]+/, '').toUpperCase(); return window.DVDCmd && DVDCmd.commands.some(c => c.k.includes(n)) ? n : null; }); /* ---------------- nhập từ người dùng ---------------- */ let initKw = null; BI('INITGET', (a, b) => { const kws = typeof a === 'string' ? a : typeof b === 'string' ? b : ''; initKw = kws.trim() ? kws.trim().split(/\\s+/) : null; return null; }); const kwOpts = () => { if(!initKw) return null; return initKw.map(w => { const caps = w.replace(/[^A-Z0-9]/g, ''); return { k: caps || w.toUpperCase(), t: w, full: w }; }); }; const kwBack = (opts, k) => { const o = (opts || []).find(o => o.k === k); return o ? o.full : k; }; // chạy 1 lời nhắc của bộ máy lệnh trong ngữ cảnh lệnh tạm (Esc = huỷ hàm LISP như AutoCAD) function ask(kind, prompt, o){ const opts = kwOpts(); initKw = null; flushOut(); return new Promise((res, rej) => { if(A().busy && A().busy()) A().cancel(true); A().run('LISP', async () => { try{ const p = Object.assign({}, o || {}); if(opts) p.kw = opts.map(x => ({ k: x.k, t: x.t })); const fn = { pt: A().getPoint, dist: A().getDist, ang: A().getAngle, num: A().getNum, str: A().getStr, kw: A().getKw, ent: A().getEnt, sel: A().getSel }[kind]; const r = await fn(prompt || '', p); if(r && r.kw) r.kw = kwBack(opts, r.kw); res(r); }catch(err){ rej(new Quit('Function cancelled')); throw err; } }, { quiet: true }); }); } const promptArgs = (a, b) => { let base = null, msg = ''; for(const x of [a, b]){ if(typeof x === 'string') msg = x; else if(Array.isArray(x)) base = pt(x); } return { base, msg }; }; BI('GETPOINT', async (a, b) => { const { base, msg } = promptArgs(a, b); const r = await ask('pt', msg || 'Chỉ định điểm', base ? { base } : {}); if(r.kw) return r.kw; return r.pt ? lpt(r.pt) : null; }); BI('GETCORNER', async (a, b) => { const { base, msg } = promptArgs(a, b); const r = await ask('pt', msg || 'Góc đối diện', base ? { base, rubber: false, preview: (g, p) => g.ents([{ type: 'POLYLINE', closed: true, vertices: [base, { x: p.x, y: base.y }, p, { x: base.x, y: p.y }] }], '#9fd0ff') } : {}); if(r.kw) return r.kw; return r.pt ? lpt(r.pt) : null; }); BI('GETDIST', async (a, b) => { const { base, msg } = promptArgs(a, b); const r = await ask('dist', msg || 'Khoảng cách', base ? { base } : {}); if(r.kw) return r.kw; return r.num != null ? +r.num : null; }); BI(['GETANGLE', 'GETORIENT'], async (a, b) => { const { base, msg } = promptArgs(a, b); const r = await ask('ang', msg || 'Góc', base ? { base } : {}); if(r.kw) return r.kw; return r.num != null ? r.num * D2R : null; }); BI('GETREAL', async (m) => { const r = await ask('num', typeof m === 'string' ? m : 'Nhập số'); if(r.kw) return r.kw; return r.num != null ? +r.num : null; }); BI('GETINT', async (m) => { for(;;){ const r = await ask('num', typeof m === 'string' ? m : 'Nhập số nguyên'); if(r.kw) return r.kw; if(r.num == null) return null; if(Number.isInteger(+r.num)) return mkInt(+r.num); A().log('Cần số nguyên.'); } }); BI('GETSTRING', async (a, b) => { const m = typeof a === 'string' ? a : typeof b === 'string' ? b : ''; const r = await ask('str', m || 'Nhập chuỗi'); return r.str != null ? r.str : ''; }); BI('GETKWORD', async (m) => { const opts = kwOpts(); if(!opts){ initKw = null; const r = await ask('str', toStr(m || '')); return r.str || null; } const r = await ask('kw', typeof m === 'string' ? m : 'Chọn'); return r.kw || null; }); /* ---------------- đối tượng (entity) ---------------- */ let lidSeq = 0; const ME = () => window.modelEntities || (typeof modelEntities !== 'undefined' ? modelEntities : []); const lidOf = e => { if(e.grp && (e.blk || String(e.grp).startsWith('D'))) return 'G:' + e.grp; if(!e._lid) e._lid = 'L' + (++lidSeq) + '_' + Date.now().toString(36); return e._lid; }; const ename = e => e ? new Ename(lidOf(e)) : null; function entsOf(en){ if(!(en instanceof Ename)) throw new LispErr('bad argument type: lentityp ' + str(en)); const id = en.id; const all = ME(); if(id.startsWith('G:')){ const g = id.slice(2); return all.filter(e => String(e.grp) === g); } const e = all.find(x => x._lid === id); return e ? [e] : []; } const isDimGrp = list => list.some(e => e.dimd || String(e.blk || '').startsWith('*DIM')); const DXFT = { LINE: 'LINE', CIRCLE: 'CIRCLE', ARC: 'ARC', POINT: 'POINT', POLYLINE: 'LWPOLYLINE', ELLIPSE: 'ELLIPSE', HATCH: 'HATCH', SOLID: 'SOLID', SOLID3D: '3DSOLID', IMAGE: 'IMAGE', SPLINE: 'SPLINE' }; const typeName = list => { if(list.length > 1 || (list[0] && list[0].grp && list[0].blk)) return isDimGrp(list) ? 'DIMENSION' : (String(list[0].blk || '').startsWith('*') ? 'GROUP' : 'INSERT'); const e = list[0]; if(e.type === 'TEXT') return e.mt ? 'MTEXT' : e.att ? 'ATTRIB' : 'TEXT'; return DXFT[e.type] || e.type; }; const aciOfE = e => e.bl ? 256 : (A().aciOf ? A().aciOf(e.col) : 7); const hexOfAci = n => typeof aciHex === 'function' ? aciHex(n) : '#ffffff'; const R3 = (x, y) => [x, y, 0.0]; function entget(en){ const list = entsOf(en); if(!list.length) return null; const e = list[0], ty = typeName(list); const out = [new DP(mkInt(-1), en), new DP(mkInt(0), ty), new DP(mkInt(8), e.layer || '0')]; if(!e.bl) out.push(new DP(mkInt(62), mkInt(aciOfE(e)))); if(e.lt && e.lt !== 'BYLAYER') out.push(new DP(mkInt(6), String(e.lt))); const P = (c, x, y) => out.push([mkInt(c), x, y, 0.0]); if(ty === 'INSERT' || ty === 'GROUP'){ const bm = e.bm || {}; const sc = Math.hypot(bm.a || 1, bm.b || 0); out.push(new DP(mkInt(2), String(e.blk || ''))); P(10, (e.bip || { x: 0 }).x, (e.bip || { y: 0 }).y); out.push(new DP(mkInt(41), sc), new DP(mkInt(42), sc), new DP(mkInt(43), sc), new DP(mkInt(50), Math.atan2(bm.b || 0, bm.a || 1))); return out; } if(ty === 'DIMENSION'){ const t = list.find(x => x.dimd && !x.dimx) || list.find(x => x.type === 'TEXT'); if(t){ out.push(new DP(mkInt(1), t.dimd && t.dimd.ov ? t.dimd.ov : '')); out.push(new DP(mkInt(42), +(t.dimv != null ? t.dimv : parseFloat(t.text) || 0))); if(t.dimd && t.dimd.p1){ P(13, t.dimd.p1.x, t.dimd.p1.y); P(14, t.dimd.p2.x, t.dimd.p2.y); } P(11, t.x, t.y); } return out; } switch(e.type){ case 'LINE': P(10, e.x1, e.y1); P(11, e.x2, e.y2); break; case 'CIRCLE': P(10, e.cx, e.cy); out.push(new DP(mkInt(40), e.r)); break; case 'ARC': P(10, e.cx, e.cy); out.push(new DP(mkInt(40), e.r), new DP(mkInt(50), e.a1 * D2R), new DP(mkInt(51), e.a2 * D2R)); break; case 'POINT': P(10, e.x, e.y); break; case 'ELLIPSE': P(10, e.cx, e.cy); out.push([mkInt(11), e.mx, e.my, 0.0], new DP(mkInt(40), e.ratio), new DP(mkInt(41), e.p1 || 0), new DP(mkInt(42), e.p2 != null ? e.p2 : 2 * Math.PI)); break; case 'TEXT': { P(10, e.x, e.y); out.push(new DP(mkInt(40), e.h || 2.5), new DP(mkInt(1), String(e.text || '')), new DP(mkInt(50), (e.rot || 0) * D2R), new DP(mkInt(7), e.style || 'Standard')); out.push(new DP(mkInt(72), mkInt(e.ha === 'center' ? 1 : (e.ha === 'right' || e.ha === 'end') ? 2 : 0)), new DP(mkInt(73), mkInt(e.va === 'bottom' ? 1 : e.va === 'middle' ? 2 : e.va === 'top' ? 3 : 0))); P(11, e.x, e.y); if(e.att) out.push(new DP(mkInt(2), e.att)); break; } case 'POLYLINE': { const B = (A().bvOf && A().bvOf(e)) || e.vertices || []; out.push(new DP(mkInt(90), mkInt(B.length)), new DP(mkInt(70), mkInt(e.closed ? 1 : 0))); B.forEach((v, k) => { out.push([mkInt(10), v.x, v.y]); if(e.pw && e.pw[k]){ out.push(new DP(mkInt(40), e.pw[k][2]), new DP(mkInt(41), e.pw[k][3])); } out.push(new DP(mkInt(42), v.bulge || 0)); }); break; } case 'HATCH': out.push(new DP(mkInt(2), String(e.pat || 'SOLID'))); break; } return out; } const gc = (al, code) => { for(const p of L(al)){ const k = p instanceof DP ? p.a : Array.isArray(p) ? p[0] : null; if(k !== null && nv(k) === code) return p instanceof DP ? p.d : p.slice(1); } return undefined; }; const gcAll = (al, code) => L(al).filter(p => (p instanceof DP ? nv(p.a) : Array.isArray(p) ? nv(p[0]) : null) === code).map(p => p instanceof DP ? p.d : p.slice(1)); const P2 = v => { const l = L(v); return { x: nv(l[0]), y: nv(l[1]) }; }; function applyCommon(w, al){ const lay = gc(al, 8); if(typeof lay === 'string'){ if(!A().layerNames().includes(lay)) A().addLayer(lay); w.layer = lay; if(w.bl) w.col = A().layerHex(lay); } const c = gc(al, 62); if(c !== undefined){ const n = toInt(c); if(n === 256 || n === 0){ w.bl = 1; w.col = A().layerHex(w.layer || '0'); } else { delete w.bl; w.col = hexOfAci(n); } } const lt = gc(al, 6); if(typeof lt === 'string') w.lt = lt.toUpperCase(); } function applyGeom(w, al){ const g = c => gc(al, c); switch(w.type){ case 'LINE': { const a = g(10), b = g(11); if(a){ const p = P2(a); w.x1 = p.x; w.y1 = p.y; } if(b){ const p = P2(b); w.x2 = p.x; w.y2 = p.y; } break; } case 'CIRCLE': case 'ARC': { const c = g(10); if(c){ const p = P2(c); w.cx = p.x; w.cy = p.y; } if(g(40) !== undefined) w.r = toReal(g(40)); if(w.type === 'ARC'){ if(g(50) !== undefined) w.a1 = toReal(g(50)) / D2R; if(g(51) !== undefined) w.a2 = toReal(g(51)) / D2R; } break; } case 'POINT': { const c = g(10); if(c){ const p = P2(c); w.x = p.x; w.y = p.y; } break; } case 'TEXT': { const c = g(11) || g(10); const ha = g(72), va = g(73); if(ha !== undefined) w.ha = ['left', 'center', 'right', 'left', 'center', 'left'][toInt(ha)] || 'left'; if(va !== undefined) w.va = ['alphabetic', 'bottom', 'middle', 'top'][toInt(va)] || 'alphabetic'; const ip = (w.ha && w.ha !== 'left') || (w.va && w.va !== 'alphabetic') ? (g(11) || g(10)) : (g(10) || g(11)); if(ip){ const p = P2(ip); w.x = p.x; w.y = p.y; } if(g(40) !== undefined) w.h = toReal(g(40)); if(typeof g(1) === 'string') w.text = g(1); if(g(50) !== undefined) w.rot = toReal(g(50)) / D2R; if(typeof g(7) === 'string') w.style = g(7); break; } case 'POLYLINE': { const vs = []; let cur = null; const wid = []; for(const p of L(al)){ const k = p instanceof DP ? nv(p.a) : Array.isArray(p) ? nv(p[0]) : null; const v = p instanceof DP ? p.d : Array.isArray(p) ? p.slice(1) : null; if(k === 10){ cur = { x: nv(v[0]), y: nv(v[1]), bulge: 0 }; vs.push(cur); wid.push([0, 0]); } else if(k === 42 && cur) cur.bulge = toReal(v); else if(k === 40 && cur) wid[wid.length - 1][0] = toReal(v); else if(k === 41 && cur) wid[wid.length - 1][1] = toReal(v); else if(k === 43){ const cw = toReal(v); for(const x of wid) x[0] = x[1] = cw; } } const fl = g(70); if(fl !== undefined) w.closed = (toInt(fl) & 1) === 1; if(vs.length >= 2){ delete w.bv; delete w.bvs; delete w.wq; delete w.pw; if(wid.some(x => x[0] > 0 || x[1] > 0) && typeof widePoly === 'function'){ widePoly(vs.map((v, k) => ({ x: v.x, y: v.y, bulge: v.bulge, sw: wid[k][0], ew: wid[k][1] })), !!w.closed, w); } else if(vs.some(v => v.bulge)){ w.vertices = vs.map(v => ({ x: v.x, y: v.y })); A().setBV(w, vs); } else w.vertices = vs.map(v => ({ x: v.x, y: v.y })); } break; } } } BI('ENTGET', en => entget(en)); BI('ENTMOD', al => { const en = gc(al, -1); const list = entsOf(en); if(!list.length) return null; const e = list[0]; if(list.length > 1 || e.grp && e.blk){ const lay = gc(al, 8), c = gc(al, 62); const rep = list.map(x => { const w = JSON.parse(JSON.stringify(x)); delete w.userAdded; applyCommon(w, al); return [x, w]; }); if(typeof lay === 'string' || c !== undefined) A().commit({ rep }); return al; } const w = JSON.parse(JSON.stringify(e)); delete w.userAdded; applyCommon(w, al); applyGeom(w, al); A().commit({ rep: [[e, w]] }); return al; }); const MAKE = { LINE: 'LINE', CIRCLE: 'CIRCLE', ARC: 'ARC', POINT: 'POINT', TEXT: 'TEXT', MTEXT: 'TEXT', LWPOLYLINE: 'POLYLINE', POLYLINE: 'POLYLINE' }; BI('ENTMAKE', al => { if(al === null || al === undefined) return null; const ty = String(gc(al, 0) || '').toUpperCase(); const t = MAKE[ty]; if(!t) return null; const w = { type: t }; if(ty === 'MTEXT') w.mt = 1; if(t === 'TEXT'){ w.h = (A().MEM && A().MEM.th) || 2.5; w.text = ''; w.rot = 0; w.ha = 'left'; w.va = 'alphabetic'; } if(t === 'POLYLINE'){ w.vertices = []; w.closed = false; } A().newProps(w); delete w.lt; applyCommon(w, al); applyGeom(w, al); if(t === 'POLYLINE' && (w.vertices || []).length < 2) return null; A().commit({ add: [w] }); return al; }); BI('ENTDEL', en => { const list = entsOf(en); if(!list.length) return null; A().commit({ del: list.filter(e => !A().isLocked(e)) }); return en; }); BI('ENTUPD', en => en); BI('REDRAW', () => { try{ draw(); }catch(_){} return null; }); BI('ENTLAST', () => { const a = ME(); return a.length ? ename(a[a.length - 1]) : null; }); BI('ENTNEXT', en => { const a = ME(); if(en === undefined || en === null) return a.length ? ename(a[0]) : null; const list = entsOf(en); if(!list.length) return null; const last = list[list.length - 1]; let i = a.indexOf(last) + 1; const g = list[0].grp; while(i < a.length && g && a[i].grp === g) i++; return i < a.length ? ename(a[i]) : null; }); BI('HANDENT', h => { const e = ME().find(x => x.h === h || x._lid === h); return e ? ename(e) : null; }); BI('ENTSEL', async (m) => { const r = await ask('ent', typeof m === 'string' ? m : 'Chọn đối tượng'); if(!r || !r.ent) return null; return [ename(r.ent), lpt(r.pt || { x: 0, y: 0 })]; }); BI('NENTSEL', async (m) => { const r = await ask('ent', typeof m === 'string' ? m : 'Chọn đối tượng'); if(!r || !r.ent) return null; const e = r.ent; if(!e._lid) e._lid = 'L' + (++lidSeq) + '_' + Date.now().toString(36); return [new Ename(e._lid), lpt(r.pt || { x: 0, y: 0 })]; }); // bộ lọc ssget: 0 loại, 8 lớp, 62 màu, 2 tên khối (cho phép ký tự đại diện * ? ,) function filterFn(fl){ if(!fl) return () => true; const conds = []; for(const p of L(fl)){ if(!(p instanceof DP)) continue; const k = nv(p.a), v = p.d; if(k === 0){ const re = wc(String(v)); conds.push((e, ty) => re.test(ty)); } else if(k === 8){ const re = wc(String(v)); conds.push(e => re.test(e.layer || '0')); } else if(k === 62){ const n = toInt(v); conds.push(e => aciOfE(e) === n); } else if(k === 2){ const re = wc(String(v)); conds.push(e => re.test(String(e.blk || e.pat || ''))); } else if(k === 1){ const re = wc(String(v)); conds.push(e => re.test(String(e.text || ''))); } } const tyOf = e => { if(e.grp && e.blk){ const b = String(e.blk); return (e.dimd || b.startsWith('*DIM')) ? 'DIMENSION' : b.startsWith('*') ? 'GROUP' : 'INSERT'; } return typeName([e]); }; return e => { const ty = tyOf(e); return conds.every(f => f(e, ty)); }; } const uniqEn = ents => { const seen = new Set(), out = []; for(const e of ents){ const id = lidOf(e); if(seen.has(id)) continue; seen.add(id); out.push(new Ename(id)); } return out; }; const visible = e => !(A().isHiddenE && A().isHiddenE(e)); BI('SSGET', async (...args) => { let mode = null, fl = null, p1 = null, p2 = null; for(const a of args){ if(typeof a === 'string') mode = a.replace(/^_/, '').toUpperCase(); else if(Array.isArray(a) && a.length && (a[0] instanceof DP)) fl = a; else if(Array.isArray(a)){ if(!p1) p1 = pt(a); else p2 = pt(a); } } const f = filterFn(fl); let ents; if(mode === 'X' || mode === 'A') ents = ME().filter(e => f(e)); else if((mode === 'W' || mode === 'C') && p1 && p2){ const x0 = Math.min(p1.x, p2.x), x1 = Math.max(p1.x, p2.x), y0 = Math.min(p1.y, p2.y), y1 = Math.max(p1.y, p2.y); ents = ME().filter(e => { if(!visible(e) || !f(e)) return false; const b = typeof entBBox === 'function' ? entBBox(e) : null; if(!b) return false; return mode === 'W' ? (b.x0 >= x0 && b.x1 <= x1 && b.y0 >= y0 && b.y1 <= y1) : !(b.x1 < x0 || b.x0 > x1 || b.y1 < y0 || b.y0 > y1); }); } else if(mode === 'L'){ const a = ME(); ents = a.length ? [a[a.length - 1]] : []; } else if(mode === 'I' || mode === 'P'){ ents = [...(window.selEnts || [])].filter(e => f(e)); if(!ents.length && mode === 'I') return null; } else { const r = await ask('sel', 'Chọn đối tượng', { filter: fl ? f : undefined }); ents = (r && r.sel) || []; } const l = uniqEn(ents); return l.length ? new SS(l) : null; }); BI('SSLENGTH', s => s instanceof SS ? mkInt(s.l.length) : null); BI('SSNAME', (s, i) => { if(!(s instanceof SS)) throw new LispErr('bad argument type: lselsetp ' + str(s)); const k = toInt(i); return k >= 0 && k < s.l.length ? s.l[k] : null; }); BI('SSADD', (en, s) => { if(en === undefined) return new SS([]); const ss = s instanceof SS ? s : new SS([]); if(en instanceof Ename && !ss.l.some(x => x.id === en.id)) ss.l.push(en); return ss; }); BI('SSDEL', (en, s) => { if(s instanceof SS) s.l = s.l.filter(x => x.id !== en.id); return s; }); BI('SSMEMB', (en, s) => s instanceof SS && s.l.some(x => x.id === en.id) ? en : null); BI('SSSETFIRST', (a, s) => { try{ selEnts.clear(); if(s instanceof SS) for(const en of s.l) for(const e of entsOf(en)) selEnts.add(e); draw(); }catch(_){} return null; }); BI('TBLSEARCH', (t, n) => { const tb = toStr(t).toUpperCase(), nm = toStr(n); if(tb === 'LAYER'){ const ln = A().layerNames().find(x => x.toUpperCase() === nm.toUpperCase()); if(!ln) return null; const LS = A().LS; return [new DP(mkInt(0), 'LAYER'), new DP(mkInt(2), ln), new DP(mkInt(70), mkInt((LS.frozen.has(ln) ? 1 : 0) | (LS.locked.has(ln) ? 4 : 0))), new DP(mkInt(62), mkInt((LS.off.has(ln) ? -1 : 1) * (A().aciOf ? A().aciOf(A().layerHex(ln)) : 7))), new DP(mkInt(6), 'Continuous')]; } if(tb === 'BLOCK'){ const all = Object.keys(window._dvdBlocks || {}).concat(Object.keys((A().blockLib && A().blockLib()) || {})); const b = all.find(x => x.toUpperCase() === nm.toUpperCase()); return b ? [new DP(mkInt(0), 'BLOCK'), new DP(mkInt(2), b)] : null; } return null; }); BI('GETVAR', n => { const k = toStr(n).toUpperCase(); if(k === 'CMDECHO' || k === 'NOMUTT' || k === 'BLIPMODE' || k === 'HIGHLIGHT') return mkInt(LV[k] != null ? LV[k] : (k === 'HIGHLIGHT' ? 1 : 0)); if(k === 'DWGPREFIX') return ''; if(k === 'ACADVER') return '24.0s (DVDCAD)'; if(k === 'LUNITS') return mkInt(2); if(k === 'ANGBASE') return 0.0; if(k === 'ANGDIR') return mkInt(0); if(k === 'VIEWCTR'){ try{ const c = toWorld(innerWidth / 2, innerHeight / 2); return [c.x, c.y, 0.0]; }catch(_){ return [0.0, 0.0, 0.0]; } } const v = A().sysvar ? A().sysvar.get(k) : undefined; if(v === undefined) return LV[k] !== undefined ? LV[k] : null; return typeof v === 'number' ? (Number.isInteger(v) ? mkInt(v) : v) : typeof v === 'boolean' ? mkInt(v ? 1 : 0) : String(v); }); const LV = {}; BI('SETVAR', (n, v) => { const k = toStr(n).toUpperCase(); const val = v instanceof LI ? v.v : v; if(A().sysvar && A().sysvar.set(k, val)) return v; LV[k] = v; return v; }); /* ---------------- (command …) ---------------- */ const argStr = a => { if(a === null || a === undefined) return ''; if(typeof a === 'string') return a; if(a instanceof LI) return String(a.v); if(typeof a === 'number') return String(+a.toPrecision(15)); if(Array.isArray(a) && a.length >= 2 && isNum(a[0])) return nv(a[0]) + ',' + nv(a[1]); if(a instanceof Ename){ return null; } if(a instanceof SS) return null; return str(a, true); }; async function waitPrompt(seq, maxMs){ const t0 = Date.now(); for(;;){ if(!A().busy()) return 'done'; if(A().reqInfo() && (A().reqSeq || 0) !== seq) return 'req'; if(maxMs && Date.now() - t0 > maxMs) return 'timeout'; await sleep(8); } } // như AutoCAD: trong (command …) lệnh có bản dòng lệnh (-LAYER, -INSERT, -COLOR…) chạy bản đó thay cho hộp thoại const clName = n => DVDCmd.commands.some(c => c.k.includes('-' + n)) ? '-' + n : n; async function command(...args){ flushOut(); if(!args.length){ if(A().busy()) A().cancel(true); return null; } let i = 0; if(!A().busy()){ const name = String(argStr(args[0]) || '').replace(/^[_.'-]+/, '').toUpperCase(); i = 1; if(!name) return null; const seq = A().reqSeq || 0; DVDCmd.run(clName(name)); await waitPrompt(seq, 1500); } for(; i < args.length; i++){ const a = args[i]; if(a === '\\\\' || (a instanceof Sym && a.n === 'PAUSE')){ const seq = A().reqSeq || 0; await waitPrompt(seq, 0); continue; } // pause: chờ người dùng nhập if(a instanceof Ename || a instanceof SS){ // chọn đối tượng cho lời nhắc chọn const ri = A().reqInfo(); const ents = a instanceof Ename ? entsOf(a) : a.l.flatMap(entsOf); const seq = A().reqSeq || 0; if(ri && ri.single){ const e = ents[0]; if(e) A().pickEnt3D(e); await waitPrompt(seq, 1500); continue; } for(const e of ents) A().pickEnt3D(e); await sleep(5); if(i + 1 >= args.length || !(args[i + 1] instanceof SS || args[i + 1] instanceof Ename)){ A().input(''); await waitPrompt(seq, 1500); } continue; } if(!A().busy()){ const name = String(argStr(a) || '').replace(/^[_.'-]+/, '').toUpperCase(); if(!name) continue; const seq = A().reqSeq || 0; DVDCmd.run(clName(name)); await waitPrompt(seq, 1500); continue; } const s = argStr(a); const seq = A().reqSeq || 0; A().input(s); await waitPrompt(seq, 1500); } return null; } BI(['COMMAND', 'VL-CMDF', 'COMMAND-S'], command); /* ---------------- lệnh c:XXX ---------------- */ const cmdFns = new Map(); function regCmd(name, fn){ const key = name.toUpperCase(); cmdFns.set(key, fn); if(!window.DVDCmd) return; const exist = DVDCmd.commands.find(c => c.k.includes(key) && c.lisp); if(exist) return; if(DVDCmd.commands.some(c => c.k.includes(key) && !c.lisp)) A().log('LISP: định nghĩa lại lệnh ' + key + ' (lệnh gốc của DVDCAD bị che).'); DVDCmd.register([key], 'Lệnh AutoLISP (' + key + ')', () => runTop(async () => { const f = cmdFns.get(key); return apply(f, []); }, key), {}); const c = DVDCmd.commands.find(c => c.k.includes(key)); if(c) c.lisp = true; } let running = 0; async function runTop(fn, label){ running++; steps = 0; try{ const r = await fn(); flushOut(); return r; } catch(err){ flushOut(); const msg = err instanceof Quit ? err.message : err instanceof LispErr ? err.message : ('lỗi trong mã: ' + (err && err.message || err)); const eh = G.get('*ERROR*'); if(eh instanceof Fn || typeof eh === 'function'){ try{ await apply(eh, [msg]); flushOut(); }catch(e2){ A().log('; lỗi: ' + (e2.message || e2)); } } else A().log('; lỗi: ' + msg); if(!(err instanceof Quit || err instanceof LispErr)) console.error(err); return undefined; } finally{ running--; if(running === 0 && A().busy && A().busy()){ const r = A().reqInfo && A().reqInfo(); if(!r) {} } } } /* ---------------- nạp mã ---------------- */ const files = new Map(); // tên file → mã (để (load \"ten\") tìm được) async function loadSource(src, name){ const forms = parse(src); let r = null; for(const f of forms) r = await ev(f); if(name) files.set(String(name).toUpperCase().replace(/\\.LSP$/, ''), src); return r; } BI('LOAD', async (n, onFail) => { const k = toStr(n).toUpperCase().replace(/\\\\/g, '/').split('/').pop().replace(/\\.LSP$/, ''); const src = files.get(k) || (window.DVDAddins && DVDAddins.sourceOf(k)); if(src == null){ if(onFail !== undefined) return onFail; throw new LispErr('LOAD failed: \"' + n + '\"'); } return loadSource(src, k); }); /* ---------------- dòng lệnh ---------------- */ function commandLine(raw){ if(raw[0] === '!'){ const s = raw.slice(1).trim(); if(!/^[^\\s()]+$/.test(s)) return false; const v = getv(sym(s)); if(A().busy && A().busy() && A().reqInfo()){ const a = argStr(v); if(a != null) A().input(a); return true; } A().log(str(v)); return true; } if(raw[0] !== '('){ return false; } const busyReq = A().busy && A().busy() && A().reqInfo(); runTop(async () => { const forms = parse(raw); let r = null; for(const f of forms) r = await ev(f); if(busyReq && A().busy() && A().reqInfo()){ const a = argStr(r); if(a != null) A().input(a); } else if(!(r instanceof Sym && r.n === '')) A().log(str(r)); return r; }); return true; } window.DVDLisp = { eval: async src => { let r; await runTop(async () => { r = await loadSource(src); }); return r; }, evalToString: async src => { let r; const ok = await runTop(async () => { const f = parse(src); for(const x of f) r = await ev(x); return true; }); return ok ? str(r) : null; }, load: (src, name) => runTop(() => loadSource(src, name), name), commandLine, str, parse, sym, stop: () => { stopFlag = true; }, get commands(){ return [...cmdFns.keys()]; }, get files(){ return [...files.keys()]; }, G }; })();": [
+"', noCancel: true, ok: () => {} }); }catch(_){ window.alert(s); } return null; }); BI(['EXIT', 'QUIT'], () => { throw new Quit('quit / exit abort'); }); BI('VL-LOAD-COM', () => null); BI('VL-CATCH-ALL-ERROR-P', x => x && x.catchErr ? T : null); BI('VL-CATCH-ALL-ERROR-MESSAGE', x => x && x.catchErr ? x.catchErr : null); BI('GETENV', n => { try{ return localStorage.getItem('dvd:lispenv:' + toStr(n)); }catch(_){ return null; } }); BI('SETENV', (n, v) => { try{ localStorage.setItem('dvd:lispenv:' + toStr(n), toStr(v)); }catch(_){} return v; }); BI('ATOMS-FAMILY', () => null); BI('SET', (s, v) => { if(!(s instanceof Sym)) throw new LispErr('bad argument type: symbolp'); setv(s, v); return v; }); BI('GETCNAME', s => { const n = toStr(s).replace(/^[_.]+/, '').toUpperCase(); return window.DVDCmd && DVDCmd.commands.some(c => c.k.includes(n)) ? n : null; }); /* ---------------- nhập từ người dùng ---------------- */ let initKw = null; BI('INITGET', (a, b) => { const kws = typeof a === 'string' ? a : typeof b === 'string' ? b : ''; initKw = kws.trim() ? kws.trim().split(/\\s+/) : null; return null; }); const kwOpts = () => { if(!initKw) return null; return initKw.map(w => { const caps = w.replace(/[^A-Z0-9]/g, ''); return { k: caps || w.toUpperCase(), t: w, full: w }; }); }; const kwBack = (opts, k) => { const o = (opts || []).find(o => o.k === k); return o ? o.full : k; }; // chạy 1 lời nhắc của bộ máy lệnh trong ngữ cảnh lệnh tạm (Esc = huỷ hàm LISP như AutoCAD) function ask(kind, prompt, o){ const opts = kwOpts(); initKw = null; flushOut(); return new Promise((res, rej) => { if(A().busy && A().busy()) A().cancel(true); A().run('LISP', async () => { try{ const p = Object.assign({}, o || {}); if(opts) p.kw = opts.map(x => ({ k: x.k, t: x.t })); const fn = { pt: A().getPoint, dist: A().getDist, ang: A().getAngle, num: A().getNum, str: A().getStr, kw: A().getKw, ent: A().getEnt, sel: A().getSel }[kind]; const r = await fn(prompt || '', p); if(r && r.kw) r.kw = kwBack(opts, r.kw); res(r); }catch(err){ rej(new Quit('Function cancelled')); throw err; } }, { quiet: true }); }); } const promptArgs = (a, b) => { let base = null, msg = ''; for(const x of [a, b]){ if(typeof x === 'string') msg = x; else if(Array.isArray(x)) base = pt(x); } return { base, msg }; }; BI('GETPOINT', async (a, b) => { const { base, msg } = promptArgs(a, b); const r = await ask('pt', msg || 'Chỉ định điểm', base ? { base } : {}); if(r.kw) return r.kw; return r.pt ? lpt(r.pt) : null; }); BI('GETCORNER', async (a, b) => { const { base, msg } = promptArgs(a, b); const r = await ask('pt', msg || 'Góc đối diện', base ? { base, rubber: false, preview: (g, p) => g.ents([{ type: 'POLYLINE', closed: true, vertices: [base, { x: p.x, y: base.y }, p, { x: base.x, y: p.y }] }], '#9fd0ff') } : {}); if(r.kw) return r.kw; return r.pt ? lpt(r.pt) : null; }); BI('GETDIST', async (a, b) => { const { base, msg } = promptArgs(a, b); const r = await ask('dist', msg || 'Khoảng cách', base ? { base } : {}); if(r.kw) return r.kw; return r.num != null ? +r.num : null; }); BI(['GETANGLE', 'GETORIENT'], async (a, b) => { const { base, msg } = promptArgs(a, b); const r = await ask('ang', msg || 'Góc', base ? { base } : {}); if(r.kw) return r.kw; return r.num != null ? r.num * D2R : null; }); BI('GETREAL', async (m) => { const r = await ask('num', typeof m === 'string' ? m : 'Nhập số'); if(r.kw) return r.kw; return r.num != null ? +r.num : null; }); BI('GETINT', async (m) => { for(;;){ const r = await ask('num', typeof m === 'string' ? m : 'Nhập số nguyên'); if(r.kw) return r.kw; if(r.num == null) return null; if(Number.isInteger(+r.num)) return mkInt(+r.num); A().log('Cần số nguyên.'); } }); BI('GETSTRING', async (a, b) => { const m = typeof a === 'string' ? a : typeof b === 'string' ? b : ''; const r = await ask('str', m || 'Nhập chuỗi'); return r.str != null ? r.str : ''; }); BI('GETKWORD', async (m) => { const opts = kwOpts(); if(!opts){ initKw = null; const r = await ask('str', toStr(m || '')); return r.str || null; } const r = await ask('kw', typeof m === 'string' ? m : 'Chọn'); return r.kw || null; }); /* ---------------- đối tượng (entity) ---------------- */ let lidSeq = 0; const ME = () => window.modelEntities || (typeof modelEntities !== 'undefined' ? modelEntities : []); const lidOf = e => { if(e.grp && (e.blk || String(e.grp).startsWith('D'))) return 'G:' + e.grp; if(!e._lid) e._lid = 'L' + (++lidSeq) + '_' + Date.now().toString(36); return e._lid; }; const ename = e => e ? new Ename(lidOf(e)) : null; function entsOf(en){ if(!(en instanceof Ename)) throw new LispErr('bad argument type: lentityp ' + str(en)); const id = en.id; const all = ME(); if(id.startsWith('G:')){ const g = id.slice(2); return all.filter(e => String(e.grp) === g); } const e = all.find(x => x._lid === id); return e ? [e] : []; } const isDimGrp = list => list.some(e => e.dimd || String(e.blk || '').startsWith('*DIM')); const DXFT = { LINE: 'LINE', CIRCLE: 'CIRCLE', ARC: 'ARC', POINT: 'POINT', POLYLINE: 'LWPOLYLINE', ELLIPSE: 'ELLIPSE', HATCH: 'HATCH', SOLID: 'SOLID', SOLID3D: '3DSOLID', IMAGE: 'IMAGE', SPLINE: 'SPLINE' }; const typeName = list => { if(list.length > 1 || (list[0] && list[0].grp && list[0].blk)) return isDimGrp(list) ? 'DIMENSION' : (String(list[0].blk || '').startsWith('*') ? 'GROUP' : 'INSERT'); const e = list[0]; if(e.type === 'TEXT') return e.mt ? 'MTEXT' : e.att ? 'ATTRIB' : 'TEXT'; return DXFT[e.type] || e.type; }; const aciOfE = e => e.bl ? 256 : (A().aciOf ? A().aciOf(e.col) : 7); const hexOfAci = n => typeof aciHex === 'function' ? aciHex(n) : '#ffffff'; const R3 = (x, y) => [x, y, 0.0]; function entget(en){ const list = entsOf(en); if(!list.length) return null; const e = list[0], ty = typeName(list); const out = [new DP(mkInt(-1), en), new DP(mkInt(0), ty), new DP(mkInt(8), e.layer || '0')]; if(!e.bl) out.push(new DP(mkInt(62), mkInt(aciOfE(e)))); if(e.lt && e.lt !== 'BYLAYER') out.push(new DP(mkInt(6), String(e.lt))); const P = (c, x, y) => out.push([mkInt(c), x, y, 0.0]); if(ty === 'INSERT' || ty === 'GROUP'){ const bm = e.bm || {}; const sc = Math.hypot(bm.a || 1, bm.b || 0); out.push(new DP(mkInt(2), String(e.blk || ''))); P(10, (e.bip || { x: 0 }).x, (e.bip || { y: 0 }).y); out.push(new DP(mkInt(41), sc), new DP(mkInt(42), sc), new DP(mkInt(43), sc), new DP(mkInt(50), Math.atan2(bm.b || 0, bm.a || 1))); return out; } if(ty === 'DIMENSION'){ const t = list.find(x => x.dimd && !x.dimx) || list.find(x => x.type === 'TEXT'); if(t){ out.push(new DP(mkInt(1), t.dimd && t.dimd.ov ? t.dimd.ov : '')); out.push(new DP(mkInt(42), +(t.dimv != null ? t.dimv : parseFloat(t.text) || 0))); if(t.dimd && t.dimd.p1){ P(13, t.dimd.p1.x, t.dimd.p1.y); P(14, t.dimd.p2.x, t.dimd.p2.y); } P(11, t.x, t.y); } return out; } switch(e.type){ case 'LINE': P(10, e.x1, e.y1); P(11, e.x2, e.y2); break; case 'CIRCLE': P(10, e.cx, e.cy); out.push(new DP(mkInt(40), e.r)); break; case 'ARC': P(10, e.cx, e.cy); out.push(new DP(mkInt(40), e.r), new DP(mkInt(50), e.a1 * D2R), new DP(mkInt(51), e.a2 * D2R)); break; case 'POINT': P(10, e.x, e.y); break; case 'ELLIPSE': P(10, e.cx, e.cy); out.push([mkInt(11), e.mx, e.my, 0.0], new DP(mkInt(40), e.ratio), new DP(mkInt(41), e.p1 || 0), new DP(mkInt(42), e.p2 != null ? e.p2 : 2 * Math.PI)); break; case 'TEXT': { P(10, e.x, e.y); out.push(new DP(mkInt(40), e.h || 2.5), new DP(mkInt(1), String(e.text || '')), new DP(mkInt(50), (e.rot || 0) * D2R), new DP(mkInt(7), e.style || 'Standard')); out.push(new DP(mkInt(72), mkInt(e.ha === 'center' ? 1 : (e.ha === 'right' || e.ha === 'end') ? 2 : 0)), new DP(mkInt(73), mkInt(e.va === 'bottom' ? 1 : e.va === 'middle' ? 2 : e.va === 'top' ? 3 : 0))); P(11, e.x, e.y); if(e.att) out.push(new DP(mkInt(2), e.att)); break; } case 'POLYLINE': { const B = (A().bvOf && A().bvOf(e)) || e.vertices || []; out.push(new DP(mkInt(90), mkInt(B.length)), new DP(mkInt(70), mkInt(e.closed ? 1 : 0))); B.forEach((v, k) => { out.push([mkInt(10), v.x, v.y]); if(e.pw && e.pw[k]){ out.push(new DP(mkInt(40), e.pw[k][2]), new DP(mkInt(41), e.pw[k][3])); } out.push(new DP(mkInt(42), v.bulge || 0)); }); break; } case 'HATCH': out.push(new DP(mkInt(2), String(e.pat || 'SOLID'))); break; } return out; } const gc = (al, code) => { for(const p of L(al)){ const k = p instanceof DP ? p.a : Array.isArray(p) ? p[0] : null; if(k !== null && nv(k) === code) return p instanceof DP ? p.d : p.slice(1); } return undefined; }; const gcAll = (al, code) => L(al).filter(p => (p instanceof DP ? nv(p.a) : Array.isArray(p) ? nv(p[0]) : null) === code).map(p => p instanceof DP ? p.d : p.slice(1)); const P2 = v => { const l = L(v); return { x: nv(l[0]), y: nv(l[1]) }; }; function applyCommon(w, al){ const lay = gc(al, 8); if(typeof lay === 'string'){ if(!A().layerNames().includes(lay)) A().addLayer(lay); w.layer = lay; if(w.bl) w.col = A().layerHex(lay); } const c = gc(al, 62); if(c !== undefined){ const n = toInt(c); if(n === 256 || n === 0){ w.bl = 1; w.col = A().layerHex(w.layer || '0'); } else { delete w.bl; w.col = hexOfAci(n); } } const lt = gc(al, 6); if(typeof lt === 'string') w.lt = lt.toUpperCase(); } function applyGeom(w, al){ const g = c => gc(al, c); switch(w.type){ case 'LINE': { const a = g(10), b = g(11); if(a){ const p = P2(a); w.x1 = p.x; w.y1 = p.y; } if(b){ const p = P2(b); w.x2 = p.x; w.y2 = p.y; } break; } case 'CIRCLE': case 'ARC': { const c = g(10); if(c){ const p = P2(c); w.cx = p.x; w.cy = p.y; } if(g(40) !== undefined) w.r = toReal(g(40)); if(w.type === 'ARC'){ if(g(50) !== undefined) w.a1 = toReal(g(50)) / D2R; if(g(51) !== undefined) w.a2 = toReal(g(51)) / D2R; } break; } case 'POINT': { const c = g(10); if(c){ const p = P2(c); w.x = p.x; w.y = p.y; } break; } case 'TEXT': { const c = g(11) || g(10); const ha = g(72), va = g(73); if(ha !== undefined) w.ha = ['left', 'center', 'right', 'left', 'center', 'left'][toInt(ha)] || 'left'; if(va !== undefined) w.va = ['alphabetic', 'bottom', 'middle', 'top'][toInt(va)] || 'alphabetic'; const ip = (w.ha && w.ha !== 'left') || (w.va && w.va !== 'alphabetic') ? (g(11) || g(10)) : (g(10) || g(11)); if(ip){ const p = P2(ip); w.x = p.x; w.y = p.y; } if(g(40) !== undefined) w.h = toReal(g(40)); if(typeof g(1) === 'string') w.text = g(1); if(g(50) !== undefined) w.rot = toReal(g(50)) / D2R; if(typeof g(7) === 'string') w.style = g(7); break; } case 'POLYLINE': { const vs = []; let cur = null; const wid = []; for(const p of L(al)){ const k = p instanceof DP ? nv(p.a) : Array.isArray(p) ? nv(p[0]) : null; const v = p instanceof DP ? p.d : Array.isArray(p) ? p.slice(1) : null; if(k === 10){ cur = { x: nv(v[0]), y: nv(v[1]), bulge: 0 }; vs.push(cur); wid.push([0, 0]); } else if(k === 42 && cur) cur.bulge = toReal(v); else if(k === 40 && cur) wid[wid.length - 1][0] = toReal(v); else if(k === 41 && cur) wid[wid.length - 1][1] = toReal(v); else if(k === 43){ const cw = toReal(v); for(const x of wid) x[0] = x[1] = cw; } } const fl = g(70); if(fl !== undefined) w.closed = (toInt(fl) & 1) === 1; if(vs.length >= 2){ delete w.bv; delete w.bvs; delete w.wq; delete w.pw; if(wid.some(x => x[0] > 0 || x[1] > 0) && typeof widePoly === 'function'){ widePoly(vs.map((v, k) => ({ x: v.x, y: v.y, bulge: v.bulge, sw: wid[k][0], ew: wid[k][1] })), !!w.closed, w); } else if(vs.some(v => v.bulge)){ w.vertices = vs.map(v => ({ x: v.x, y: v.y })); A().setBV(w, vs); } else w.vertices = vs.map(v => ({ x: v.x, y: v.y })); } break; } } } BI('ENTGET', en => entget(en)); BI('ENTMOD', al => { const en = gc(al, -1); const list = entsOf(en); if(!list.length) return null; const e = list[0]; if(list.length > 1 || e.grp && e.blk){ const lay = gc(al, 8), c = gc(al, 62); const rep = list.map(x => { const w = JSON.parse(JSON.stringify(x)); delete w.userAdded; applyCommon(w, al); return [x, w]; }); if(typeof lay === 'string' || c !== undefined) A().commit({ rep }); return al; } const w = JSON.parse(JSON.stringify(e)); delete w.userAdded; applyCommon(w, al); applyGeom(w, al); A().commit({ rep: [[e, w]] }); return al; }); const MAKE = { LINE: 'LINE', CIRCLE: 'CIRCLE', ARC: 'ARC', POINT: 'POINT', TEXT: 'TEXT', MTEXT: 'TEXT', LWPOLYLINE: 'POLYLINE', POLYLINE: 'POLYLINE' }; BI('ENTMAKE', al => { if(al === null || al === undefined) return null; const ty = String(gc(al, 0) || '').toUpperCase(); const t = MAKE[ty]; if(!t) return null; const w = { type: t }; if(ty === 'MTEXT') w.mt = 1; if(t === 'TEXT'){ w.h = (A().MEM && A().MEM.th) || 2.5; w.text = ''; w.rot = 0; w.ha = 'left'; w.va = 'alphabetic'; } if(t === 'POLYLINE'){ w.vertices = []; w.closed = false; } A().newProps(w); delete w.lt; applyCommon(w, al); applyGeom(w, al); if(t === 'POLYLINE' && (w.vertices || []).length < 2) return null; A().commit({ add: [w] }); return al; }); BI('ENTDEL', en => { const list = entsOf(en); if(!list.length) return null; A().commit({ del: list.filter(e => !A().isLocked(e)) }); return en; }); BI('ENTUPD', en => en); BI('REDRAW', () => { try{ draw(); }catch(_){} return null; }); BI('ENTLAST', () => { const a = ME(); return a.length ? ename(a[a.length - 1]) : null; }); BI('ENTNEXT', en => { const a = ME(); if(en === undefined || en === null) return a.length ? ename(a[0]) : null; const list = entsOf(en); if(!list.length) return null; const last = list[list.length - 1]; let i = a.indexOf(last) + 1; const g = list[0].grp; while(i < a.length && g && a[i].grp === g) i++; return i < a.length ? ename(a[i]) : null; }); BI('HANDENT', h => { const e = ME().find(x => x.h === h || x._lid === h); return e ? ename(e) : null; }); BI('ENTSEL', async (m) => { const r = await ask('ent', typeof m === 'string' ? m : 'Chọn đối tượng'); if(!r || !r.ent) return null; return [ename(r.ent), lpt(r.pt || { x: 0, y: 0 })]; }); BI('NENTSEL', async (m) => { const r = await ask('ent', typeof m === 'string' ? m : 'Chọn đối tượng'); if(!r || !r.ent) return null; const e = r.ent; if(!e._lid) e._lid = 'L' + (++lidSeq) + '_' + Date.now().toString(36); return [new Ename(e._lid), lpt(r.pt || { x: 0, y: 0 })]; }); // bộ lọc ssget: 0 loại, 8 lớp, 62 màu, 2 tên khối (cho phép ký tự đại diện * ? ,) function filterFn(fl){ if(!fl) return () => true; const conds = []; for(const p of L(fl)){ if(!(p instanceof DP)) continue; const k = nv(p.a), v = p.d; if(k === 0){ const re = wc(String(v)); conds.push((e, ty) => re.test(ty)); } else if(k === 8){ const re = wc(String(v)); conds.push(e => re.test(e.layer || '0')); } else if(k === 62){ const n = toInt(v); conds.push(e => aciOfE(e) === n); } else if(k === 2){ const re = wc(String(v)); conds.push(e => re.test(String(e.blk || e.pat || ''))); } else if(k === 1){ const re = wc(String(v)); conds.push(e => re.test(String(e.text || ''))); } } const tyOf = e => { if(e.grp && e.blk){ const b = String(e.blk); return (e.dimd || b.startsWith('*DIM')) ? 'DIMENSION' : b.startsWith('*') ? 'GROUP' : 'INSERT'; } return typeName([e]); }; return e => { const ty = tyOf(e); return conds.every(f => f(e, ty)); }; } const uniqEn = ents => { const seen = new Set(), out = []; for(const e of ents){ const id = lidOf(e); if(seen.has(id)) continue; seen.add(id); out.push(new Ename(id)); } return out; }; const visible = e => !(A().isHiddenE && A().isHiddenE(e)); BI('SSGET', async (...args) => { let mode = null, fl = null, p1 = null, p2 = null; for(const a of args){ if(typeof a === 'string') mode = a.replace(/^_/, '').toUpperCase(); else if(Array.isArray(a) && a.length && (a[0] instanceof DP)) fl = a; else if(Array.isArray(a)){ if(!p1) p1 = pt(a); else p2 = pt(a); } } const f = filterFn(fl); let ents; if(mode === 'X' || mode === 'A') ents = ME().filter(e => f(e)); else if((mode === 'W' || mode === 'C') && p1 && p2){ const x0 = Math.min(p1.x, p2.x), x1 = Math.max(p1.x, p2.x), y0 = Math.min(p1.y, p2.y), y1 = Math.max(p1.y, p2.y); ents = ME().filter(e => { if(!visible(e) || !f(e)) return false; const b = typeof entBBox === 'function' ? entBBox(e) : null; if(!b) return false; return mode === 'W' ? (b.x0 >= x0 && b.x1 <= x1 && b.y0 >= y0 && b.y1 <= y1) : !(b.x1 < x0 || b.x0 > x1 || b.y1 < y0 || b.y0 > y1); }); } else if(mode === 'L'){ const a = ME(); ents = a.length ? [a[a.length - 1]] : []; } else if(mode === 'I' || mode === 'P'){ ents = [...(window.selEnts || [])].filter(e => f(e)); if(!ents.length && mode === 'I') return null; } else { const r = await ask('sel', 'Chọn đối tượng', { filter: fl ? f : undefined }); ents = (r && r.sel) || []; } const l = uniqEn(ents); return l.length ? new SS(l) : null; }); BI('SSLENGTH', s => s instanceof SS ? mkInt(s.l.length) : null); BI('SSNAME', (s, i) => { if(!(s instanceof SS)) throw new LispErr('bad argument type: lselsetp ' + str(s)); const k = toInt(i); return k >= 0 && k < s.l.length ? s.l[k] : null; }); BI('SSADD', (en, s) => { if(en === undefined) return new SS([]); const ss = s instanceof SS ? s : new SS([]); if(en instanceof Ename && !ss.l.some(x => x.id === en.id)) ss.l.push(en); return ss; }); BI('SSDEL', (en, s) => { if(s instanceof SS) s.l = s.l.filter(x => x.id !== en.id); return s; }); BI('SSMEMB', (en, s) => s instanceof SS && s.l.some(x => x.id === en.id) ? en : null); BI('SSSETFIRST', (a, s) => { try{ selEnts.clear(); if(s instanceof SS) for(const en of s.l) for(const e of entsOf(en)) selEnts.add(e); draw(); }catch(_){} return null; }); BI('TBLSEARCH', (t, n) => { const tb = toStr(t).toUpperCase(), nm = toStr(n); if(tb === 'LAYER'){ const ln = A().layerNames().find(x => x.toUpperCase() === nm.toUpperCase()); if(!ln) return null; const LS = A().LS; return [new DP(mkInt(0), 'LAYER'), new DP(mkInt(2), ln), new DP(mkInt(70), mkInt((LS.frozen.has(ln) ? 1 : 0) | (LS.locked.has(ln) ? 4 : 0))), new DP(mkInt(62), mkInt((LS.off.has(ln) ? -1 : 1) * (A().aciOf ? A().aciOf(A().layerHex(ln)) : 7))), new DP(mkInt(6), 'Continuous')]; } if(tb === 'BLOCK'){ const all = Object.keys(window._dvdBlocks || {}).concat(Object.keys((A().blockLib && A().blockLib()) || {})); const b = all.find(x => x.toUpperCase() === nm.toUpperCase()); return b ? [new DP(mkInt(0), 'BLOCK'), new DP(mkInt(2), b)] : null; } return null; }); BI('GETVAR', n => { const k = toStr(n).toUpperCase(); if(k === 'CMDECHO' || k === 'NOMUTT' || k === 'BLIPMODE' || k === 'HIGHLIGHT') return mkInt(LV[k] != null ? LV[k] : (k === 'HIGHLIGHT' ? 1 : 0)); if(k === 'DWGPREFIX') return ''; if(k === 'ACADVER') return '24.0s (DVDCAD)'; if(k === 'LUNITS') return mkInt(2); if(k === 'ANGBASE') return 0.0; if(k === 'ANGDIR') return mkInt(0); if(k === 'VIEWCTR'){ try{ const c = toWorld(innerWidth / 2, innerHeight / 2); return [c.x, c.y, 0.0]; }catch(_){ return [0.0, 0.0, 0.0]; } } const v = A().sysvar ? A().sysvar.get(k) : undefined; if(v === undefined) return LV[k] !== undefined ? LV[k] : null; return typeof v === 'number' ? (Number.isInteger(v) ? mkInt(v) : v) : typeof v === 'boolean' ? mkInt(v ? 1 : 0) : String(v); }); const LV = {}; BI('SETVAR', (n, v) => { const k = toStr(n).toUpperCase(); const val = v instanceof LI ? v.v : v; if(A().sysvar && A().sysvar.set(k, val)) return v; LV[k] = v; return v; }); /* ---------------- (command …) ---------------- */ const argStr = a => { if(a === null || a === undefined) return ''; if(typeof a === 'string') return a; if(a instanceof LI) return String(a.v); if(typeof a === 'number') return String(+a.toPrecision(15)); if(Array.isArray(a) && a.length >= 2 && isNum(a[0])) return nv(a[0]) + ',' + nv(a[1]); if(a instanceof Ename){ return null; } if(a instanceof SS) return null; return str(a, true); }; async function waitPrompt(seq, maxMs){ const t0 = Date.now(); for(;;){ if(!A().busy()) return 'done'; if(A().reqInfo() && (A().reqSeq || 0) !== seq) return 'req'; if(maxMs && Date.now() - t0 > maxMs) return 'timeout'; await sleep(8); } } // như AutoCAD: trong (command …) lệnh có bản dòng lệnh (-LAYER, -INSERT, -COLOR…) chạy bản đó thay cho hộp thoại const clName = n => DVDCmd.commands.some(c => c.k.includes('-' + n)) ? '-' + n : n; async function command(...args){ flushOut(); if(!args.length){ if(A().busy()) A().cancel(true); return null; } let i = 0; if(!A().busy()){ const name = String(argStr(args[0]) || '').replace(/^[_.'-]+/, '').toUpperCase(); i = 1; if(!name) return null; const seq = A().reqSeq || 0; DVDCmd.run(clName(name)); await waitPrompt(seq, 1500); } for(; i < args.length; i++){ const a = args[i]; if(a === '\\\\' || (a instanceof Sym && a.n === 'PAUSE')){ const seq = A().reqSeq || 0; await waitPrompt(seq, 0); continue; } // pause: chờ người dùng nhập if(a instanceof Ename || a instanceof SS){ // chọn đối tượng cho lời nhắc chọn const ri = A().reqInfo(); const ents = a instanceof Ename ? entsOf(a) : a.l.flatMap(entsOf); const seq = A().reqSeq || 0; if(ri && ri.single){ const e = ents[0]; if(e) A().pickEnt3D(e); await waitPrompt(seq, 1500); continue; } for(const e of ents) A().pickEnt3D(e); await sleep(5); if(i + 1 >= args.length || !(args[i + 1] instanceof SS || args[i + 1] instanceof Ename)){ A().input(''); await waitPrompt(seq, 1500); } continue; } if(!A().busy()){ const name = String(argStr(a) || '').replace(/^[_.'-]+/, '').toUpperCase(); if(!name) continue; const seq = A().reqSeq || 0; DVDCmd.run(clName(name)); await waitPrompt(seq, 1500); continue; } const s = argStr(a); const seq = A().reqSeq || 0; A().input(s); await waitPrompt(seq, 1500); } return null; } BI(['COMMAND', 'VL-CMDF', 'COMMAND-S'], command); /* ---------------- lệnh c:XXX ---------------- */ const cmdFns = new Map(); function regCmd(name, fn){ const key = name.toUpperCase(); cmdFns.set(key, fn); if(!window.DVDCmd) return; const exist = DVDCmd.commands.find(c => c.k.includes(key) && c.lisp); if(exist) return; if(DVDCmd.commands.some(c => c.k.includes(key) && !c.lisp)) A().log('LISP: định nghĩa lại lệnh ' + key + ' (lệnh gốc của DVDCAD bị che).'); DVDCmd.register([key], 'Lệnh AutoLISP (' + key + ')', () => runTop(async () => { const f = cmdFns.get(key); return apply(f, []); }, key), {}); const c = DVDCmd.commands.find(c => c.k.includes(key)); if(c) c.lisp = true; } let running = 0; async function runTop(fn, label){ running++; steps = 0; try{ const r = await fn(); flushOut(); return r; } catch(err){ flushOut(); const msg = err instanceof Quit ? err.message : err instanceof LispErr ? err.message : ('lỗi trong mã: ' + (err && err.message || err)); const eh = G.get('*ERROR*'); if(eh instanceof Fn || typeof eh === 'function'){ try{ await apply(eh, [msg]); flushOut(); }catch(e2){ A().log('; lỗi: ' + (e2.message || e2)); } } else A().log('; lỗi: ' + msg); if(!(err instanceof Quit || err instanceof LispErr)) console.error(err); return undefined; } finally{ running--; if(running === 0 && A().busy && A().busy()){ const r = A().reqInfo && A().reqInfo(); if(!r) {} } } } /* ---------------- nạp mã ---------------- */ const files = new Map(); // tên file → mã (để (load \"ten\") tìm được) async function loadSource(src, name){ const forms = parse(src); let r = null; for(const f of forms) r = await ev(f); if(name) files.set(String(name).toUpperCase().replace(/\\.LSP$/, ''), src); return r; } BI('LOAD', async (n, onFail) => { const k = toStr(n).toUpperCase().replace(/\\\\/g, '/').split('/').pop().replace(/\\.LSP$/, ''); const src = files.get(k) || (window.DVDAddins && DVDAddins.sourceOf(k)); if(src == null){ if(onFail !== undefined) return onFail; throw new LispErr('LOAD failed: \"' + n + '\"'); } return loadSource(src, k); }); /* ---------------- dòng lệnh ---------------- */ function commandLine(raw){ if(raw[0] === '!'){ const s = raw.slice(1).trim(); if(!/^[^\\s()]+$/.test(s)) return false; const v = getv(sym(s)); if(A().busy && A().busy() && A().reqInfo()){ const a = argStr(v); if(a != null) A().input(a); return true; } A().log(str(v)); return true; } if(raw[0] !== '('){ return false; } const busyReq = A().busy && A().busy() && A().reqInfo(); runTop(async () => { const forms = parse(raw); let r = null; for(const f of forms) r = await ev(f); if(busyReq && A().busy() && A().reqInfo()){ const a = argStr(r); if(a != null) A().input(a); } else if(!(r instanceof Sym && r.n === '')) A().log(str(r)); return r; }); return true; } window.DVDLisp = { eval: async src => { let r; await runTop(async () => { r = await loadSource(src); }); return r; }, evalToString: async src => { let r; const ok = await runTop(async () => { const f = parse(src); for(const x of f) r = await ev(x); return true; }); return ok ? str(r) : null; }, load: (src, name) => runTop(() => loadSource(src, name), name), commandLine, str, parse, sym, stop: () => { stopFlag = true; }, get commands(){ return [...cmdFns.keys()]; }, get files(){ return [...files.keys()]; }, G, // cho phần mở rộng (dvd-lisp2.js: DCL, vla / vlax, tệp…) ext: { BI, SPECIAL, G, ev, apply, progn, withBindings, toFn, Sym, LI, DP, Ename, SS, Fn, LispErr, Quit, T, mkInt, toReal, toInt, toStr, pt, lpt, L, nv, isNum, truthy, str, sym, entsOf, ename, entget, ME, typeName, ask, files, gc, out, flushOut, loadSource, runTop, getv, setv, parse } }; })();": [
 "dvd-lisp.js"
 ],
 "',' (Phẩy)": [
@@ -498,6 +508,9 @@
 ],
 "(theo kiểu ô)": [
 "dvd-acad-dlg2.js"
+],
+"(thư mục hỗ trợ).": [
+"dvd-lisp2.js"
 ],
 "(thư viện)": [
 "dvd-acad-dlg.js"
@@ -818,6 +831,9 @@
 ". Gõ END, MID, CEN, INT, PER, TAN, NEA, QUA, NOD, INS, EXT, PAR, GCE để bắt điểm 1 lần. Lệnh trong suốt:": [
 "dvd-cmd.js"
 ],
+". Lưu trong máy, giữ qua các lần mở DVDCAD.": [
+"dvd-addins.js"
+],
 ". MVIEW để thêm khung nhìn, VPEDIT để chỉnh tỉ lệ/tâm, PLOT để in.": [
 "dvd-acad-pro.js"
 ],
@@ -945,6 +961,9 @@
 ],
 "96 — nhỏ": [
 "dvd-acad-x21.js"
+],
+": .fas / .vlx là LISP đã biên dịch và mã hoá cho riêng AutoCAD; .dll / .arx là chương trình Windows nối vào bên trong AutoCAD. Cần bản mã nguồn .lsp từ tác giả.": [
+"dvd-addins.js"
 ],
 ": bấm các đỉnh, Enter để chọn": [
 "dvd-acad-core.js"
@@ -1206,17 +1225,35 @@
 "AaBb Việt Nam 123": [
 "dvd-acad-more.js"
 ],
+"ActiveX: không có phương thức": [
+"dvd-lisp2.js"
+],
+"ActiveX: không ghi được thuộc tính": [
+"dvd-lisp2.js"
+],
 "Add-in mẫu": [
 "dvd-addins.js"
 ],
 "Add-in mẫu…": [
 "dvd-acad-dlg2.js"
 ],
+"Add: chưa hỗ trợ cho": [
+"dvd-lisp2.js"
+],
 "Ai có link đều xem được": [
 "dvd-cloud.js"
 ],
 "Ai có link đều xem được bản vẽ (không cần đăng nhập).": [
 "dvd-cloud.js"
+],
+"AutoLISP (tự nạp": [
+"dvd-lisp2.js"
+],
+"AutoLISP: add-in nhị phân (.arx / .dll / .dvb) chỉ chạy trên AutoCAD — bỏ qua": [
+"dvd-lisp2.js"
+],
+"AutoLISP: reactor (vlr-*) được tạo nhưng DVDCAD chưa phát sinh sự kiện cho reactor.": [
+"dvd-lisp2.js"
 ],
 "BATTMAN: khối \"": [
 "dvd-acad-dlg.js",
@@ -1321,6 +1358,9 @@
 ],
 "Biến hệ thống…": [
 "dvd-acad-dlg4.js"
+],
+"Biến đổi đối tượng: chưa hỗ trợ": [
+"dvd-lisp2.js"
 ],
 "Biểu thức": [
 "dvd-acad-x4.js"
@@ -2394,7 +2434,8 @@
 "dvd-acad-x23.js"
 ],
 "Bỏ qua": [
-"dvd-acad-dlg2.js"
+"dvd-acad-dlg2.js",
+"dvd-addins.js"
 ],
 "Bỏ qua lần này": [
 "dvd-acad-x8.js:attr"
@@ -3395,7 +3436,8 @@
 "dvd-acad-x5.js"
 ],
 "Chưa có tệp nào.": [
-"dvd-acad-x21.js"
+"dvd-acad-x21.js",
+"dvd-addins.js"
 ],
 "Chưa có ánh xạ nào.": [
 "dvd-acad-dlg2.js"
@@ -5923,6 +5965,9 @@
 "Các trạng thái lớp": [
 "dvd-acad-dlg.js"
 ],
+"Các tệp .lsp, .dcl, .lin, .pat… mà tiện ích LISP tìm bằng": [
+"dvd-addins.js"
+],
 "Các tệp chuẩn gắn với bản vẽ hiện hành:": [
 "dvd-acad-dlg2.js"
 ],
@@ -6606,6 +6651,9 @@
 "DCCONVERT: xoá kích thước": [
 "dvd-acad-x4.js"
 ],
+"DCL: chưa có hộp thoại (new_dialog)": [
+"dvd-lisp2.js"
+],
 "DETACHURL: đã gỡ": [
 "dvd-acad-dlg2.js"
 ],
@@ -6639,7 +6687,7 @@
 "DVD-VN (màu → nét)": [
 "dvd-acad-x9.js"
 ],
-"DVDCAD chạy add-in AutoLISP dạng mã nguồn (.lsp) và JavaScript (.js). File .fas / .vlx (LISP đã biên dịch), .dll / .arx / .dvb (add-in Windows của AutoCAD) không chạy được trong trình duyệt. Có thể gõ thẳng biểu thức LISP ở dòng lệnh, ví dụ": [
+"DVDCAD chạy add-in AutoLISP dạng mã nguồn (.lsp, kèm hộp thoại .dcl, hàm vla- / vlax-) và JavaScript (.js). Bộ tiện ích nhiều tệp: bấm \"Nạp cả thư mục…\" hoặc chọn gói .zip. File .fas / .vlx (LISP đã biên dịch, mã hoá), .dll / .arx / .dvb (chương trình Windows nối vào AutoCAD) không chạy được — cần bản .lsp từ tác giả. Có thể gõ thẳng biểu thức LISP ở dòng lệnh, ví dụ": [
 "dvd-addins.js"
 ],
 "DVDCAD luôn ghi đầy đủ các bước hoàn tác.": [
@@ -8683,6 +8731,7 @@
 "Huỷ": [
 "dvd-acad-cmdline.js",
 "dvd-acad-cmds.js",
+"dvd-lisp2.js",
 "index.html:html"
 ],
 "Huỷ (Esc)": [
@@ -9211,6 +9260,9 @@
 ],
 "In độ trong suốt": [
 "dvd-acad-more.js"
+],
+"Item: không áp dụng": [
+"dvd-lisp2.js"
 ],
 "KB): bản vẽ,": [
 "dvd-acad-x16.js"
@@ -9820,7 +9872,8 @@
 "dvd-acad-cmdline.js",
 "dvd-acad-cmds.js",
 "dvd-acad-x18.js",
-"dvd-acad-x22.js"
+"dvd-acad-x22.js",
+"dvd-lisp2.js"
 ],
 "Không có khối 3D nào.": [
 "dvd-acad-x10.js"
@@ -9928,6 +9981,9 @@
 ],
 "Không có tệp \"": [
 "dvd-acad-dlg3.js"
+],
+"Không có tệp .lsp / .dcl / .js nào": [
+"dvd-addins.js"
 ],
 "Không có tệp .sld hợp lệ.": [
 "dvd-acad-dlg3.js"
@@ -10159,6 +10215,7 @@
 "dvd-acad-x15.js"
 ],
 "Không mở được": [
+"dvd-addins.js",
 "dvd-desktop.js"
 ],
 "Không mở được bản vẽ mẫu. Kiểm tra file sample.dxf.": [
@@ -10235,6 +10292,9 @@
 ],
 "Không sửa được lỗi này.": [
 "dvd-acad-dlg2.js"
+],
+"Không thấy \"": [
+"dvd-addins.js"
 ],
 "Không thấy kiểu.": [
 "dvd-acad-dlg.js"
@@ -13213,6 +13273,9 @@
 "Mọi trạng thái": [
 "dvd-acad-x5.js"
 ],
+"Mọi tệp .lsp và .dcl được chép vào": [
+"dvd-addins.js"
+],
 "Mọi đường viền": [
 "dvd-acad-dlg2.js"
 ],
@@ -14247,6 +14310,9 @@
 "Nạp add-in": [
 "dvd-addins.js"
 ],
+"Nạp bộ tiện ích": [
+"dvd-addins.js"
+],
 "Nạp các kiểu nét đã chọn": [
 "dvd-acad-x8.js"
 ],
@@ -14265,6 +14331,9 @@
 ],
 "Nạp lại tất cả tham chiếu": [
 "dvd-acad-pro.js:attr"
+],
+"Nạp ngay và đưa vào Startup Suite": [
+"dvd-addins.js"
 ],
 "Nạp phông…": [
 "dvd-acad-x23.js"
@@ -14478,6 +14547,12 @@
 ],
 "Offset chỉ hỗ trợ đường, tròn, cung.": [
 "index.html"
+],
+"Offset: chưa hỗ trợ": [
+"dvd-lisp2.js"
+],
+"Offset: đối tượng không hỗ trợ": [
+"dvd-lisp2.js"
 ],
 "PARTIALOAD: nạp thêm": [
 "dvd-acad-x22.js"
@@ -16434,6 +16509,21 @@
 "Thông tin tệp": [
 "dvd-acad-dlg2.js"
 ],
+"Thông tin…": [
+"dvd-lisp2.js"
+],
+"Thư mục gốc": [
+"dvd-addins.js"
+],
+"Thư mục hỗ trợ": [
+"dvd-addins.js"
+],
+"Thư mục hỗ trợ (Support File Search Path)": [
+"dvd-addins.js"
+],
+"Thư mục hỗ trợ của AutoLISP: tệp .lsp / .dcl / .lin / .pat dùng chung cho add-in": [
+"dvd-addins.js"
+],
 "Thư pháp": [
 "dvd-acad-x11.js"
 ],
@@ -17105,6 +17195,9 @@
 "Trợ giúp vẽ": [
 "dvd-acad-ui.js"
 ],
+"Trợ giúp…": [
+"dvd-lisp2.js"
+],
 "Trụ": [
 "dvd-acad-dlg.js",
 "dvd-acad-ui.js",
@@ -17709,6 +17802,7 @@
 "dvd-acad-dlg.js",
 "dvd-acad-x18.js",
 "dvd-acad-x6.js",
+"dvd-addins.js",
 "index.html"
 ],
 "Tìm tiếp": [
@@ -18153,7 +18247,8 @@
 "Tệp": [
 "dvd-acad-dlg2.js",
 "dvd-acad-dlg4.js",
-"dvd-acad-x21.js"
+"dvd-acad-x21.js",
+"dvd-addins.js"
 ],
 "Tệp .actm không hợp lệ (chỉ đọc được macro DVDCAD).": [
 "dvd-acad-dlg2.js"
@@ -19859,6 +19954,9 @@
 "a ai ao au ay ac ach am an ang anh ap at ăc ăm ăn ăng ăp ăt âc âm ân âng âp ât âu ây e eo ec em en eng ep et ê êu êch êm ên ênh êp êt": [
 "dvd-acad-x8.js"
 ],
+"acad.lsp / acaddoc.lsp tự chạy mỗi khi mở DVDCAD (như AutoCAD), không cần đánh dấu.": [
+"dvd-addins.js"
+],
 "acad.pgp – Sửa lệnh tắt": [
 "dvd-acad-dlg2.js"
 ],
@@ -20191,6 +20289,9 @@
 ],
 "của": [
 "dvd-acad-core.js"
+],
+"của DVDCAD để": [
+"dvd-addins.js"
 ],
 "của đa giác cắt": [
 "dvd-acad-x16.js"
@@ -20681,6 +20782,9 @@
 "liệt kê lớp": [
 "dvd-help.js"
 ],
+"load_dialog: không tìm thấy \"": [
+"dvd-lisp2.js"
+],
 "loại": [
 "dvd-acad-x9.js"
 ],
@@ -21022,6 +21126,9 @@
 "offset liên tiếp từ bản vừa tạo": [
 "dvd-help.js"
 ],
+"ok_button : retirement_button { label = \"OK\"; key = \"accept\"; is_default = true; } cancel_button : retirement_button { label = \"Huỷ\"; key = \"cancel\"; is_cancel = true; } help_button : retirement_button { label = \"Trợ giúp…\"; key = \"help\"; is_help = true; } info_button : retirement_button { label = \"Thông tin…\"; key = \"info\"; } retirement_button : button { fixed_width = true; width = 8; alignment = centered; } errtile : text { label = \"\"; key = \"error\"; width = 35; is_error_tile = true; } ok_only : column { : row { fixed_width = true; alignment = centered; ok_button; } } ok_cancel : column { : row { fixed_width = true; alignment = centered; ok_button; cancel_button; } } ok_cancel_help : column { : row { fixed_width = true; alignment = centered; ok_button; cancel_button; help_button; } } ok_cancel_help_info : column { : row { fixed_width = true; alignment = centered; ok_button; cancel_button; help_button; info_button; } } ok_cancel_help_errtile : column { ok_cancel_help; errtile; } spacer_0 : spacer { width = 0; height = 0; } spacer_1 : spacer { width = 1; height = 1; } default_button : button { is_default = true; } default_dcl_settings : dialog { }": [
+"dvd-lisp2.js"
+],
 "phép đo": [
 "index.html"
 ],
@@ -21146,6 +21253,9 @@
 "thêm / bớt một độ dài": [
 "dvd-help.js"
 ],
+"thư mục hỗ trợ": [
+"dvd-addins.js"
+],
 "thư pháp": [
 "dvd-acad-x11.js"
 ],
@@ -21219,6 +21329,9 @@
 "tìm thấy": [
 "dvd-acad-core.js"
 ],
+"tìm thấy như trong Support File Search Path của AutoCAD.": [
+"dvd-addins.js"
+],
 "tím": [
 "dvd-acad-x9.js"
 ],
@@ -21252,8 +21365,32 @@
 "tắt/đóng băng ·": [
 "dvd-acad-x6.js"
 ],
+"tệp .dll/.arx": [
+"dvd-addins.js"
+],
+"tệp .fas/.vlx": [
+"dvd-addins.js"
+],
+"tệp .js,": [
+"dvd-addins.js"
+],
+"tệp .lsp,": [
+"dvd-addins.js"
+],
+"tệp hỗ trợ (.dcl, .lin, .pat…)": [
+"dvd-addins.js"
+],
+"tệp vào thư mục hỗ trợ, nạp": [
+"dvd-addins.js"
+],
+"tệp đã biên dịch / native.": [
+"dvd-addins.js"
+],
 "tệp →": [
 "dvd-acad-x21.js"
+],
+"tệp.": [
+"dvd-addins.js"
 ],
 "tỉ lệ": [
 "dvd-acad-x23.js"
@@ -21293,6 +21430,9 @@
 ],
 "vector. REDRAW để trở lại bản vẽ.": [
 "dvd-acad-dlg3.js"
+],
+"vlax-curve: đối tượng không phải đường cong": [
+"dvd-lisp2.js"
 ],
 "vàng": [
 "dvd-acad-x9.js"
@@ -22593,6 +22733,9 @@
 "Đã chèn ảnh": [
 "dvd-acad-pro.js"
 ],
+"Đã chép": [
+"dvd-addins.js"
+],
 "Đã chỉnh ảnh": [
 "dvd-acad-pro.js"
 ],
@@ -23333,6 +23476,9 @@
 ],
 "Đã tự lưu trên máy.": [
 "dvd-cmd.js"
+],
+"Đã tự nạp": [
+"dvd-lisp2.js"
 ],
 "Đã vát": [
 "dvd-acad-cmds.js"
@@ -26030,6 +26176,9 @@
 "— chạm để tới, hoặc dùng ◀ ▶ để chuyển.": [
 "index.html"
 ],
+"— chỉ có .fas / .vlx (LISP đã biên dịch, DVDCAD không chạy được).": [
+"dvd-addins.js"
+],
 "— chỉ định góc thứ nhất": [
 "dvd-acad-core.js"
 ],
@@ -26071,6 +26220,9 @@
 ],
 "— thư viện của tôi": [
 "dvd-acad-dlg.js"
+],
+"— tên tệp": [
+"dvd-lisp2.js"
 ],
 "— đang dựng lại hình.": [
 "dvd-acad-more.js"
@@ -26268,11 +26420,17 @@
 "⚠ Add-in chạy với toàn quyền trong DVDCAD (sửa / xoá bản vẽ, gửi dữ liệu ra mạng). Chỉ nạp file từ nguồn bạn tin cậy.": [
 "dvd-addins.js"
 ],
+"⚠ Bỏ qua": [
+"dvd-addins.js"
+],
 "⚠ Chưa chọn đối tượng": [
 "dvd-acad-dlg.js"
 ],
 "⚠ Hình lớn hơn khổ giấy — sẽ bị cắt. Chọn tỉ lệ nhỏ hơn hoặc khổ lớn hơn.": [
 "dvd-acad-more.js"
+],
+"⚠ Tiện ích chạy với toàn quyền trong DVDCAD. Chỉ nạp từ nguồn bạn tin cậy.": [
+"dvd-addins.js"
 ],
 "⚠ Ứng dụng chạy với toàn quyền trong DVDCAD (sửa / xoá bản vẽ, gửi dữ liệu ra mạng). Chỉ nạp tệp từ nguồn bạn tin cậy.": [
 "dvd-acad-dlg2.js"
@@ -26361,7 +26519,10 @@
 "＋ Lưu góc nhìn này…": [
 "dvd-acad-3d.js"
 ],
-"＋ Nạp file… (.lsp, .js)": [
+"＋ Nạp cả thư mục…": [
+"dvd-addins.js"
+],
+"＋ Nạp file… (.lsp, .js, .dcl, .zip)": [
 "dvd-addins.js"
 ],
 "＋ Nạp từ đường link…": [

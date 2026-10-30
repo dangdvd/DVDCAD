@@ -1,50 +1,58 @@
-## DVDCAD 5.23.0 — Độ trong suốt theo lớp, ETRANSMIT gói DWG, REVCLOUD Sửa, POLYSOLID Cung
+## DVDCAD 5.24.0 — Chạy bộ tiện ích AutoLISP như AutoCAD: hộp thoại DCL, vla- / vlax-, nạp cả thư mục
 
 Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Windows. Tên lệnh, lệnh tắt và cách dùng giống AutoCAD để người dùng chuyển sang không bỡ ngỡ.
 
 ### Tải về
-- **DVDCAD-Setup-5.23.0.exe** — bộ cài.
+- **DVDCAD-Setup-5.24.0.exe** — bộ cài.
   - Cài cho tài khoản Windows đang dùng, không cần quyền quản trị.
   - Có lối tắt Desktop và Start Menu.
   - Nhấp đúp file .dwg / .dxf là mở bằng DVDCAD.
-- **DVDCAD-5.23.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
+- **DVDCAD-5.24.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
 
 Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More info → Run anyway**.
 
 ### Có gì mới
-Bản này xử lý các hạn chế còn ghi trong mục "Khác với AutoCAD" của hướng dẫn.
+Bản này giúp cài và chạy các **bộ tiện ích AutoLISP viết cho AutoCAD** (dạng mã nguồn `.lsp` kèm hộp thoại `.dcl`) gần như trên AutoCAD.
 
-- **Độ trong suốt theo lớp** (như cột Transparency trong bảng Lớp của AutoCAD):
-  - Bảng Lớp có cột **Độ trong suốt** (bấm để nhập 0–90). `-LAYER` có tuỳ chọn **Trong suốt**.
-  - Đối tượng có độ trong suốt "ByLayer" lấy theo lớp.
-  - **Đọc và ghi được trong DXF và DWG 2004 → 2018** theo đúng cách AutoCAD lưu, nên mở bản vẽ của AutoCAD cũng thấy được độ trong suốt của lớp.
-  - Trạng thái lớp (`LAYERSTATE`) lưu cả độ trong suốt.
-- **ETRANSMIT / ARCHIVE**:
-  - Chọn định dạng bản vẽ trong gói: **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** hoặc DXF. Trước đây gói luôn dùng DXF.
-  - Gói `.zip` được **nén**: bản vẽ mẫu từ 3 MB giảm còn khoảng 0,7 MB.
-- **REVCLOUD › Sửa**: vẽ lại một đoạn mây như AutoCAD. Chọn mây, bấm điểm đầu trên mây, các điểm mới, rồi điểm cuối trên mây, sau đó chọn phía cần bỏ.
-- **POLYSOLID** có tuỳ chọn **Cung** khi vẽ tường theo điểm:
-  - Cung tiếp tuyến với đoạn trước, hoặc cung qua **Điểm thứ hai**.
-  - **Đường thẳng** để quay lại vẽ đoạn thẳng.
-- **EXTEND** kéo dài được đa tuyến có **đoạn đầu hoặc đoạn cuối là cung**: cung được kéo dài theo đúng đường tròn của nó tới ranh giới.
-- Hướng dẫn: cập nhật các mục đã lỗi thời. Ví dụ, mục PLOT trước ghi chỉ có khổ A4 → A0, và DWG 2007 trước ghi là cần ODA.
+- **Nạp cả bộ tiện ích**: `APPLOAD` → **Nạp cả thư mục…** (chọn thư mục cài bộ LISP), hoặc **Nạp file…** rồi chọn gói **.zip** hay nhiều tệp cùng lúc.
+  - Các tệp `.lsp`, `.dcl`, `.lin`, `.pat`, `.mnl`… được chép vào **thư mục hỗ trợ** của DVDCAD, giống Support File Search Path của AutoCAD. Vì vậy `load`, `load_dialog`, `findfile` tìm thấy chúng.
+  - Chọn tệp `.lsp` nào **nạp ngay và tự nạp khi mở DVDCAD**.
+  - `acad.lsp`, `acaddoc.lsp`, `S::STARTUP`, `autoload` chạy theo đúng thứ tự như AutoCAD.
+  - Tệp soạn trên Windows theo bảng mã tiếng Việt (Windows-1258) đọc đúng dấu.
+  - Lệnh `SUPPORTFILES` để xem / xoá các tệp trong thư mục hỗ trợ.
+- **Hộp thoại DCL**: hiện được hộp thoại của tiện ích, gồm:
+  - ô nhập, danh sách, danh sách thả xuống, ô đánh dấu, nút chọn, thanh trượt, ảnh, nút OK / Huỷ;
+  - các hàm `action_tile`, `set_tile`, `get_tile`, `start_list`, `start_image`, `done_dialog`…
+- **Hàm ActiveX `vla-` / `vlax-`**:
+  - `vla-AddLine`, `vla-AddCircle`, `vla-AddLightWeightPolyline`, `vla-AddText`, `vla-AddBlockReference`…;
+  - `vla-get-` / `vla-put-` thuộc tính (lớp, màu, chiều dài, diện tích, toạ độ, nội dung chữ…), có `:vlax-true` / `:vlax-false`;
+  - `vla-Move`, `vla-Rotate`, `vla-Mirror`, `vla-Offset`…, `vlax-for` duyệt lớp / khối, safearray / variant.
+- **`vlax-curve-`**: chiều dài, điểm, tham số, điểm gần nhất trên đường thẳng, cung, tròn, elip, đa tuyến có cung. Kết quả giống AutoCAD.
+- **Hàm khác**:
+  - đọc / ghi tệp (`open`, `read-line`, `write-line`), `getfiled`;
+  - `grread`, `grdraw`, `tblnext`;
+  - `entmake` chèn khối, `entmakex`;
+  - `textbox`, `cvunit`, `acad_colordlg`, vài hàm Express Tools (`acet-…`) hay dùng.
 
 ### Kiểm thử
 - GitHub Actions trên Windows:
-  1. Kiểm thử nhanh như 5.22.0, thêm hai phần mới:
-     - Độ trong suốt lớp 40% ghi vào DXF, rồi ghi DWG 2018 và đọc lại vẫn đúng 40%.
-     - ETRANSMIT tạo gói .zip đã nén, có bản vẽ DWG bên trong.
+  1. Kiểm thử nhanh như 5.23.0, thêm hai phần mới:
+     - hộp thoại DCL hiện lên và trả giá trị;
+     - `vla-AddLine`, `vla-get-Length`, `vlax-curve` trả đúng.
   2. **ODA File Converter** và **ACadSharp** đọc lại các file DWG do DVDCAD ghi.
   3. Bộ đọc XPS của Windows mở tệp DWFx.
   4. Cài lặng bộ cài, chạy kiểm thử trên chính `DVDCAD.exe` đã cài, rồi gỡ cài.
-- Kiểm thử giao diện tự động:
-  - Độ trong suốt lớp đọc lại đúng qua DXF và DWG 2018 / 2013 / 2010 / 2007 / 2004.
-  - ETRANSMIT ra DWG 2018 (nén), DWG 2007 (không nén) và DXF; DWG trong gói mở lại đủ 9996 / 9996 đối tượng.
-  - REVCLOUD Sửa thay đúng phía trên của mây; U trả lại mây cũ.
-  - POLYSOLID có đoạn cung một phần tư đường tròn.
-  - EXTEND cung đầu / cuối đa tuyến tới đúng giao điểm (71,414; −70).
+- Kiểm thử giao diện tự động, chạy một bộ LISP mẫu:
+  - Hộp thoại DCL: dựng đủ các ô, `action_tile` chạy khi chọn, OK trả 1 và đọc đúng giá trị, Huỷ trả 0.
+  - `vla-` dựng đường, dời, xoay, đối xứng, offset đường tròn đúng kích thước.
+  - `vlax-curve` trên đa tuyến có cung: chiều dài 25,707, điểm giữa cung (15; 5), tham số tại khoảng cách 5 là 0,5.
+  - Nạp thư mục mẫu: `.dcl` vào thư mục hỗ trợ, `autoload` nạp tệp khi gõ lệnh, `acaddoc.lsp` + `S::STARTUP` tự chạy, tệp Windows-1258 đúng dấu, `.fas` được báo bỏ qua.
+  - Mở lại DVDCAD: thư mục hỗ trợ và Startup Suite còn nguyên.
 
 ### Giới hạn
+- **Không chạy được `.fas` / `.vlx`**: đây là LISP đã biên dịch và mã hoá cho riêng AutoCAD, không có mã nguồn. Nhiều bộ tiện ích thương mại chỉ phát hành dạng này, kèm khoá bản quyền. Cần xin tác giả bản `.lsp` (hoặc bản dành cho DVDCAD).
+- **Không chạy được `.dll` / `.arx` / `.dvb`**: đây là chương trình Windows (.NET, ObjectARX, VBA) chạy bên trong AutoCAD và gọi thẳng thư viện của Autodesk.
+- Reactor (`vlr-…`) tạo được nhưng chưa phát sinh sự kiện. `trans` / `osnap` trả nguyên điểm. `entmake` cho HATCH / DIMENSION / định nghĩa khối chưa có (tiện ích dùng `command` thì vẫn chạy).
 - **Chưa có DWF6 ePlot** (`.dwf`): không lấy được đặc tả WHIP / W2D, và không có bộ đọc chuẩn để kiểm chứng tệp ghi ra. Dùng DWFx thay.
 - DWFx chưa thử bằng sản phẩm Autodesk (Design Review, Autodesk Viewer). Phần XPS đã kiểm bằng bộ đọc của Windows.
 - Hình chiếu (VIEWBASE…) lưu cùng bản vẽ dạng nét thường: AutoCAD thấy đủ nét nhưng không coi là hình chiếu liên kết với mô hình. Định dạng liên kết này Autodesk không công bố.
