@@ -255,7 +255,7 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
     const dwgOda = path.join(tmp, 'luu-oda.dwg'); await stubSave(dwgOda);
     await win.evaluate(() => { localStorage.setItem('dvd:dwgsrv', JSON.stringify({ url: '', ver: 'ACAD2007' })); DVDCmd.run('SAVEDWG'); });
     if(process.platform !== 'win32') check(await until(() => head(dwgOda) === 'AC1032'), 'DWG 2007 qua ODA File Converter trên máy');
-    else check(await until(() => /^AC10(21|18)$/.test(head(dwgOda)), 60000), 'DWG 2007: qua ODA nếu máy đã cài, chưa cài → tự ghi DWG 2004 gốc, AutoCAD 2007 mở được (' + head(dwgOda) + ')');
+    else check(await until(() => head(dwgOda) === 'AC1021', 60000), 'DWG 2007: qua ODA nếu máy đã cài, chưa cài → tự ghi DWG 2007 gốc (' + head(dwgOda) + ')');
     await win.evaluate(() => localStorage.removeItem('dvd:dwgsrv'));
     // DWGSERVER: nút Tải ODA File Converter mở trang tải chính thức (trình duyệt ngoài), Tìm lại dò lại ODA trên máy
     await app.evaluate(({ shell }) => { global.__ext = []; shell.openExternal = async u => { global.__ext.push(u); }; });
