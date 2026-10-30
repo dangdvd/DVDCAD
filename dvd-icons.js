@@ -610,5 +610,16 @@
     I.QUICKPROPERTIES = has('PROPERTIES') + BSTAR; I.QP = I.QUICKPROPERTIES;
     I.MVSETUP = '<rect x="2.5" y="4" width="19" height="16"/><path class="a" d="M12 15h9.5M12 15v5M16 15v5"/><rect class="fa" x="5" y="6.5" width="5" height="5"/>';
     I.GEOREMOVE = I.GEOREMOVE || has('GEOGRAPHICLOCATION') + BX; I.PLOTTERMANAGER = has('PLOT') + BGEAR; I.UPDATETHUMBSNOW = '<rect x="2.5" y="5" width="8" height="6"/><rect x="13.5" y="5" width="8" height="6"/><rect x="2.5" y="13" width="8" height="6"/>' + REGENAR; }
+  // v5w: WMFIN, phông SHX, GCSMOOTH, ALIGNSPACE, SYSWINDOWS
+  { const has = k => I[k] || '';
+    I.WMFIN = DOC + '<text x="12" y="17" font-size="5.5" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">WMF</text>' + '<path class="y" d="M14 21h7M18.5 18.5L21 21l-2.5 2.5"/>';
+    I.WMFOPTS = I.WMFIN + BGEAR;
+    I.SHXFONTS = '<path class="a" d="M4 19L9 5l5 14M6 14h6" stroke-linejoin="miter"/><path d="M15 8h6M15 12h6M15 16h4"/>' + BSTAR;
+    I.FONTSHX = I.SHXFONTS;
+    I.GCSMOOTH = '<path class="a" d="M3 18h7"/><path class="y" d="M10 18c4 0 5-2 6.5-6S19 6 21 6"/>' + P(10, 18);
+    I.ALIGNSPACE = '<rect x="2.5" y="4" width="19" height="16"/><rect class="a" x="6" y="8" width="11" height="8"/>' + AR(5, 19, 9, 15, 'y') + AR(19, 5, 15, 9, 'y');
+    I.SYSWINDOWS = '<rect class="fd" x="2.5" y="4" width="9" height="16"/><rect x="2.5" y="4" width="9" height="16"/><rect class="fd" x="12.5" y="4" width="9" height="16"/><rect class="a" x="12.5" y="4" width="9" height="16"/><path d="M2.5 7h9M12.5 7h9"/>';
+    I.SYSWINDOWS_V = I.SYSWINDOWS; I.SYSWINDOWS_H = '<rect x="3" y="3" width="18" height="8"/><rect class="a" x="3" y="13" width="18" height="8"/><path d="M3 5.5h18M3 15.5h18"/>';
+    I.SYSWINDOWS_C = '<rect x="3" y="3" width="13" height="10"/><rect class="fd" x="6" y="6" width="13" height="10"/><rect x="6" y="6" width="13" height="10"/><rect class="fd" x="9" y="9" width="13" height="11"/><rect class="a" x="9" y="9" width="13" height="11"/>'; void has; }
   window.DVDIcons = I;
 })();

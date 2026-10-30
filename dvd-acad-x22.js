@@ -45,36 +45,48 @@
 
   /* PSETUPIN — nhập thiết lập trang có tên từ bản vẽ khác (DXF: PLOTSETTINGS / LAYOUT; bản vẽ DVDCAD: DVDCAD_DATA) */
   const PAPERS_RE = /(?:^|_)A(\d)(?:_|$)/i;
-  function setupsFromDXF(text){
-    const out = {}; const t = String(text); let i = t.search(/\n\s*0\s*\r?\n\s*OBJECTS\s*\r?\n/); if(i < 0) i = 0;
+  // một thiết lập in (mã nhóm DXF: 2 máy in, 4 khổ giấy, 7 bảng kiểu in, 70 cờ, 73 xoay, 74 vùng in, 75 tỉ lệ chuẩn, 142 / 143 tỉ lệ) → thiết lập trang DVDCAD
+  function psFrom(cur){ const P = {}; const paper = cur[4] || ''; const m = PAPERS_RE.exec(paper.replace(/ISO_(full_bleed_|expand_)?/i, '')); if(m) P.paper = 'A' + m[1];
+    const dims = /\(([\d.]+)_x_([\d.]+)_(MM|Inches)\)/i.exec(paper); const wide = dims ? +dims[1] >= +dims[2] : (cur.pw > 0 && cur.ph > 0 ? cur.pw >= cur.ph : true); const rot = +(cur[73] || 0); P.land = (rot % 2 === 1) ? !wide : wide;
+    const pt = +(cur[74] || 1); P.area = pt === 0 || pt === 3 ? 'display' : pt === 4 ? 'window' : 'extents';
+    const fl = +(cur[70] || 0); P.center = !!(fl & 4); P.lw = !!(fl & 128) || !(fl & 32);
+    const num = +(cur[142] || 1), den = +(cur[143] || 1); const std = +(cur[75] || 0); P.fit = std === 0 && !(fl & 16) ? (num === 1 && den === 1 ? true : false) : false; if(!P.fit && num > 0) P.scale = +(den / num).toPrecision(6);
+    const ctb = String(cur[7] || '').toLowerCase(); P.style = /mono/.test(ctb) ? 'mono' : /gray/.test(ctb) ? 'gray' : ctb ? 'mono' : 'color';
+    const dev = String(cur[2] || '').toLowerCase(); P.dev = /pdf/.test(dev) ? 'pdf' : /png|publishtoweb/.test(dev) ? 'png' : /hpgl|designjet|\.pc3/.test(dev) && !/pdf|png/.test(dev) ? 'plt' : 'print';
+    return P; }
+  // DXF: PLOTSETTINGS (thiết lập trang có tên) + thiết lập riêng của từng LAYOUT (tên *Layout1* như Page Setup Manager của AutoCAD)
+  function setupsFromDXF(text, opt){
+    const out = {}, lay = {}; const t = String(text); let i = t.search(/\n\s*0\s*\r?\n\s*OBJECTS\s*\r?\n/); if(i < 0) i = 0;
     const lines = t.slice(i).replace(/\r/g, '').split('\n'); let cur = null;
-    const flush = () => { if(!cur || !cur.name) { cur = null; return; } const P = {}; const paper = cur[4] || ''; const m = PAPERS_RE.exec(paper.replace(/ISO_(full_bleed_|expand_)?/i, '')); if(m) P.paper = 'A' + m[1];
-      const dims = /\(([\d.]+)_x_([\d.]+)_MM\)/i.exec(paper); const wide = dims ? +dims[1] >= +dims[2] : true; const rot = +(cur[73] || 0); P.land = (rot % 2 === 1) ? !wide : wide;
-      const pt = +(cur[74] || 1); P.area = pt === 0 || pt === 3 ? 'display' : pt === 4 ? 'window' : 'extents';
-      const fl = +(cur[70] || 0); P.center = !!(fl & 4); P.lw = !!(fl & 128) || !(fl & 32);
-      const num = +(cur[142] || 1), den = +(cur[143] || 1); const std = +(cur[75] || 0); P.fit = std === 0 && !(fl & 16) ? (num === 1 && den === 1 ? true : false) : false; if(!P.fit && num > 0) P.scale = +(den / num).toPrecision(6);
-      const ctb = String(cur[7] || '').toLowerCase(); P.style = /mono/.test(ctb) ? 'mono' : /gray/.test(ctb) ? 'gray' : ctb ? 'mono' : 'color';
-      const dev = String(cur[2] || '').toLowerCase(); P.dev = /pdf/.test(dev) ? 'pdf' : /png|publishtoweb/.test(dev) ? 'png' : /hpgl|designjet|\.pc3/.test(dev) && !/pdf|png/.test(dev) ? 'plt' : 'print';
-      out[cur.name] = P; cur = null; };
+    const flush = () => { if(!cur){ return; } if(cur.name) out[cur.name] = psFrom(cur); else if(cur.kind === 'LAYOUT' && cur.layName) lay['*' + cur.layName + '*'] = psFrom(cur); cur = null; };
     for(let k = 0; k + 1 < lines.length; k += 2){ const c = parseInt(lines[k], 10), v = lines[k + 1].trim(); if(!isFinite(c)) continue;
       if(c === 0){ flush(); if(v === 'PLOTSETTINGS' || v === 'LAYOUT') cur = { kind: v }; continue; }
       if(!cur) continue; if(c === 100 && v === 'AcDbLayout'){ cur.lay = true; continue; }
-      if(c === 1 && !cur.lay && cur.name == null){ cur.name = v; continue; } if([2, 4, 7, 70, 73, 74, 75, 142, 143].includes(c) && !cur.lay && cur[c] == null) cur[c] = v; }
-    flush(); delete out['']; return out;
+      if(c === 1 && cur.lay && cur.layName == null){ cur.layName = v; continue; }
+      if(c === 1 && !cur.lay && cur.name == null){ cur.name = v; continue; } if([2, 4, 7, 70, 73, 74, 75, 142, 143].includes(c) && !cur.lay && cur[c] == null) cur[c] = v; if((c === 44 || c === 45) && !cur.lay) cur[c === 44 ? 'pw' : 'ph'] = +v; }
+    flush(); delete out['']; return opt && opt.layouts ? { named: out, layouts: lay } : out;
   }
+  // DWG (đọc trong khung ẩn): thiết lập in của LAYOUT + PLOTSETTINGS có tên → cùng dạng mã nhóm như DXF
+  const psCodes = q => ({ 2: q.printer, 4: q.media, 7: q.style, 70: q.flags, 73: q.rot, 74: q.type, 75: q.stdType, 142: q.pu, 143: q.du, pw: q.pw, ph: q.ph });
+  A.setupsFromDWGFrame = w => { const named = {}, layouts = {}; let unread = 0;
+    try{ for(const q of (w._dwgPageSetups || [])){ if(!q || q.unreadable){ unread++; continue; } if(q.name) named[q.name] = psFrom(psCodes(q)); } }catch(_){}
+    try{ for(const L of (w.eval('dwgLayouts') || [])) if(L && L.plot) layouts['*' + L.name + '*'] = psFrom(psCodes(L.plot)); }catch(_){}
+    return { named, layouts, unread }; };
   A.setupsFromDXF = setupsFromDXF;
   A.psetupIn = async () => {
-    const f = await pickFile('.dxf,.dwg'); if(!f) return null; let found = {};
+    const f = await pickFile('.dxf,.dwg'); if(!f) return null; let found = {}, lays = {}, unread = 0;
     try{
-      if(/\.dxf$/i.test(f.name)){ const t = await f.text(); found = setupsFromDXF(t); const m = /\n\s*1\s*\r?\n\s*DVDCAD1\s*\r?\n/.exec(t); if(m){ let js = ''; const L = t.slice(m.index + m[0].length).replace(/\r/g, '').split('\n'); for(let k = 0; k + 1 < L.length; k += 2){ const c = parseInt(L[k], 10); if(c === 0) break; if(c === 300) js += L[k + 1]; } try{ const o = JSON.parse(js); if(o.psu) Object.assign(found, o.psu); }catch(_){} } }
-      else if(A.dwgConvertFiles){ const nm = f.name; try{ localStorage.removeItem('dvd:psetups::' + nm); }catch(_){} await A.dwgConvertFiles([f], 'DXF:R2018'); found = lsGet('dvd:psetups::' + nm, {}) || {}; }
+      if(/\.dxf$/i.test(f.name)){ const t = await f.text(); const R = setupsFromDXF(t, { layouts: true }); found = R.named; lays = R.layouts; const m = /\n\s*1\s*\r?\n\s*DVDCAD1\s*\r?\n/.exec(t); if(m){ let js = ''; const L = t.slice(m.index + m[0].length).replace(/\r/g, '').split('\n'); for(let k = 0; k + 1 < L.length; k += 2){ const c = parseInt(L[k], 10); if(c === 0) break; if(c === 300) js += L[k + 1]; } try{ const o = JSON.parse(js); if(o.psu) Object.assign(found, o.psu); }catch(_){} } }
+      else if(A.dwgConvertFiles){ const nm = f.name; try{ localStorage.removeItem('dvd:psetups::' + nm); }catch(_){} let R = null; await A.dwgConvertFiles([f], 'DXF:R2018', null, w => { R = A.setupsFromDWGFrame(w); }); found = Object.assign({}, R ? R.named : {}, lsGet('dvd:psetups::' + nm, {}) || {}); if(R){ lays = R.layouts; unread = R.unread; } }
     }catch(err){ log('PSETUPIN: ' + (err.message || err)); return null; }
-    const names = Object.keys(found); if(!names.length){ log('PSETUPIN: tệp "' + f.name + '" không có thiết lập trang có tên' + (/\.dwg$/i.test(f.name) ? ' (DWG của AutoCAD: lưu thành DXF rồi nhập)' : '') + '.'); return null; }
+    if(unread) log('PSETUPIN: ' + unread + ' thiết lập trang có tên trong tệp DWG không đọc được — lưu tệp thành DXF trong AutoCAD rồi nhập để lấy đủ.');
+    for(const [k, v] of Object.entries(lays)) if(!found[k]) found[k] = Object.assign({ _lay: 1 }, v);
+    const names = Object.keys(found); if(!names.length){ log('PSETUPIN: tệp "' + f.name + '" không có thiết lập trang có tên.'); return null; }
     return new Promise(res => { const cur = A.pageSetups();
-      A.dialog({ title: 'Nhập thiết lập trang', cls: 'acw-free', help: 'PSETUPIN', html: '<div class="acw" style="width:380px"><div class="acw-note" translate="no">' + esc(f.name) + '</div>' + names.map((n, i) => '<div class="acw-row">' + K.chk('psi' + i, n + (cur[n] ? ' (ghi đè)' : ''), 1) + '</div>').join('') + '</div>',
-        ok: r => { const L = A.pageSetups(), got = []; names.forEach((n, i) => { if(r.querySelector('#psi' + i).checked){ L[n] = found[n]; got.push(n); } }); A.pageSetupsSave(L); log('PSETUPIN: nhập ' + got.length + ' thiết lập trang (' + got.join(', ') + ').'); res(got); }, cancel: () => res(null) }); });
+      A.dialog({ title: 'Nhập thiết lập trang', cls: 'acw-free', help: 'PSETUPIN', html: '<div class="acw" style="width:380px"><div class="acw-note" translate="no">' + esc(f.name) + '</div>' + names.map((n, i) => '<div class="acw-row">' + K.chk('psi' + i, n + (found[n]._lay ? ' — thiết lập của layout' : '') + (cur[n] ? ' (ghi đè)' : ''), found[n]._lay ? 0 : 1) + '</div>').join('') + '</div>',
+        ok: r => { const L = A.pageSetups(), got = []; names.forEach((n, i) => { if(r.querySelector('#psi' + i).checked){ const v = Object.assign({}, found[n]); delete v._lay; L[n] = v; got.push(n); } }); A.pageSetupsSave(L); log('PSETUPIN: nhập ' + got.length + ' thiết lập trang (' + got.join(', ') + ').'); res(got); }, cancel: () => res(null) }); });
   };
-  plain(['PSETUPIN'], 'Nhập thiết lập trang có tên (page setup) từ bản vẽ khác (.dxf / .dwg của DVDCAD) — dùng trong hộp PLOT', () => A.psetupIn());
+  plain(['PSETUPIN'], 'Nhập thiết lập trang có tên (page setup) từ bản vẽ khác (.dxf / .dwg, cả thiết lập của từng layout) — dùng trong hộp PLOT', () => A.psetupIn());
 
   /* PARTIALOPEN / PARTIALOAD — mở một phần bản vẽ theo lớp, nạp thêm lớp sau */
   let PART = null;   // { name, file, kind, data, layers (đã nạp), all }

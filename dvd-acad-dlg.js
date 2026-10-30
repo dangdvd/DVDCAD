@@ -427,17 +427,20 @@
   function textsOfStyle(n){ const out = []; try{ for(const e of modelEntities) if(e && e.type === 'TEXT' && (e.style || 'Standard') === n && !e.dimd && !e.dimx) out.push(e); }catch(_){} return out; }
   function openTextStyle(){
     const TS = A.TS; if(!TS){ say('Chưa có kiểu chữ.'); return; }
-    const fonts = (A.FONTS || ['Arial']).slice(); for(const st of Object.values(TS.list)) if(st.font && !fonts.includes(st.font)) fonts.push(st.font);
+    const shxL = () => (A.shxFontList ? A.shxFontList() : []);
+    const fontsNow = () => { const f = (A.FONTS || ['Arial']).slice(); for(const F of shxL()) if(F.type !== 'bigfont') f.push(F.file.toLowerCase()); for(const st of Object.values(TS.list)) if(st.font && !f.includes(st.font)) f.push(st.font); return f; };
+    const bigsNow = () => { const b = shxL().filter(F => F.type === 'bigfont').map(F => F.file.toLowerCase()); for(const st of Object.values(TS.list)) if(st.big && !b.includes(st.big)) b.push(st.big); return b; };
+    const fonts = fontsNow();
     let sel = TS.cur, filter = 'all', dirty = false;
     const html = '<div class="acw"><div class="acw-row" style="margin:0 0 6px"><span>Kiểu chữ hiện hành:</span> <span id="tsCur" class="nm"></span></div>' +
       '<div class="acw-cols"><div style="flex:0 0 170px"><div class="acw-lab">Các kiểu:</div><div id="tsList"></div>' + '<div style="margin-top:8px">' + K.sel('tsFilter', [['all', 'Tất cả kiểu'], ['used', 'Kiểu đang dùng']], 'all') + '</div>' +
         '<div id="tsPrev" style="margin-top:8px;height:66px;border:1px solid #5d697e;background:#fff;color:#000;display:grid;place-items:center;overflow:hidden;font-size:24px;white-space:nowrap">AaBb123</div></div>' +
-      '<div class="c1">' + K.grp('Phông chữ', '<div class="acw-cols"><div class="c1">' + K.vrow('Tên phông:', K.sel('tsFont', fonts.map(f => [f, f]), '')) + '</div><div class="c1">' + K.vrow('Kiểu phông:', K.sel('tsFst', [['r', 'Thường (Regular)']], 'r', { dis: 1 })) + '</div></div>' + K.chk('tsBig', 'Dùng Big Font', 0, { dis: 1, tip: 'Chỉ dùng phông TrueType' })) +
+      '<div class="c1">' + K.grp('Phông chữ', '<div class="acw-cols"><div class="c1">' + K.vrow('Tên phông:', K.sel('tsFont', fonts.map(f => [f, f]), '')) + '</div><div class="c1">' + K.vrow('Kiểu phông:', K.sel('tsFst', [['r', 'Thường (Regular)']], 'r', { dis: 1 })) + '</div></div>' + K.chk('tsBig', 'Dùng Big Font', 0, { tip: 'Chỉ dùng với phông SHX (như AutoCAD)' }) + K.vrow('Big Font:', K.sel('tsBigF', bigsNow().map(f => [f, f]), ''))) +
         K.grp('Cỡ chữ', '<div class="acw-cols"><div class="c1">' + K.chk('tsAnno', 'Chú thích theo tỉ lệ (Annotative)', 0, { dis: 1 }) + '<br>' + K.chk('tsOri', 'Xoay chữ theo hướng layout', 0, { dis: 1 }) + '</div><div class="c1">' + K.vrow('Cao chữ:', K.num('tsH', 0, { min: 0 })) + '</div></div>' +
           '<div class="acw-note">Cao chữ 0 = hỏi cao chữ mỗi lần dùng lệnh TEXT.</div>') +
         K.grp('Hiệu ứng', '<div class="acw-cols"><div class="c1">' + K.chk('tsUd', 'Lộn ngược', 0) + '<br>' + K.chk('tsBk', 'Viết ngược (trái ↔ phải)', 0) + '<br>' + K.chk('tsVt', 'Viết dọc', 0, { dis: 1, tip: 'Chỉ có với phông SHX (như AutoCAD)' }) + '</div><div class="c1">' +
           K.vrow('Hệ số rộng:', K.num('tsWf', 1, { min: 0.01 })) + K.vrow('Góc nghiêng:', K.num('tsObl', 0)) + '</div></div>') + '</div>' +
-      '<div class="acw-btncol" style="padding-top:16px">' + K.btn('tsSet', 'Đặt hiện hành') + K.btn('tsNew', 'Mới…') + K.btn('tsDel', 'Xoá') + '</div></div></div>';
+      '<div class="acw-btncol" style="padding-top:16px">' + K.btn('tsSet', 'Đặt hiện hành') + K.btn('tsNew', 'Mới…') + K.btn('tsDel', 'Xoá') + '<div style="height:14px"></div>' + K.btn('tsShx', 'Phông SHX…') + '</div></div></div>';
     const d = A.dialog({ title: 'Kiểu chữ', wide: true, cls: 'acw-free', help: 'STYLE', html, noOk: true, cancelText: 'Đóng', left: K.btn('tsSelApply', 'Áp cho chữ đang chọn'),
       cancel: () => { if(dirty) askSave(); } });
     const root = d.root, $ = id => root.querySelector('#' + id); root.querySelector('.modal').style.width = 'min(700px,97vw)';
@@ -449,11 +452,18 @@
       $('tsList').outerHTML = K.list('tsList', names.map(n => ({ v: n, h: (n === TS.cur ? '<span style="color:#7ee787">▸</span> ' : '<span style="visibility:hidden">▸</span> ') + '<span class="nm">' + esc(n) + '</span>' })), sel, 'height:200px');
       K.bindList($('tsList'), v => { if(dirty) apply(); sel = v; load(); }, v => { if(dirty) apply(); TS.cur = v; sel = v; A.tsSave(); render(); });
       $('tsCur').textContent = TS.cur; load(); };
-    const load = () => { const st = TS.list[sel] || {}; $('tsFont').value = st.font || 'Arial'; $('tsH').value = st.h > 0 ? st.h : 0; $('tsWf').value = st.wf > 0 ? st.wf : 1; $('tsBk').checked = !!st.bk; $('tsUd').checked = !!st.ud; $('tsObl').value = st.obl || 0;
+    const isShx = f => /\.shx$/i.test(String(f || ''));
+    const fillSel = (id, L) => { const v = $(id).value; $(id).innerHTML = L.map(f => '<option value="' + esc(f) + '">' + esc(f) + '</option>').join(''); if(L.includes(v)) $(id).value = v; };
+    const bigUi = () => { const sx = isShx($('tsFont').value); $('tsBig').disabled = !sx; if(!sx) $('tsBig').checked = false; $('tsBigF').disabled = !(sx && $('tsBig').checked); };
+    const load = () => { const st = TS.list[sel] || {}; $('tsFont').value = st.font || 'Arial'; $('tsBig').checked = !!st.big; if(st.big) $('tsBigF').value = st.big; bigUi(); $('tsH').value = st.h > 0 ? st.h : 0; $('tsWf').value = st.wf > 0 ? st.wf : 1; $('tsBk').checked = !!st.bk; $('tsUd').checked = !!st.ud; $('tsObl').value = st.obl || 0;
       $('tsDel').disabled = sel === 'Standard' || sel === TS.cur; dirty = false; ap.disabled = true; prev(); };
-    const prev = () => { const p = $('tsPrev'), w = num($('tsWf').value) || 1; p.style.fontFamily = '"' + $('tsFont').value + '",sans-serif'; const ob = Math.max(-85, Math.min(85, num($('tsObl').value) || 0)); p.style.transform = 'scaleX(' + (w * ($('tsBk').checked ? -1 : 1)) + ') scaleY(' + ($('tsUd').checked ? -1 : 1) + ') skewX(' + (-ob) + 'deg)'; };
+    const prev = () => { const p = $('tsPrev'), w = num($('tsWf').value) || 1; bigUi();
+      if(isShx($('tsFont').value) && A.shxText && A.shxFontHas && A.shxFontHas($('tsFont').value)){ p.style.transform = ''; p.innerHTML = '<canvas width="300" height="64"></canvas>'; const c = p.querySelector('canvas'), g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 300, 64);
+        const e = { type: 'TEXT', text: 'AaBb123', ff: $('tsFont').value, ffb: $('tsBig').checked ? $('tsBigF').value : undefined, h: 1, ha: 'center', va: 'middle', xs: w * ($('tsBk').checked ? -1 : 1), ud: $('tsUd').checked ? 1 : 0, obl: num($('tsObl').value) || 0 };
+        const T0 = g.getTransform(), ob = Math.tan((e.obl || 0) * Math.PI / 180); g.setTransform(e.xs, 0, -ob, e.ud ? -1 : 1, 150, 32); g.lineWidth = 1.6; A.shxText(g, e, 24, '#000', T0); return; }
+      if(!p.firstChild || p.firstChild.nodeType !== 3) p.textContent = 'AaBb123'; p.style.fontFamily = '"' + $('tsFont').value + '",sans-serif'; const ob = Math.max(-85, Math.min(85, num($('tsObl').value) || 0)); p.style.transform = 'scaleX(' + (w * ($('tsBk').checked ? -1 : 1)) + ') scaleY(' + ($('tsUd').checked ? -1 : 1) + ') skewX(' + (-ob) + 'deg)'; };
     const apply = () => { const st = TS.list[sel]; if(!st) return; const w = num($('tsWf').value), h = num($('tsH').value);
-      st.font = $('tsFont').value; if(w > 0.01 && w < 100) st.wf = w; st.h = h > 0 ? h : 0; if($('tsBk').checked) st.bk = 1; else delete st.bk; if($('tsUd').checked) st.ud = 1; else delete st.ud; { const ob = num($('tsObl').value) || 0; if(Math.abs(ob) > 1e-9 && Math.abs(ob) <= 85) st.obl = ob; else delete st.obl; } A.tsSave();
+      st.font = $('tsFont').value; if(isShx(st.font) && $('tsBig').checked && $('tsBigF').value) st.big = $('tsBigF').value; else delete st.big; if(w > 0.01 && w < 100) st.wf = w; st.h = h > 0 ? h : 0; if($('tsBk').checked) st.bk = 1; else delete st.bk; if($('tsUd').checked) st.ud = 1; else delete st.ud; { const ob = num($('tsObl').value) || 0; if(Math.abs(ob) > 1e-9 && Math.abs(ob) <= 85) st.obl = ob; else delete st.obl; } A.tsSave();
       // như AutoCAD: chữ đang dùng kiểu này đổi theo
       const t = textsOfStyle(sel).filter(e => !A.isLocked || !A.isLocked(e)); if(t.length) A.commit({ rep: t.map(e => { const c = JSON.parse(JSON.stringify(e)); A.tsApply(c, sel); return [e, c]; }) }, 'Cập nhật ' + t.length + ' chữ theo kiểu ' + sel);
       dirty = false; ap.disabled = true; };
@@ -462,6 +472,7 @@
     root.addEventListener('change', e => { if(e.target.closest('.c1')){ dirty = true; ap.disabled = false; prev(); } });
     ap.onclick = apply;
     $('tsFilter').onchange = () => { filter = $('tsFilter').value; render(); };
+    $('tsShx').onclick = async () => { if(!A.shxPickFonts) return; const n = await A.shxPickFonts(); if(n){ fillSel('tsFont', fontsNow()); fillSel('tsBigF', bigsNow()); prev(); } };
     $('tsSet').onclick = () => { if(dirty) apply(); TS.cur = sel; A.tsSave(); render(); log('Kiểu chữ hiện hành: ' + sel); };
     $('tsNew').onclick = async () => { if(dirty) apply(); let i = 1; while(TS.list['style' + i]) i++; const nm = await askText({ title: 'Kiểu chữ mới — tên kiểu', value: 'style' + i }); if(nm == null) return; const n = nm.trim();
       if(!n || TS.list[n]){ say('Tên trống hoặc đã có.'); return; } TS.list[n] = Object.assign({}, TS.list[sel] || TS.list.Standard); TS.cur = n; sel = n; A.tsSave(); render(); };

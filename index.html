@@ -856,7 +856,9 @@
    colorIndex: 256 = BYLAYER, 0 = BYBLOCK, 1..255 = màu ACI cụ thể
    ============================================================ */
 const ACI_RGB=[0x000000,0xFF0000,0xFFFF00,0x00FF00,0x00FFFF,0x0000FF,0xFF00FF,0xFFFFFF,0x808080,0xC0C0C0,0xFF0000,0xFF7F7F,0xA50000,0xA55252,0x7F0000,0x7F3F3F,0x4C0000,0x4C2626,0x260000,0x261313,0xFF3F00,0xFF9F7F,0xA52900,0xA56752,0x7F1F00,0x7F4F3F,0x4C1300,0x4C2F26,0x260900,0x261713,0xFF7F00,0xFFBF7F,0xA55200,0xA57C52,0x7F3F00,0x7F5F3F,0x4C2600,0x4C3926,0x261300,0x261C13,0xFFBF00,0xFFDF7F,0xA57C00,0xA59152,0x7F5F00,0x7F6F3F,0x4C3900,0x4C4226,0x261C00,0x262113,0xFFFF00,0xFFFF7F,0xA5A500,0xA5A552,0x7F7F00,0x7F7F3F,0x4C4C00,0x4C4C26,0x262600,0x262613,0xBFFF00,0xDFFF7F,0x7CA500,0x91A552,0x5F7F00,0x6F7F3F,0x394C00,0x424C26,0x1C2600,0x212613,0x7FFF00,0xBFFF7F,0x52A500,0x7CA552,0x3F7F00,0x5F7F3F,0x264C00,0x394C26,0x132600,0x1C2613,0x3FFF00,0x9FFF7F,0x29A500,0x67A552,0x1F7F00,0x4F7F3F,0x134C00,0x2F4C26,0x092600,0x172613,0x00FF00,0x7FFF7F,0x00A500,0x52A552,0x007F00,0x3F7F3F,0x004C00,0x264C26,0x002600,0x132613,0x00FF3F,0x7FFF9F,0x00A529,0x52A567,0x007F1F,0x3F7F4F,0x004C13,0x264C2F,0x002609,0x135817,0x00FF7F,0x7FFFBF,0x00A552,0x52A57C,0x007F3F,0x3F7F5F,0x004C26,0x264C39,0x002613,0x13581C,0x00FFBF,0x7FFFDF,0x00A57C,0x52A591,0x007F5F,0x3F7F6F,0x004C39,0x264C42,0x00261C,0x135858,0x00FFFF,0x7FFFFF,0x00A5A5,0x52A5A5,0x007F7F,0x3F7F7F,0x004C4C,0x264C4C,0x002626,0x135858,0x00BFFF,0x7FDFFF,0x007CA5,0x5291A5,0x005F7F,0x3F6F7F,0x00394C,0x26427E,0x001C26,0x135858,0x007FFF,0x7FBFFF,0x0052A5,0x527CA5,0x003F7F,0x3F5F7F,0x00264C,0x26397E,0x001326,0x131C58,0x003FFF,0x7F9FFF,0x0029A5,0x5267A5,0x001F7F,0x3F4F7F,0x00134C,0x262F7E,0x000926,0x131758,0x0000FF,0x7F7FFF,0x0000A5,0x5252A5,0x00007F,0x3F3F7F,0x00004C,0x26267E,0x000026,0x131358,0x3F00FF,0x9F7FFF,0x2900A5,0x6752A5,0x1F007F,0x4F3F7F,0x13004C,0x2F267E,0x090026,0x171358,0x7F00FF,0xBF7FFF,0x5200A5,0x7C52A5,0x3F007F,0x5F3F7F,0x26004C,0x39267E,0x130026,0x1C1358,0xBF00FF,0xDF7FFF,0x7C00A5,0x9152A5,0x5F007F,0x6F3F7F,0x39004C,0x42264C,0x1C0026,0x581358,0xFF00FF,0xFF7FFF,0xA500A5,0xA552A5,0x7F007F,0x7F3F7F,0x4C004C,0x4C264C,0x260026,0x581358,0xFF00BF,0xFF7FDF,0xA5007C,0xA55291,0x7F005F,0x7F3F6F,0x4C0039,0x4C2642,0x26001C,0x581358,0xFF007F,0xFF7FBF,0xA50052,0xA5527C,0x7F003F,0x7F3F5F,0x4C0026,0x4C2639,0x260013,0x58131C,0xFF003F,0xFF7F9F,0xA50029,0xA55267,0x7F001F,0x7F3F4F,0x4C0013,0x4C262F,0x260009,0x581317,0x000000,0x656565,0x666666,0x999999,0xCCCCCC,0xFFFFFF];
-let LAYER_COLORS={}, LAYER_RGB={}, HIDDEN_LAYERS=new Set(), STYLE_FONTS={}, STYLE_WF={};   // LAYER_RGB: màu RGB của lớp (DXF 2004+, mã 420)
+let LAYER_COLORS={}, LAYER_RGB={}, HIDDEN_LAYERS=new Set(), STYLE_FONTS={}, STYLE_WF={}, STYLE_SHX={};
+// tên phông SHX của kiểu chữ (AutoCAD: phông .shx + bigfont); phông VNI / TCVN đã giải mã sang Unicode nên không dùng nét SHX
+function shxOfStyle(f,b){ f=String(f||'').trim(); b=String(b||'').trim(); const ext=x=>x&&!/\.[a-z0-9]+$/i.test(x)?x+'.shx':x; f=ext(f); b=ext(b); const ok=x=>/\.shx$/i.test(x)&&!fontKind(x); return { f: ok(f)?f.replace(/^.*[\\/]/,''):null, b: ok(b)?b.replace(/^.*[\\/]/,''):null }; }   // LAYER_RGB: màu RGB của lớp (DXF 2004+, mã 420)
 function rgbHex(n){ n=(n>>>0)&0xFFFFFF; return '#'+n.toString(16).padStart(6,'0'); }
 function aciHex(aci){ const i=(aci>=0&&aci<=255)?aci:7; const v=ACI_RGB[i]; return rgbHex(v!=null?v:0xFFFFFF); }
 function layerAci(name){ const v=LAYER_COLORS[name]; return (v>=1&&v<=255)?v:7; }
@@ -1141,7 +1143,7 @@ function parseDXF(text){
   // bảng STYLE (kiểu chữ) -> họ font TrueType + hệ số rộng
   const styleMap={};
   { let i=0; for(; i<pairs.length; i++){ if(pairs[i].code===2 && pairs[i].value.trim()==='STYLE' && i>0 && pairs[i-1].code===0 && pairs[i-1].value.trim()==='TABLE') break; }
-    if(i<pairs.length){ let j=i+1; while(j<pairs.length && !(pairs[j].code===0 && pairs[j].value.trim()==='ENDTAB')){ if(pairs[j].code===0 && pairs[j].value.trim()==='STYLE'){ let k=j+1; const g=[]; while(k<pairs.length && pairs[k].code!==0){ g.push(pairs[k]); k++; } const nm=str(g,2); if(nm) styleMap[nm]={ff:ttfFamily(str(g,3)), wf:num(g,41)||1}; j=k; } else j++; } } }
+    if(i<pairs.length){ let j=i+1; while(j<pairs.length && !(pairs[j].code===0 && pairs[j].value.trim()==='ENDTAB')){ if(pairs[j].code===0 && pairs[j].value.trim()==='STYLE'){ let k=j+1; const g=[]; while(k<pairs.length && pairs[k].code!==0){ g.push(pairs[k]); k++; } const nm=str(g,2); if(nm){ const sx=shxOfStyle(str(g,3),str(g,4)); styleMap[nm]={ff:ttfFamily(str(g,3)), wf:num(g,41)||1, shx:sx.f, big:sx.b}; } j=k; } else j++; } } }
   // kiểu nét (6), tỉ lệ nét riêng (48), bề rộng nét (370: >0 = 1/100mm, -2 = ByBlock)
   function entExtra(e,g,rt){
     if(num(g,67)===1){ e._ps=1; const h=str(g,5); if(h) e._h=h.toUpperCase(); }   // thuộc không gian giấy (layout); handle để tìm đường cắt khung nhìn
@@ -1150,7 +1152,7 @@ function parseDXF(text){
     { const xi=g.findIndex(it=>it.code===1001&&String(it.value).trim()==='AcDbBlockRepETag'); if(xi>=0){ for(let k=xi+1;k<g.length&&g[k].code!==1001;k++) if(g[k].code===1071){ e._et=parseInt(g[k].value,10); break; } const h=str(g,5); if(h) e._h=h.toUpperCase(); } }   // số thứ tự nét trong khối động
     { const xi=g.findIndex(it=>it.code===1001&&String(it.value).trim()==='DVDCAD'); if(xi>=0){ let js=''; for(let k=xi+1;k<g.length&&g[k].code!==1001;k++){ if(g[k].code!==1000) continue; const v=String(g[k].value); if(v.startsWith('P:')) js=v.slice(2); else if(v.startsWith('P+')) js+=v.slice(2); } if(js){ try{ e._x=JSON.parse(js); }catch(_){} } } }
     if(e.type==='TEXT'){ const isT=(rt==='TEXT'||rt==='ATTRIB'); const xw=isT?num(g,41):undefined; const sn=str(g,7);
-      if(sn){ e.style=sn; const S=styleMap[sn]; if(S){ if(S.ff) e.ff=S.ff; if(isT&&!(xw>0)&&S.wf&&Math.abs(S.wf-1)>1e-3&&e.xs==null) e.xs=S.wf; } }
+      if(sn){ e.style=sn; const S=styleMap[sn]; if(S){ if(S.ff) e.ff=S.ff; else if(S.shx){ e.ff=S.shx; if(S.big) e.ffb=S.big; } if(isT&&!(xw>0)&&S.wf&&Math.abs(S.wf-1)>1e-3&&e.xs==null) e.xs=S.wf; } }
       if(xw>0&&Math.abs(xw-1)>1e-3&&e.xs==null) e.xs=xw; } const lt=ltNorm(str(g,6)); if(lt) e.lt=lt; const s=num(g,48); if(s>0&&Math.abs(s-1)>1e-9) e.lts=s; const w=num(g,370); if(w>0) e.lw=w; else if(w===-2) e.lwb=1; { const tr=num(g,440); if(tr!=null&&(tr&0x02000000)) e.tp=Math.round((1-(tr&255)/255)*100); } }
   let ltscale=1;
   for(let i=0;i<pairs.length-1;i++){ if(pairs[i].code===9 && pairs[i].value.trim()==='$LTSCALE'){ const v=parseFloat(pairs[i+1].value); if(v>0) ltscale=v; break; } if(pairs[i].code===0 && pairs[i].value.trim()==='ENDSEC') break; }
@@ -1529,7 +1531,7 @@ function transformPrim(e,M){
     case 'POINT':{const a=mApply(M,e.x,e.y);const o={type:'POINT',layer:L,x:a.x,y:a.y}; if(e.shpx){ const k=Math.hypot(M.a,M.b)||1; o.shpx=Object.assign({},e.shpx,{size:(e.shpx.size||1)*k,rot:(e.shpx.rot||0)+Math.atan2(M.b,M.a)*180/Math.PI}); } return o;}
     case 'SOLID': { const o={type:'SOLID',layer:L,pts:e.pts.map(p=>mApply(M,p.x,p.y))}; if(e.face){ o.face=1; o.zs=e.zs; if(e.ie) o.ie=e.ie; } return o; }
     case 'SOLID3D': { const o=JSON.parse(JSON.stringify(e)); const sc=Math.hypot(M.a,M.b); xfV3(o,p=>mApply(M,p.x,p.y),sc,(M.a*M.d-M.b*M.c)<0); if(o.pts) o.pts=o.pts.map(p=>mApply(M,p.x,p.y)); if(o.holes) o.holes=o.holes.map(h=>h.map(p=>mApply(M,p.x,p.y))); if(o.cx!=null){ const c=mApply(M,o.cx,o.cy); o.cx=c.x; o.cy=c.y; o.r*=sc; if(o.r2!=null) o.r2*=sc; } o.layer=L; return o; }
-    case 'TEXT':{const a=mApply(M,e.x,e.y),ys=Math.hypot(M.c,M.d)||1,xsM=Math.hypot(M.a,M.b)||1,rotAdd=Math.atan2(M.b,M.a)*180/Math.PI;const o={type:'TEXT',layer:L,x:a.x,y:a.y,h:(e.h||10)*ys,text:e.text,rot:(e.rot||0)+rotAdd,ha:e.ha,va:e.va,mt:e.mt,xs:e.xs,ew:(e.ew||0)*xsM};if(e.ff)o.ff=e.ff;if(e.rt){o.rt=e.rt;if(e.mtwk)o.mtwk=e.mtwk;}if(e.ud)o.ud=1;if(e.obl)o.obl=e.obl;return o;}
+    case 'TEXT':{const a=mApply(M,e.x,e.y),ys=Math.hypot(M.c,M.d)||1,xsM=Math.hypot(M.a,M.b)||1,rotAdd=Math.atan2(M.b,M.a)*180/Math.PI;const o={type:'TEXT',layer:L,x:a.x,y:a.y,h:(e.h||10)*ys,text:e.text,rot:(e.rot||0)+rotAdd,ha:e.ha,va:e.va,mt:e.mt,xs:e.xs,ew:(e.ew||0)*xsM};if(e.ff)o.ff=e.ff;if(e.ffb)o.ffb=e.ffb;if(e.rt){o.rt=e.rt;if(e.mtwk)o.mtwk=e.mtwk;}if(e.ud)o.ud=1;if(e.obl)o.obl=e.obl;return o;}
     case 'CIRCLE': if(mIsId(M)) return e; if(mSim(M)){ const c=mApply(M,e.cx,e.cy); return {type:'CIRCLE',layer:L,cx:c.x,cy:c.y,r:e.r*Math.hypot(M.a,M.b)}; } return {type:'POLYLINE',layer:L,closed:true,vertices:smpCircle(e.cx,e.cy,e.r).map(p=>mApply(M,p.x,p.y))};
     case 'ARC': if(mIsId(M)) return e; if(mSim(M)){ const c=mApply(M,e.cx,e.cy), s=Math.hypot(M.a,M.b), rot=Math.atan2(M.b,M.a)*180/Math.PI, mir=(M.a*M.d-M.b*M.c)<0; return mir?{type:'ARC',layer:L,cx:c.x,cy:c.y,r:e.r*s,a1:rot-e.a2,a2:rot-e.a1}:{type:'ARC',layer:L,cx:c.x,cy:c.y,r:e.r*s,a1:e.a1+rot,a2:e.a2+rot}; } return {type:'POLYLINE',layer:L,closed:false,vertices:smpArc(e.cx,e.cy,e.r,e.a1,e.a2).map(p=>mApply(M,p.x,p.y))};
     case 'ELLIPSE': if(mIsId(M)) return e; if(mSim(M)){ const c=mApply(M,e.cx,e.cy), mx=M.a*e.mx+M.c*e.my, my=M.b*e.mx+M.d*e.my, mir=(M.a*M.d-M.b*M.c)<0; const p1=e.p1||0, p2=e.p2==null?2*Math.PI:e.p2; return {type:'ELLIPSE',layer:L,cx:c.x,cy:c.y,mx,my,ratio:e.ratio,p1:mir?-p2:p1,p2:mir?-p1:p2}; } return {type:'POLYLINE',layer:L,closed:false,vertices:smpEllipse(e).map(p=>mApply(M,p.x,p.y))};
@@ -2249,6 +2251,7 @@ function drawEntityBody(e,col){
       ctx.textAlign=e.ha||'left';ctx.textBaseline=e.va||'alphabetic';
       if(_T0){ const _Xa=_T0.a*_c+_T0.c*_s, _Xb=_T0.b*_c+_T0.d*_s; let _Ya=-_T0.a*_s+_T0.c*_c, _Yb=-_T0.b*_s+_T0.d*_c; if(e.ud){ _Ya=-_Ya; _Yb=-_Yb; } if(e.obl){ const _t=Math.tan(e.obl*Math.PI/180); _Ya-=_t*_Xa; _Yb-=_t*_Xb; }   // lộn ngược / góc nghiêng (như AutoCAD)
         ctx.setTransform(_Xa*_xs,_Xb*_xs,_Ya,_Yb,_T0.a*p.x+_T0.c*p.y+_T0.e,_T0.b*p.x+_T0.d*p.y+_T0.f); } else { ctx.save(); ctx.translate(p.x,p.y); if(_r) ctx.rotate(_r); if(_xs!==1) ctx.scale(_xs,1); if(e.ud) ctx.scale(1,-1); }
+      if(e.ff&&/\.shx$/i.test(e.ff)&&!(e.cols||(e.rt&&e.rtx===e.text))&&window.DVDAcad&&DVDAcad.shxText&&DVDAcad.shxText(ctx,e,size,col,_T0)){ if(!_T0) ctx.restore(); ctx.textAlign='left'; ctx.textBaseline='alphabetic'; break; }   // phông SHX: nét của phông như AutoCAD
       if((e.cols||(e.rt&&e.rtx===e.text))&&window.DVDAcad&&DVDAcad.drawRichText){ DVDAcad.drawRichText(ctx,e,fsz); _txtFont=null; }   // chữ có định dạng (đậm, nghiêng, gạch chân, trường) / có cột
       else { const _ls=String(e.text).split('\n');if(_ls.length<=1){ctx.fillText(e.text,0,0);}else{const lh=fsz*1.3,va=e.va||'alphabetic';let st=(va==='middle')?-(_ls.length-1)/2*lh:(va==='top')?0:-(_ls.length-1)*lh;for(let _i=0;_i<_ls.length;_i++)ctx.fillText(_ls[_i],0,st+_i*lh);} }
       if(_T0) ctx.setTransform(_T0); else ctx.restore(); ctx.textAlign='left'; ctx.textBaseline='alphabetic'; break;}
@@ -2917,6 +2920,7 @@ function hitHandle(screen){
 function polyDist(w,v,closed){ let d=Infinity; for(let i=1;i<v.length;i++){const dd=distToSeg(w,v[i-1],v[i]); if(dd<d)d=dd;} if(closed&&v.length>2){const dd=distToSeg(w,v[v.length-1],v[0]); if(dd<d)d=dd;} return d; }
 // Hộp bao chữ trong hệ cục bộ (gốc tại điểm chèn, theo canh lề ha/va, có hệ số rộng xs, nhiều dòng)
 function textExtent(e){
+  if(e.ff&&/\.shx$/i.test(e.ff)&&window.DVDAcad&&DVDAcad.shxExtent){ try{ const r=DVDAcad.shxExtent(e); if(r) return r; }catch(_){} }
   if((e.cols||(e.rt&&e.rtx===e.text))&&window.DVDAcad&&DVDAcad.richExtent){ try{ const r=DVDAcad.richExtent(e); if(r) return r; }catch(_){} }
   const h=e.h||10; const ls=String(e.text||'').split('\n'); let mx=1; for(const t of ls){ const n=[...t].length; if(n>mx)mx=n; }
   const _xs=e.xs||1; const W=Math.max(h*0.6, mx*h*0.62*Math.abs(_xs)); const n=ls.length, lh=h*1.3;
@@ -4683,7 +4687,7 @@ function dwgList(arr){
       if(typeof e.color==='number' && e.color>0 && e.color!==16777215) c.rgb=e.color; // true color: ưu tiên hơn ACI, đúng như AutoCAD hiển thị
       { const lw=dwgLW(e.lineweight); if(lw>0) c.lw=lw; else if(lw===-2) c.lwb=1; }   // bề rộng nét (1/100 mm) cho chế độ bản in
       { const lt=ltNorm(e.lineType); if(lt) c.lt=lt; const s=e.lineTypeScale; if(s>0&&Math.abs(s-1)>1e-9) c.lts=s; }
-      if(e.styleName){ c.style=e.styleName; if(c.type==='TEXT'){ const ff=ttfFamily(STYLE_FONTS[e.styleName]); if(ff) c.ff=ff; } }   // tên kiểu chữ -> vá font tiếng Việt + họ font
+      if(e.styleName){ c.style=e.styleName; if(c.type==='TEXT'){ const ff=ttfFamily(STYLE_FONTS[e.styleName]); if(ff) c.ff=ff; else { const sx=STYLE_SHX[e.styleName]; if(sx&&sx.f){ c.ff=sx.f; if(sx.b) c.ffb=sx.b; } } } }   // tên kiểu chữ -> vá font tiếng Việt + họ font
       o.push(c);
     }
     if(e.type==='INSERT' && e.attribs && e.attribs.length){   // chữ thuộc tính đi kèm INSERT (WCS)
@@ -4707,9 +4711,9 @@ function buildLayerColors(db){
   }
   try{ for(const t of ((db.tables&&db.tables.LTYPE&&db.tables.LTYPE.entries)||[])){ const nm=String(t.name||'').toUpperCase(); const pat=(t.pattern||[]).map(p=>+p.elementLength).filter(isFinite); if(nm&&!/^(BYLAYER|BYBLOCK|CONTINUOUS)$/.test(nm)&&pat.length){ LTYPES[nm]={name:nm,desc:t.description||'',pat}; const tx=[]; (t.pattern||[]).forEach((p,i)=>{ if(!p) return; const fl=+p.shapeNumber||0; if(p.text&&String(p.text).trim()) tx.push({i,t:String(p.text),s:+p.scale||1,r:(+p.rotation||0)*180/Math.PI,x:+p.offsetX||0,y:+p.offsetY||0,abs:!!(fl&1)}); else if(fl&4) tx.push({i,sh:1,n:+p.elementTypeFlag||0,t:'',s:+p.scale||1,r:(+p.rotation||0)*180/Math.PI,x:+p.offsetX||0,y:+p.offsetY||0,abs:!!(fl&1)}); }); if(tx.length) LTYPES[nm].txt=tx; } } }catch(_){}
   { const s=db.header&&+db.header.LTSCALE; if(s>0) LTSCALE=s; }
-  STYLE_FONTS={}; STYLE_WF={};
+  STYLE_FONTS={}; STYLE_WF={}; STYLE_SHX={};
   const st=(db.tables&&db.tables.STYLE&&db.tables.STYLE.entries)||[];
-  for(const s of st){ if(s.name==null) continue; STYLE_FONTS[s.name]=String(s.font||s.primaryFont||s.fontFile||s.bigFont||''); const w=(s.widthFactor??s.width_factor??s.xScale); STYLE_WF[s.name]=(typeof w==='number'&&w>0)?w:1; }
+  for(const s of st){ if(s.name==null) continue; STYLE_SHX[s.name]=shxOfStyle(s.font, s.bigFont); STYLE_FONTS[s.name]=String(s.font||s.primaryFont||s.fontFile||s.bigFont||''); const w=(s.widthFactor??s.width_factor??s.xScale); STYLE_WF[s.name]=(typeof w==='number'&&w>0)?w:1; }
 }
 // Dựng bản đồ block + model space từ DwgDatabase, rồi khai triển INSERT/DIMENSION
 /* Gộp các mảnh chữ cùng dòng (bản vẽ Việt cũ hay tách nguyên âm có dấu thành TEXT riêng).
@@ -4839,7 +4843,7 @@ function buildLayouts(db, recs, blocks){
       const a=Lo.minLimit, b=Lo.maxLimit; const lim=(a&&b&&[a.x,a.y,b.x,b.y].every(isFinite)&&b.x-a.x>1e-6&&b.y-a.y>1e-6)?{x0:a.x,y0:a.y,x1:b.x,y1:b.y}:null;
       paper={paperPrims, viewports:vps, lim:_paperSheet(lim, paperPrims, vps, false)}; _vpFrames(paperPrims, vps);
     }
-    out.push({name:nm, tabOrder:Lo.tabOrder||0, isModel, paper});
+    out.push({name:nm, tabOrder:Lo.tabOrder||0, isModel, paper, plot:Lo.plotSettings||null});   // plot: thiết lập in của layout (PSETUPIN)
   }
   out.sort((a,b)=>a.tabOrder-b.tabOrder);
   return out;
@@ -4986,6 +4990,7 @@ function dwgBuild(db){
   const paperH=new Set(); for(const r of recs){ if(!r||!/^\*paper_space/i.test(r.name||'')) continue; for(const e of (r.entities||[])){ if(e.handle!=null) paperH.add(e.handle); for(const a of (e.attribs||[])) if(a&&a.handle!=null) paperH.add(a.handle); } }
   const model=dwgList(paperH.size?(db.entities||[]).filter(e=>!(e&&e.handle!=null&&paperH.has(e.handle))):db.entities);
   const layouts=buildLayouts(db, recs, blocks);
+  try{ window._dwgPageSetups=((db.objects&&db.objects.PLOTSETTINGS)||[]); }catch(_){}   // thiết lập trang có tên của tệp DWG (PSETUPIN)
   window._dvdBlocks = isMobileDevice() ? null : blocks;
   return { entities: mergeText(resolveBlocks(model, blocks, !isMobileDevice())), insunits:(db.header&&db.header.INSUNITS)||0, layouts, blocks:collectBlocks(model), dims:extractDims(db) };
 }
@@ -6171,6 +6176,7 @@ if('serviceWorker' in navigator && !window.dvdDesktop){
 <script src="./dvd-acad-x20.js"></script>
 <script src="./dvd-acad-x21.js"></script>
 <script src="./dvd-acad-x22.js"></script>
+<script src="./dvd-acad-x23.js"></script>
 <script src="./dvd-lisp.js"></script>
 <script src="./dvd-addins.js"></script>
 <script src="./dvd-acad-pgp.js"></script>

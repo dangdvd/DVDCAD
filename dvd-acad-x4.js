@@ -1,5 +1,5 @@
 /* DVDCAD v4k (viết lại ở v5i) — ràng buộc tham số như AutoCAD (tab Parametric)
-   · Hình học: GCHORIZONTAL, GCVERTICAL, GCPARALLEL, GCPERPENDICULAR, GCCOLLINEAR, GCCOINCIDENT, GCEQUAL, GCCONCENTRIC, GCTANGENT, GCFIX · lệnh chung GEOMCONSTRAINT
+   · Hình học: GCHORIZONTAL, GCVERTICAL, GCPARALLEL, GCPERPENDICULAR, GCCOLLINEAR, GCCOINCIDENT, GCEQUAL, GCCONCENTRIC, GCTANGENT, GCFIX, GCSYMMETRIC, GCSMOOTH (spline G2) · lệnh chung GEOMCONSTRAINT
      Như AutoCAD: đối tượng chọn trước đứng yên, đối tượng chọn sau dời theo.
    · Kích thước: DCALIGNED, DCHORIZONTAL, DCVERTICAL, DCRADIUS, DCDIAMETER, DCANGULAR · lệnh chung DIMCONSTRAINT
      Mỗi ràng buộc có tên (d1, rad1, dia1, ang1…); giá trị là biểu thức theo tên khác: d1*2, d1+300, sqrt(d2^2+d3^2).
@@ -53,6 +53,7 @@
     switch(k){ case 'p1': return { x: e.x1, y: e.y1 }; case 'p2': return { x: e.x2, y: e.y2 }; case 'c': return { x: e.cx, y: e.cy };
       case 'a1': return arcPt(e, e.a1); case 'a2': return arcPt(e, e.a2); }
     if(k && k[0] === 'v'){ const v = e.vertices && e.vertices[+k.slice(1)]; return v ? { x: v.x, y: v.y } : null; }
+    if((k === 's0' || k === 's1') && Array.isArray(e.spl) && e.spl.length){ const q = e.spl[k === 's0' ? 0 : e.spl.length - 1]; return { x: q.x, y: q.y }; }   // đầu / cuối spline
     return null;
   }
   function setP(e, k, p){
@@ -61,7 +62,28 @@
     if(k[0] === 'v'){ const v = e.vertices[+k.slice(1)]; if(v){ v.x = p.x; v.y = p.y; } }
     if(e.wq) delete e.wq;
   }
-  function translate(e, dx, dy){ for(const k of keysOf(e)){ if(k === 'a1' || k === 'a2') continue; const p = getP(e, k); setP(e, k, { x: p.x + dx, y: p.y + dy }); } }
+  function translate(e, dx, dy){ for(const k of keysOf(e)){ if(k === 'a1' || k === 'a2') continue; const p = getP(e, k); setP(e, k, { x: p.x + dx, y: p.y + dy }); } if(Array.isArray(e.spl)) e.spl = e.spl.map(q => ({ x: q.x + dx, y: q.y + dy })); }
+  /* ---- GCSMOOTH: nối trơn G2 (liên tục độ cong) đầu spline với đầu đường khác ---- */
+  const isSpl = e => !!e && e.type === 'POLYLINE' && Array.isArray(e.spl) && e.spl.length >= 2 && !e.closed;
+  // đầu đường cong: điểm, hướng đi ra khỏi đường (vào spline), độ cong có dấu theo chiều đi tới đầu đó
+  function endInfo(e, k){ if(!e) return null; const u = (x, y) => { const L = Math.hypot(x, y) || 1; return { x: x / L, y: y / L }; };
+    if(e.type === 'LINE'){ const a = getP(e, k === 'p1' ? 'p2' : 'p1'), b = getP(e, k); return { p: b, t: u(b.x - a.x, b.y - a.y), kap: 0 }; }
+    if(e.type === 'ARC'){ const ang = (k === 'a1' ? e.a1 : e.a2) * D2R, p = arcPt(e, k === 'a1' ? e.a1 : e.a2); return k === 'a2' ? { p, t: { x: -Math.sin(ang), y: Math.cos(ang) }, kap: 1 / e.r } : { p, t: { x: Math.sin(ang), y: -Math.cos(ang) }, kap: -1 / e.r }; }
+    if(e.type === 'POLYLINE'){ let V = e.vertices || []; if(V.length < 2) return null; if(isSpl(e)){ if(k === 's0') V = V.slice().reverse(); } else if(k === 'v0') V = V.slice().reverse();
+      const n = V.length, a = V[n - 2], b = V[n - 1]; const T = u(b.x - a.x, b.y - a.y); let kap = 0;
+      if(isSpl(e) && n >= 3){ const c0 = V[n - 3]; const ax = a.x - c0.x, ay = a.y - c0.y, bx = b.x - a.x, by = b.y - a.y, cx = b.x - c0.x, cy = b.y - c0.y; const den = Math.hypot(ax, ay) * Math.hypot(bx, by) * Math.hypot(cx, cy); if(den > 1e-18) kap = 2 * (ax * by - ay * bx) / den; }
+      return { p: { x: b.x, y: b.y }, t: T, kap }; }
+    return null; }
+  // chỉnh spline (bản sao làm việc) cho đầu k trùng điểm, cùng hướng, cùng độ cong với đầu đường kia; trả độ dời lớn nhất
+  function smoothSpl(w, k, inf){ let F = w.spl.map(q => ({ x: q.x, y: q.y })); const rev = k === 's1'; if(rev) F.reverse(); const F0 = F.map(q => ({ x: q.x, y: q.y }));
+    if(F.length < 4){ const V = sampleCatmull(F, false, 24); let tot = 0; const cum = [0]; for(let i = 1; i < V.length; i++){ tot += Math.hypot(V[i].x - V[i - 1].x, V[i].y - V[i - 1].y); cum.push(tot); }
+      const at = f => { const t = f * tot; let i = 1; while(i < V.length - 1 && cum[i] < t) i++; const s2 = (t - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1); return { x: V[i - 1].x + (V[i].x - V[i - 1].x) * s2, y: V[i - 1].y + (V[i].y - V[i - 1].y) * s2 }; };
+      F = [F[0], at(1 / 3), at(2 / 3), F[F.length - 1]]; }
+    const P0 = inf.p, T = inf.t, L = Math.max(Math.hypot(F[1].x - F[0].x, F[1].y - F[0].y), 1e-9), N = { x: -T.y, y: T.x };
+    F[0] = { x: P0.x, y: P0.y }; F[1] = { x: P0.x + T.x * L, y: P0.y + T.y * L };
+    { const cur = (F[2].x - P0.x) * N.x + (F[2].y - P0.y) * N.y, want = -inf.kap * L * L / 4, dd = want - cur; F[2] = { x: F[2].x + N.x * dd, y: F[2].y + N.y * dd }; }   // độ cong đầu Catmull-Rom = -4·((P2-P0)·n)/L²
+    let mv = F.length !== F0.length ? 1 : 0; if(!mv) for(let i = 0; i < F.length; i++) mv = Math.max(mv, Math.hypot(F[i].x - F0[i].x, F[i].y - F0[i].y));
+    if(rev) F.reverse(); w.spl = F; w.vertices = sampleCatmull(F, false, 16); if(w.wq) delete w.wq; return mv; }
   const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
   const segPts = (e, s) => segKeys(e, s).map(k => getP(e, k));
   function nearSeg(e, pt){ if(!pt || e.type === 'LINE') return 0; let best = 0, bd = Infinity; for(let s = 0; s < nSeg(e); s++){ const [a, b] = segPts(e, s); const d = segDist(pt, a, b); if(d < bd){ bd = d; best = s; } } return best; }
@@ -167,6 +189,7 @@
         const id = c.a.cid, e = ws.cur(id); let ka = c.a.k, kb = c.b.k; if(lk(id, kb) && !lk(id, ka)){ const t = ka; ka = kb; kb = t; }
         const pa = getP(e, ka), pb = getP(e, kb); return dimPts(c, id, kb, pa, pb);
       }
+      if(c.t === 'smooth'){ const O = ws.cur(c.b.cid), S = ws.cur(c.a.cid); if(!isSpl(S) || !O) return; const inf = endInfo(O, c.b.k); if(!inf) return; const w = ws.w(c.a.cid); const d = smoothSpl(w, c.a.k, inf); if(d > tol) moved = Math.max(moved, d); for(const k of keysOf(w)) lock(c.a.cid, k); return; }
       const sd = side(c); if(!sd) return; const { ref, mov } = sd;
       const E = ws.cur(ref.cid), M = ws.cur(mov.cid);
       switch(c.t){
@@ -261,7 +284,7 @@
      6) LỆNH
      ===================================================================== */
   const nextId = () => 'c' + (++seq);
-  const KIND = { sym: 'Đối xứng', hor: 'Ngang', ver: 'Dọc', par: 'Song song', perp: 'Vuông góc', col: 'Thẳng hàng', coin: 'Trùng điểm', eq: 'Bằng nhau', conc: 'Đồng tâm', tan: 'Tiếp xúc', fix: 'Cố định', dist: 'Dài thẳng', dx: 'Ngang', dy: 'Dọc', rad: 'Bán kính', dia: 'Đường kính', ang: 'Góc' };
+  const KIND = { smooth: 'Trơn (G2)', sym: 'Đối xứng', hor: 'Ngang', ver: 'Dọc', par: 'Song song', perp: 'Vuông góc', col: 'Thẳng hàng', coin: 'Trùng điểm', eq: 'Bằng nhau', conc: 'Đồng tâm', tan: 'Tiếp xúc', fix: 'Cố định', dist: 'Dài thẳng', dx: 'Ngang', dy: 'Dọc', rad: 'Bán kính', dia: 'Đường kính', ang: 'Góc' };
   const pick = (pr, filter, o) => A.getEnt(pr, Object.assign({ filter: e => okEnt(e) && (!filter || filter(e)) }, o || {}));
   async function addGeo(t, a0, b0){
     const ents = [a0.e].concat(b0 ? [b0.e] : []); const prep = prepFor(ents.filter((e, i, s) => s.indexOf(e) === i));
@@ -290,8 +313,9 @@
   };
   for(const [name, [t, desc, fn]] of Object.entries(GEO)) cmd([name], desc, fn);
   cmd(['GEOMCONSTRAINT', 'GCON'], 'Ràng buộc hình học (chọn loại)', async () => {
-    const r = await A.getKw('Nhập loại ràng buộc', { kw: [['H', 'Ngang', 'GCHORIZONTAL'], ['V', 'Dọc', 'GCVERTICAL'], ['PE', 'Vuông góc', 'GCPERPENDICULAR'], ['PA', 'Song song', 'GCPARALLEL'], ['T', 'Tiếp xúc', 'GCTANGENT'], ['CO', 'Trùng điểm', 'GCCOINCIDENT'], ['CON', 'Đồng tâm', 'GCCONCENTRIC'], ['COL', 'Thẳng hàng', 'GCCOLLINEAR'], ['E', 'Bằng nhau', 'GCEQUAL'], ['F', 'Cố định', 'GCFIX']].map(([k, t]) => ({ k, t })), def: 'H' });
-    const m = { H: 'GCHORIZONTAL', V: 'GCVERTICAL', PE: 'GCPERPENDICULAR', PA: 'GCPARALLEL', T: 'GCTANGENT', CO: 'GCCOINCIDENT', CON: 'GCCONCENTRIC', COL: 'GCCOLLINEAR', E: 'GCEQUAL', F: 'GCFIX' }[r.kw || (r.none ? 'H' : '')];
+    const r = await A.getKw('Nhập loại ràng buộc', { kw: [['H', 'Ngang', 'GCHORIZONTAL'], ['V', 'Dọc', 'GCVERTICAL'], ['PE', 'Vuông góc', 'GCPERPENDICULAR'], ['PA', 'Song song', 'GCPARALLEL'], ['T', 'Tiếp xúc', 'GCTANGENT'], ['SM', 'Trơn', 'GCSMOOTH'], ['CO', 'Trùng điểm', 'GCCOINCIDENT'], ['CON', 'Đồng tâm', 'GCCONCENTRIC'], ['COL', 'Thẳng hàng', 'GCCOLLINEAR'], ['S', 'Đối xứng', 'GCSYMMETRIC'], ['E', 'Bằng nhau', 'GCEQUAL'], ['F', 'Cố định', 'GCFIX']].map(([k, t]) => ({ k, t })), def: 'H' });
+    const m = { H: 'GCHORIZONTAL', V: 'GCVERTICAL', PE: 'GCPERPENDICULAR', PA: 'GCPARALLEL', T: 'GCTANGENT', SM: 'GCSMOOTH', CO: 'GCCOINCIDENT', CON: 'GCCONCENTRIC', COL: 'GCCOLLINEAR', S: 'GCSYMMETRIC', E: 'GCEQUAL', F: 'GCFIX' }[r.kw || (r.none ? 'H' : '')];
+    if(m === 'GCSMOOTH' || m === 'GCSYMMETRIC'){ DVDCmd.run(m); return; }
     if(m) await GEO[m][2]();
   });
 
@@ -415,7 +439,7 @@
   /* =====================================================================
      7) KÝ HIỆU RÀNG BUỘC (CONSTRAINTBAR) + nhãn ràng buộc kích thước
      ===================================================================== */
-  const GLYPH = { sym: '[]', hor: '—', ver: '│', par: '∥', perp: '⊥', col: '⋯', eq: '=', conc: '◎', tan: '◠', fix: '🔒' };
+  const GLYPH = { smooth: '∽', sym: '[]', hor: '—', ver: '│', par: '∥', perp: '⊥', col: '⋯', eq: '=', conc: '◎', tan: '◠', fix: '🔒' };
   const _draw = window.draw;
   window.draw = function(){
     const r = _draw.apply(this, arguments);
@@ -470,6 +494,17 @@
     change(L => L.push(c), [c.a.cid, c.x.cid], 'Đã thêm ràng buộc Đối xứng', prep);
   });
   GEO.GCSYMMETRIC = ['sym', 'Ràng buộc đối xứng', async () => DVDCmd.run('GCSYMMETRIC')];
+  // GCSMOOTH: như AutoCAD — chọn spline (gần đầu cần nối) rồi đường thứ hai (đường thẳng, cung, đa tuyến, spline; gần đầu cần nối) → spline dời theo, liên tục G2
+  cmd(['GCSMOOTH'], 'Ràng buộc trơn (G2): đầu spline nối liền, cùng hướng tiếp tuyến và cùng độ cong với đầu của đường thẳng / cung / đa tuyến / spline khác (spline dời theo)', async () => {
+    const r0 = await A.getEnt('Chọn spline thứ nhất', { filter: e => isSpl(e) && !e.grp && !e.xr }); if(!r0.ent) return; const S = r0.ent;
+    const ka = r0.pt && Math.hypot(r0.pt.x - S.spl[0].x, r0.pt.y - S.spl[0].y) > Math.hypot(r0.pt.x - S.spl[S.spl.length - 1].x, r0.pt.y - S.spl[S.spl.length - 1].y) ? 's1' : 's0';
+    const r1 = await A.getEnt('Chọn đường cong thứ hai', { filter: e => e !== S && !e.grp && !e.xr && (e.type === 'LINE' || e.type === 'ARC' || (e.type === 'POLYLINE' && !e.closed && (e.vertices || []).length >= 2)) }); if(!r1.ent) return; const O = r1.ent;
+    const ends = O.type === 'LINE' ? ['p1', 'p2'] : O.type === 'ARC' ? ['a1', 'a2'] : isSpl(O) ? ['s0', 's1'] : ['v0', 'v' + (O.vertices.length - 1)];
+    const q = r1.pt || getP(O, ends[1]); const kb = Math.hypot(q.x - getP(O, ends[0]).x, q.y - getP(O, ends[0]).y) <= Math.hypot(q.x - getP(O, ends[1]).x, q.y - getP(O, ends[1]).y) ? ends[0] : ends[1];
+    const ents = [S, O]; const prep = prepFor(ents); const c = { id: nextId(), t: 'smooth', a: { cid: prep.ids[0], k: ka }, b: { cid: prep.ids[1], k: kb } };
+    change(L => L.push(c), [c.b.cid], 'Đã thêm ràng buộc Trơn (G2)', prep);
+  });
+  GEO.GCSMOOTH = ['smooth', 'Ràng buộc trơn (G2)', async () => DVDCmd.run('GCSMOOTH')];
   const dimsOfSel = async pr => { const s = await A.getSel(pr || 'Chọn đối tượng', { pre: true }); const ids = new Set((s.sel || []).map(e => e.cid).filter(Boolean)); return liveCons().filter(c => isDim(c) && cidsOf(c).some(id => ids.has(id))); };
   // DCDISPLAY: hiện / ẩn ràng buộc kích thước động của các đối tượng chọn
   cmd(['DCDISPLAY'], 'Hiện / ẩn ràng buộc kích thước (động) của các đối tượng chọn', async () => {

@@ -95,7 +95,9 @@
     const ltDefs = [...ltUsed].map(n => { const d = A.ltDefOf(n) || (window.LTYPES && LTYPES[n]); return d && d.pat && d.pat.length ? { n, d, h: H() } : null; }).filter(Boolean);
     const ltOk = new Set(ltDefs.map(x => x.n));
     const hLtByBlock = H(), hLtByLayer = H(), hLtCont = H();
-    const stUsed = new Map(); for(const e of scanE){ if(e.type === 'TEXT' && e.style && e.ff && A.FONT_FILE && A.FONT_FILE[e.ff] && !stUsed.has(e.style) && String(e.style).toUpperCase() !== 'STANDARD') stUsed.set(e.style, { f: A.FONT_FILE[e.ff], h: H() }); }
+    const stUsed = new Map(); for(const e of scanE){ if(e.type !== 'TEXT' || !e.style || !e.ff || stUsed.has(e.style) || String(e.style).toUpperCase() === 'STANDARD') continue;
+      if(/\.shx$/i.test(e.ff)) stUsed.set(e.style, { f: String(e.ff).toLowerCase(), b: e.ffb && /\.shx$/i.test(e.ffb) ? String(e.ffb).toLowerCase() : '', h: H() });   // phông SHX (+ bigfont)
+      else if(A.FONT_FILE && A.FONT_FILE[e.ff]) stUsed.set(e.style, { f: A.FONT_FILE[e.ff], h: H() }); }
     const hStStd = H(); const needShx = ltDefs.some(x => (x.d.txt || []).some(t => t.sh)); const hStShx = needShx ? H() : null;
     const hApAcad = H(), hApDvd = H(), hDsStd = H(), hVpAct = H();
     const layH = new Map(); for(const ly of layers) layH.set(ly, H());
@@ -239,7 +241,7 @@
       const lw = lwStd(A.layerLW ? A.layerLW(ly) : 0); P(370, lw != null ? lw : -3); P(390, hPsnNormal); if(N7) P(347, N7.mGlobal); } });
     table('STYLE', 1 + stUsed.size + (hStShx ? 1 : 0), () => {
       rec('STYLE', hStStd, 'AcDbTextStyleTableRecord'); P(2, 'Standard'); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'arial.ttf'); P(4, '');
-      for(const [n, o] of stUsed){ rec('STYLE', o.h, 'AcDbTextStyleTableRecord'); P(2, dxfStr(n)); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, o.f); P(4, ''); }
+      for(const [n, o] of stUsed){ rec('STYLE', o.h, 'AcDbTextStyleTableRecord'); P(2, dxfStr(n)); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, o.f); P(4, o.b || ''); }
       if(hStShx){ rec('STYLE', hStShx, 'AcDbTextStyleTableRecord'); P(2, ''); P(70, 1); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'ltypeshp.shx'); P(4, ''); } });
     table('VIEW', 0, () => {}); table('UCS', 0, () => {});
     const dynApps = DYNX && dynBase.size ? ['AcDbDynamicBlockTrueName', 'AcDbDynamicBlockGUID', 'AcDbBlockRepETag', 'AcDbBlockRepBTag'] : [];

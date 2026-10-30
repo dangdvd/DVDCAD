@@ -6,6 +6,39 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5w: WMFIN, mặt cắt nửa / bậc / xoay, phông SHX cho chữ, GCSMOOTH, ALIGNSPACE, SYSWINDOWS, PSETUPIN đọc DWG của AutoCAD
+- Tệp mới `dvd-acad-x23.js` (nạp sau `dvd-acad-x22.js`, có trong cache của `sw.js`).
+- **WMFIN** — `A.parseWMF(buf, { wire, wide })`:
+  - Header placeable (0x9AC6CDD7, đơn vị / inch) hoặc header thường.
+  - Bảng đối tượng GDI theo đúng chỗ trống: bút, chổi, font; bảng màu / chổi ảnh / vùng vẫn chiếm chỗ.
+  - Hệ toạ độ theo SETWINDOWORG / EXT (OFFSET / SCALE), SAVEDC / RESTOREDC.
+  - Chữ theo `lfCharSet` → TextDecoder (163 = windows-1258, chuẩn hoá NFC).
+  - Khối lưu trong `window._dvdBlocks` (`src: 'file'`) rồi `A.instBlock`.
+- **Mặt cắt** (`dvd-acad-x19.js`):
+  - `rec.cut = { pts, type: 'F' | 'H' | 'O' | 'A' }`; bản 5.15 `{ a, b }` vẫn đọc được.
+  - `sectionPlan(rec, par)` chia thành các dải; mỗi dải gồm mặt phẳng cắt hoặc không cắt, cùng khoảng `[lo, hi]` theo trục dọc đường cắt.
+  - Cắt xoay: quay `d` / `u` quanh `par.d` (Rodrigues), trải phẳng bằng độ dời `off`.
+  - `shootSection()` chụp từng dải bằng `shootOn` một mặt phẳng, rồi cắt nét theo dải và cắt vùng bằng Sutherland–Hodgman. Biên vùng chỉ vẽ cạnh thật (`edges`).
+- **Phông SHX**:
+  - `parseFont()` đọc shapes 1.0 (hình 0 = above / below / modes), unifont (int32 số hình, mã 2 byte) và bigfont (dải mã đầu, bảng chỉ mục 8 byte; bỏ tiền tố mã 2 byte).
+  - `runGlyph()` dịch mã 0–14. Mã 7 lấy 1 byte, 2 byte (unifont) hoặc dạng mở rộng của bigfont.
+  - Bảng ngược: Unicode → windows-1252 (°, ±, Ø → 127 / 128 / 129) và Unicode → GBK / Big5 / Shift-JIS / EUC-KR theo tên phông.
+  - API: `A.shxText(ctx, e, size, col, T0)` (gọi trong `drawEntity`, bỏ qua chữ rich text), `A.shxExtent` (dùng cho `textExtent`), `A.shxStrokes` (`vecWalk`, TXTEXP).
+  - Chữ mang `e.ff = 'romans.shx'` và `e.ffb` (bigfont), lấy từ STYLE mã 3 / 4 khi đọc DXF và từ `font` / `bigFont` của DWG. `shxOfStyle()` bỏ qua phông VNI / TCVN vì đã giải mã sang Unicode.
+  - Phông lưu ở IndexedDB `dvdcad-pro` (`shxf:<TÊN>`, `shxf:list`).
+- **GCSMOOTH** (`dvd-acad-x4.js`):
+  - Ràng buộc `smooth` với khoá `s0` / `s1` (đầu spline = `e.spl`).
+  - `endInfo()` cho điểm, tiếp tuyến đi ra và độ cong có dấu ở đầu đường kia.
+  - `smoothSpl()` đặt P0, đặt P1 theo tiếp tuyến, rồi dời P2 vuông góc. Độ cong đầu của Catmull-Rom là κ = −4·((P2−P0)·n)/L².
+  - Spline dưới 4 điểm khớp được lấy mẫu lại thành 4 điểm. `translate()` dời cả `e.spl`.
+- **ALIGNSPACE**: `A.alignSpace(L, i, m1, p1, m2, p2)` đổi `vh` / `dcx` / `dcy` của khung nhìn; với layout DVDCAD thì lưu vào `D.vps[i].n` / `cx` / `cy`.
+- **SYSWINDOWS**: lưu ảnh canvas của tab trước mỗi `loadDXF` / `loadDWG`, rồi lát các ô trên vùng vẽ. Ribbon: `A.ribbonAct('SYSWINDOWS|V')`…
+- **PSETUPIN cho DWG**:
+  - `libredwg-web.js` `readPlotSettingsAt(base)` đọc struct PLOTSETTINGS thẳng từ `HEAPU8`, vì dynapi của bản wasm không trả struct con.
+  - Vị trí trường: `LAYOUT + 12` tên, `+16` máy in, `+20` khổ giấy, `+24` cờ, `+72` / `+80` khổ mm, `+136…140` đơn vị / xoay / kiểu in, `+144` / `+152` tỉ lệ, `+160` bảng kiểu in, `+164` / `+168` tỉ lệ chuẩn. Đã đối chiếu DWG 2000 / 2004 / 2018 của AutoCAD với DXF cùng bản vẽ.
+  - Có kiểm tra giá trị hợp lệ; không đọc được thì báo `unreadable`.
+  - Kết quả ra `layout.plot` và `window._dwgPageSetups`, rồi `A.setupsFromDWGFrame(w)` → `psFrom()` (dùng chung với DXF; DXF đọc thêm mã 44 / 45).
+
 ## v5v: Smart Blocks, hình chiếu từ mô hình 3D, ràng buộc đối xứng + DCCONVERT, GEOMARK, 3DPOLY / PFACE / 3DMESH / EDGE, SHP / SHX, EPS / WMF / web / DWGCONVERT
 - Tệp mới nạp sau `dvd-acad-dlg4.js`: `dvd-acad-x18.js` … `dvd-acad-x22.js` (có trong danh sách cache của `sw.js`). Ribbon có thêm tab `layout` (*Bố cục*) trong cả 2 không gian làm việc.
 - `dvd-acad-x18.js` (Smart Blocks):

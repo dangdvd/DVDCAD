@@ -1,7 +1,7 @@
 /* DVDCAD v5v — Hình chiếu từ mô hình 3D như AutoCAD (Model Documentation)
    · VIEWBASE: hình chiếu cơ sở (hướng Trước / Sau / Trái / Phải / Trên / Dưới / 4 hướng ISO, tỉ lệ, nét khuất) rồi đặt luôn các hình chiếu phụ
    · VIEWPROJ: hình chiếu phụ từ một hình chiếu có sẵn — đặt sang phải / trái / trên / dưới theo góc chiếu 1 (TCVN, ISO) hoặc 3, chéo = ISO
-   · VIEWSECTION: mặt cắt toàn phần qua 2 điểm trên hình chiếu cha — đường cắt + mũi tên + chữ, mặt cắt gạch ANSI31, nhãn "MẶT CẮT A-A"
+   · VIEWSECTION: mặt cắt toàn phần / nửa / bậc / xoay trên hình chiếu cha — đường cắt + mũi tên + chữ, mặt cắt gạch ANSI31, nhãn "MẶT CẮT A-A"
    · VIEWDETAIL: hình trích (tròn / chữ nhật) phóng to một vùng của hình chiếu cha, nhãn "HÌNH TRÍCH B  TỈ LỆ 2 : 1"
    · VIEWEDIT (tỉ lệ, nét khuất, nhãn) · VIEWUPDATE (dựng lại theo mô hình đã sửa, giữ chỗ đã dời) · VIEWSTD · VIEWSECTIONSTYLE · VIEWDETAILSTYLE
    Lớp MD_Visible / MD_Hidden / MD_Annotation / MD_Hatch như AutoCAD. Thông số hình chiếu lưu kèm bản vẽ (DXF / DWG). */
@@ -90,6 +90,60 @@
   const segBB = (S, x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity) => { for(let i = 0; i < S.length; i += 2){ x0 = Math.min(x0, S[i]); x1 = Math.max(x1, S[i]); y0 = Math.min(y0, S[i + 1]); y1 = Math.max(y1, S[i + 1]); } return { x0, y0, x1, y1 }; };
   const shotBB = s => { let b = segBB(s.vis); for(const g of s.reg) for(const p of g.outer) b = segBB(p, b.x0, b.y0, b.x1, b.y1); if(!isFinite(b.x0)) b = segBB(s.hid); return isFinite(b.x0) ? b : { x0: -1, y0: -1, x1: 1, y1: 1 }; };
 
+  /* ---- mặt cắt: toàn phần (F) / nửa (H) / bậc (O) / xoay (A) ---- */
+  const cutPts = rec => rec.cut ? (rec.cut.pts || [rec.cut.a, rec.cut.b]).filter(Boolean) : [];
+  const cutType = rec => (rec.cut && rec.cut.type) || 'F';
+  const mapCut = (rec, f) => { if(rec.cut) rec.cut = { pts: cutPts(rec).map(f), type: cutType(rec) }; };
+  const rotAbout = (v, k, th) => { const c = Math.cos(th), s2 = Math.sin(th); return add(add(mul(v, c), mul(cross(k, v), s2)), mul(k, dot(k, v) * (1 - c))); };   // Rodrigues
+  // các dải của mặt cắt: mỗi dải một mặt phẳng cắt (hoặc không cắt) + khoảng theo trục dọc đường cắt
+  function sectionPlan(rec, par){
+    const to3 = q => add(mul(par.r, (q.x - par.at.x) / par.sc), mul(par.u, (q.y - par.at.y) / par.sc));
+    const P3 = cutPts(rec).map(to3), type = cutType(rec), d = rec.d, u = rec.u, r = unit(cross(u, d));
+    const segs = []; for(let i = 0; i + 1 < P3.length; i++){ const v = sub(P3[i + 1], P3[i]), L = Math.hypot(v[0], v[1], v[2]); if(L < 1e-12) continue; segs.push({ A: P3[i], B: P3[i + 1], dir: mul(v, 1 / L), L }); }
+    if(!segs.length) return null;
+    const d1 = segs[0].dir, ax = par.d, pl = { type, lx: dot(d1, r), ly: dot(d1, u), wx: dot(ax, r), wy: dot(ax, u), strips: [] };
+    if(type === 'A'){   // xoay: mỗi đoạn một mặt phẳng, trải phẳng về mặt phẳng của đoạn đầu (quay quanh trục nhìn của hình chiếu cha)
+      let acc = dot(segs[0].A, d1);
+      segs.forEach((sg, i) => { const th = Math.atan2(dot(cross(d1, sg.dir), ax), dot(d1, sg.dir)), di = rotAbout(d, ax, th), ui = rotAbout(u, ax, th);
+        const tA = dot(sg.A, sg.dir), tB = dot(sg.B, sg.dir); pl.strips.push({ cut: { n: mul(di, -1), o: sg.A }, d: di, u: ui, lo: i === 0 ? -Infinity : tA, hi: i === segs.length - 1 ? Infinity : tB, off: acc - tA, unf: 1 }); acc += sg.L; });
+      return pl;
+    }
+    // F / H / O: đoạn cắt song song với đoạn đầu, đoạn bậc vuông góc; đoạn bậc ở đầu / cuối = phần không cắt (mặt cắt nửa)
+    const kind = segs.map((sg, i) => { if(i === 0) return 'c'; if(type === 'F') return 'c'; if(type === 'H') return 's'; const k = dot(sg.dir, d1); return k > 0.98 ? 'c' : Math.abs(k) < 0.2 ? 's' : k < -0.98 ? 'r' : 'x'; });
+    if(kind.includes('x')) return { err: 'Đường cắt bậc: các đoạn phải song song hoặc vuông góc với đoạn đầu (dùng kiểu Cắt xoay cho đoạn xiên).' };
+    if(kind.includes('r')) return { err: 'Đường cắt bậc phải đi một chiều.' };
+    const C = kind.map((k, i) => k === 'c' ? i : -1).filter(i => i >= 0), t = p => dot(p, d1);
+    C.forEach((ci, j) => { const sg = segs[ci]; const lo = j === 0 ? (ci > 0 ? t(sg.A) : -Infinity) : t(sg.A), hi = j === C.length - 1 ? (ci < segs.length - 1 ? t(sg.B) : Infinity) : t(segs[C[j + 1]].A);
+      pl.strips.push({ cut: { n: mul(d, -1), o: sg.A }, d, u, lo, hi, off: 0 }); });
+    if(C[0] > 0) pl.strips.push({ cut: null, d, u, lo: -Infinity, hi: t(segs[C[0]].A), off: 0 });
+    if(C[C.length - 1] < segs.length - 1) pl.strips.push({ cut: null, d, u, lo: t(segs[C[C.length - 1]].B), hi: Infinity, off: 0 });
+    return pl;
+  }
+  // chụp mặt cắt: chụp từng dải rồi cắt theo khoảng của dải, ghép lại (xoay: trải phẳng)
+  function shootSection(V, rec, par){
+    const pl = sectionPlan(rec, par); if(!pl) return null; if(pl.err){ log(pl.err); return null; }
+    if(pl.strips.length === 1 && !isFinite(pl.strips[0].lo) && !isFinite(pl.strips[0].hi)){ const st = pl.strips[0]; return shootOn(V, st.d, st.u, st.cut); }   // toàn phần
+    const out = { vis: [], hid: [], reg: [], r: unit(cross(rec.u, rec.d)), u: rec.u, d: rec.d };
+    const T = (x, y) => x * pl.lx + y * pl.ly, W = (x, y) => x * pl.wx + y * pl.wy;
+    for(const st of pl.strips){
+      const s = shootOn(V, st.d, st.u, st.cut); if(!s) return null;
+      const M = (x, y) => { if(!st.unf) return [x, y]; const tt = T(x, y) + st.off, w = W(x, y); return [tt * pl.lx + w * pl.wx, tt * pl.ly + w * pl.wy]; };
+      const clipS = (S, dst) => { for(let i = 0; i < S.length; i += 4){ const ta = T(S[i], S[i + 1]), tb = T(S[i + 2], S[i + 3]), dt = tb - ta; let t0 = 0, t1 = 1;
+          if(Math.abs(dt) < 1e-15){ if(ta < st.lo || ta > st.hi) continue; } else { let u0 = (st.lo - ta) / dt, u1 = (st.hi - ta) / dt; if(u0 > u1){ const w2 = u0; u0 = u1; u1 = w2; } t0 = Math.max(0, u0); t1 = Math.min(1, u1); if(t1 <= t0) continue; }
+          const p = M(S[i] + (S[i + 2] - S[i]) * t0, S[i + 1] + (S[i + 3] - S[i + 1]) * t0), q = M(S[i] + (S[i + 2] - S[i]) * t1, S[i + 1] + (S[i + 3] - S[i + 1]) * t1); dst.push(p[0], p[1], q[0], q[1]); } };
+      clipS(s.vis, out.vis); clipS(s.hid, out.hid);
+      for(const g of s.reg){
+        const clipL = l => { let L = l.map(v => ({ x: v[0], y: v[1] })); const tt = q => T(q.x, q.y);
+          for(const [lim, sg] of [[st.lo, 1], [st.hi, -1]]){ if(!isFinite(lim) || !L.length) continue; L = clipPoly(L, q => (tt(q) - lim) * sg >= 0, (q1, q2) => { const a = tt(q1), b = tt(q2), k = (lim - a) / (b - a); return { x: q1.x + (q2.x - q1.x) * k, y: q1.y + (q2.y - q1.y) * k }; }); }
+          return L.length >= 3 ? L.map(q => M(q.x, q.y)) : null; };
+        const outer = clipL(g.outer); if(!outer) continue; const holes = (g.holes || []).map(clipL).filter(Boolean);
+        const E = []; for(const l of [g.outer].concat(g.holes || [])){ const S = []; for(let i = 0; i < l.length; i++){ const a = l[i], b = l[(i + 1) % l.length]; S.push(a[0], a[1], b[0], b[1]); } clipS(S, E); }
+        out.reg.push({ outer, holes, edges: E });   // biên vùng cắt: chỉ cạnh thật, không vẽ đường ghép giữa các dải
+      }
+    }
+    return out;
+  }
+
   /* ---- dựng đối tượng 2D của một hình chiếu ---- */
   function mk(type, o, layer, tag){ const e = Object.assign({ type }, o); A.newProps(e); e.layer = layer; e.bl = 1; e.col = A.layerHex(layer); delete e.lt; delete e.lw; e.dvw = tag; return e; }
   const P = (rec, x, y) => ({ x: rec.at.x + rec.sc * x, y: rec.at.y + rec.sc * y });
@@ -99,7 +153,7 @@
     lines(s.vis, LAY.vis); if(rec.hid) lines(s.hid, LAY.hid);
     if(s.reg.length){ const size = (() => { const b = shotBB(s); return Math.max(b.x1 - b.x0, b.y1 - b.y0) * rec.sc; })();
       for(const g of s.reg){ const loops = [g.outer].concat(g.holes).map(l => l.map(p => P(rec, p[0], p[1])));
-        for(const l of loops) out.push(mk('POLYLINE', { closed: true, vertices: l }, LAY.vis, tag));
+        if(g.edges) lines(g.edges, LAY.vis); else for(const l of loops) out.push(mk('POLYLINE', { closed: true, vertices: l }, LAY.vis, tag));
         out.push(mk('HATCH', { loops, pat: SST.pat || 'ANSI31', psc: Math.max(1e-6, (SST.psc || 1) * size / 80 / 3.175), pang: 0, solid: false }, LAY.hat, tag)); } }
     return out;
   }
@@ -109,18 +163,27 @@
     return out;
   }
   const entsBB = L => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for(const e of L){ let b = null; try{ b = entBBox(e); }catch(_){} if(!b) continue; x0 = Math.min(x0, b.x0); y0 = Math.min(y0, b.y0); x1 = Math.max(x1, b.x1); y1 = Math.max(y1, b.y1); } return isFinite(x0) ? { x0, y0, x1, y1 } : null; };
-  // mặt cắt: đường cắt + mũi tên + chữ trên hình chiếu cha
+  // mặt cắt: đường cắt + mũi tên + chữ trên hình chiếu cha (đường gãy: nét đậm ở mỗi chỗ gãy)
   function cutMarks(rec, par){
-    const out = [], tag = rec.id + '/a'; const a = rec.cut.a, b = rec.cut.b; const L = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / L, uy = (b.y - a.y) / L;
-    const vd = mul(rec.d, -1), wx = dot(vd, par.r), wy = dot(vd, par.u), wl = Math.hypot(wx, wy) || 1, nx = wx / wl, ny = wy / wl;   // hướng nhìn trên hình chiếu cha
-    const s = SST.arr, ext = s * 1.2;
-    const A0 = { x: a.x - ux * ext, y: a.y - uy * ext }, B0 = { x: b.x + ux * ext, y: b.y + uy * ext };
-    const ln = mk('LINE', { x1: A0.x, y1: A0.y, x2: B0.x, y2: B0.y }, LAY.ann, tag); ln.lt = 'DASHDOT'; ln.lts = Math.max(0.05, s / 6); out.push(ln);
-    for(const [p, q] of [[A0, { x: A0.x + ux * s * 2, y: A0.y + uy * s * 2 }], [B0, { x: B0.x - ux * s * 2, y: B0.y - uy * s * 2 }]]){ const t = mk('LINE', { x1: p.x, y1: p.y, x2: q.x, y2: q.y }, LAY.ann, tag); t.lw = 70; out.push(t); }
-    for(const p of [A0, B0]){ const tip = { x: p.x + nx * s * 2.2, y: p.y + ny * s * 2.2 }, base = { x: p.x + nx * s * 0.8, y: p.y + ny * s * 0.8 };
-      out.push(mk('LINE', { x1: p.x, y1: p.y, x2: base.x, y2: base.y }, LAY.ann, tag));
-      out.push(mk('SOLID', { pts: [tip, { x: base.x + ux * s * 0.4, y: base.y + uy * s * 0.4 }, { x: base.x - ux * s * 0.4, y: base.y - uy * s * 0.4 }] }, LAY.ann, tag));
-      const tp = { x: p.x + nx * s * 1.4 - (p === A0 ? ux : -ux) * s * 1.4, y: p.y + ny * s * 1.4 - (p === A0 ? uy : -uy) * s * 1.4 };
+    const out = [], tag = rec.id + '/a', P = cutPts(rec), n = P.length, type = cutType(rec); if(n < 2) return out;
+    const dirs = []; for(let i = 0; i + 1 < n; i++){ const L = Math.hypot(P[i + 1].x - P[i].x, P[i + 1].y - P[i].y) || 1; dirs.push({ x: (P[i + 1].x - P[i].x) / L, y: (P[i + 1].y - P[i].y) / L }); }
+    const vd = mul(rec.d, -1), wx = dot(vd, par.r), wy = dot(vd, par.u), wl = Math.hypot(wx, wy) || 1, N0 = { x: wx / wl, y: wy / wl };   // hướng nhìn trên hình chiếu cha
+    const s = SST.arr, ext = s * 1.2, d0 = dirs[0], dl = dirs[dirs.length - 1];
+    const A0 = { x: P[0].x - d0.x * ext, y: P[0].y - d0.y * ext }, B0 = { x: P[n - 1].x + dl.x * ext, y: P[n - 1].y + dl.y * ext };
+    const ln = n === 2 ? mk('LINE', { x1: A0.x, y1: A0.y, x2: B0.x, y2: B0.y }, LAY.ann, tag) : mk('POLYLINE', { closed: false, vertices: [A0].concat(P.slice(1, -1), [B0]) }, LAY.ann, tag);
+    ln.lt = 'DASHDOT'; ln.lts = Math.max(0.05, s / 6); out.push(ln);
+    const thick = (p, ux, uy, L) => { const t = mk('LINE', { x1: p.x, y1: p.y, x2: p.x + ux * L, y2: p.y + uy * L }, LAY.ann, tag); t.lw = 70; out.push(t); };
+    thick(A0, d0.x, d0.y, s * 2); thick(B0, -dl.x, -dl.y, s * 2);
+    for(let i = 1; i < n - 1; i++){ thick(P[i], -dirs[i - 1].x, -dirs[i - 1].y, s); thick(P[i], dirs[i].x, dirs[i].y, s); }
+    // mũi tên vuông góc đoạn đầu / đoạn cuối, chỉ hướng nhìn (mặt cắt nửa: đoạn cuối là bậc → không mũi tên ở cuối)
+    const perpTo = dd => { let q = { x: -dd.y, y: dd.x }; if(q.x * N0.x + q.y * N0.y < 0) q = { x: -q.x, y: -q.y }; return q; };
+    const ends = [[A0, perpTo(d0), d0, 1]]; const lastCut = type === 'A' || type === 'F' || (type === 'O' && Math.abs(dl.x * d0.x + dl.y * d0.y) > 0.98);
+    ends.push([B0, lastCut ? perpTo(dl) : null, dl, -1]);
+    for(const [p, nn, dd, sg] of ends){
+      if(nn){ const tip = { x: p.x + nn.x * s * 2.2, y: p.y + nn.y * s * 2.2 }, base = { x: p.x + nn.x * s * 0.8, y: p.y + nn.y * s * 0.8 };
+        out.push(mk('LINE', { x1: p.x, y1: p.y, x2: base.x, y2: base.y }, LAY.ann, tag));
+        out.push(mk('SOLID', { pts: [tip, { x: base.x + dd.x * s * 0.4, y: base.y + dd.y * s * 0.4 }, { x: base.x - dd.x * s * 0.4, y: base.y - dd.y * s * 0.4 }] }, LAY.ann, tag)); }
+      const side = nn || N0; const tp = { x: p.x + side.x * s * 1.4 - sg * dd.x * s * 1.4, y: p.y + side.y * s * 1.4 - sg * dd.y * s * 1.4 };
       out.push(mk('TEXT', { x: tp.x, y: tp.y, h: SST.th, text: rec.lab, rot: 0, ha: 'center', va: 'middle' }, LAY.ann, tag)); }
     return out;
   }
@@ -173,10 +236,10 @@
     const moved = new Map();
     for(const r of recs){ const cur = viewEnts(r.id).filter(e => e.type !== 'TEXT'); if(cur.length && r._c && !opt.fresh){ const b = entsBB(cur); if(b){ const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2; if(Math.hypot(cx - r._c.x, cy - r._c.y) > 1e-9 * Math.max(1, Math.abs(cx) + Math.abs(cy))){ const dx = cx - r._c.x, dy = cy - r._c.y; r.at = { x: r.at.x + dx, y: r.at.y + dy }; moved.set(r.id, { dx, dy }); } } } }
     for(const r of recs){ const m = r.par != null ? moved.get(r.par) : null; if(!m) continue; const sh = q => ({ x: q.x + m.dx, y: q.y + m.dy });
-      if(r.cut) r.cut = { a: sh(r.cut.a), b: sh(r.cut.b) }; if(r.det) r.det = Object.assign({}, r.det, { c: sh(r.det.c) }); }
+      if(r.cut) mapCut(r, sh); if(r.det) r.det = Object.assign({}, r.det, { c: sh(r.det.c) }); }
     const need = recs.filter(r => r.k !== 'det');
     const shots = new Map();
-    if(need.length){ const ok = await withViewer(async V => { for(const r of need){ const s = shootOn(V, r.d, r.u, r.k === 'sec' ? r.cutPl : null); if(!s) return false; shots.set(r.id, s); } return true; }); if(!ok){ log('Không dựng được hình chiếu (cần khung 3D).'); return false; } }
+    if(need.length){ const ok = await withViewer(async V => { for(const r of need){ const s = r.k === 'sec' ? shootSection(V, r, DV.get(r.par)) : shootOn(V, r.d, r.u, null); if(!s) return false; shots.set(r.id, s); } return true; }); if(!ok){ log('Không dựng được hình chiếu (cần khung 3D).'); return false; } }
     const made = new Map();   // id → đối tượng mới (để hình trích dùng nét mới của cha)
     for(const r of recs){
       for(const e of allEnts(r.id)) del.push(e);
@@ -268,24 +331,36 @@
     const par = await pickView('Chọn hình chiếu cha'); if(!par) return; if(par.k === 'det'){ log('Không chiếu phụ từ hình trích.'); return; }
     const n = await placeProjected(par); if(n) log('VIEWPROJ: ' + n + ' hình chiếu phụ.');
   });
-  /* VIEWSECTION — mặt cắt toàn phần */
-  ecmd(['VIEWSECTION'], 'Mặt cắt từ hình chiếu (toàn phần qua 2 điểm): đường cắt, mũi tên, chữ, mặt cắt gạch ANSI31, nhãn "MẶT CẮT A-A"', async () => {
+  /* VIEWSECTION — mặt cắt toàn phần / nửa / bậc / xoay */
+  const SECT = { F: 'Toàn phần', H: 'Nửa', O: 'Bậc', A: 'Cắt xoay' };
+  ecmd(['VIEWSECTION'], 'Mặt cắt từ hình chiếu: toàn phần, nửa, bậc (offset) hoặc xoay (aligned) — đường cắt, mũi tên, chữ, mặt cắt gạch ANSI31, nhãn "MẶT CẮT A-A"', async () => {
     const par = await pickView('Chọn hình chiếu cha', r => r.k !== 'det'); if(!par) return; if(!isOrtho(par.d)){ log('Mặt cắt cần hình chiếu cha vuông góc (không phải ISO).'); return; }
-    let lab = nextLetter();
+    let lab = nextLetter(), type = lsGet('dvd:viewsec:type', 'F'); if(!SECT[type]) type = 'F';
     let a = null;
-    for(;;){ const r = await A.getPoint('Chỉ định điểm đầu đường cắt hoặc', { kw: [{ k: 'I', t: 'Ký hiệu' }] }); if(r.kw === 'I'){ const s = await A.getStr('Ký hiệu mặt cắt', { def: lab }); const v = String(s.str || '').trim(); if(v) lab = v.toUpperCase(); continue; } if(!r.pt) return; a = r.pt; break; }
-    const b0 = await A.getPoint('Chỉ định điểm cuối đường cắt', { base: a }); if(!b0.pt) return; const b = b0.pt;
-    if(Math.hypot(b.x - a.x, b.y - a.y) < 1e-9) return;
-    // đường cắt trên hình chiếu cha → mặt phẳng cắt 3D chứa đường đó và hướng nhìn của cha
+    for(;;){ const r = await A.getPoint('Chỉ định điểm đầu đường cắt hoặc', { kw: [{ k: 'T', t: 'Kiểu' }, { k: 'I', t: 'Ký hiệu' }] });
+      if(r.kw === 'T'){ const k = await A.getKw('Kiểu mặt cắt', { kw: [{ k: 'F', t: 'Toàn phần' }, { k: 'H', t: 'Nửa' }, { k: 'O', t: 'Bậc' }, { k: 'A', t: 'Cắt xoay' }], def: SECT[type] }); if(k.kw && SECT[k.kw]){ type = k.kw; lsSet('dvd:viewsec:type', type); } continue; }
+      if(r.kw === 'I'){ const s = await A.getStr('Ký hiệu mặt cắt', { def: lab }); const v = String(s.str || '').trim(); if(v) lab = v.toUpperCase(); continue; }
+      if(!r.pt) return; a = r.pt; break; }
+    const pts = [a]; const same = (p, q) => Math.hypot(p.x - q.x, p.y - q.y) < 1e-9;
+    const drawn = g => { for(let i = 0; i + 1 < pts.length; i++) g.line(pts[i], pts[i + 1]); };
+    if(type === 'F'){ const q = await A.getPoint('Chỉ định điểm cuối đường cắt', { base: a }); if(!q.pt) return; pts.push(q.pt); }
+    else if(type === 'H'){ const q = await A.getPoint('Chỉ định điểm tiếp theo', { base: a }); if(!q.pt) return; pts.push(q.pt); const q2 = await A.getPoint('Chỉ định điểm cuối đường cắt', { base: q.pt, preview: drawn }); if(!q2.pt) return; pts.push(q2.pt); }
+    else for(;;){ const q = await A.getPoint(pts.length < 2 ? 'Chỉ định điểm tiếp theo' : 'Chỉ định điểm tiếp theo hoặc', { base: pts[pts.length - 1], kw: pts.length > 1 ? [{ k: 'U', t: 'Hoàn tác' }] : [], preview: drawn });
+      if(q.kw === 'U'){ if(pts.length > 1) pts.pop(); continue; } if(!q.pt) break; if(!same(q.pt, pts[pts.length - 1])) pts.push(q.pt); }
+    if(pts.length < 2 || same(pts[0], pts[1])) return;
+    const b = pts[1];
+    // đoạn đầu của đường cắt → mặt phẳng cắt 3D chứa đoạn đó và hướng nhìn của cha
     const to3 = q => add(mul(par.r, (q.x - par.at.x) / par.sc), mul(par.u, (q.y - par.at.y) / par.sc));
     const A3 = to3(a), B3 = to3(b); const n = unit(cross(sub(B3, A3), par.d));
     // hình chiếu mặt cắt: đặt về phía nào thì nhìn theo quy ước góc chiếu
     const k = STD.proj === 3 ? 1 : -1;
     const dirFor = p => { const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, nx = dot(n, par.r), ny = dot(n, par.u); const side = Math.sign((p.x - mx) * nx + (p.y - my) * ny) || 1; const d = mul(n, k * side);
       const horiz = Math.abs(nx) >= Math.abs(ny); const u = upFor(d, horiz ? par.u : mul(par.d, -(Math.sign(dot(d, par.u)) || 1))); return { d, u, horiz, key: side, al: alignKind(par, d, u, horiz ? 'h' : 'v') }; };
+    const cut = { pts, type };
+    { const pl = sectionPlan({ d: n, u: upFor(n, par.u), cut }, par); if(pl && pl.err){ log(pl.err); return; } }
     log('Đang dựng mặt cắt…');
     const C = new Map();
-    const ok = await withViewer(async V => { for(const side of [1, -1]){ const q = dirFor({ x: (a.x + b.x) / 2 + dot(n, par.r) * side, y: (a.y + b.y) / 2 + dot(n, par.u) * side }); const cut = { n: mul(q.d, -1), o: A3 }; const s = shootOn(V, q.d, q.u, cut); if(s) C.set(side, { q, s, cut }); } return true; });
+    const ok = await withViewer(async V => { for(const side of [1, -1]){ const q = dirFor({ x: (a.x + b.x) / 2 + dot(n, par.r) * side, y: (a.y + b.y) / 2 + dot(n, par.u) * side }); const s = shootSection(V, { d: q.d, u: q.u, cut }, par); if(s) C.set(side, { q, s }); } return true; });
     if(!ok || !C.size){ log('Không dựng được mặt cắt.'); return; }
     const placeOf = (q, s, p) => { const bb = shotBB(s), bc = { x: (bb.x0 + bb.x1) / 2, y: (bb.y0 + bb.y1) / 2 }; if(q.al === 'h') return { x: p.x - par.sc * bc.x, y: par.at.y }; if(q.al === 'v') return { x: par.at.x, y: p.y - par.sc * bc.y }; return { x: p.x - par.sc * bc.x, y: p.y - par.sc * bc.y }; };
     const r = await A.getPoint('Chỉ định vị trí hình chiếu mặt cắt', { rubber: false, preview: (g, p) => { const q = dirFor(p), it = C.get(q.key); if(!it) return; const at = placeOf(q, it.s, p);
@@ -293,9 +368,9 @@
         for(const R of it.s.reg) g.poly(R.outer.map(v => ({ x: at.x + par.sc * v[0], y: at.y + par.sc * v[1] })), true); } });
     if(!r.pt) return;
     const q = dirFor(r.pt), it = C.get(q.key); if(!it) return;
-    const rec = newRec({ k: 'sec', par: par.id, d: q.d, u: q.u, sc: par.sc, hid: 0, at: placeOf(q, it.s, r.pt), lab, cut: { a, b }, cutPl: it.cut });
+    const rec = newRec({ k: 'sec', par: par.id, d: q.d, u: q.u, sc: par.sc, hid: 0, at: placeOf(q, it.s, r.pt), lab, cut });
     if(!(await regen([rec], 'VIEWSECTION'))){ DV.delete(rec.id); return; }
-    log('VIEWSECTION: mặt cắt ' + lab + '-' + lab + (it.s.reg.length ? ' (' + it.s.reg.length + ' vùng cắt)' : ' — đường cắt không qua khối nào') + '.');
+    log('VIEWSECTION: mặt cắt ' + SECT[type].toLowerCase() + ' ' + lab + '-' + lab + (it.s.reg.length ? ' (' + it.s.reg.length + ' vùng cắt)' : ' — đường cắt không qua khối nào') + '.');
   });
   /* VIEWDETAIL — hình trích */
   ecmd(['VIEWDETAIL'], 'Hình trích (Detail View): khoanh vùng tròn / chữ nhật trên hình chiếu cha, phóng to theo tỉ lệ, nhãn "HÌNH TRÍCH B  TỈ LỆ 2 : 1"', async () => {
@@ -344,7 +419,7 @@
       // giữ tâm hình chiếu này; con (không phải hình trích) đổi tỉ lệ theo
       const keepC = rec._c ? { x: rec._c.x, y: rec._c.y } : null; scaleAround(rec); if(keepC) rec._c = keepC;
       for(const ch of descend([rec.id])) if(ch !== rec){ if(ch.k === 'det' && ch.par !== rec.id) continue; if(ch.k === 'det'){ ch.det = Object.assign({}, ch.det, { c: { x: c.x + (ch.det.c.x - c.x) * f, y: c.y + (ch.det.c.y - c.y) * f }, r: ch.det.r * f, w: ch.det.w ? ch.det.w * f : ch.det.w, h: ch.det.h ? ch.det.h * f : ch.det.h }); ch.sc *= f; continue; }
-        ch.sc *= f; if(ch.k === 'sec') ch.cut = { a: { x: c.x + (ch.cut.a.x - c.x) * f, y: c.y + (ch.cut.a.y - c.y) * f }, b: { x: c.x + (ch.cut.b.x - c.x) * f, y: c.y + (ch.cut.b.y - c.y) * f } };
+        ch.sc *= f; if(ch.k === 'sec') mapCut(ch, q => ({ x: c.x + (q.x - c.x) * f, y: c.y + (q.y - c.y) * f }));
         const cc = ch._c || ch.at; const dx = (cc.x - c.x) * (f - 1), dy = (cc.y - c.y) * (f - 1); const nc = { x: cc.x + dx, y: cc.y + dy }; ch.at = { x: nc.x - (cc.x - ch.at.x) * f, y: nc.y - (cc.y - ch.at.y) * f }; ch._c = null; }
       rec._c = null; }
     await regen(descend([rec.id]), 'VIEWEDIT', { fresh: true }); log('VIEWEDIT: đã cập nhật hình chiếu.');

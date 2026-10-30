@@ -500,9 +500,9 @@
   // hệ số rộng có dấu: âm = chữ ngược (Backwards)
   const stXs = st => (st.wf > 0 ? st.wf : 1) * (st.bk ? -1 : 1);
   A.tsSetCur = name => { if(!TS.list[name]) return false; TS.cur = name; tsSave(); return true; };
-  A.tsApply = (w, name) => { const st = TS.list[name]; if(!st) return; w.style = name; w.ff = st.font; const xs = stXs(st); if(Math.abs(xs - 1) > 1e-3) w.xs = xs; else delete w.xs; if(st.ud) w.ud = 1; else delete w.ud; if(st.obl) w.obl = st.obl; else delete w.obl; };
+  A.tsApply = (w, name) => { const st = TS.list[name]; if(!st) return; w.style = name; w.ff = st.font; if(st.big && /\.shx$/i.test(st.font || '')) w.ffb = st.big; else delete w.ffb; const xs = stXs(st); if(Math.abs(xs - 1) > 1e-3) w.xs = xs; else delete w.xs; if(st.ud) w.ud = 1; else delete w.ud; if(st.obl) w.obl = st.obl; else delete w.obl; };
   const _np = A.newProps;
-  A.newProps = function(e){ const r = _np.apply(this, arguments); if(e && e.type === 'TEXT' && e.ff == null){ const st = TS.list[TS.cur]; if(st){ e.style = TS.cur; e.ff = st.font; const xs = stXs(st); if(Math.abs(xs - 1) > 1e-3 && e.xs == null) e.xs = xs; } } return r; };
+  A.newProps = function(e){ const r = _np.apply(this, arguments); if(e && e.type === 'TEXT' && e.ff == null){ const st = TS.list[TS.cur]; if(st){ e.style = TS.cur; e.ff = st.font; if(st.big && /\.shx$/i.test(st.font || '')) e.ffb = st.big; const xs = stXs(st); if(Math.abs(xs - 1) > 1e-3 && e.xs == null) e.xs = xs; } } return r; };
   function openStyles(){
     let sel = TS.cur;
     const d = A.dialog({ title: 'Kiểu chữ (Text Style)', wide: true, okText: 'Đóng', noCancel: true,

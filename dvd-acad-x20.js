@@ -235,7 +235,9 @@
   const pickFile = accept => new Promise(res => { const i = document.createElement('input'); i.type = 'file'; i.accept = accept; i.style.display = 'none'; document.body.appendChild(i); i.onchange = () => { res(i.files && i.files[0] || null); i.remove(); }; i.click(); });
   A.shapeLoadFile = loadFile;
   plain(['LOAD'], 'Nạp tệp hình (.shx / .shp) để dùng với lệnh SHAPE', async () => {
-    const f = await pickFile('.shx,.shp'); if(!f) return; try{ const r = await loadFile(f); log('LOAD: đã nạp ' + r.file + ' — ' + r.n + ' hình (' + r.shapes.filter(s => s.num > 0).slice(0, 12).map(s => s.name).join(', ') + (r.n > 12 ? '…' : '') + ').'); applyPending(); }catch(err){ log('LOAD: ' + err.message); }
+    const f = await pickFile('.shx,.shp'); if(!f) return;
+    if(/\.shx$/i.test(f.name) && A.shxFontAdd){ try{ const F = await A.shxFontAdd(new Uint8Array(await f.arrayBuffer()), f.name.replace(/^.*[\\/]/, '')); log('LOAD: ' + F.file.toLowerCase() + ' là phông chữ SHX (' + F.type + ', ' + F.glyph.size + ' ký tự) — đã nạp làm phông cho kiểu chữ (STYLE / SHXFONTS).'); return; }catch(_){ /* không phải phông → tệp hình */ } }
+    try{ const r = await loadFile(f); log('LOAD: đã nạp ' + r.file + ' — ' + r.n + ' hình (' + r.shapes.filter(s => s.num > 0).slice(0, 12).map(s => s.name).join(', ') + (r.n > 12 ? '…' : '') + ').'); applyPending(); }catch(err){ log('LOAD: ' + err.message); }
   });
   plain(['COMPILE'], 'Dịch tệp hình nguồn .shp thành .shx (và nạp luôn để dùng với SHAPE)', async () => {
     const f = await pickFile('.shp'); if(!f) return; try{ const r = await loadFile(f); const nm = r.file; try{ await shareOrDownload(new Blob([r.u8], { type: 'application/octet-stream' }), nm, 'application/octet-stream'); }catch(_){}

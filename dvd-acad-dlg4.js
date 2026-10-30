@@ -79,7 +79,9 @@
     if(!sel.length){ const r = await A.getSel('Chọn chữ cần nổ', { filter: e => e.type === 'TEXT' }); sel = (r.sel || []).filter(e => e.type === 'TEXT'); }
     if(!sel.length) return; const L = (A.editList ? A.editList() : modelEntities); sel = sel.filter(e => L.includes(e)); if(!sel.length){ log('Đối tượng không sửa được ở đây.'); return; }
     const add = [], del = []; let nl = 0;
-    for(const e of sel){ const loops = textOutline(e); if(!loops.length) continue; del.push(e); for(const P of loops){ const w = { type: 'POLYLINE', closed: true, vertices: P, layer: e.layer || '0', col: e.col }; if(e.bl) w.bl = 1; if(e.lw) w.lw = e.lw; add.push(w); nl++; } }
+    for(const e of sel){ const st = A.shxStrokes ? A.shxStrokes(e) : null;   // phông SHX: nổ thành đa tuyến theo nét của phông (như AutoCAD)
+      if(st && st.length){ del.push(e); for(const P of st){ const w = { type: 'POLYLINE', closed: false, vertices: P, layer: e.layer || '0', col: e.col }; if(e.bl) w.bl = 1; if(e.lw) w.lw = e.lw; add.push(w); nl++; } continue; }
+      const loops = textOutline(e); if(!loops.length) continue; del.push(e); for(const P of loops){ const w = { type: 'POLYLINE', closed: true, vertices: P, layer: e.layer || '0', col: e.col }; if(e.bl) w.bl = 1; if(e.lw) w.lw = e.lw; add.push(w); nl++; } }
     if(!add.length){ log('TXTEXP: không có chữ nào nổ được.'); return; }
     A.commit({ del, add }, 'TXTEXP: ' + del.length + ' chữ → ' + nl + ' đa tuyến'); log('TXTEXP: ' + del.length + ' chữ → ' + nl + ' đa tuyến đường bao.'); });
 
@@ -271,7 +273,8 @@
     const one = (e, P) => { const t = e.type;
       if(t === 'LINE'){ stroke([{ x: e.x1, y: e.y1 }, { x: e.x2, y: e.y2 }], false, P, dashOf(e, P)); return; }
       if(t === 'POINT'){ sel(P); out.push('PU' + X(e.x) + ',' + Y(e.y) + ';PD;'); return; }
-      if(t === 'TEXT'){ const L = A.textOutline ? A.textOutline(e, { px: Math.max(24, Math.min(140, (e.h || 2.5) * k * 12)) }) : []; fill(L, P); return; }
+      if(t === 'TEXT'){ const S = A.shxStrokes ? A.shxStrokes(e) : null; if(S){ for(const L of S) stroke(L, false, P, null); return; }   // phông SHX: nét đơn
+        const L = A.textOutline ? A.textOutline(e, { px: Math.max(24, Math.min(140, (e.h || 2.5) * k * 12)) }) : []; fill(L, P); return; }
       if(t === 'HATCH'){ const loops = (e.loops || []).filter(l => l && l.length >= 3); if(e.solid || e.grad){ fill(loops, P); return; } const bb = entBBox(e); const r = bb && A.patternSegs ? A.patternSegs(e, bb, 40000) : null; if(!r) return;
         for(const sg of r.segs) for(const c of (A.clipSegToLoops ? A.clipSegToLoops(sg[0], sg[1], sg[2], sg[3], loops) : [sg])) stroke([{ x: c[0], y: c[1] }, { x: c[2], y: c[3] }], false, P, null); return; }
       if(t === 'SOLID'){ const p = e.pts || []; if(p.length >= 3) fill([p.length === 4 ? [p[0], p[1], p[3], p[2]] : p], P); return; }

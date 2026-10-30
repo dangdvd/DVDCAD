@@ -133,7 +133,7 @@
       onOpen: root => root.addEventListener('click', ev => { const b = ev.target.closest('[data-c]'); if(!b) return; const c = b.dataset.c; const d = b.closest('.dvd-dlg, .dvd-modal, [role="dialog"]') || root; try{ (d.remove ? d : root).remove(); }catch(_){} later(() => DVDCmd.run(c)); }) });
   }
   plain(['IMPORT', 'IMP'], 'Nhập file khác vào bản vẽ (PDF, ACIS, ảnh, bảng, DWG/DXF)', () => { if(A.busy()) A.cancel(true); chooser('Nhập file (IMPORT)', [
-    ['PDFIMPORT', 'PDF → nét vẽ, chữ'], ['ACISIN', 'ACIS .sat / .sab → khối 3D'], ['IMAGEATTACH', 'Ảnh (JPG, PNG…) làm nền'], ['TABLEIMPORT', 'Bảng CSV / Excel → bảng'], ['XATTACH', 'DWG / DXF làm tham chiếu ngoài'], ['ADCENTER', 'Lấy khối, lớp… từ bản vẽ khác'], ['APPLOAD', 'Add-in (.lsp / .js)']]); });
+    ['PDFIMPORT', 'PDF → nét vẽ, chữ'], ['WMFIN', 'Windows Metafile .wmf → khối'], ['ACISIN', 'ACIS .sat / .sab → khối 3D'], ['IMAGEATTACH', 'Ảnh (JPG, PNG…) làm nền'], ['TABLEIMPORT', 'Bảng CSV / Excel → bảng'], ['XATTACH', 'DWG / DXF làm tham chiếu ngoài'], ['ADCENTER', 'Lấy khối, lớp… từ bản vẽ khác'], ['APPLOAD', 'Add-in (.lsp / .js)']]); });
   plain(['ATTACH'], 'Gắn file tham chiếu: DWG/DXF, ảnh, PDF', () => { if(A.busy()) A.cancel(true); chooser('Gắn tham chiếu (ATTACH)', [
     ['XATTACH', 'DWG / DXF (XREF)'], ['IMAGEATTACH', 'Ảnh (JPG, PNG…)'], ['PDFATTACH', 'PDF làm nền'], ['DATALINK', 'Liên kết dữ liệu bảng (CSV / Excel)']]); });
 

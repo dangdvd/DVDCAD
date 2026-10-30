@@ -110,6 +110,24 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
   console.log('7. Lệnh phục hồi (x3 / x4 / x5) + lưu DWG');
   check(await win.evaluate(() => ['DRAWORDER', 'WIPEOUT', 'CANNOSCALE', 'GCHORIZONTAL', 'DCALIGNED', 'PARAMETERS', 'BPARAMETER', 'BDYN', 'SAVEDWG'].every(n => DVDCmd.commands.some(c => c.k.includes(n)))), 'có DRAWORDER, WIPEOUT, CANNOSCALE, GC*/DC*, PARAMETERS, BPARAMETER, BDYN, SAVEDWG');
   check(await win.evaluate(() => ['BCONVERT', 'VIEWBASE', 'VIEWSECTION', 'VIEWDETAIL', 'GCSYMMETRIC', 'DCCONVERT', 'GEOMARKPOINT', '3DPOLY', 'SHAPE', 'PSOUT', 'WMFOUT', 'PUBLISHTOWEB', 'DWGCONVERT', 'BVSTATE', 'PSETUPIN', 'SYSVARMONITOR'].every(n => DVDCmd.commands.some(c => c.k.includes(n)))), 'có lệnh v5v: BCONVERT, VIEWBASE / VIEWSECTION / VIEWDETAIL, GCSYMMETRIC, DCCONVERT, GEOMARK, 3DPOLY, SHAPE, PSOUT, WMFOUT, PUBLISHTOWEB, DWGCONVERT, BVSTATE, PSETUPIN, SYSVARMONITOR');
+  check(await win.evaluate(() => ['WMFIN', 'WMFOPTS', 'SHXFONTS', 'GCSMOOTH', 'ALIGNSPACE', 'SYSWINDOWS'].every(n => DVDCmd.commands.some(c => c.k.includes(n)))), 'có lệnh v5w: WMFIN, WMFOPTS, SHXFONTS, GCSMOOTH, ALIGNSPACE, SYSWINDOWS');
+  {
+    const v5w = await win.evaluate(async () => { const A = DVDAcad, out = {};
+      // WMF tối thiểu: placeable 100 × 50 đơn vị (100 / inch), bút đỏ + chữ nhật
+      const recs = [[0x020B, [0, 0]], [0x020C, [50, 100]], [0x02FA, [0, 1, 0, 0x00FF, 0]], [0x012D, [0]], [0x041B, [40, 90, 10, 10]], [0x0000, []]];
+      const body = []; let mx = 0; for(const [fn, w] of recs){ const n = 3 + w.length; mx = Math.max(mx, n); body.push(n & 0xffff, n >>> 16, fn, ...w); }
+      const ph = new DataView(new ArrayBuffer(22)); ph.setUint32(0, 0x9AC6CDD7, true); ph.setInt16(10, 100, true); ph.setInt16(12, 50, true); ph.setUint16(14, 100, true); let cs = 0; for(let i = 0; i < 10; i++) cs ^= ph.getUint16(i * 2, true); ph.setUint16(20, cs, true);
+      const hd = new DataView(new ArrayBuffer(18)); hd.setUint16(0, 1, true); hd.setUint16(2, 9, true); hd.setUint16(4, 0x300, true); hd.setUint32(6, (18 + body.length * 2) / 2, true); hd.setUint16(10, 1, true); hd.setUint32(12, mx, true);
+      const u = new Uint8Array(40 + body.length * 2); u.set(new Uint8Array(ph.buffer), 0); u.set(new Uint8Array(hd.buffer), 22); new Uint16Array(u.buffer, 40).set(body.map(v => v & 0xffff));
+      const R = A.parseWMF(u.buffer, {}); const P = R.ents.find(e => e.type === 'POLYLINE'); out.wmf = !!P && P.closed && P.col === '#ff0000' && Math.abs(R.w - 25.4) < 1e-6 && Math.abs(P.vertices[2].x - 22.86) < 1e-6;
+      // phông SHX shapes 1.0 tự dựng: hình 0 (cao 6), 'A' rộng 5
+      const nm = s => [...s].map(c => c.charCodeAt(0)); const g0 = nm('T').concat([0, 6, 2, 0, 0]), gA = [0, 8, 2, 6, 8, 2, 250, 2, 8, 1, 0, 0];
+      const hdr = nm('AutoCAD-86 shapes 1.0\r\n\x1a'), F = hdr.concat([1, 0, 65, 0, 2, 0], [0, 0, g0.length, 0, 65, 0, gA.length, 0], g0, gA);
+      await A.shxFontAdd(Uint8Array.from(F), 'smoke.shx', false); const ex = A.shxExtent({ type: 'TEXT', text: 'AA', ff: 'smoke.shx', h: 3 }); out.shx = !!ex && Math.abs(ex.xmax - 5) < 1e-9;
+      return out; });
+    check(v5w.wmf, 'WMFIN: đọc Windows Metafile (placeable) → đa tuyến kín đúng kích thước và màu bút');
+    check(v5w.shx, 'phông SHX: nạp phông shapes 1.0, bề rộng chữ theo bước tiến của phông');
+  }
   {
     const stubSave = p => app.evaluate(({ dialog }, p) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: p }); }, p);
     const head = p => { try{ return fs.readFileSync(p, 'latin1').slice(0, 6); }catch(_){ return ''; } };

@@ -7246,6 +7246,12 @@ class LibreDwgConverter {
             case Dwg_Object_Type.DWG_TYPE_LAYOUT:
               db.objects.LAYOUT.push(this.convertLayout(tio, obj));
               break;
+            case Dwg_Object_Type.DWG_TYPE_PLOTSETTINGS:
+              { // DVDCAD: thiết lập trang có tên (ACAD_PLOTSETTINGS) — PSETUPIN
+                let ps = null; for (const d of [-8, -4, 0, -12]) { const q = this.readPlotSettingsAt(tio + d); if (q && q.name) { ps = q; break; } }
+                (db.objects.PLOTSETTINGS || (db.objects.PLOTSETTINGS = [])).push(ps || { unreadable: true });
+              }
+              break;
             case Dwg_Object_Type.DWG_TYPE_SPATIAL_FILTER:
               db.objects.SPATIAL_FILTER.push(
                 this.convertSpatialFilter(tio, obj)
@@ -7831,6 +7837,20 @@ class LibreDwgConverter {
       resolutionUnits
     };
   }
+  // DVDCAD: đọc struct PLOTSETTINGS (thiết lập in) từ bộ nhớ wasm. base = địa chỉ Dwg_Object_LAYOUT (struct con bắt đầu ở +8);
+  // đối tượng PLOTSETTINGS đứng riêng (thiết lập trang có tên) thì base = tio - 8. Trả null nếu giá trị không hợp lệ.
+  readPlotSettingsAt(base) {
+    try {
+      const M = this.libredwg.wasmInstance, U8 = M && M.HEAPU8; if (!U8 || !(base > 0) || base + 200 >= U8.length) return null;
+      const D = new DataView(U8.buffer);
+      const str = (p) => { if (!p) return ""; if (p < 0 || p + 2 > U8.length) return null; if (U8[p] && !U8[p + 1]) { let w = ""; for (let k = 0; k < 256; k++) { const c = D.getUint16(p + 2 * k, true); if (!c) break; w += String.fromCharCode(c); } return w; } let a = ""; for (let k = 0; k < 256; k++) { const c = U8[p + k]; if (!c) break; a += String.fromCharCode(c); } return a; };
+      const ps = { name: str(D.getUint32(base + 12, true)), printer: str(D.getUint32(base + 16, true)), media: str(D.getUint32(base + 20, true)), flags: D.getUint16(base + 24, true),
+        pw: D.getFloat64(base + 72, true), ph: D.getFloat64(base + 80, true), unit: D.getUint16(base + 136, true), rot: D.getUint16(base + 138, true), type: D.getUint16(base + 140, true),
+        pu: D.getFloat64(base + 144, true), du: D.getFloat64(base + 152, true), style: str(D.getUint32(base + 160, true)), stdType: D.getUint16(base + 164, true), stdFactor: D.getFloat64(base + 168, true) };
+      const ok = ps.printer != null && ps.media != null && ps.name != null && ps.style != null && ps.unit <= 2 && ps.rot <= 3 && ps.type <= 5 && ps.stdType <= 32 && ps.pw > 0 && ps.pw < 1e5 && ps.ph > 0 && ps.ph < 1e5 && isFinite(ps.pu) && isFinite(ps.du) && /^[\x20-\uffff]*$/.test(ps.printer + ps.media + ps.name + ps.style);
+      return ok ? ps : null;
+    } catch (_) { return null; }
+  }
   convertLayout(item, obj) {
     const libredwg = this.libredwg;
     const commonAttrs = this.getCommonObjectAttrs(obj);
@@ -7866,6 +7886,9 @@ class LibreDwgConverter {
     );
     const named_ucs_ref = libredwg.dwg_dynapi_entity_value(item, "named_ucs").data;
     const namedUcsId = !!named_ucs_ref ? idToString(libredwg.dwg_ref_get_absref(named_ucs_ref)) : void 0;
+    // DVDCAD: thiết lập in của layout (AcDbPlotSettings, struct plotsettings ngay đầu Dwg_Object_LAYOUT) — cho PSETUPIN đọc DWG của AutoCAD.
+    // dynapi của bản wasm không trả struct con nên đọc thẳng bộ nhớ theo bố cục của bản build này (đã đối chiếu DWG 2000 / 2004 / 2018 của AutoCAD với DXF cùng bản vẽ).
+    const plotSettings = this.readPlotSettingsAt(item);
     return {
       ...commonAttrs,
       layoutName,
@@ -7884,6 +7907,7 @@ class LibreDwgConverter {
       paperSpaceTableId,
       viewportId,
       namedUcsId,
+      plotSettings,
       // orthographicUcsId?: string;
       shadePlotId: ""
       // TODO: Set the correct value

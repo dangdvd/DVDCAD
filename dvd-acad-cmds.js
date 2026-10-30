@@ -2109,7 +2109,7 @@
     A.lsSync();
     for(const ly of layers){ const aci = aciNear(A.layerHex(ly)); let fl = 0; if(A.LS.frozen.has(ly)) fl |= 1; if(A.LS.locked.has(ly)) fl |= 4; P(0, 'LAYER'); P(2, dxfStr(ly)); P(70, fl); P(62, A.LS.off.has(ly) ? -aci : aci); const llt = A.layerLT(ly); P(6, ltOk.has(llt) ? dxfStr(llt) : 'CONTINUOUS'); }
     P(0, 'ENDTAB');
-    const stUsed = new Map(); for(const e of ents){ if(e.type === 'TEXT' && e.style && e.ff && A.FONT_FILE && A.FONT_FILE[e.ff] && !stUsed.has(e.style)) stUsed.set(e.style, A.FONT_FILE[e.ff]); }
+    const stUsed = new Map(); for(const e of ents){ if(e.type === 'TEXT' && e.style && e.ff && !stUsed.has(e.style)){ const f = /\.shx$/i.test(e.ff) ? String(e.ff).toLowerCase() : (A.FONT_FILE && A.FONT_FILE[e.ff]); if(f) stUsed.set(e.style, f); } }
     stUsed.delete('STANDARD');
     P(0, 'TABLE'); P(2, 'STYLE'); P(70, 1 + stUsed.size); P(0, 'STYLE'); P(2, 'STANDARD'); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'arial.ttf'); P(4, '');
     for(const [n, f] of stUsed){ P(0, 'STYLE'); P(2, dxfStr(n)); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, f); P(4, ''); }

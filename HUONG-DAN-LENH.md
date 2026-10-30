@@ -1,4 +1,4 @@
-# DVDCAD v5v — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5w — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,42 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v5w)
+- **`WMFIN`**: nhập Windows Metafile (`.wmf`) thành khối `WMF0`, `WMF1`… như AutoCAD.
+  - Hỏi điểm chèn (góc trên trái), tỉ lệ, góc xoay.
+  - Đọc được nét, đa giác, chữ nhật, elip, cung, hình quạt, chữ (cả bảng mã tiếng Việt 1258), vùng tô đặc và tô gạch.
+  - `WMFOPTS`: **Khung dây** (bỏ vùng tô), **Nét rộng** (giữ bề rộng bút).
+- **`VIEWSECTION` → Kiểu (T)**: đủ 4 loại mặt cắt như AutoCAD:
+  - **Toàn phần**: 2 điểm.
+  - **Nửa**: điểm đầu → điểm giữa → điểm cuối. Nửa có đoạn cắt được gạch, nửa còn lại vẽ hình nhìn ngoài.
+  - **Bậc** (offset): đường cắt gấp khúc, các đoạn song song / vuông góc. Mỗi đoạn cắt qua chỗ của nó, không vẽ đường ghép giữa các dải.
+  - **Cắt xoay** (aligned): đoạn xiên được xoay trải phẳng về cùng mặt phẳng với đoạn đầu.
+  - Đường cắt gãy có nét đậm ở mỗi chỗ gãy, mũi tên vuông góc từng đầu. `VIEWUPDATE` và lưu / mở lại giữ đúng kiểu mặt cắt.
+- **Phông SHX cho chữ** (`SHXFONTS`, hoặc STYLE → **Phông SHX…**, hoặc `LOAD` tệp phông):
+  - Nạp phông `.shx` có sẵn trên máy: phông thường (txt, simplex, romans…), **unifont** và **bigfont** (chữ Trung / Nhật / Hàn).
+  - Kiểu chữ dùng phông `.shx` thì chữ vẽ bằng nét của phông như AutoCAD (cỡ chữ = chiều cao chữ hoa). Áp cho cả chữ trong tệp DXF / DWG của AutoCAD.
+  - Ký tự phông không có → lấy từ big font → không có nữa thì vẽ bằng phông TrueType.
+  - Hộp STYLE: chọn phông `.shx`, **Dùng Big Font**, xem trước bằng nét phông.
+  - Lưu DXF / DWG ghi tên phông và bigfont vào bảng STYLE. In, xuất PDF / EPS / WMF / HPGL, `TXTEXP` đều theo nét phông.
+  - Phông đã nạp được nhớ lại cho lần sau. Mở bản vẽ dùng phông chưa nạp thì dòng lệnh báo tên phông còn thiếu.
+- **`GCSMOOTH`**: ràng buộc trơn (G2).
+  - Chọn spline (gần đầu cần nối), rồi đường thứ hai (đường thẳng, cung, đa tuyến hoặc spline khác).
+  - Đầu spline nối liền, cùng tiếp tuyến và cùng độ cong. Sửa đường kia thì spline tự chỉnh theo.
+  - `GEOMCONSTRAINT` có thêm tuỳ chọn **Trơn** và **Đối xứng**.
+- **`ALIGNSPACE`** (Express Tools, tab Bố cục):
+  - Bấm 1–2 điểm của mô hình trong khung nhìn, rồi 1–2 điểm tương ứng trên giấy.
+  - Khung nhìn đổi tỉ lệ và vị trí nhìn cho các điểm trùng nhau.
+- **`SYSWINDOWS`**: xếp các bản vẽ đang mở **Lát dọc / Lát ngang / Xếp chồng / Thu nhỏ** (tab Hiển thị → Xếp bản vẽ).
+  - Mỗi ô là ảnh bản vẽ ở góc nhìn đang dùng; bấm ô để làm bản vẽ hiện hành, Esc để trở lại.
+- **`PSETUPIN` đọc DWG của AutoCAD**:
+  - Liệt kê thiết lập trang có tên và thiết lập riêng của từng layout (`*Layout1*`… như Page Setup Manager). Khổ giấy, hướng, vùng in, tỉ lệ, máy in, bảng kiểu in.
+  - Kết quả giống như khi đọc bản DXF của cùng bản vẽ.
+- **Chưa có**:
+  - `SYSWINDOWS` chưa có cửa sổ sửa song song: các ô chỉ để xem và chọn bản vẽ.
+  - `ALIGNSPACE` chưa xoay khung nhìn (VIEWTWIST). Nếu hai cặp điểm lệch hướng thì căn theo điểm thứ nhất và khoảng cách.
+  - Phông SHX chưa dùng cho chữ có định dạng riêng từng đoạn (MTEXT nhiều phông).
+  - Hình chiếu lưu cùng bản vẽ dạng nét thường: AutoCAD thấy đủ nét nhưng không coi là hình chiếu liên kết với mô hình.
 
 ## Bổ sung như AutoCAD 2027 (v5v)
 - Ribbon có thêm tab **Bố cục** (*Layout*): **Hình chiếu**, **Layout**, **Thiết lập trang**. Các lệnh mới khác nằm trong tab Chèn, Tham số, Hiển thị, Quản lý, Xuất và tab Trang chủ của không gian 3D.
@@ -79,11 +115,7 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   - `MVSETUP`: khung bản vẽ + khung tên 180 × 56 theo khổ A0–A4 và tỉ lệ.
   - `PLOTTERMANAGER`: danh sách máy in / máy vẽ và thuộc tính.
   - `UPDATETHUMBSNOW`: cập nhật ảnh thu nhỏ của bản vẽ.
-- **Chưa có**:
-  - Lệnh: `SYSWINDOWS`, `ALIGNSPACE`, `GCSMOOTH`, `WMFIN`.
-  - Mặt cắt chỉ có loại toàn phần (chưa có nửa / bậc / xoay).
-  - Phông chữ SHX cho chữ: `LOAD` báo đó là phông, không phải tệp hình.
-  - `PSETUPIN` đọc được tệp DXF / DWG do DVDCAD lưu và DXF của AutoCAD. Với DWG do AutoCAD lưu: lưu thành DXF trong AutoCAD rồi nhập.
+- Các hạn chế còn lại của bản này đã được xử lý ở v5w (mục trên).
 
 ## Bổ sung như AutoCAD 2027 (v5u)
 - **Khối động: lật và kéo giãn là tham số thật của AutoCAD** (DXF / DWG 2018):
