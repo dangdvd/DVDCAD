@@ -1371,7 +1371,7 @@ function parseDXF(text){
   }
 
   // LAYER table -> màu theo layer (code 62: âm = layer tắt; code 70 bit1 = đóng băng)
-  const layerColors={}; const layerRGB={}; const hidden=new Set(); const layerLT={}, layerLW={}, layerByH={};
+  const layerColors={}; const layerRGB={}; const hidden=new Set(); const layerLT={}, layerLW={}, layerTP={}, layerByH={};
   {
     let i=0;
     for(; i<pairs.length; i++){
@@ -1386,7 +1386,7 @@ function parseDXF(text){
           const nm=str(g,2); const col=num(g,62); const fl=num(g,70)||0;
           { const lh=str(g,5); if(nm&&lh) layerByH[lh.toUpperCase()]=nm; }
           if(nm){ layerColors[nm]=(col!=null?Math.abs(col):7); if((col!=null&&col<0)||((fl&1)===1)) hidden.add(nm);
-            const lt=ltNorm(str(g,6)); if(lt&&lt!=='CONTINUOUS') layerLT[nm]=lt; const w=num(g,370); if(w>0) layerLW[nm]=w; const tc=num(g,420); if(tc!=null&&isFinite(tc)) layerRGB[nm]=tc; }
+            const lt=ltNorm(str(g,6)); if(lt&&lt!=='CONTINUOUS') layerLT[nm]=lt; const w=num(g,370); if(w>0) layerLW[nm]=w; const tc=num(g,420); if(tc!=null&&isFinite(tc)) layerRGB[nm]=tc; const tp=layerTpOf(g); if(tp>0) layerTP[nm]=tp; }
           j=k;
         } else j++;
       }
@@ -1411,7 +1411,7 @@ function parseDXF(text){
       }
     }
   }
-  LAYER_COLORS=layerColors; LAYER_RGB=layerRGB; HIDDEN_LAYERS=hidden; LAYER_LT=layerLT; LAYER_LW=layerLW; LTYPES=ltypes; LTSCALE=ltscale;
+  LAYER_COLORS=layerColors; LAYER_RGB=layerRGB; HIDDEN_LAYERS=hidden; LAYER_LT=layerLT; LAYER_LW=layerLW; setLayerTPs(layerTP); LTYPES=ltypes; LTSCALE=ltscale;
 
   return {entities, blocks, insunits, layouts, paper, layerByH};
 }
@@ -2217,6 +2217,9 @@ function drawEntity(e){
 }
 // độ trong suốt 0–90 %: e.tp (riêng) hoặc theo lớp (LAYER_TP); TPDISPLAY = nút hiện/ẩn trong suốt
 let TPDISPLAY=(()=>{ try{ return localStorage.getItem('dvd:tpdisp')!=='0'; }catch(_){ return true; } })(); const LAYER_TP={};
+// độ trong suốt của lớp trong DXF: XDATA "AcCmTransparency" 1071 = 0x02000000 | alpha (255 = đặc) → % (như cột Transparency của AutoCAD)
+function layerTpOf(g){ for(let q=0;q<g.length;q++){ if(g[q].code===1001&&String(g[q].value).trim()==='AcCmTransparency'){ for(let r=q+1;r<g.length&&g[r].code!==1001;r++) if(g[r].code===1071){ const v=(+g[r].value)>>>0; if(v&0x02000000) return Math.round((1-(v&255)/255)*100); } } } return 0; }
+function setLayerTPs(o){ for(const k of Object.keys(LAYER_TP)) delete LAYER_TP[k]; for(const [k,v] of Object.entries(o||{})) if(v>0) LAYER_TP[k]=Math.min(90,v); }
 function tpOf(e){ const v=e.tp!=null?e.tp:LAYER_TP[e.layer||'0']; return v>0?Math.min(90,v):0; }
 function drawEntityBody(e,col){
   switch(e.type){
@@ -4702,8 +4705,12 @@ function dwgList(arr){
   return (X&&window.DVDAcad&&DVDAcad.fromFaces&&o.some(q=>q&&q._x3))?DVDAcad.fromFaces(o):o;
 }
 // map màu theo layer (DWG): tên -> ACI; layer tắt/đóng băng -> ẩn
+// độ trong suốt lớp từ DWG (LibreDWG): trường transparency / XDATA AcCmTransparency nếu bộ đọc có trả về
+function dwgLayerTp(L){ try{ let v=L.transparency!=null?L.transparency:(L.transparencyType!=null?null:null);
+    if(v==null&&Array.isArray(L.xdata)) for(const x of L.xdata){ if(/AcCmTransparency/i.test(x.appName||x.name||'')){ const it=(x.items||x.data||[]).find(d=>d&&(d.code===1071||d.type===1071)); if(it) v=it.value; } }
+    if(v==null) return 0; v=(+v)>>>0; if(v&0x02000000) return Math.round((1-(v&255)/255)*100); return v>0&&v<=90?v:0; }catch(_){ return 0; } }
 function buildLayerColors(db){
-  LAYER_COLORS={}; LAYER_RGB={}; HIDDEN_LAYERS=new Set(); LAYER_LT={}; LAYER_LW={}; LTYPES={}; LTSCALE=1;
+  LAYER_COLORS={}; LAYER_RGB={}; HIDDEN_LAYERS=new Set(); LAYER_LT={}; LAYER_LW={}; LTYPES={}; LTSCALE=1; const ltp={};
   const ls=(db.tables&&db.tables.LAYER&&db.tables.LAYER.entries)||[];
   for(const L of ls){
     if(L.name==null) continue;
@@ -4711,7 +4718,9 @@ function buildLayerColors(db){
     if(L.off||L.frozen) HIDDEN_LAYERS.add(L.name);
     const lt=ltNorm(L.lineType); if(lt&&lt!=='CONTINUOUS') LAYER_LT[L.name]=lt;
     { const lw=dwgLW(L.lineweight); if(lw>0) LAYER_LW[L.name]=lw; }
+    { const t=dwgLayerTp(L); if(t>0) ltp[L.name]=t; }
   }
+  if(_dwgLayTp) Object.assign(ltp, _dwgLayTp); setLayerTPs(ltp);
   try{ for(const t of ((db.tables&&db.tables.LTYPE&&db.tables.LTYPE.entries)||[])){ const nm=String(t.name||'').toUpperCase(); const pat=(t.pattern||[]).map(p=>+p.elementLength).filter(isFinite); if(nm&&!/^(BYLAYER|BYBLOCK|CONTINUOUS)$/.test(nm)&&pat.length){ LTYPES[nm]={name:nm,desc:t.description||'',pat}; const tx=[]; (t.pattern||[]).forEach((p,i)=>{ if(!p) return; const fl=+p.shapeNumber||0; if(p.text&&String(p.text).trim()) tx.push({i,t:String(p.text),s:+p.scale||1,r:(+p.rotation||0)*180/Math.PI,x:+p.offsetX||0,y:+p.offsetY||0,abs:!!(fl&1)}); else if(fl&4) tx.push({i,sh:1,n:+p.elementTypeFlag||0,t:'',s:+p.scale||1,r:(+p.rotation||0)*180/Math.PI,x:+p.offsetX||0,y:+p.offsetY||0,abs:!!(fl&1)}); }); if(tx.length) LTYPES[nm].txt=tx; } } }catch(_){}
   { const s=db.header&&+db.header.LTSCALE; if(s>0) LTSCALE=s; }
   STYLE_FONTS={}; STYLE_WF={}; STYLE_SHX={};
@@ -5005,6 +5014,22 @@ function dwgBuild(db){
   return { entities: mergeText(resolveBlocks(model, blocks, !isMobileDevice())), insunits:(db.header&&db.header.INSUNITS)||0, layouts, blocks:collectBlocks(model), dims:extractDims(db) };
 }
 // Chỉ dựng (parse) các block ĐƯỢC THAM CHIẾU bởi INSERT/DIMENSION; bỏ block không dùng → tiết kiệm RAM lớn.
+// độ trong suốt lớp trong DWG: EED "AcCmTransparency" (mã 71 = RL 0x02000000 | alpha) — bộ chuyển của libredwg-web bỏ EED của bảng lớp nên đọc thẳng cấu trúc LibreDWG
+// Dwg_Eed (wasm32): BS size @0, Dwg_Handle @8 (code, size, value 64-bit @16), Eed_Data* @32, raw* @36; mỗi mục 40 byte
+let _dwgLayTp=null;
+function dwgLayerTpRaw(lib, ptr){
+  try{ const W=lib.wasmInstance; if(!W||!W.dwg_dynapi_common_value||!W.dwg_get_num_objects) return null;
+    const n=W.dwg_get_num_objects(ptr), H8=W.HEAPU8, H32=W.HEAP32, val=(t,k)=>{ try{ const r=W.dwg_dynapi_entity_value(t,k); return r&&r.success!==false?r.data:null; }catch(_){ return null; } };
+    const nm=t=>{ const p0=val(t,'name'); if(!p0) return ''; if(typeof p0==='string') return p0; if(H8[p0+1]===0&&H8[p0]!==0){ let s='', q=p0>>1; while(W.HEAPU16[q]&&s.length<512) s+=String.fromCharCode(W.HEAPU16[q++]); return s; } return W.UTF8ToString(p0); };
+    let app=-1; const lays=[];
+    for(let i=0;i<n;i++){ const o=W.dwg_get_object(ptr,i); if(!o) continue; const dn=W.dwg_object_get_dxfname(o); if(dn!=='APPID'&&dn!=='LAYER') continue; const t=W.dwg_object_to_object_tio(o); if(!t) continue;
+      if(dn==='APPID'){ if(/^AcCmTransparency$/i.test(nm(t))) app=Number(W.dwg_object_get_handle_object(o).value); } else lays.push(t); }
+    if(app<0) return null; const out={};
+    for(const t of lays){ let ne=0, ep=0; try{ ne=W.dwg_dynapi_common_value(t,'num_eed').data|0; ep=W.dwg_dynapi_common_value(t,'eed').data|0; }catch(_){ continue; } if(!ne||!ep) continue;
+      for(let k=0;k<Math.min(ne,32);k++){ const e=ep+40*k; if(H32[(e+16)>>2]!==app) continue; const sz=W.HEAP16[e>>1], raw=H32[(e+36)>>2]; if(!raw||sz<5) continue;
+        for(let q=0;q+4<sz;q++){ if(H8[raw+q]===71){ const v=(H8[raw+q+1]|(H8[raw+q+2]<<8)|(H8[raw+q+3]<<16)|(H8[raw+q+4]<<24))>>>0; if(v&0x02000000){ const tp=Math.round((1-(v&255)/255)*100); if(tp>0) out[nm(t)]=Math.min(90,tp); } break; } } } }
+    return out; }catch(err){ console.warn('dwgLayerTpRaw', err); return null; }
+}
 // khối động AutoCAD trong DWG — đọc thẳng cấu trúc LibreDWG (bộ chuyển của libredwg-web bỏ qua các đối tượng này):
 // BLOCKVISIBILITYPARAMETER (tên + nét từng trạng thái), ACDB_BLOCKREPRESENTATION_DATA (bản chèn → khối gốc), XRECORD (trạng thái hiện tại)
 let _dwgDyn=null;
@@ -5072,7 +5097,7 @@ async function loadDWG(arrayBuffer, srcName){
     window._dvdDwgX=dvdDwgPrivate(arrayBuffer); window._dvdXData=(window._dvdDwgX&&window._dvdDwgX.d)||null;
     const ptr=lib.dwg_read_data(arrayBuffer,_DwgType.DWG);
     if(ptr==null){ valEl.classList.remove('show'); toast('Không đọc được file DWG này.'); return; }
-    const db=lib.convert(ptr); _dwgDyn=dwgDynInfo(lib, ptr, db);   // khối động AutoCAD: đọc trước khi giải phóng
+    const db=lib.convert(ptr); _dwgDyn=dwgDynInfo(lib, ptr, db); _dwgLayTp=dwgLayerTpRaw(lib, ptr);   // khối động AutoCAD, độ trong suốt lớp: đọc trước khi giải phóng
     _dwgImgDef=new Map(); try{ for(const d of ((db.objects&&db.objects.IMAGEDEF)||[])) if(d&&d.handle!=null) _dwgImgDef.set(String(d.handle), d.fileName||''); }catch(_){}
     try{ lib.dwg_free(ptr); }catch(_){}   // giải phóng cấu trúc C NGAY sau convert (db đã là bản sao JS độc lập) -> hạ đỉnh RAM khi mở file lớn trên iPhone
     const built=dwgBuild(db); window._dvdDwgX=null; _dwgDyn=null; _dwgImgDef=null;   // dữ liệu riêng chỉ cho bản vẽ này (không áp nhầm sang XREF / so sánh)

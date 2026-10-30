@@ -175,6 +175,18 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
     if(process.env.DVD_DWG_OUT){ fs.mkdirSync(process.env.DVD_DWG_OUT, { recursive: true }); fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'kiem-tra.dwfx'), Buffer.from(v6b.dwfx.b64, 'base64')); }
   }
   {
+    // v6d: độ trong suốt theo lớp (DXF / DWG), ETRANSMIT gói DWG nén
+    const v6d = await win.evaluate(async () => { const A = DVDAcad, w = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      A.newDrawing(); await w(500); try{ A.hideStart && A.hideStart(); }catch(_){}
+      A.addLayer('KINH', '#00ffff'); A.setLayerTP('KINH', 40); const e0 = A.newProps({ type: 'LINE', x1: 0, y1: 0, x2: 100, y2: 0 }); e0.layer = 'KINH'; delete e0.tp; A.commit({ add: [e0] }); await w(100);
+      out.dxf = /AcCmTransparency\r?\n\s*1071\r?\n33554585/.test(A.dxfR2000(modelEntities.slice(), { version: 'R2018' }));
+      const d = A.dwgNative(modelEntities.slice(), { version: 'R2018' }); await loadDWG(d.slice().buffer, 'tp.dwg'); await w(500); out.dwg = A.layerTP('KINH');
+      const z = await A.transmit(false, { fmt: 'R2013', z: 1, noSave: true }); const u = new Uint8Array(await z.arrayBuffer()); out.zip = u[0] === 0x50 && u[1] === 0x4B && u[8] === 8;   // mục đầu nén deflate
+      let s = ''; for(let i = 0; i < Math.min(u.length, 4096); i++) s += String.fromCharCode(u[i]); out.dwgIn = /\.dwg/.test(s); return out; });
+    check(v6d.dxf && v6d.dwg === 40, 'độ trong suốt lớp 40%: DXF ghi XDATA AcCmTransparency, DWG 2018 đọc lại ' + v6d.dwg + '%');
+    check(v6d.zip && v6d.dwgIn, 'ETRANSMIT: gói .zip nén, bản vẽ DWG trong gói');
+  }
+  {
     // v5x: MTEXT nhiều phông (\F SHX / \f TrueType), thiết lập trang có tên → PLOTSETTINGS, khung nhìn xoay (VIEWTWIST) → DWG đọc lại
     const v5x = await win.evaluate(async () => { const A = DVDAcad, w = ms => new Promise(r => setTimeout(r, ms)), out = {};
       const R = A.mtextRuns('{\\Ftxt|c0;AB}{\\fArial|b0|i0|c0|p34;CD}'); out.runs = !!R && R[0].ff === 'txt.shx' && R[1].ff === 'Arial';

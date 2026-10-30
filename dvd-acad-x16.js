@@ -137,7 +137,7 @@
   plain(['ATTACH'], 'Gắn file tham chiếu: DWG/DXF, ảnh, PDF', () => { if(A.busy()) A.cancel(true); chooser('Gắn tham chiếu (ATTACH)', [
     ['XATTACH', 'DWG / DXF (XREF)'], ['IMAGEATTACH', 'Ảnh (JPG, PNG…)'], ['PDFATTACH', 'PDF làm nền'], ['DATALINK', 'Liên kết dữ liệu bảng (CSV / Excel)']]); });
 
-  /* ---- ETRANSMIT / ARCHIVE: gói .zip (không nén) ---- */
+  /* ---- ETRANSMIT / ARCHIVE: gói .zip — bản vẽ DWG (chọn phiên bản như AutoCAD) hoặc DXF, ảnh, tham chiếu; nén deflate ---- */
   const CRC = (() => { const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
   const crc32 = u => { let c = 0xFFFFFFFF; for(let i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
   function zipStore(files){
@@ -152,12 +152,18 @@
   }
   A.zipStore = zipStore;
   const toU8 = async x => x == null ? null : x instanceof Uint8Array ? x : x instanceof ArrayBuffer ? new Uint8Array(x) : x instanceof Blob ? new Uint8Array(await x.arrayBuffer()) : new TextEncoder().encode(String(x));
-  async function transmit(archive){
+  // hộp "Create Transmittal" thu gọn: định dạng bản vẽ trong gói (giữ DWG 2018 như AutoCAD 2018+, hoặc lưu về phiên bản cũ / DXF), nén
+  const TFMT = [['R2018', 'DWG 2018 (AutoCAD 2018 → 2027)'], ['R2013', 'DWG 2013'], ['R2010', 'DWG 2010'], ['R2007', 'DWG 2007'], ['R2004', 'DWG 2004'], ['R2000', 'DWG 2000'], ['DXF', 'DXF (theo DXFVERSION)']];
+  function transmitDlg(archive){ if(!ME().length){ say('Chưa có bản vẽ.'); return; } const K = A.acw; let o = {}; try{ o = JSON.parse(localStorage.getItem('dvd:etrans') || '{}') || {}; }catch(_){}
+    const html = '<div class="acw" style="width:380px">' + K.row('Định dạng bản vẽ:', K.sel('etF', TFMT, o.fmt || 'R2018')) + K.chk('etZ', 'Nén gói .zip', o.z !== 0) + '<div class="acw-note">Gói gồm bản vẽ, tệp ảnh (IMAGE), tệp tham chiếu ngoài (XREF) và tệp báo cáo ' + (archive ? 'lưu trữ' : 'gửi đi') + '.</div></div>';
+    A.dialog({ title: archive ? 'Lưu trữ bản vẽ (ARCHIVE)' : 'Tạo gói gửi đi (ETRANSMIT)', cls: 'acw-free', help: archive ? 'ARCHIVE' : 'ETRANSMIT', html, okText: 'OK', ok: r => { const opt = { fmt: K.val(r, 'etF'), z: K.on(r, 'etZ') ? 1 : 0 }; try{ localStorage.setItem('dvd:etrans', JSON.stringify(opt)); }catch(_){} transmit(archive, opt); } }); }
+  async function transmit(archive, opt){ opt = Object.assign({ fmt: 'R2018', z: 1 }, opt);
     if(!ME().length){ say('Chưa có bản vẽ.'); return; }
     const nm = baseName(), files = [], rep = [], used = new Set();
     const uniq = n => { let s = n, k = 1; while(used.has(s.toLowerCase())) s = n.replace(/(\.[^.]*)?$/, m => '_' + (k++) + (m || '')); used.add(s.toLowerCase()); return s; };
-    let dxf; try{ dxf = entitiesToDXF(ME().filter(e => !e.xr), { layouts: true }); }catch(err){ console.warn(err); log('Không tạo được DXF.'); return; }
-    files.push({ name: uniq(nm + '.dxf'), data: await toU8(dxf) }); rep.push('Bản vẽ: ' + nm + '.dxf (' + ME().filter(e => !e.xr).length + ' đối tượng)');
+    const own = ME().filter(e => !e.xr), dwg = opt.fmt !== 'DXF' && !!A.dwgNative;
+    let data; try{ data = dwg ? A.dwgNative(own, { version: opt.fmt, layouts: true }) : await toU8(entitiesToDXF(own, { layouts: true })); }catch(err){ console.warn(err); log('Không tạo được bản vẽ ' + (dwg ? 'DWG' : 'DXF') + '.'); return; }
+    const ext = dwg ? '.dwg' : '.dxf'; files.push({ name: uniq(nm + ext), data }); rep.push('Bản vẽ: ' + nm + ext + (dwg ? ' (' + (TFMT.find(x => x[0] === opt.fmt) || ['', opt.fmt])[1] + ')' : '') + ' — ' + own.length + ' đối tượng');
     const imgs = new Map(); for(const e of ME()) if(e.type === 'IMAGE' && e.img && !imgs.has(e.img)) imgs.set(e.img, e.name || e.img);
     // ảnh đã ghi thành IMAGE + IMAGEDEF ".\tên": tệp ảnh cùng tên đặt cạnh bản vẽ trong gói → AutoCAD mở gói thấy ảnh
     for(const f of (A.lastImgFiles || []).slice()){ try{ const b = new Uint8Array(await (await fetch(f.url)).arrayBuffer()); files.push({ name: uniq(f.name), data: b }); rep.push('Ảnh: ' + f.name); imgs.delete(f.id); }catch(_){} }
@@ -166,13 +172,14 @@
     for(const x of X){ let b = null; try{ b = A.proIdbGet ? await A.proIdbGet('xref:' + x.id) : null; }catch(_){} if(b){ const fn = uniq('xref/' + String(x.name).replace(/[\\/:*?"<>|]+/g, '_')); files.push({ name: fn, data: await toU8(b) }); rep.push('Tham chiếu: ' + fn); } else rep.push('Tham chiếu (thiếu dữ liệu): ' + x.name); }
     const now = new Date(); const txt = (archive ? 'ARCHIVE' : 'ETRANSMIT') + ' — DVDCAD\r\nBản vẽ gốc: ' + ((typeof currentName !== 'undefined' && currentName) || nm) + '\r\nNgày: ' + now.toLocaleString() + '\r\n\r\n' + rep.join('\r\n') + '\r\n';
     files.push({ name: uniq(nm + '_' + (archive ? 'archive' : 'transmittal') + '.txt'), data: new TextEncoder().encode(txt) });
-    const blob = zipStore(files); await save(blob, nm + (archive ? '_archive' : '_etransmit') + '.zip', 'application/zip');
+    const blob = opt.z && A.zipParts ? new Blob(await A.zipParts(files), { type: 'application/zip' }) : zipStore(files); if(opt.noSave) return blob; await save(blob, nm + (archive ? '_archive' : '_etransmit') + '.zip', 'application/zip');
     log((archive ? 'ARCHIVE' : 'ETRANSMIT') + ': đã đóng gói ' + files.length + ' file (' + (blob.size / 1024).toFixed(0) + ' KB): bản vẽ, ' + imgs.size + ' ảnh, ' + X.length + ' tham chiếu.');
     return blob;
   }
   A.transmit = transmit;
-  plain(['ETRANSMIT'], 'Đóng gói bản vẽ kèm ảnh, file tham chiếu thành .zip để gửi', () => transmit(false));
-  plain(['ARCHIVE'], 'Lưu trữ bản vẽ cùng mọi file liên quan thành .zip', () => transmit(true));
+  plain(['ETRANSMIT'], 'Đóng gói bản vẽ (DWG / DXF) kèm ảnh, file tham chiếu thành .zip nén để gửi', () => transmitDlg(false));
+  plain(['ARCHIVE'], 'Lưu trữ bản vẽ cùng mọi file liên quan thành .zip nén', () => transmitDlg(true));
+  plain(['-ETRANSMIT'], 'ETRANSMIT không hộp thoại (DWG 2018, nén)', () => transmit(false));
   alias(['3DPRINT', '3DPRINTSERVICE', 'SENDTO3DPRINT'], 'EXPORTSTL', 'Gửi khối 3D đi in 3D (xuất STL)');
   alias(['EXPORTTOAUTOCAD', 'AECTOACAD'], 'SAVEAS', 'Xuất bản vẽ thuần AutoCAD (DXF)');
   alias(['RECOVERALL'], 'RECOVER', 'Khôi phục bản vẽ lỗi (RECOVER + AUDIT)');

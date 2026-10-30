@@ -6,6 +6,16 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6d: độ trong suốt theo lớp (DXF / DWG), ETRANSMIT gói DWG nén, REVCLOUD Sửa, POLYSOLID Cung, EXTEND cung đa tuyến
+- **Độ trong suốt lớp**: `LS.layTP` + `LAYER_TP` (đã dùng sẵn trong `tpOf`); `A.layerTP(n)`, `A.setLayerTP(n, %)`; bảng Lớp (cột Độ trong suốt), `-LAYER` › TR, LAYERSTATE, đổi tên lớp.
+  - DXF: LAYER + XDATA `1001 AcCmTransparency` / `1071 0x02000000 | alpha` (APPID ghi thêm); đọc: `layerTpOf(g)`.
+  - DWG: bộ ghi truyền EED của bản ghi LAYER (`obj(T.LAYER, h, r)`). Đọc: libredwg-web bỏ EED của bảng lớp → `dwgLayerTpRaw(lib, ptr)` đọc thẳng cấu trúc LibreDWG:
+    `dwg_dynapi_common_value(tio, 'num_eed' | 'eed')`, mỗi `Dwg_Eed` 40 byte (BS size @0, handle value @16, raw* @36); handle APPID qua `dwg_object_get_handle_object(o).value` (BigInt → Number); trong raw tìm mã 71 + RL.
+- **ETRANSMIT / ARCHIVE** (`x16`): hộp chọn định dạng (DWG 2018 → 2000 qua `A.dwgNative(ents, { version, layouts: true })`, hoặc DXF), nén bằng `A.zipParts` (deflate-raw); `-ETRANSMIT`; `opt.noSave` trả Blob (kiểm thử).
+- **REVCLOUD › Sửa** (`x11` `rcModify`): `projPath` chiếu điểm lên đường dẫn mây (`e.rcv`), `walkPath` đi tiến giữa hai vị trí; mây kín chọn phía bỏ theo độ dài cung tiến; dựng lại bằng `cloudFromPath` giữ cung min / max / kiểu.
+- **POLYSOLID** (`x14`): chế độ Cung — cung tiếp tuyến (tâm = S + n·|c|²/(2c·n)) hoặc 3 điểm (đường tròn ngoại tiếp), chia 5°; `seg` lưu số điểm mỗi lần nhập để Hoàn tác.
+- **EXTEND** (`cmds` `extendPolyArc`): đoạn đầu / cuối là cung (bulge b): tâm = trung điểm + pháp tuyến trái · c(1−b²)/(4b); giao đường tròn đầy với ranh giới, lấy góc gần nhất theo chiều kéo, bulge mới = tan(θ'/4).
+
 ## v6c: DWFx ePlot (XPS), thuộc tính máy in Windows
 - **`dvd-acad-x25.js`** — `XpsCtx extends SvgCtx`: lệnh vẽ canvas → XAML của FixedPage (đơn vị 1/96 inch = px CSS):
   đường / Bézier → `<Path Data="F1 M… L… C… Z">` (F1 = nonzero, mặc định XPS là even-odd), nét đứt `StrokeDashArray` theo bội số bề dày, cắt → `<Canvas Clip>`,

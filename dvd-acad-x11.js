@@ -66,16 +66,43 @@
     if(!closed){ const k = await A.getKw('Đảo chiều cung?', { kw: [{ k: 'C', t: 'Có' }, { k: 'K', t: 'Không' }], def: 'Không', preview: null }); if(k.kw === 'C') e = cloudFromPath(P, closed, true); }
     A.newProps(e); A.commit({ add: [e] }, 'Đã vẽ khoanh mây'); log('REVCLOUD: khoanh mây ' + (closed ? 'kín' : 'hở') + ', ' + (e.rcv.length - (closed ? 0 : 1)) + ' cung.'); return true;
   }
-  cmd(['REVCLOUD', 'RC'], 'Khoanh mây sửa đổi: Chữ nhật / Đa giác / Tự do / Đối tượng; độ dài cung, kiểu Thường / Thư pháp', async () => {
+  // ---- REVCLOUD › Sửa (Modify) như AutoCAD: vẽ lại một đoạn mây — điểm đầu trên mây, các điểm mới, điểm cuối trên mây, chọn phía bỏ đi ----
+  function projPath(P, closed, q){ let best = null, acc = 0; const n = closed ? P.length : P.length - 1;
+    for(let i = 0; i < n; i++){ const a = P[i], b = P[(i + 1) % P.length], dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy, L = Math.sqrt(L2); let t = L2 > 0 ? ((q.x - a.x) * dx + (q.y - a.y) * dy) / L2 : 0; t = Math.max(0, Math.min(1, t));
+      const p = { x: a.x + dx * t, y: a.y + dy * t }, d = dist(q, p); if(!best || d < best.d) best = { i, t, p, d, s: acc + t * L }; acc += L; }
+    if(best) best.T = acc; return best; }
+  // các điểm đi tiến trên đường dẫn từ vị trí f tới vị trí t (vòng kín: qua đỉnh cuối về đầu)
+  function walkPath(P, closed, f, t){ const out = [f.p], n = P.length; if(f.i === t.i && t.s >= f.s){ out.push(t.p); return out; }
+    let i = f.i; for(let k = 0; k < n + 1; k++){ i = closed ? (i + 1) % n : i + 1; if(!closed && i >= n) break; out.push(P[i]); if(i === t.i) break; } out.push(t.p); return out; }
+  async function rcModify(){
+    const s = await A.getEnt('Chọn khoanh mây cần sửa', { filter: e => e.type === 'POLYLINE' && (e.rc || e.rcv) && !A.isLocked(e) }); const e0 = s.ent || (s.sel || [])[0]; if(!e0) return;   // chọn bằng gõ (L, W…) trả về sel
+    const pth = pathOf(e0); if(!pth || pth.P.length < 2){ log('Không đọc được đường dẫn của mây.'); return; } const P = pth.P, closed = pth.closed; hl([e0]);
+    const a = await A.getPoint('Chỉ định điểm đầu (trên mây)'); if(!a.pt){ hl([]); return; } const f = projPath(P, closed, a.pt); const U = [];
+    for(;;){ const q = await A.getPoint(U.length ? 'Chỉ định điểm tiếp theo hoặc điểm cuối (trên mây) — Enter để xong' : 'Chỉ định điểm tiếp theo', { base: U.length ? U[U.length - 1] : f.p, kw: U.length ? [{ k: 'U', t: 'Bỏ điểm' }] : [] });
+      if(q.kw === 'U'){ U.pop(); continue; } if(!q.pt) break; U.push(q.pt); }
+    if(U.length < 1){ hl([]); log('Cần ít nhất một điểm mới.'); return; }
+    const l = projPath(P, closed, U.pop()); const mid = U; let NP;
+    if(closed){ const T = f.T, fw = (l.s - f.s + T) % T;
+      const sd = await A.getPoint('Chọn phía cần xoá', { preview: null }); hl([]); if(!sd.pt) return; const sp = projPath(P, closed, sd.pt), spl = (sp.s - f.s + T) % T;
+      if(spl <= fw){ const keep = walkPath(P, true, l, f); NP = [f.p, ...mid, l.p, ...keep.slice(1, -1)]; }   // bỏ đoạn đi tiến f → l, giữ l → f
+      else { const keep = walkPath(P, true, f, l); NP = [...keep, ...mid.slice().reverse()]; } }   // bỏ đoạn l → f, giữ f → l
+    else { hl([]); let F = f, Lp = l, M = mid; if(Lp.s < F.s){ [F, Lp] = [Lp, F]; M = mid.slice().reverse(); }
+      const start = { i: 0, t: 0, p: P[0], s: 0 }, end = { i: P.length - 2, t: 1, p: P[P.length - 1], s: F.T };
+      NP = [...walkPath(P, false, start, F), ...M, ...walkPath(P, false, Lp, end)]; }
+    const rc = e0.rc || {}; const e = cloudFromPath(NP, closed, !!rc.r, { min: rc.mn, max: rc.mx, style: rc.s }); if(!e){ log('Đoạn mây mới không hợp lệ.'); return; }
+    for(const key of ['layer', 'col', 'bl', 'lw', 'lt', 'lts', 'tp']) if(e0[key] != null) e[key] = e0[key];
+    A.commit({ rep: [[e0, e]] }, 'Đã sửa khoanh mây'); log('REVCLOUD › Sửa: đã vẽ lại một đoạn mây (' + (e.rcv.length - (closed ? 0 : 1)) + ' cung).'); }
+  A.rcModify = rcModify;
+  cmd(['REVCLOUD', 'RC'], 'Khoanh mây sửa đổi: Chữ nhật / Đa giác / Tự do / Đối tượng / Sửa; độ dài cung, kiểu Thường / Thư pháp', async () => {
     for(;;){
       log(rcStatus());
-      const kw = [{ k: 'A', t: 'Độ dài cung' }, { k: 'O', t: 'Đối tượng' }, { k: 'R', t: 'Chữ nhật' }, { k: 'P', t: 'Đa giác' }, { k: 'F', t: 'Tự do' }, { k: 'S', t: 'Kiểu' }, { k: 'M', t: 'Sửa mây' }];
+      const kw = [{ k: 'A', t: 'Độ dài cung' }, { k: 'O', t: 'Đối tượng' }, { k: 'R', t: 'Chữ nhật' }, { k: 'P', t: 'Đa giác' }, { k: 'F', t: 'Tự do' }, { k: 'S', t: 'Kiểu' }, { k: 'M', t: 'Sửa' }];
       const pr = RC.type === 'R' ? 'Chỉ định góc thứ nhất' : RC.type === 'P' ? 'Chỉ định điểm đầu' : 'Chỉ định điểm đầu (rồi rê chuột / ngón tay theo đường mây)';
       const r = await A.getPoint(pr, { kw, def: 'Đối tượng' });
       if(r.kw === 'A'){ const a = await A.getDist('Độ dài cung nhỏ nhất', { def: +arcMin().toPrecision(6) }); if(!(a.num > 0)) continue; const b = await A.getDist('Độ dài cung lớn nhất', { def: Math.max(a.num, +arcMax().toPrecision(6)) }); RC.min = a.num; RC.max = b.num >= a.num ? b.num : a.num; rcSave(); continue; }
       if(r.kw === 'S'){ const s = await A.getKw('Kiểu cung', { kw: [{ k: 'N', t: 'Thường' }, { k: 'C', t: 'Thư pháp' }], def: RC.style === 'C' ? 'Thư pháp' : 'Thường' }); if(s.kw){ RC.style = s.kw; rcSave(); } continue; }
       if(r.kw === 'R' || r.kw === 'P' || r.kw === 'F'){ RC.type = r.kw; rcSave(); continue; }
-      if(r.kw === 'M'){ A.cancel(true); setTimeout(() => DVDCmd.run('REVCLOUDPROPERTIES'), 0); return; }
+      if(r.kw === 'M'){ await rcModify(); return; }
       if(r.kw === 'O' || r.none){
         const s = await A.getEnt('Chọn đối tượng để đổi thành mây (tròn, elip, đa tuyến, spline, cung, đường)', { filter: e => /^(CIRCLE|ELLIPSE|POLYLINE|ARC|LINE|HATCH)$/.test(e.type) && !e.wipe }); if(!s.ent) return;
         const pth = pathOf(s.ent); if(!pth){ log('Không dùng được đối tượng này.'); continue; } hl([s.ent]);

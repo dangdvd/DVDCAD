@@ -710,6 +710,20 @@
     const rep = [[e, parts[0]]]; const add = parts.slice(1);
     A.commit({ rep, add }); return '';
   }
+  // đa tuyến có đoạn đầu / cuối là cung: kéo dài cung đó theo đúng đường tròn của nó tới ranh giới gần nhất (như AutoCAD), giữ chiều cung
+  function extendPolyArc(e, BV, atStart, cands){
+    const i = atStart ? 0 : BV.length - 2, P = BV[i], Q = BV[i + 1], b = P.bulge, th = 4 * Math.atan(b), sg = th > 0 ? 1 : -1;
+    const dx = Q.x - P.x, dy = Q.y - P.y, c = Math.hypot(dx, dy); if(c < 1e-12) return 'Đoạn quá ngắn.';
+    const d = c * (1 - b * b) / (4 * b), C = { x: (P.x + Q.x) / 2 - dy / c * d, y: (P.y + Q.y) / 2 + dx / c * d }, r = Math.hypot(P.x - C.x, P.y - C.y);
+    const aP = Math.atan2(P.y - C.y, P.x - C.x), aQ = Math.atan2(Q.y - C.y, Q.x - C.x), gap = TAU - Math.abs(th);
+    const full = { t: 'a', cx: C.x, cy: C.y, r, a0: 0, sw: TAU, u0: 0 }; let best = null;
+    for(const o of cands([C.x - r, C.y - r, C.x + r, C.y + r])){ const co = G.curveOf(o); if(!co) continue; for(const pc of co.pieces) for(const q of G.xPieces(full, pc)){ const ang = Math.atan2(q.y - C.y, q.x - C.x);
+      const off = atStart ? (sg > 0 ? G.norm(aP - ang) : G.norm(ang - aP)) : (sg > 0 ? G.norm(ang - aQ) : G.norm(aQ - ang)); if(off > 1e-9 && off < gap - 1e-9 && (best == null || off < best)) best = off; } }
+    if(best == null) return 'Không gặp ranh giới nào theo hướng kéo dài.';
+    const nb = BV.map(q => Object.assign({}, q)), th2 = th + sg * best, at = a => ({ x: C.x + r * Math.cos(a), y: C.y + r * Math.sin(a) });
+    if(atStart){ Object.assign(nb[0], at(aP - sg * best)); nb[0].bulge = Math.tan(th2 / 4); } else { Object.assign(nb[nb.length - 1], at(aQ + sg * best)); nb[nb.length - 2].bulge = Math.tan(th2 / 4); }
+    const w = copyOf(e); A.setBV(w, nb); A.commit({ rep: [[e, w]] }); return '';
+  }
   function doExtend(e, pick, edges){
     const big = (() => { const b = bounds || { minX: 0, minY: 0, maxX: 1, maxY: 1 }; return Math.max(b.maxX - b.minX, b.maxY - b.minY, 1) * 4; })();
     const cands = (box) => (edges ? edges.filter(x => x !== e && cutter(x)) : A.queryBox(box[0], box[1], box[2], box[3], 30000).filter(x => x !== e && cutter(x)));
@@ -718,7 +732,7 @@
       let a, b, atStart;
       if(e.type === 'LINE'){ atStart = Math.hypot(pick.x - e.x1, pick.y - e.y1) < Math.hypot(pick.x - e.x2, pick.y - e.y2); a = atStart ? { x: e.x2, y: e.y2 } : { x: e.x1, y: e.y1 }; b = atStart ? { x: e.x1, y: e.y1 } : { x: e.x2, y: e.y2 }; }
       else { const BV = A.bvOf(e); const V = BV || e.vertices; atStart = Math.hypot(pick.x - V[0].x, pick.y - V[0].y) < Math.hypot(pick.x - V[V.length - 1].x, pick.y - V[V.length - 1].y); if(atStart){ b = V[0]; a = V[1]; } else { b = V[V.length - 1]; a = V[V.length - 2]; }
-        if(BV && (atStart ? BV[0].bulge : BV[BV.length - 2].bulge)) return 'Đầu đa tuyến là cung — dùng LENGTHEN hoặc kéo ô nắm.'; }
+        if(BV && (atStart ? BV[0].bulge : BV[BV.length - 2].bulge)) return extendPolyArc(e, BV, atStart, cands); }
       const L = dist(a, b); if(L < 1e-12) return 'Đoạn quá ngắn.';
       const ux = (b.x - a.x) / L, uy = (b.y - a.y) / L;
       const seg = { t: 's', ax: b.x, ay: b.y, bx: b.x + ux * big, by: b.y + uy * big, u0: 0, u1: 1 };

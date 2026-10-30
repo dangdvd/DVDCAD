@@ -244,7 +244,7 @@
      4) LỚP: lớp hiện hành, khoá, đóng băng, màu (lưu theo bản vẽ)
      ===================================================================== */
   const LS = A.LS = { cur: '0', color: 'BYLAYER', off: new Set(), frozen: new Set(), locked: new Set(), hex: {}, orig: {}, extra: new Set(), lw: 'BYLAYER',
-    lt: 'BYLAYER', celts: 1, ltscale: null, layLT: {}, layLW: {}, ltd: {}, origLT: {}, origLW: {}, origLTS: 1 };
+    lt: 'BYLAYER', celts: 1, ltscale: null, layLT: {}, layLW: {}, layTP: {}, ltd: {}, origLT: {}, origLW: {}, origTP: {}, origLTS: 1 };
   function lsKey(){ try{ return baseKey ? 'lay::' + baseKey : null; }catch(_){ return null; } }
   function isLockedE(e){ return !!(e && e.xr) || LS.locked.has((e && e.layer) || '0'); }   // tham chiếu ngoài (XREF) không sửa được
   A.isLocked = isLockedE;
@@ -262,17 +262,17 @@
   A.lsSave = function(){
     const k = lsKey(); if(!k) return; syncHidden();
     const o = { cur: LS.cur, color: LS.color, off: [...LS.off], fz: [...LS.frozen], lk: [...LS.locked], hex: LS.hex, extra: [...LS.extra],
-      lt: LS.lt, lw: LS.lw, celts: LS.celts, lts: LS.ltscale, layLT: LS.layLT, layLW: LS.layLW, ltd: LS.ltd };
+      lt: LS.lt, lw: LS.lw, celts: LS.celts, lts: LS.ltscale, layLT: LS.layLT, layLW: LS.layLW, layTP: LS.layTP, ltd: LS.ltd };
     try{ localStorage.setItem(k, JSON.stringify(o)); }catch(_){}
     if(A.onLayers) A.onLayers();
   };
   A.lsLoad = function(){
     hidSig = null; LS.cur = '0'; LS.color = 'BYLAYER'; LS.off = new Set(); LS.frozen = new Set(); LS.locked = new Set(); LS.hex = {}; LS.orig = {}; LS.extra = new Set();
-    LS.lt = 'BYLAYER'; LS.lw = 'BYLAYER'; LS.celts = 1; LS.ltscale = null; LS.layLT = {}; LS.layLW = {}; LS.ltd = {};
+    LS.lt = 'BYLAYER'; LS.lw = 'BYLAYER'; LS.celts = 1; LS.ltscale = null; LS.layLT = {}; LS.layLW = {}; LS.layTP = {}; LS.ltd = {};
     try{ for(const L of layerList) LS.orig[L.name] = String(L.hex || '#ffffff').toLowerCase(); }catch(_){}
     // giá trị gốc từ file (để biết người dùng đã đổi gì)
-    if(!A._ltOrigFor || A._ltOrigFor !== modelEntities){ A._ltOrigFor = modelEntities; LS.origLT = Object.assign({}, LAYER_LT); LS.origLW = Object.assign({}, LAYER_LW); LS.origLTS = LTSCALE; }
-    LAYER_LT = Object.assign({}, LS.origLT); LAYER_LW = Object.assign({}, LS.origLW); LTSCALE = LS.origLTS;
+    if(!A._ltOrigFor || A._ltOrigFor !== modelEntities){ A._ltOrigFor = modelEntities; LS.origLT = Object.assign({}, LAYER_LT); LS.origLW = Object.assign({}, LAYER_LW); LS.origTP = Object.assign({}, LAYER_TP); LS.origLTS = LTSCALE; }
+    LAYER_LT = Object.assign({}, LS.origLT); LAYER_LW = Object.assign({}, LS.origLW); for(const k of Object.keys(LAYER_TP)) delete LAYER_TP[k]; Object.assign(LAYER_TP, LS.origTP); LTSCALE = LS.origLTS;
     let o = null; const k = lsKey(); try{ o = k ? JSON.parse(localStorage.getItem(k) || 'null') : null; }catch(_){}
     if(o){
       LS.cur = o.cur || '0'; LS.color = o.color || 'BYLAYER';
@@ -280,7 +280,7 @@
       const hex = o.hex || {};
       for(const [n, h] of Object.entries(hex)){ const old = LS.orig[n]; if(old && old !== h) recolorLayer(n, old, h, true); LS.hex[n] = h; }
       LS.lt = o.lt || 'BYLAYER'; LS.lw = o.lw != null ? o.lw : 'BYLAYER'; LS.celts = o.celts > 0 ? o.celts : 1; LS.ltscale = o.lts > 0 ? o.lts : null;
-      LS.layLT = o.layLT || {}; LS.layLW = o.layLW || {}; LS.ltd = o.ltd || {};
+      LS.layLT = o.layLT || {}; LS.layLW = o.layLW || {}; LS.layTP = o.layTP || {}; LS.ltd = o.ltd || {};
       applyLT();
       applyHidden();
     }
@@ -324,6 +324,7 @@
     for(const [n, d] of Object.entries(LS.ltd)) if(d && d.pat) LTYPES[n] = d;
     for(const [n, v] of Object.entries(LS.layLT)){ if(!v || v === 'CONTINUOUS') delete LAYER_LT[n]; else LAYER_LT[n] = v; }
     for(const [n, v] of Object.entries(LS.layLW)){ if(v > 0) LAYER_LW[n] = v; else delete LAYER_LW[n]; }
+    for(const [n, v] of Object.entries(LS.layTP)){ if(v > 0) LAYER_TP[n] = v; else delete LAYER_TP[n]; }
     if(LS.ltscale > 0) LTSCALE = LS.ltscale;
   }
   A.layerLT = n => LAYER_LT[n] || 'CONTINUOUS';
@@ -333,6 +334,9 @@
   A.loadLT = function(name){ const d = stdLT(name); if(!d) return false; LTYPES[d.name] = { name: d.name, desc: d.desc, pat: d.pat }; LS.ltd[d.name] = LTYPES[d.name]; A.lsSave(); return true; };
   A.setLayerLT = function(name, lt){ lt = String(lt || 'CONTINUOUS').toUpperCase(); if(lt !== 'CONTINUOUS' && !LTYPES[lt]) A.loadLT(lt); LS.layLT[name] = lt; if(lt === 'CONTINUOUS') delete LAYER_LT[name]; else LAYER_LT[name] = lt; A.lsSave(); try{ draw(); }catch(_){} };
   A.setLayerLW = function(name, lw){ lw = +lw || 0; LS.layLW[name] = lw; if(lw > 0) LAYER_LW[name] = lw; else delete LAYER_LW[name]; A.lsSave(); try{ draw(); }catch(_){} };
+  // độ trong suốt theo lớp (0–90 %, như cột Transparency của bảng Lớp AutoCAD); đối tượng "ByLayer" (không có tp riêng) lấy theo lớp
+  A.layerTP = n => LAYER_TP[n] || 0;
+  A.setLayerTP = function(name, tp){ tp = Math.max(0, Math.min(90, Math.round(+tp || 0))); LS.layTP[name] = tp; if(tp > 0) LAYER_TP[name] = tp; else delete LAYER_TP[name]; A.lsSave(); try{ draw(); }catch(_){} };
   A.setLTScale = function(v){ v = +v; if(!(v > 0)) return; LS.ltscale = v; LTSCALE = v; A.lsSave(); try{ draw(); }catch(_){} };
   A.setCurLT = function(lt){ lt = String(lt || 'BYLAYER').toUpperCase(); if(!/^(BYLAYER|BYBLOCK|CONTINUOUS)$/.test(lt) && !LTYPES[lt]) A.loadLT(lt); LS.lt = lt; A.lsSave(); };
   A.setCurLW = function(lw){ LS.lw = (lw === 'BYLAYER' || lw == null) ? 'BYLAYER' : (+lw || 0); A.lsSave(); };

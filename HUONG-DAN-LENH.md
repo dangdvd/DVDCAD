@@ -1,4 +1,4 @@
-# DVDCAD v6c — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v6d — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,17 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v6d)
+- **Độ trong suốt theo lớp** (Layer Transparency):
+  - Cột **Độ trong suốt** trong bảng Lớp (bấm để nhập 0–90). `-LAYER` có tuỳ chọn **Trong suốt** (TR).
+  - Đối tượng có độ trong suốt "ByLayer" lấy theo lớp. Bật **TPY** ở thanh trạng thái để thấy.
+  - Đọc / ghi DXF và DWG 2004 → 2018 như AutoCAD: XDATA `AcCmTransparency` (mã 1071) trên lớp. Mở tệp DWG / DXF của AutoCAD cũng đọc được.
+  - Trạng thái lớp (`LAYERSTATE`, `LAYERP`) lưu cả độ trong suốt.
+- **ETRANSMIT / ARCHIVE**: hộp thoại chọn **định dạng bản vẽ trong gói**: DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000 hoặc DXF; **nén .zip** (deflate). `-ETRANSMIT`: không hỏi, DWG 2018, nén.
+- **REVCLOUD › Sửa** (Modify): chọn mây → điểm đầu trên mây → các điểm mới → điểm cuối trên mây → Enter → chọn phía cần bỏ. Mây hở: bỏ đoạn giữa hai điểm.
+- **POLYSOLID**: tuỳ chọn **Cung** khi vẽ theo điểm — cung tiếp tuyến đoạn trước, hoặc **Điểm thứ hai** (cung 3 điểm); **Đường thẳng** để quay lại. **Đóng** khi đang ở chế độ Cung thì khép bằng cung.
+- **EXTEND** đa tuyến có đoạn **đầu hoặc cuối là cung**: kéo dài cung theo đúng đường tròn của nó tới ranh giới gần nhất, giữ chiều cung.
 
 ## Bổ sung như AutoCAD 2027 (v6c)
 - **DWFx ePlot (XPS Compatible).pc3** trong danh sách máy in của `PLOT`:
@@ -1290,17 +1301,18 @@ Bố cục tab, bảng và biểu tượng theo AutoCAD để người dùng Aut
 
 ## In bản vẽ (PLOT, Ctrl+P)
 Hộp thoại giống AutoCAD:
-- **Khổ giấy:** A4 đến A0, chọn ngang hoặc dọc.
-- **Vùng in:**
-  - Toàn bản vẽ (Extents).
-  - Đang hiện trên màn hình (Display).
-  - Khung chọn (Window): bấm "Chọn khung trên bản vẽ" rồi chỉ 2 góc.
+- **Máy in / máy vẽ:**
+  - `DWG To PDF.pc3` và các bản `AutoCAD PDF`.
+  - `DWFx ePlot`.
+  - `PublishToWeb PNG / JPG`, HPGL/2.
+  - `Default Windows System Printer` và mọi máy in đã cài trong Windows (bản Windows). Nút **Thuộc tính…** chỉnh độ sâu màu, màu / đen trắng, in hai mặt, dpi.
+- **Khổ giấy:** 89 khổ như DWG To PDF.pc3 (ISO A / B / C, full bleed, expand, ANSI, ARCH, JIS) hoặc khổ tự chọn; ngang hoặc dọc.
+- **Vùng in:** Phạm vi (Extents), Màn hình (Display), Khung (Window).
 - **Tỉ lệ:** khít khổ giấy, hoặc in **đúng tỉ lệ 1:N** (1:50, 1:100…). Bản vẽ đơn vị mm thì 1:100 nghĩa là 1 m thật = 10 mm trên giấy. Nếu hình lớn hơn khổ giấy, hộp thoại báo trước.
-- **Kiểu in:** đen trắng (monochrome), màu, hoặc thang xám. Tuỳ chọn **in bề rộng nét** theo mm thật trên giấy (mặc định 0.25 mm).
-- **Xem trước** ngay trong hộp thoại.
-- **Xuất:** PDF đúng khổ giấy, gửi máy in, hoặc ảnh PNG.
-
-Trên điện thoại vẫn dùng nút Xuất như cũ.
+- **Bảng kiểu in:** monochrome.ctb, grayscale.ctb, bảng .ctb tự tạo (STYLESMANAGER), hoặc in theo màu bản vẽ; in bề rộng nét, độ trong suốt, dấu in, lộn ngược.
+- **Xem trước…** (`PREVIEW`): trang vector, lăn chuột phóng to / thu nhỏ, kéo để dời, Zoom Window, menu chuột phải như AutoCAD.
+- **Xuất:** PDF vector, DWFx, máy in (nét vector), ảnh PNG / JPG, tệp HPGL/2.
+Trên điện thoại vẫn dùng nút Xuất như cũ (PDF xuất ra cũng là PDF vector).
 
 ## Lưu & mở
 - Mọi thay đổi **tự lưu trên máy**, gắn với đúng file đó.
@@ -1315,12 +1327,12 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - **Bản vẽ mới** (`NEW`, Ctrl+N) dùng đơn vị mm và được lưu trong mục "Gần đây".
 
 ## Khác với AutoCAD
-- Lưu **DWG 2018 / 2013 / 2010 / 2004 / 2000** và DXF ngay trong app (`SAVEDWG`, `SAVEAS`). Riêng DWG 2007 cần ODA File Converter hoặc máy chủ chuyển đổi (`DWGSERVER`).
+- Lưu **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** và DXF ngay trong app (`SAVEDWG`, `SAVEAS`), không cần ODA File Converter.
 - Khối lưu ra DXF thành BLOCK + INSERT (kèm thuộc tính ATTDEF/ATTRIB); kích thước thẳng, bán kính, đường kính lưu thành DIMENSION. Kích thước góc lưu thành DIMENSION 3 điểm; bản khối bị sửa riêng lưu thành khối biến thể (TÊN$1…). Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước, và bám theo đường hình khi gốc đường gióng nằm đúng điểm đặc trưng (v5b). Kích thước góc chưa bám theo đường hình. AutoCAD đọc lại thấy kích thước thường (không liên kết).
 - Kích thước thẳng/chéo có sẵn trong file DWG/DXF cũng kéo ô nắm và STRETCH được. Khi sửa, kích thước được vẽ lại theo kiểu của DVDCAD: giữ cao chữ, số lẻ, mũi tên/gạch chéo. Kích thước góc và bán kính của file gốc chỉ chọn theo cụm.
 - DXF lưu mặc định **2018 (AC1032)**, chữ UTF-8, màu RGB. `DXFVERSION` chọn 2013 / 2010 / 2007 / 2004 / 2000, Tự động (2000/2004) hoặc R12 (phần mềm rất cũ). AutoCAD 2017 trở về trước không mở được file 2018 — chọn phiên bản thấp hơn.
 - Hatch dò biên trong màn hình trước, không thấy biên kín thì tự mở rộng phạm vi dò (tới 40 lần màn hình).
-- Đa tuyến có cung giữ đúng cung khi di chuyển, xoay, lật, tỉ lệ, OFFSET, sửa bằng ô nắm và lưu DXF. TRIM, BREAK, EXTEND, JOIN, FILLET / CHAMFER đa tuyến, REVERSE cũng giữ cung. Cung ở đầu đa tuyến chưa EXTEND được (kéo ô nắm hoặc LENGTHEN).
+- Đa tuyến có cung giữ đúng cung khi di chuyển, xoay, lật, tỉ lệ, OFFSET, sửa bằng ô nắm và lưu DXF. TRIM, BREAK, EXTEND, JOIN, FILLET / CHAMFER đa tuyến, REVERSE cũng giữ cung. EXTEND đa tuyến có đoạn đầu / cuối là cung thì kéo dài cung theo đường tròn của nó (như AutoCAD).
 - Vùng (REGION) lưu ra DXF dạng đa tuyến kín kèm dữ liệu DVDCAD (mở lại trong DVDCAD vẫn là vùng; AutoCAD thấy đa tuyến). Spline / elip trong phép toán vùng được chia thành đoạn thẳng nhỏ.
 - DATALINK tự đọc lại file Excel trên Chrome / Edge máy tính. Trên iPhone / iPad / Safari: dùng `DATALINKURL` (Google Sheets / link CSV) để tự cập nhật, hoặc chọn lại file khi chạy DATALINKUPDATE.
 - Ràng buộc tham số và định nghĩa khối động ghi kèm trong DXF (R2000+, mục DVDCAD_DATA) — mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này. Khối động lưu ra (DXF và DWG) như AutoCAD: khối gốc + khối ẩn danh `*U` cho từng bản chèn; bản 2018 ghi tham số hiển thị của AutoCAD (AutoCAD đổi trạng thái được). Kéo giãn / lật chỉ ghi thành hình đang hiện (AutoCAD chưa có grip kéo giãn / lật). Khối động của AutoCAD: DXF đọc được tham số hiển thị (đổi trạng thái trong DVDCAD); DWG hiện đúng trạng thái đang lưu, tên khối là `*U…`; tham số khác (kéo giãn, lật, xoay, bảng tra…) chưa đổi được.
@@ -1329,19 +1341,19 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - Khối sau UNION/SUBTRACT là lưới tam giác: mặt cong hiện dạng nhiều mặt phẳng nhỏ.
 - Khối ACIS (3DSOLID) của AutoCAD trong DXF đọc được: mặt phẳng, mặt trụ, nón, cầu, xuyến. Mặt cong tự do (spline, bo cạnh của AutoCAD) hiện gần đúng theo đường biên. Khối đọc vào thành khối lưới, lưu lại là 3DFACE. Đọc 3DSOLID từ file **DWG** được (đã thử file DWG 2007); khối mặt cong tự do hiện gần đúng.
 - UCS ở DVDCAD chỉ dùng cho lệnh tạo khối 3D. Nét 2D luôn vẽ trên mặt bằng XY.
-- Layout chỉ chứa khung tên và khung nhìn. Muốn ghi chú thêm thì vẽ ở Model.
-- Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
+- Layout chứa khung nhìn, khung tên và đối tượng giấy (vẽ thẳng trên layout, hoặc chuyển giữa Model và giấy bằng `CHSPACE`).
+- Ảnh (IMAGE) lưu thành tệp ảnh cạnh bản vẽ như AutoCAD (bản Windows); trên trình duyệt, ảnh nền và tệp tham chiếu lưu trong trình duyệt của từng máy. `ETRANSMIT` đóng gói bản vẽ cùng ảnh và tham chiếu để gửi đi.
 - Kiểu nét phức: chữ và hình trong nét hiện đúng (hình của ltypeshp.shx vẽ gần đúng: tròn, vuông, gạch, zigzag, batting; hình SHX khác hiện dạng vòng tròn nhỏ).. Lưu DXF R2000 ghi đủ chữ trong nét; hình trong nét ghi đúng số hình chuẩn của ltypeshp.shx (130 TRACK1, 131 ZIG, 132 BOX, 133 CIRC1, 134 BAT, 135 AMZIGZAG) và vẽ đúng hình theo định nghĩa SHP.
 - MLEDIT dùng cho đường đôi vẽ bằng `MLINE` của DVDCAD và MLINE trong file AutoCAD (DXF đã thử; DWG đọc theo dữ liệu LibreDWG). Đường đôi khép kín chưa sửa được. Chưa có kiểu nối Chữ T liền, Cắt bỏ / Nối lại đoạn, thêm / bớt đỉnh. Nắp đầu theo kiểu MLINESTYLE của file AutoCAD chưa vẽ.
 - Đa tuyến có độ rộng: độ rộng mỗi đoạn giữ khi sửa. Thêm / xoá đỉnh trên đoạn có độ rộng thay đổi (thon) thì đỉnh mới lấy độ rộng của đỉnh gần nhất. Đa tuyến rộng trong khối bị kéo giãn không đều chỉ tô gần đúng.
-- REVCLOUD: chưa có tuỳ chọn Sửa kiểu AutoCAD (vẽ lại một đoạn mây). Dùng `REVCLOUDPROPERTIES` để đổi cung, hoặc vẽ mây mới. Sửa đỉnh mây bằng ô nắm thì mây không còn dựng lại được từ đường dẫn gốc.
+- REVCLOUD › **Sửa** vẽ lại một đoạn mây như AutoCAD (điểm đầu trên mây, các điểm mới, điểm cuối trên mây, chọn phía bỏ đi). `REVCLOUDPROPERTIES` đổi độ dài cung / kiểu. Sửa đỉnh mây bằng ô nắm thì mây không còn dựng lại được từ đường dẫn gốc.
 - File rất lớn trên iPhone / iPad chỉ hiện 400 nghìn đối tượng đầu (sau khi nổ khối) để tránh Safari bị tắt vì hết bộ nhớ. Muốn xem đủ, mở trên máy tính hoặc tách bản vẽ. File DWG lớn vẫn tốn bộ nhớ hơn DXF (bộ giải mã LibreDWG).
 - Vẽ lại đầy đủ bản vẽ hàng trăm nghìn nét vẫn mất khoảng 1–2 giây (máy thử không có GPU, máy thật thường nhanh hơn). Phóng / dời thì dùng ảnh tạm nên mượt.
 - Xem 3D theo dõi thay đổi lớp / ẩn hiện đối tượng mỗi 0,3 giây rồi dựng lại toàn cảnh. Với bản vẽ rất nhiều khối, sau mỗi lần bật / tắt lớp có thể phải chờ một chút mới thấy kết quả.
 - Mặt lưới RULESURF / TABSURF / REVSURF / EDGESURF / PLANESURF là khối lưới tam giác: lưu DXF thành 3DFACE và UNION / SUBTRACT không dùng cho mặt hở. Đường 2D của DVDCAD luôn nằm trên mặt bằng XY (cao độ theo ELEV), nên RULESURF / EDGESURF giữa các đường 2D ra mặt phẳng.
-- POLYSOLID chưa có tuỳ chọn Cung khi vẽ theo điểm. Muốn có đoạn cong, vẽ đa tuyến có cung rồi dùng POLYSOLID › Đối tượng.
+- POLYSOLID vẽ theo điểm có tuỳ chọn **Cung** (cung tiếp tuyến đoạn trước, hoặc qua Điểm thứ hai) và **Đường thẳng** để quay lại đoạn thẳng, như AutoCAD.
 - Giao diện English dịch từ chuỗi tiếng Việt gốc khi hiển thị. Một vài câu ghép có thể đọc chưa trơn như AutoCAD bản tiếng Anh. Chữ do lệnh ghi vào bản vẽ (trường ngày tháng, nhãn ký hiệu, khung tên mẫu) vẫn là tiếng Việt.
 - AutoLISP của DVDCAD chạy mã nguồn `.lsp`. Chưa có: hàm `vla-` / `vlax-` (ActiveX), hộp thoại DCL, `grread`, `entmake` cho khối / hatch, reactor. Add-in lưu trên từng máy (trong trình duyệt), không đi kèm bản vẽ hay Google Drive.
-- Độ trong suốt đặt cho từng đối tượng. Độ trong suốt theo lớp (trong bảng Lớp của AutoCAD) chưa đọc / ghi. THICKEN chỉ làm dày được mặt phẳng; mặt cong (REVSURF…) chưa làm dày được. 3DFACE nằm ở cao độ ELEV (chưa nhập Z riêng từng đỉnh).
-- Lớp đóng băng riêng khung nhìn (VPLAYER, LAYVPI) và đường cắt khung nhìn (VPCLIP) lưu trên máy theo bản vẽ, chưa ghi vào file DXF / DWG. VPSYNC trên layout đọc từ file DWG chỉ giữ đến khi mở lại file. ETRANSMIT đóng gói bản vẽ dạng DXF (không phải DWG), không nén. MKLTYPE chỉ tạo kiểu nét đơn giản (nét, khoảng hở, chấm), chưa có chữ / hình trong nét.
+- Độ trong suốt đặt cho từng đối tượng. Độ trong suốt theo lớp: cột Độ trong suốt trong bảng Lớp, `-LAYER` › Trong suốt; đọc / ghi DXF và DWG như AutoCAD (XDATA AcCmTransparency). THICKEN chỉ làm dày được mặt phẳng; mặt cong (REVSURF…) chưa làm dày được. 3DFACE nằm ở cao độ ELEV (chưa nhập Z riêng từng đỉnh).
+- Lớp đóng băng riêng khung nhìn (VPLAYER, LAYVPI) và đường cắt khung nhìn (VPCLIP) ghi vào DXF / DWG. ETRANSMIT / ARCHIVE đóng gói bản vẽ DWG (chọn phiên bản 2018 → 2000) hoặc DXF, nén .zip. MKLTYPE chỉ tạo kiểu nét đơn giản (nét, khoảng hở, chấm), chưa có chữ / hình trong nét.
 - XCLIP: khối có đường cắt đảo ngược khi lưu DXF được ghi thành các đối tượng rời (phần nhìn thấy), không còn là khối có đường cắt, vì AutoCAD không nhận đường cắt đảo ngược do phần mềm khác tạo. Lưu DXF R12 chỉ ghi phần nhìn thấy. Trên iPhone / iPad (không giữ nhóm khối để tiết kiệm bộ nhớ), phần ngoài đường cắt bị bỏ hẳn khi mở file. Chưa có Clipdepth (cắt theo chiều sâu 3D).

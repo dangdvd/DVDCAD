@@ -242,14 +242,15 @@
     A.lsSync && A.lsSync();
     table('LAYER', layers.size, () => { for(const ly of layers){ const aci = A.aciNear(A.layerHex(ly)); let fl = 0; if(A.LS.frozen.has(ly)) fl |= 1; if(A.LS.locked.has(ly)) fl |= 4;
       rec('LAYER', layH.get(ly), 'AcDbLayerTableRecord'); P(2, dxfStr(ly)); P(70, fl); P(62, A.LS.off.has(ly) ? -aci : aci); if(V2004 && !isAciColor(A.layerHex(ly))) P(420, hexRGB(A.layerHex(ly))); const llt = String(A.layerLT(ly) || '').toUpperCase(); P(6, ltOk.has(llt) ? dxfStr(llt) : 'Continuous');
-      const lw = lwStd(A.layerLW ? A.layerLW(ly) : 0); P(370, lw != null ? lw : -3); P(390, hPsnNormal); if(N7) P(347, N7.mGlobal); } });
+      const lw = lwStd(A.layerLW ? A.layerLW(ly) : 0); P(370, lw != null ? lw : -3); P(390, hPsnNormal); if(N7) P(347, N7.mGlobal);
+      const ltp = A.layerTP ? A.layerTP(ly) : 0; if(ltp > 0 && V2004){ P(1001, 'AcCmTransparency'); P(1071, (0x02000000 | Math.round(255 * (1 - Math.min(90, ltp) / 100))) >>> 0); } } });   // độ trong suốt lớp (như AutoCAD 2011+)
     table('STYLE', 1 + stUsed.size + (hStShx ? 1 : 0), () => {
       rec('STYLE', hStStd, 'AcDbTextStyleTableRecord'); P(2, 'Standard'); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'arial.ttf'); P(4, '');
       for(const [n, o] of stUsed){ rec('STYLE', o.h, 'AcDbTextStyleTableRecord'); P(2, dxfStr(n)); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, o.f); P(4, o.b || ''); }
       if(hStShx){ rec('STYLE', hStShx, 'AcDbTextStyleTableRecord'); P(2, ''); P(70, 1); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'ltypeshp.shx'); P(4, ''); } });
     table('VIEW', 0, () => {}); table('UCS', 0, () => {});
     const dynApps = DYNX && dynBase.size ? ['AcDbDynamicBlockTrueName', 'AcDbDynamicBlockGUID', 'AcDbBlockRepETag', 'AcDbBlockRepBTag'] : [];
-    table('APPID', 2 + dynApps.length, () => { rec('APPID', hApAcad, 'AcDbRegAppTableRecord'); P(2, 'ACAD'); P(70, 0); rec('APPID', hApDvd, 'AcDbRegAppTableRecord'); P(2, 'DVDCAD'); P(70, 0);
+    table('APPID', 3 + dynApps.length, () => { rec('APPID', hApAcad, 'AcDbRegAppTableRecord'); P(2, 'ACAD'); P(70, 0); rec('APPID', hApDvd, 'AcDbRegAppTableRecord'); P(2, 'DVDCAD'); P(70, 0); rec('APPID', H(), 'AcDbRegAppTableRecord'); P(2, 'AcCmTransparency'); P(70, 0);
       for(const n of dynApps){ rec('APPID', H(), 'AcDbRegAppTableRecord'); P(2, n); P(70, 0); } });
     const dt = A.dimTxt ? A.dimTxt() : 2.5;
     table('DIMSTYLE', 1, () => { rec('DIMSTYLE', hDsStd, 'AcDbDimStyleTableRecord', 105); P(2, 'Standard'); P(70, 0); P(40, 1); P(41, dt * ((A.DS && A.DS.asz) || 1)); P(42, dt * ((A.DS && A.DS.exo) || 0.6)); P(44, dt * ((A.DS && A.DS.exe) || 0.8)); P(140, dt); P(147, dt * ((A.DS && A.DS.gap) || 0.5)); P(77, 1); P(271, (A.DS && A.DS.dec) | 0); P(340, hStStd); },

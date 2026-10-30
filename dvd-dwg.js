@@ -359,7 +359,7 @@
 
     // ---- bản ghi bảng ----
     for(const r of recsOf('LAYER')){
-      const o = obj(T.LAYER, ref(r.get(5))); tableRec(o, 2, r.get(2, '0'));
+      const o = obj(T.LAYER, ref(r.get(5)), r); tableRec(o, 2, r.get(2, '0'));   // r: EED (độ trong suốt lớp AcCmTransparency)
       const fl = r.int(70), c = r.int(62, 7), off = c < 0, lw = lwIndex(r.has(370) ? r.int(370) : -3);
       o.d.BS((fl & 1 ? 1 : 0) | (off ? 2 : 0) | (fl & 2 ? 4 : 0) | (fl & 4 ? 8 : 0) | (r.int(290, 1) ? 16 : 0) | ((lw & 0x1f) << 5));
       if(R04) o.d.CMC(Math.abs(c) || 7, rgbOf(r)); else o.d.CMC(off ? (-Math.abs(c)) & 0xffff : Math.abs(c) || 7);
@@ -880,8 +880,8 @@
       const secSummary = (() => { const F = new BW(256); for(const s of ['', '', '', '', '', 'DVDCAD', '', '']) T16(F, s);
         F.RL(0); F.RL(0); F.RL(jd[0]); F.RL(jd[1]); F.RL(jd[0]); F.RL(jd[1]); F.RS(0); F.RL(0); F.RL(0); return F.bytes(); })();
       const secAppInfo = (() => { const F = new BW(1024), z16 = () => { for(let i = 0; i < 16; i++) F.RC(0); };
-        F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.22.0'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
-        U16(F, '<ProductInformation name ="DVDCAD" build_version="5.22.0" registry_version="5.22" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
+        F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.23.0'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
+        U16(F, '<ProductInformation name ="DVDCAD" build_version="5.23.0" registry_version="5.23" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
       const secRev = Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0);
       if(VER === 21) return file2007();
       const up32 = (n, q) => Math.max(q, Math.ceil(n / q) * q);
@@ -1141,7 +1141,7 @@
       const o = Object.assign({}, opt); if(!VCODE[o.version]) o.version = 'R2000';
       // DXF trung gian cùng phiên bản (R2004+: màu RGB 420, độ trong suốt 440; R2007+: chuỗi Unicode)
       const pv = A.dxfVer, pl = A.lastDxfVer; A.dxfVer = o.version; let dxf;
-      try{ dxf = A.dxfR2000(ents || (typeof modelEntities !== 'undefined' ? modelEntities : [])); } finally { A.dxfVer = pv; A.lastDxfVer = pl; }
+      try{ dxf = A.dxfR2000(ents || (typeof modelEntities !== 'undefined' ? modelEntities : []), o.layouts ? { layouts: true } : undefined); } finally { A.dxfVer = pv; A.lastDxfVer = pl; }
       if(o.bmp === undefined) o.bmp = previewBmp(document.getElementById('cv'));
       return dwgFromDxf(dxf, o);
     };

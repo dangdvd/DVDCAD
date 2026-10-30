@@ -192,16 +192,31 @@
   cmd(['POLYSOLID', 'PSOLID'], 'Tường 3D: vẽ theo điểm hoặc chọn đường / cung / đa tuyến (Cao, Rộng, Canh)', async () => {
     const info = () => 'Cao = ' + PS.h + ', Rộng = ' + PS.w + ', Canh = ' + ({ L: 'Trái', C: 'Giữa', R: 'Phải' })[PS.j];
     log(info());
-    const P = []; let closed = false;
-    const prev = (g, p) => { const Q = P.concat(p ? [p] : []); if(Q.length < 2) return; const o = wallOutline(Q, false, PS.w, PS.j); g.ents([{ type: 'POLYLINE', closed: true, vertices: o.pts }], '#9fd0ff'); };
+    // P: đường tâm (cung chia nhỏ thành đoạn); seg: số điểm mỗi lần nhập (Hoàn tác); chế độ Cung như AutoCAD: cung tiếp tuyến đoạn trước, hoặc qua điểm thứ hai
+    const P = [], seg = []; let closed = false, arcMode = false;
+    const tanDir = () => { const n = P.length; if(n < 2) return { x: 1, y: 0 }; const a = P[n - 2], b = P[n - 1], L = Math.hypot(b.x - a.x, b.y - a.y) || 1; return { x: (b.x - a.x) / L, y: (b.y - a.y) / L }; };
+    const arcPts = (S, E, M) => { let C, ccw;   // điểm chia cung S → E (bỏ S); M: điểm thứ hai (cung 3 điểm), không có M: tiếp tuyến với hướng trước
+      if(M){ const ax = S.x, ay = S.y, bx = M.x, by = M.y, cx = E.x, cy = E.y, d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by)); if(Math.abs(d) < 1e-12) return [E];
+        C = { x: ((ax * ax + ay * ay) * (by - cy) + (bx * bx + by * by) * (cy - ay) + (cx * cx + cy * cy) * (ay - by)) / d, y: ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx) + (cx * cx + cy * cy) * (bx - ax)) / d };
+        ccw = ((M.x - S.x) * (E.y - S.y) - (M.y - S.y) * (E.x - S.x)) < 0; }
+      else { const t = tanDir(), nx = -t.y, ny = t.x, cxv = E.x - S.x, cyv = E.y - S.y, dn = cxv * nx + cyv * ny; if(Math.abs(dn) < 1e-9) return [E];
+        const r = (cxv * cxv + cyv * cyv) / (2 * dn); C = { x: S.x + nx * r, y: S.y + ny * r }; ccw = dn > 0; }
+      const R = Math.hypot(S.x - C.x, S.y - C.y), a0 = Math.atan2(S.y - C.y, S.x - C.x); let sw = Math.atan2(E.y - C.y, E.x - C.x) - a0;
+      if(ccw){ while(sw <= 0) sw += TAU; } else { while(sw >= 0) sw -= TAU; }
+      const N = Math.max(4, Math.ceil(Math.abs(sw) / (TAU / 72))), out = []; for(let k = 1; k <= N; k++){ const a = a0 + sw * k / N; out.push(k === N ? { x: E.x, y: E.y } : { x: C.x + R * Math.cos(a), y: C.y + R * Math.sin(a) }); } return out; };
+    const prev = (g, p) => { const Q = P.concat(p ? (arcMode && P.length ? arcPts(P[P.length - 1], p) : [p]) : []); if(Q.length < 2) return; const o = wallOutline(Q, false, PS.w, PS.j); g.ents([{ type: 'POLYLINE', closed: true, vertices: o.pts }], '#9fd0ff'); };
+    const push = pts => { for(const q of pts) P.push({ x: q.x, y: q.y }); seg.push(pts.length); };
     for(;;){
-      const kw = P.length ? [{ k: 'C', t: 'Đóng' }, { k: 'U', t: 'Hoàn tác' }] : [{ k: 'O', t: 'Đối tượng' }, { k: 'H', t: 'Cao' }, { k: 'W', t: 'Rộng' }, { k: 'J', t: 'Canh' }];
-      const r = await A.getPoint(P.length ? 'Điểm tiếp theo' : 'Điểm đầu tường hoặc [Đối tượng / Cao / Rộng / Canh] <Đối tượng>', { kw, base: P[P.length - 1], preview: prev });
+      const kw = P.length ? (arcMode ? [{ k: 'C', t: 'Đóng' }, { k: 'L', t: 'Đường thẳng' }, { k: 'S', t: 'Điểm thứ hai' }, { k: 'U', t: 'Hoàn tác' }] : [{ k: 'A', t: 'Cung' }, { k: 'C', t: 'Đóng' }, { k: 'U', t: 'Hoàn tác' }]) : [{ k: 'O', t: 'Đối tượng' }, { k: 'H', t: 'Cao' }, { k: 'W', t: 'Rộng' }, { k: 'J', t: 'Canh' }];
+      const r = await A.getPoint(P.length ? (arcMode ? 'Điểm cuối cung' : 'Điểm tiếp theo') : 'Điểm đầu tường hoặc [Đối tượng / Cao / Rộng / Canh] <Đối tượng>', { kw, base: P[P.length - 1], preview: prev });
       if(r.kw === 'H'){ const v = await A.getDist('Chiều cao tường', { def: PS.h }); if(v.num > 0){ PS.h = v.num; store('ps', PS); } log(info()); continue; }
       if(r.kw === 'W'){ const v = await A.getDist('Bề dày tường', { def: PS.w }); if(v.num > 0){ PS.w = v.num; store('ps', PS); } log(info()); continue; }
       if(r.kw === 'J'){ const v = await A.getKw('Canh tường theo đường vẽ', { kw: [{ k: 'L', t: 'Trái' }, { k: 'C', t: 'Giữa' }, { k: 'R', t: 'Phải' }], def: PS.j }); if(v.kw){ PS.j = v.kw; store('ps', PS); } log(info()); continue; }
-      if(r.kw === 'U'){ P.pop(); continue; }
-      if(r.kw === 'C'){ if(P.length >= 3){ closed = true; break; } continue; }
+      if(r.kw === 'A'){ arcMode = true; continue; } if(r.kw === 'L'){ arcMode = false; continue; }
+      if(r.kw === 'U'){ const k = seg.pop() || 0; P.splice(P.length - k, k); if(!P.length) seg.length = 0; continue; }
+      if(r.kw === 'S'){ const m = await A.getPoint('Điểm thứ hai trên cung', { base: P[P.length - 1] }); if(!m.pt) continue; const S0 = P[P.length - 1];
+        const e2 = await A.getPoint('Điểm cuối cung', { base: m.pt, preview: (g, p) => { const Q = P.concat(arcPts(S0, p, m.pt)); const o = wallOutline(Q, false, PS.w, PS.j); g.ents([{ type: 'POLYLINE', closed: true, vertices: o.pts }], '#9fd0ff'); } }); if(!e2.pt) continue; push(arcPts(S0, e2.pt, m.pt)); continue; }
+      if(r.kw === 'C'){ if(P.length >= 3){ if(arcMode){ const q = P[0]; push(arcPts(P[P.length - 1], q).slice(0, -1)); } closed = true; break; } continue; }
       if(r.kw === 'O' || (r.none && !P.length)){
         const s = await A.getSel('Chọn đường / cung / tròn / đa tuyến làm đường tâm tường', { filter: e => /^(LINE|ARC|CIRCLE|POLYLINE)$/.test(e.type) && !e.wq }); const src = (s.sel || []).filter(e => !A.isLocked(e));
         const add = []; for(const e of src){ const p = pathOf(e); if(!p) continue; const so = await wallSolid(p.P, p.closed, e); if(so) add.push(so); }
@@ -209,7 +224,7 @@
         A.commit({ add, del: src }, 'Đã tạo ' + add.length + ' tường 3D'); log('Đã chuyển ' + add.length + ' đối tượng thành tường 3D (' + info() + ').'); return;
       }
       if(r.none || !r.pt) break;
-      P.push({ x: r.pt.x, y: r.pt.y });
+      if(arcMode && P.length) push(arcPts(P[P.length - 1], r.pt)); else push([r.pt]);
     }
     if(P.length < 2) return;
     const so = await wallSolid(P, closed, null); if(!so){ log('Không tạo được tường.'); return; }

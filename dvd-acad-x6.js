@@ -559,7 +559,7 @@
   });
   // ---- trạng thái lớp: LAYERP / LAYERSTATE ----
   const LS = A.LS;
-  const snap = () => ({ cur: LS.cur, off: [...LS.off], fz: [...LS.frozen], lk: [...LS.locked], hex: Object.assign({}, LS.hex), layLT: Object.assign({}, LS.layLT), layLW: Object.assign({}, LS.layLW) });
+  const snap = () => ({ cur: LS.cur, off: [...LS.off], fz: [...LS.frozen], lk: [...LS.locked], hex: Object.assign({}, LS.hex), layLT: Object.assign({}, LS.layLT), layLW: Object.assign({}, LS.layLW), layTP: Object.assign({}, LS.layTP || {}) });
   const sameSnap = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   let restoring = false, lastSnap = null; const PREV = [];
   function restoreSnap(S){
@@ -570,6 +570,7 @@
       hiddenUserLayers.clear(); for(const n of LS.off) hiddenUserLayers.add(n); for(const n of LS.frozen) hiddenUserLayers.add(n);
       for(const [n, v] of Object.entries(S.layLT || {})) if((LS.layLT[n] || 'CONTINUOUS') !== v) A.setLayerLT(n, v);
       for(const [n, v] of Object.entries(S.layLW || {})) if((LS.layLW[n] || 0) !== v) A.setLayerLW(n, v);
+      if(A.setLayerTP) for(const [n, v] of Object.entries(S.layTP || {})) if(A.layerTP(n) !== v) A.setLayerTP(n, v);
       if(S.cur && A.layerNames().includes(S.cur)) LS.cur = S.cur;
       A.lsSave(); try{ invalidateSnap(); forceRedraw(); }catch(_){ try{ draw(); }catch(__){} }
     } finally { restoring = false; lastSnap = snap(); }
@@ -639,8 +640,8 @@
     const rep = []; for(const e of modelEntities) if((e.layer || '0') === o) rep.push([e, Object.assign(copy(e), { layer: n })]);
     try{ for(const L of layerList) if(L.name === o) L.name = n; }catch(_){}
     const mv = (set) => { if(set.has(o)){ set.delete(o); set.add(n); } }; mv(LS.off); mv(LS.frozen); mv(LS.locked); mv(LS.extra); LS.extra.add(n);
-    for(const m of [LS.hex, LS.orig, LS.layLT, LS.layLW]) if(o in m){ m[n] = m[o]; delete m[o]; }
-    try{ if(LAYER_LT[o] != null){ LAYER_LT[n] = LAYER_LT[o]; delete LAYER_LT[o]; } if(LAYER_LW[o] != null){ LAYER_LW[n] = LAYER_LW[o]; delete LAYER_LW[o]; } }catch(_){}
+    for(const m of [LS.hex, LS.orig, LS.layLT, LS.layLW, LS.layTP || {}]) if(o in m){ m[n] = m[o]; delete m[o]; }
+    try{ if(LAYER_LT[o] != null){ LAYER_LT[n] = LAYER_LT[o]; delete LAYER_LT[o]; } if(LAYER_LW[o] != null){ LAYER_LW[n] = LAYER_LW[o]; delete LAYER_LW[o]; } if(LAYER_TP[o] != null){ LAYER_TP[n] = LAYER_TP[o]; delete LAYER_TP[o]; } }catch(_){}
     if(LS.cur === o) LS.cur = n; hiddenUserLayers.clear(); for(const x of LS.off) hiddenUserLayers.add(x); for(const x of LS.frozen) hiddenUserLayers.add(x);
     if(rep.length) A.commit({ rep }, 'Đổi tên lớp ' + o + ' → ' + n); A.lsSave(); log('Đã đổi tên lớp "' + o + '" thành "' + n + '" (' + rep.length + ' đối tượng).'); return true;
   }

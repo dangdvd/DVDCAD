@@ -511,7 +511,7 @@
       '<div class="lm-tb">' + tb.map(b => b[0] === 'sep' ? '<span class="sp"></span>' : '<button type="button" data-a="' + b[0] + '" title="' + b[1] + '">' + SV(b[2]) + '</button>').join('') + '</div>' +
       '<div class="acw-cols" style="gap:6px;align-items:stretch"><div class="lm-flt"><div class="acw-lab" style="padding:3px 6px;margin:0;border-bottom:1px solid #5a6578">Bộ lọc</div><div id="lmF"></div>' +
         '<div style="margin-top:auto;padding:6px">' + K.chk('lmInv', 'Đảo bộ lọc', 0) + '</div></div>' +
-      '<div class="lm-grid"><table><thead><tr>' + [['st', 'Trạng thái'], ['name', 'Tên'], ['on', 'Bật'], ['fz', 'Đóng băng'], ['lk', 'Khoá'], ['col', 'Màu'], ['lt', 'Kiểu nét'], ['lw', 'Bề rộng nét'], ['n', 'Số đối tượng']].map(([k, t]) => '<th data-s="' + k + '">' + t + '</th>').join('') + '</tr></thead><tbody id="lmB"></tbody></table></div></div>' +
+      '<div class="lm-grid"><table><thead><tr>' + [['st', 'Trạng thái'], ['name', 'Tên'], ['on', 'Bật'], ['fz', 'Đóng băng'], ['lk', 'Khoá'], ['col', 'Màu'], ['lt', 'Kiểu nét'], ['lw', 'Bề rộng nét'], ['tp', 'Độ trong suốt'], ['n', 'Số đối tượng']].map(([k, t]) => '<th data-s="' + k + '">' + t + '</th>').join('') + '</tr></thead><tbody id="lmB"></tbody></table></div></div>' +
       '<div id="lmS" class="acw-note" style="margin-top:6px"></div></div>';
     lmD = A.dialog({ title: 'Quản lý thuộc tính lớp', cls: 'lm-pal acw-free', help: 'LAYER', html, noOk: true, cancelText: 'Đóng', modeless: true, cancel: () => { lmD = null; } });
     const root = lmD.root, $ = id => root.querySelector('#' + id); const md = root.querySelector('.modal'); md.style.width = 'min(900px,96vw)';
@@ -522,7 +522,7 @@
     const rows = () => { const c = counts(); let L = A.layerNames().slice();
       if(filt === 'used') L = L.filter(n => c[n] || n === '0' || n === A.LS.cur); if(inv) L = A.layerNames().filter(n => !L.includes(n));
       if(q){ const re = new RegExp('^' + q.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + (q.includes('*') ? '$' : ''), 'i'); L = L.filter(n => re.test(n) || n.toLowerCase().includes(q.toLowerCase())); }
-      const key = n => sortK === 'on' ? +A.LS.off.has(n) : sortK === 'fz' ? +A.LS.frozen.has(n) : sortK === 'lk' ? +A.LS.locked.has(n) : sortK === 'col' ? colName(A.layerHex(n)) : sortK === 'lt' ? ltName(A.layerLT(n)) : sortK === 'lw' ? A.layerLW(n) : sortK === 'n' ? (c[n] || 0) : sortK === 'st' ? +(n !== A.LS.cur) : n.toLowerCase();
+      const key = n => sortK === 'on' ? +A.LS.off.has(n) : sortK === 'fz' ? +A.LS.frozen.has(n) : sortK === 'lk' ? +A.LS.locked.has(n) : sortK === 'col' ? colName(A.layerHex(n)) : sortK === 'lt' ? ltName(A.layerLT(n)) : sortK === 'lw' ? A.layerLW(n) : sortK === 'tp' ? (A.layerTP ? A.layerTP(n) : 0) : sortK === 'n' ? (c[n] || 0) : sortK === 'st' ? +(n !== A.LS.cur) : n.toLowerCase();
       L.sort((a, b) => { const x = key(a), y = key(b); return (x < y ? -1 : x > y ? 1 : a.localeCompare(b, undefined, { numeric: true })) * sortD; });
       return { L, c }; };
     const render = () => { if(!document.body.contains(root)) return; A.lsSync && A.lsSync(); const { L, c } = rows();
@@ -530,17 +530,17 @@
       $('lmF').innerHTML = [['all', 'Tất cả'], ['used', 'Lớp đang dùng']].map(([k, t]) => '<div class="it' + (filt === k ? ' on' : '') + '" data-f="' + k + '" style="padding-left:' + (k === 'all' ? 6 : 20) + 'px">' + IC_LAY + ' ' + t + '</div>').join('');
       $('lmB').innerHTML = L.map(n => { const off = A.LS.off.has(n), fz = A.LS.frozen.has(n), lk = A.LS.locked.has(n), hx = A.layerHex(n);
         return '<tr data-n="' + esc(n) + '" class="' + (sel.has(n) ? 'sel' : '') + '"><td data-f="st">' + (n === A.LS.cur ? IC_CUR : IC_LAY) + '</td><td class="nm" data-f="name">' + esc(n) + '</td><td data-f="off">' + IC_ON(!off) + '</td><td data-f="frozen">' + IC_FZ(fz) + '</td><td data-f="locked">' + IC_LK(lk) + '</td>' +
-          '<td data-f="col"><span class="acw-sw" style="background:' + hx + '"></span>' + esc(colName(hx)) + '</td><td data-f="lt">' + esc(ltName(A.layerLT(n))) + '</td><td data-f="lw">' + esc(lwName(A.layerLW(n))) + '</td><td style="text-align:right;color:#aab3c0">' + (c[n] || 0) + '</td></tr>'; }).join('');
+          '<td data-f="col"><span class="acw-sw" style="background:' + hx + '"></span>' + esc(colName(hx)) + '</td><td data-f="lt">' + esc(ltName(A.layerLT(n))) + '</td><td data-f="lw">' + esc(lwName(A.layerLW(n))) + '</td><td data-f="tp" style="text-align:right">' + (A.layerTP ? A.layerTP(n) : 0) + '</td><td style="text-align:right;color:#aab3c0">' + (c[n] || 0) + '</td></tr>'; }).join('');
       root.querySelectorAll('th[data-s]').forEach(th => th.classList.toggle('srt', th.dataset.s === sortK));
       const tot = A.layerNames().length; $('lmS').textContent = (filt === 'used' ? 'Lớp đang dùng' : 'Tất cả') + ': hiện ' + L.length + ' / ' + tot + ' lớp'; };
     lmD.render = render;
-    const sig = () => { try{ return A.LS.cur + '|' + A.layerNames().join(',') + '|' + [...A.LS.off].join(',') + '|' + [...A.LS.frozen].join(',') + '|' + [...A.LS.locked].join(',') + '|' + A.layerNames().map(n => A.layerHex(n) + A.layerLT(n) + A.layerLW(n)).join(''); }catch(_){ return ''; } };
+    const sig = () => { try{ return A.LS.cur + '|' + A.layerNames().join(',') + '|' + [...A.LS.off].join(',') + '|' + [...A.LS.frozen].join(',') + '|' + [...A.LS.locked].join(',') + '|' + A.layerNames().map(n => A.layerHex(n) + A.layerLT(n) + A.layerLW(n) + (A.layerTP ? A.layerTP(n) : 0)).join(''); }catch(_){ return ''; } };
     let last = ''; const render0 = render; const renderS = () => { last = sig(); render0(); }; lmD.render = renderS;
     md.addEventListener('pointerenter', () => { if(sig() !== last) renderS(); });
     const targets = n => sel.has(n) ? [...sel] : [n];
     const flag = (n, f) => { const set = f === 'off' ? A.LS.off : f === 'frozen' ? A.LS.frozen : A.LS.locked; const v = !set.has(n); for(const x of targets(n)) A.setLayerFlag(x, f, v); };
     const newLayer = () => { let i = 1; const names = A.layerNames(); while(names.includes('Layer' + i)) i++; const n = 'Layer' + i; const from = sel.size === 1 ? [...sel][0] : null;
-      if(!A.addLayer(n, from ? A.layerHex(from) : '#ffffff')) return; if(from){ if(A.layerLT(from) !== 'CONTINUOUS') A.setLayerLT(n, A.layerLT(from)); if(A.layerLW(from) > 0) A.setLayerLW(n, A.layerLW(from)); }
+      if(!A.addLayer(n, from ? A.layerHex(from) : '#ffffff')) return; if(from){ if(A.layerLT(from) !== 'CONTINUOUS') A.setLayerLT(n, A.layerLT(from)); if(A.layerLW(from) > 0) A.setLayerLW(n, A.layerLW(from)); if(A.layerTP && A.layerTP(from) > 0) A.setLayerTP(n, A.layerTP(from)); }
       sel = new Set([n]); anchor = n; renderS(); rename(n); };
     const delLayers = () => { const msgs = []; for(const n of [...sel]){ const m = A.deleteLayer(n); if(m) msgs.push(n + ': ' + m); } if(msgs.length) say(msgs[0]); sel = new Set([A.LS.cur]); renderS(); };
     const setCur = n => { if(!n) return; if(A.LS.frozen.has(n)) A.setLayerFlag(n, 'frozen', false); A.setCurLayer(n); renderS(); try{ A.ribbon && A.ribbon.renderS(); }catch(_){} };
@@ -558,6 +558,9 @@
       if(f === 'col'){ A.aciPicker(td.getBoundingClientRect(), c => { if(!c || c === 'BYLAYER') return; for(const x of targets(n)) A.setLayerColor(x, c); renderS(); }); return; }
       if(f === 'lt'){ selectLinetype(A.layerLT(n), v => { for(const x of targets(n)) A.setLayerLT(x, v); renderS(); }); return; }
       if(f === 'lw'){ selectLineweight(A.layerLW(n), v => { for(const x of targets(n)) A.setLayerLW(x, v); renderS(); }); return; }
+      // độ trong suốt lớp: hộp nhập 0–90 như "Layer Transparency" của AutoCAD
+      if(f === 'tp' && A.setLayerTP){ A.dialog({ title: 'Độ trong suốt của lớp', cls: 'acw-free', help: 'LAYER', html: '<div class="acw" style="width:300px">' + K.row('Độ trong suốt (0–90):', '<input id="ltpV" type="number" min="0" max="90" step="5" value="' + A.layerTP(n) + '" style="width:70px">') + '<div class="acw-note">Đối tượng có độ trong suốt "ByLayer" lấy theo lớp. Bật nút TPY ở thanh trạng thái để thấy.</div></div>',
+        ok: r => { const v = parseFloat(r.querySelector('#ltpV').value); if(!(v >= 0 && v <= 90)){ say('Độ trong suốt từ 0 đến 90.'); return false; } for(const x of targets(n)) A.setLayerTP(x, v); renderS(); } }); return; }
       // chọn dòng: Ctrl = thêm/bớt, Shift = khoảng
       const { L } = rows();
       if(e.shiftKey && anchor && L.includes(anchor)){ const i0 = L.indexOf(anchor), i1 = L.indexOf(n); sel = new Set(L.slice(Math.min(i0, i1), Math.max(i0, i1) + 1)); }

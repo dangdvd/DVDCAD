@@ -99,10 +99,10 @@
     const L = all || A.layerNames(), out = new Set(); for(const p of pats){ if(/[*?]/.test(p)){ const re = new RegExp('^' + p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i'); for(const n of L) if(re.test(n)) out.add(n); } else out.add(L.find(n => n.toUpperCase() === p.toUpperCase()) || p); } return [...out]; };
   const pickLayers = async (prompt, allowSel) => { const r = await A.getStr(prompt + (allowSel ? ' hoặc <chọn đối tượng>' : '')); if(r.str) return namesOf(r.str);
     if(!allowSel) return []; const s = await A.getSel('Chọn đối tượng'); return [...new Set((s.sel || []).map(e => e.layer || '0'))]; };
-  cmd(['-LAYER', '-LA'], 'Lớp bằng dòng lệnh (cho script / LISP): ? · Tạo · Hiện hành · Mới · Bật · Tắt · Màu · Kiểu nét · Bề rộng nét · Đóng băng · Rã băng · Khoá · Mở khoá', async () => {
+  cmd(['-LAYER', '-LA'], 'Lớp bằng dòng lệnh (cho script / LISP): ? · Tạo · Hiện hành · Mới · Bật · Tắt · Màu · Kiểu nét · Bề rộng nét · Trong suốt · Đóng băng · Rã băng · Khoá · Mở khoá', async () => {
     for(;;){
       log('Lớp hiện hành: "' + A.LS.cur + '"');
-      const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: '?', t: '?' }, { k: 'M', t: 'Tạo' }, { k: 'S', t: 'Hiện hành' }, { k: 'N', t: 'Mới' }, { k: 'ON', t: 'Bật' }, { k: 'OFF', t: 'Tắt' }, { k: 'C', t: 'Màu' }, { k: 'L', t: 'Kiểu nét' }, { k: 'LW', t: 'Bề rộng nét' }, { k: 'F', t: 'Đóng băng' }, { k: 'T', t: 'Rã băng' }, { k: 'LO', t: 'Khoá' }, { k: 'U', t: 'Mở khoá' }] });
+      const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: '?', t: '?' }, { k: 'M', t: 'Tạo' }, { k: 'S', t: 'Hiện hành' }, { k: 'N', t: 'Mới' }, { k: 'ON', t: 'Bật' }, { k: 'OFF', t: 'Tắt' }, { k: 'C', t: 'Màu' }, { k: 'L', t: 'Kiểu nét' }, { k: 'LW', t: 'Bề rộng nét' }, { k: 'TR', t: 'Trong suốt' }, { k: 'F', t: 'Đóng băng' }, { k: 'T', t: 'Rã băng' }, { k: 'LO', t: 'Khoá' }, { k: 'U', t: 'Mở khoá' }] });
       if(k.none || !k.kw) return;
       const LS = A.LS;
       if(k.kw === '?'){ const r = await A.getStr('Nhập tên lớp cần liệt kê', { def: '*' }); const L = namesOf(r.str || '*'); for(const n of L) log(n + '  ' + (LS.off.has(n) ? 'Tắt' : 'Bật') + (LS.frozen.has(n) ? ' · Đóng băng' : '') + (LS.locked.has(n) ? ' · Khoá' : '') + '  màu ' + A.layerHex(n) + '  ' + A.layerLT(n)); continue; }
@@ -119,6 +119,8 @@
         const L = await pickLayers('Nhập danh sách lớp nhận kiểu nét "' + lt + '"', false); for(const n of (L.length ? L : [LS.cur])) A.setLayerLT(n, lt); if(A.onLayers) A.onLayers(); continue; }
       if(k.kw === 'LW'){ const r = await A.getNum('Nhập bề rộng nét (mm)'); if(r.num == null) continue; const lw = Math.round(Math.abs(r.num) * 100);
         const L = await pickLayers('Nhập danh sách lớp nhận bề rộng ' + (lw / 100).toFixed(2) + ' mm', false); for(const n of (L.length ? L : [LS.cur])) A.setLayerLW(n, lw); if(A.onLayers) A.onLayers(); continue; }
+      if(k.kw === 'TR' && A.setLayerTP){ const r = await A.getNum('Nhập giá trị độ trong suốt (0-90)', { def: 0 }); if(r.num == null) continue; const v = Math.round(r.num); if(!(v >= 0 && v <= 90)){ log('Độ trong suốt từ 0 đến 90.'); continue; }
+        const L = await pickLayers('Nhập danh sách lớp nhận độ trong suốt ' + v, false); for(const n of (L.length ? L : [LS.cur])) A.setLayerTP(n, v); if(A.onLayers) A.onLayers(); continue; }
     }
   });
   cmd(['-INSERT', '-I'], 'Chèn khối bằng dòng lệnh (cho script / LISP): tên, điểm chèn, tỉ lệ, góc xoay', async () => {
