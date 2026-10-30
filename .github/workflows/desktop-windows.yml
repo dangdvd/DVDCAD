@@ -98,6 +98,13 @@ jobs:
           Start-Process $exe.FullName -ArgumentList "`"$res`"", "`"$o7`"", 'ACAD2007', 'DWG', '0', '1', 'tong-hop-R2018.dxf' -Wait -NoNewWindow
           $l7 = @(Get-ChildItem $o7 -Filter *.dwg | ForEach-Object FullName) + @(Get-ChildItem $out -Filter *R2007*.dwg | ForEach-Object FullName)
           if($l7.Count){ node test/dwg2007-info.js @l7 }
+          # tách lỗi vỏ tệp / nội dung: tệp 2007 của ODA đóng gói lại bằng vỏ tệp DVDCAD (pack2007) → ODA đọc lại
+          $rp = Join-Path $env:RUNNER_TEMP 'dwg-rp'; $rpo = Join-Path $env:RUNNER_TEMP 'dwg-rp-dxf'; New-Item -ItemType Directory -Force $rp, $rpo | Out-Null
+          foreach($f in Get-ChildItem $o7 -Filter *.dwg){ node test/dwg2007-repack.js $f.FullName (Join-Path $rp ('oda-dong-goi-lai-' + $f.Name)) }
+          Start-Process $exe.FullName -ArgumentList "`"$rp`"", "`"$rpo`"", 'ACAD2018', 'DXF', '0', '1', '*.DWG' -Wait -NoNewWindow
+          foreach($f in Get-ChildItem $rp -Filter *.dwg){ $dxf = Join-Path $rpo ($f.BaseName + '.dxf'); $err = Join-Path $rpo ($f.BaseName + '.err')
+            if(Test-Path $err){ Write-Host "::warning::ODA audit $($f.Name): $((Get-Content $err -Raw).Trim())" }
+            if((Test-Path $dxf) -and (Get-Item $dxf).Length -ge 1000){ Write-Host "✓ ODA đọc được $($f.Name) (vỏ tệp DVDCAD, nội dung ODA)" } else { Write-Host "::warning::ODA không đọc được $($f.Name) (vỏ tệp DVDCAD, nội dung ODA)" } }
           if($bad){ exit 1 }
 
       # Bộ đọc DWG độc lập thứ hai (ACadSharp, MIT, .NET): đọc từng file DWG gốc của DVDCAD, in số đối tượng + cảnh báo.
@@ -138,6 +145,7 @@ jobs:
             ${{ runner.temp }}/dwg-out
             ${{ runner.temp }}/dwg-oda
             ${{ runner.temp }}/dwg-oda07
+            ${{ runner.temp }}/dwg-rp
           if-no-files-found: ignore
 
       - name: Dựng bộ cài và bản portable (chưa ký số)

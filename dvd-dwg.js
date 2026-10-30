@@ -882,82 +882,14 @@
       const secRev = Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0);
       if(VER === 21) return file2007();
       const up32 = (n, q) => Math.max(q, Math.ceil(n / q) * q);
-      /* ---------- DWG 2007 (AC1021): trang mã Reed–Solomon, bản đồ trang / section dạng số 64 bit, header nén + CRC-64 ----------
-         0x00: 0x80 byte đầu file (như 2004); 0x80: khối 0x400 byte (header 0x110 byte nén, RS(255,239) ×3 xen kẽ + 0x28 byte kiểm tra);
-         0x480: bản đồ trang (2 bản), các trang dữ liệu, bản đồ section (2 bản), cuối file: bản sao khối 0x400 byte. */
+      // DWG 2007: các section theo thứ tự trang trong file như AutoCAD (Preview cần địa chỉ tuyệt đối của chính nó → hàm)
       function file2007(){
-        const L64 = (u, at, v) => { const dv = new DataView(u.buffer, u.byteOffset); v = BigInt.asUintN(64, BigInt(v)); dv.setUint32(at, Number(v & 0xffffffffn), true); dv.setUint32(at + 4, Number(v >> 32n), true); };
-        const a8 = n => (n + 7) & ~7, a32 = n => (n + 31) & ~31;
-        const pages = [];   // { id, bytes } theo thứ tự trong file (địa chỉ = 0x480 + tổng cỡ trang trước)
-        let nextId = 1; const newId = () => nextId++;
-        // trang dữ liệu: nén (nếu có lợi) → RS(255,251) xen kẽ, cỡ trên đĩa bội 32 — hoặc trang nguyên (mã hoá 1: SummaryInfo / Preview / AppInfo, để địa chỉ trỏ thẳng vào dữ liệu)
-        const dataPage = (chunk, raw) => { const id = newId(); let comp = raw ? null : r21Comp(chunk); if(!comp) comp = chunk;
-          let bytes;
-          if(raw){ let sz = a32(chunk.length + 4); const nb0 = Math.ceil(a8(chunk.length) / 251); if(sz === a32(nb0 * 255)) sz += 32; bytes = new Uint8Array(sz); bytes.set(chunk); }
-          else { const nb = Math.ceil(a8(comp.length) / 251); const pe = new Uint8Array(nb * 251); pe.set(comp); bytes = new Uint8Array(a32(nb * 255)); RS(0x11D, 251).enc(pe, nb, bytes, 0); }
-          pages.push({ id, bytes }); return { id, uncomp: chunk.length, comp: comp.length, sum: sum21(chunk, chunk.length), crc: crcJ(comp, comp.length) }; };
-        const SECS = [];
-        const addSec = (name, hash, data, max, raw) => { const d = { name, hash, size: data.length, max, enc: raw ? 1 : 4, pages: [] }; SECS.push(d);
-          const nP = Math.max(1, Math.ceil(data.length / max));
-          for(let k = 0; k < nP; k++){ const o0 = k * max, chunk = data.subarray(o0, Math.min(data.length, o0 + max)); const r = dataPage(chunk, raw); r.off = o0; d.pages.push(r); }
-          return d; };
-        // trang hệ thống: nén, lặp lại `rep` lần (đệm bội 8), RS(255,239) xen kẽ
-        const sysPage = (data, rep) => { const comp = r21Comp(data, true); const step = a8(comp.length), nb = Math.ceil(step * rep / 239);
-          const pe = new Uint8Array(nb * 239); for(let r = 0; r < rep; r++) pe.set(comp, r * step);
-          const bytes = new Uint8Array(a32(nb * 255)); RS(0x169, 239).enc(pe, nb, bytes, 0); return { comp, bytes }; };
-        // 2 bản bản đồ trang đứng đầu; cỡ cố định (tăng dần nếu không vừa)
-        let pmSize = 0x400;
-        for(;;){
-          pages.length = 0; SECS.length = 0; nextId = 1;
-          const pmId1 = newId(), pmId2 = newId(); pages.push({ id: pmId1, bytes: null }, { id: pmId2, bytes: null });
-          const base = 0x480 + 2 * pmSize;
-          const dSum = addSec('AcDb:SummaryInfo', 0x717a060f, secSummary, a32(secSummary.length) > 0x80 ? a32(secSummary.length) : 0x80, true);
-          const sumAt = base, pvAt = sumAt + pages[pages.length - 1].bytes.length;
-          const secPrev = (() => { const bmp = opt.bmp && opt.bmp.length ? opt.bmp : null; const F = new BW(64 + (bmp ? bmp.length : 0)); sentinel(F, SENT.THUMB_BEGIN);
-            if(bmp){ F.RL(1 + 9 + bmp.length); F.RC(1); F.RC(2); F.RL(pvAt + 16 + 4 + 1 + 9); F.RL(bmp.length); F.need(bmp.length * 8); F.u.set(bmp, F.byte); F.p += bmp.length * 8; }
-            else { F.RL(1); F.RC(0); } sentinel(F, SENT.THUMB_END); for(let i = 0; i < 32; i++) F.RC(0); return F.bytes(); })();   // + 32 byte đệm như AutoCAD (bộ đọc tính cỡ ảnh theo cỡ section)
-          addSec('AcDb:Preview', 0x40aa0473, secPrev, Math.max(0x400, a32(secPrev.length)), true);
-          const appAt = pvAt + pages[pages.length - 1].bytes.length;
-          addSec('AcDb:AppInfo', 0x3fa0043e, secAppInfo, Math.max(0x80, a32(secAppInfo.length)), true);
-          addSec('AcDb:RevHistory', 0x60a205b3, secRev, 0x1000);
-          addSec('AcDb:AcDbObjects', 0x674c05a9, secObjects, 0xf800);
-          addSec('AcDb:ObjFreeSpace', 0x77e2061f, secFree, 0xf800);
-          addSec('AcDb:Template', 0x4a1404ce, secTemplate, 0x400);
-          addSec('AcDb:Handles', 0x3f6e0450, secHandles, 0xf800);
-          addSec('AcDb:Classes', 0x3f54045f, secClasses, 0xf800);
-          addSec('AcDb:AuxHeader', 0x54f0050a, secAux, 0x800);
-          addSec('AcDb:Header', 0x32b803d9, secHeader, 0x800);
-          // bản đồ section: các section (như AutoCAD: từ cuối lên) + một bản ghi rỗng
-          const recs = SECS.slice().reverse().concat([{ name: '', hash: 0, size: 0, max: 0xf800, enc: 4, pages: [] }]);
-          let smLen = 0; for(const d of recs) smLen += 64 + (d.name ? (d.name.length + 1) * 2 : 0) + d.pages.length * 56;
-          const sm = new Uint8Array(smLen); let q = 0;
-          for(const d of recs){ const nl = d.name ? (d.name.length + 1) * 2 : 0;
-            for(const v of [d.size, d.max, 0, d.hash, nl, 0, d.enc, d.pages.length]){ L64(sm, q, v); q += 8; }
-            for(let i = 0; i < d.name.length; i++){ sm[q] = d.name.charCodeAt(i); q += 2; } if(nl) q += 2;
-            for(const pg of d.pages){ for(const v of [pg.off, d.pages.length > 1 ? pg.uncomp : d.max, pg.id, pg.uncomp, pg.comp, pg.sum, pg.crc]){ L64(sm, q, v); q += 8; } } }
-          const smRep = 4, smP = sysPage(sm, smRep), smId1 = newId(), smId2 = newId(); pages.push({ id: smId1, bytes: smP.bytes }, { id: smId2, bytes: smP.bytes.slice() });
-          // bản đồ trang: (cỡ, id) mỗi trang theo thứ tự trong file
-          const pm = new Uint8Array(pages.length * 16); pages.forEach((p, i) => { L64(pm, i * 16, p.bytes ? p.bytes.length : pmSize); L64(pm, i * 16 + 8, p.id); });
-          const pmRep = 3, pmP = sysPage(pm, pmRep);
-          if(pmP.bytes.length > pmSize){ pmSize = a32(pmP.bytes.length + 0x100); continue; }
-          const pmB = new Uint8Array(pmSize); pmB.set(pmP.bytes); pages[0].bytes = pmB; pages[1].bytes = pmB.slice();
-          let body = 0; for(const p of pages) body += p.bytes.length;
-          const fileSize = 0x480 + body + 0x400;
-          // header 0x110 byte (34 số 64 bit)
-          const hd = new Uint8Array(0x110);
-          const hv64 = [0x70, fileSize, crcJ(pmP.comp, pmP.comp.length), pmRep, 0, pmSize, pmId2, 0, pmId1, body, pmP.comp.length, pm.length, pages.length, nextId - 1, 0x20, 0x40, crcJ(pm, pm.length), 0xf800, 4, 1,
-            recs.length, crcJ(sm, sm.length), smP.comp.length, smId2, smId1, sm.length, crcJ(smP.comp, smP.comp.length), smRep, 0, 0x60100, 0, 0, BigInt(Math.floor(Math.random() * 0x7fffffff)) * 0x100000000n + BigInt(Math.floor(Math.random() * 0xffffffff)), 0];
-          hv64.forEach((v, i) => L64(hd, i * 8, v)); L64(hd, 0x108, crc64(hd, 0x110));
-          const hc = r21Comp(hd, true);
-          const pre = new Uint8Array(3 * 239); L64(pre, 0, 0); L64(pre, 8, 0); L64(pre, 16, crc64(hc, hc.length)); new DataView(pre.buffer).setInt32(24, hc.length, true); new DataView(pre.buffer).setInt32(28, 0, true); pre.set(hc, 32);
-          const blk = new Uint8Array(0x400); RS(0x169, 239).enc(pre, 3, blk, 0);
-          // 0x80 byte đầu file
-          const H0 = new Uint8Array(0x80); const vs = 'AC1021'; for(let i = 0; i < 6; i++) H0[i] = vs.charCodeAt(i);
-          H0[0x0b] = 0x32; H0[0x0c] = 3; le(H0, 0x0d, pvAt); H0[0x11] = DWGV; H0[0x12] = MAINT; H0[0x13] = 30; H0[0x16] = DWGV; H0[0x17] = MAINT;
-          le(H0, 0x20, sumAt); le(H0, 0x28, 0x80); le(H0, 0x2c, appAt);
-          const pv = privBlock();
-          return cat([H0, blk].concat(pages.map(p => p.bytes), [blk], pv ? [pv] : []));
-        }
+        const prev = pvAt => { const bmp = opt.bmp && opt.bmp.length ? opt.bmp : null; const F = new BW(96 + (bmp ? bmp.length : 0)); sentinel(F, SENT.THUMB_BEGIN);
+          if(bmp){ F.RL(1 + 9 + bmp.length); F.RC(1); F.RC(2); F.RL(pvAt + 16 + 4 + 1 + 9); F.RL(bmp.length); F.need(bmp.length * 8); F.u.set(bmp, F.byte); F.p += bmp.length * 8; }
+          else { F.RL(1); F.RC(0); } sentinel(F, SENT.THUMB_END); for(let i = 0; i < 32; i++) F.RC(0); return F.bytes(); };   // + 32 byte đệm như AutoCAD (bộ đọc tính cỡ ảnh theo cỡ section)
+        return pack2007([['AcDb:SummaryInfo', secSummary], ['AcDb:Preview', prev], ['AcDb:AppInfo', secAppInfo], ['AcDb:RevHistory', secRev], ['AcDb:AcDbObjects', secObjects],
+          ['AcDb:ObjFreeSpace', secFree], ['AcDb:Template', secTemplate], ['AcDb:Handles', secHandles], ['AcDb:Classes', secClasses], ['AcDb:AuxHeader', secAux], ['AcDb:Header', secHeader]],
+          { dwgv: DWGV, maint: MAINT, tail: privBlock() });
       }
       // --- trang dữ liệu: đầu 32 byte (mã hoá XOR theo địa chỉ) + dữ liệu (nén / nguyên) + lấp dãy MAGIC tới bội 0x20 ---
       const pages = [], fileParts = [], descs = []; let pos = 0x100;
@@ -1085,6 +1017,71 @@
     }catch(_){ return null; }
   }
 
+  /* ---------------- vỏ tệp DWG 2007 (AC1021) ----------------
+     0x00: 0x80 byte đầu file (như 2004); 0x80: khối 0x400 byte (header 0x110 byte nén + CRC-64, RS(255,239) ×3 xen kẽ + 0x28 byte kiểm tra);
+     0x480: bản đồ trang (2 bản), các trang dữ liệu, bản đồ section (2 bản); cuối file: bản sao khối 0x400 byte.
+     secs = [[tên, dữ liệu | (địa chỉ tuyệt đối của trang) => dữ liệu], …] theo thứ tự trang trong file. */
+  const SEC21 = { 'AcDb:SummaryInfo': [0x717a060f, 0x80, 1], 'AcDb:Preview': [0x40aa0473, 0x400, 1], 'AcDb:AppInfo': [0x3fa0043e, 0x80, 1], 'AcDb:AppInfoHistory': [0x96de0737, 0x80, 1],
+    'AcDb:FileDepList': [0x6c4205ca, 0x80, 1], 'AcDb:RevHistory': [0x60a205b3, 0x1000, 4], 'AcDb:AcDbObjects': [0x674c05a9, 0xf800, 4], 'AcDb:ObjFreeSpace': [0x77e2061f, 0xf800, 4],
+    'AcDb:Template': [0x4a1404ce, 0x400, 4], 'AcDb:Handles': [0x3f6e0450, 0xf800, 4], 'AcDb:Classes': [0x3f54045f, 0xf800, 4], 'AcDb:AuxHeader': [0x54f0050a, 0x800, 4], 'AcDb:Header': [0x32b803d9, 0x800, 4] };
+  function pack2007(secs, o){
+    o = o || {};
+    const L64 = (u, at, v) => { const dv = new DataView(u.buffer, u.byteOffset); v = BigInt.asUintN(64, BigInt(v)); dv.setUint32(at, Number(v & 0xffffffffn), true); dv.setUint32(at + 4, Number(v >> 32n), true); };
+    const le = (u, at, v) => new DataView(u.buffer, u.byteOffset).setUint32(at, v >>> 0, true);
+    const a8 = n => (n + 7) & ~7, a32 = n => (n + 31) & ~31;
+    const cat = parts => { let n = 0; for(const p of parts) n += p.length; const u = new Uint8Array(n); let q = 0; for(const p of parts){ u.set(p, q); q += p.length; } return u; };
+    const pages = [];   // { id, bytes } theo thứ tự trong file (địa chỉ = 0x480 + tổng cỡ trang trước)
+    let nextId = 1; const newId = () => nextId++;
+    // trang dữ liệu: nén (nếu có lợi) → RS(255,251) xen kẽ, cỡ trên đĩa bội 32 — hoặc trang nguyên (mã hoá 1: SummaryInfo / Preview / AppInfo, để địa chỉ trỏ thẳng vào dữ liệu)
+    const dataPage = (chunk, raw) => { const id = newId(); let comp = raw ? null : r21Comp(chunk); if(!comp) comp = chunk;
+      let bytes;
+      if(raw){ let sz = a32(chunk.length + 4); const nb0 = Math.ceil(a8(chunk.length) / 251); if(sz === a32(nb0 * 255)) sz += 32; bytes = new Uint8Array(sz); bytes.set(chunk); }
+      else { const nb = Math.ceil(a8(comp.length) / 251); const pe = new Uint8Array(nb * 251); pe.set(comp); bytes = new Uint8Array(a32(nb * 255)); RS(0x11D, 251).enc(pe, nb, bytes, 0); }
+      pages.push({ id, bytes }); return { id, uncomp: chunk.length, comp: comp.length, sum: sum21(chunk, chunk.length), crc: crcJ(comp, comp.length) }; };
+    // trang hệ thống: nén, lặp lại `rep` lần (đệm bội 8), RS(255,239) xen kẽ
+    const sysPage = (data, rep) => { const comp = r21Comp(data, true); const step = a8(comp.length), nb = Math.ceil(step * rep / 239);
+      const pe = new Uint8Array(nb * 239); for(let r = 0; r < rep; r++) pe.set(comp, r * step);
+      const bytes = new Uint8Array(a32(nb * 255)); RS(0x169, 239).enc(pe, nb, bytes, 0); return { comp, bytes }; };
+    let pmSize = 0x400;   // 2 bản bản đồ trang đứng đầu; cỡ cố định (tăng dần nếu không vừa)
+    for(;;){
+      pages.length = 0; nextId = 1; const SECS = [], at = {};
+      const pmId1 = newId(), pmId2 = newId(); pages.push({ id: pmId1, bytes: null }, { id: pmId2, bytes: null });
+      let pos = 0x480 + 2 * pmSize;
+      for(const [name, src] of secs){ const [hash, max0, enc] = SEC21[name] || [0, 0xf800, 4]; at[name] = pos;
+        const data = typeof src === 'function' ? src(pos) : src, raw = enc === 1, max = raw ? Math.max(max0, a32(data.length)) : max0;
+        const d = { name, hash, size: data.length, max, enc, pages: [] }; SECS.push(d);
+        for(let k = 0, nP = Math.max(1, Math.ceil(data.length / max)); k < nP; k++){ const o0 = k * max, r = dataPage(data.subarray(o0, Math.min(data.length, o0 + max)), raw); r.off = o0; d.pages.push(r); pos += pages[pages.length - 1].bytes.length; } }
+      // bản đồ section: các section (như AutoCAD: từ cuối lên) + một bản ghi rỗng
+      const recs = SECS.slice().reverse().concat([{ name: '', hash: 0, size: 0, max: 0xf800, enc: 4, pages: [] }]);
+      let smLen = 0; for(const d of recs) smLen += 64 + (d.name ? (d.name.length + 1) * 2 : 0) + d.pages.length * 56;
+      const sm = new Uint8Array(smLen); let q = 0;
+      for(const d of recs){ const nl = d.name ? (d.name.length + 1) * 2 : 0;
+        for(const v of [d.size, d.max, 0, d.hash, nl, 0, d.enc, d.pages.length]){ L64(sm, q, v); q += 8; }
+        for(let i = 0; i < d.name.length; i++){ sm[q] = d.name.charCodeAt(i); q += 2; } if(nl) q += 2;
+        for(const pg of d.pages){ for(const v of [pg.off, d.pages.length > 1 ? pg.uncomp : d.max, pg.id, pg.uncomp, pg.comp, pg.sum, pg.crc]){ L64(sm, q, v); q += 8; } } }
+      const smRep = 4, smP = sysPage(sm, smRep), smId1 = newId(), smId2 = newId(); pages.push({ id: smId1, bytes: smP.bytes }, { id: smId2, bytes: smP.bytes.slice() });
+      // bản đồ trang: (cỡ, id) mỗi trang theo thứ tự trong file
+      const pm = new Uint8Array(pages.length * 16); pages.forEach((p, i) => { L64(pm, i * 16, p.bytes ? p.bytes.length : pmSize); L64(pm, i * 16 + 8, p.id); });
+      const pmRep = 3, pmP = sysPage(pm, pmRep);
+      if(pmP.bytes.length > pmSize){ pmSize = a32(pmP.bytes.length + 0x100); continue; }
+      const pmB = new Uint8Array(pmSize); pmB.set(pmP.bytes); pages[0].bytes = pmB; pages[1].bytes = pmB.slice();
+      let body = 0; for(const p of pages) body += p.bytes.length;
+      // header 0x110 byte (34 số 64 bit); hạt giống CRC = 0 (dạng mã hoá 0)
+      const hd = new Uint8Array(0x110), rnd = () => BigInt(Math.floor(Math.random() * 0x7fffffff)) * 0x100000000n + BigInt(Math.floor(Math.random() * 0xffffffff));
+      [0x70, 0x480 + body + 0x400, crcJ(pmP.comp, pmP.comp.length), pmRep, 0, pmSize, pmId2, 0, pmId1, body, pmP.comp.length, pm.length, pages.length, nextId - 1, 0x20, 0x40, crcJ(pm, pm.length), 0xf800, 4, 1,
+        recs.length, crcJ(sm, sm.length), smP.comp.length, smId2, smId1, sm.length, crcJ(smP.comp, smP.comp.length), smRep, 0, 0x60100, 0, 0, rnd(), 0].forEach((v, i) => L64(hd, i * 8, v));
+      L64(hd, 0x108, crc64(hd, 0x110));
+      const hc = r21Comp(hd, true), pre = new Uint8Array(3 * 239), dv = new DataView(pre.buffer);
+      L64(pre, 16, crc64(hc, hc.length)); dv.setInt32(24, hc.length, true); pre.set(hc, 32);
+      const blk = new Uint8Array(0x400); RS(0x169, 239).enc(pre, 3, blk, 0);
+      // 0x80 byte đầu file
+      const H0 = new Uint8Array(0x80); for(let i = 0; i < 6; i++) H0[i] = 'AC1021'.charCodeAt(i);
+      H0[0x0b] = 0x32; H0[0x0c] = 3; le(H0, 0x0d, at['AcDb:Preview'] || 0); H0[0x11] = o.dwgv || 0x1b; H0[0x12] = o.maint || 0; H0[0x13] = 30; H0[0x16] = o.dwgv || 0x1b; H0[0x17] = o.maint || 0;
+      le(H0, 0x20, at['AcDb:SummaryInfo'] || 0); le(H0, 0x28, 0x80); le(H0, 0x2c, at['AcDb:AppInfo'] || 0);
+      return cat([H0, blk].concat(pages.map(p => p.bytes), [blk], o.tail ? [o.tail] : []));
+    }
+  }
+
   /* ---------------- đọc DWG 2007: giải nén LZ kiểu 2007 + sửa trang "không nén" cho libredwg-web ----------------
      AutoCAD (và DVDCAD) ghi trang không nén được vẫn mã Reed–Solomon xen kẽ; bản libredwg-web kèm theo lại chép thẳng
      các trang đó → hỏng dữ liệu. fix2007 giải xen kẽ các trang ấy ngay trong bộ nhớ trước khi đưa cho libredwg-web. */
@@ -1123,7 +1120,7 @@
         if(!out) out = u.slice(); const d = deRS(pg.at, nb, 251); out.set(d.subarray(0, un), pg.at); } }
     return out ? out.buffer : buf; }catch(_){ return buf; } }
 
-  const api = { BW, crc16, parseDxf, headerVars, Rec, tvBytes, dwgFromDxf, previewBmp, fix2007, r21Comp, r21Decomp, crc64, crcJ, sum21 };
+  const api = { BW, crc16, parseDxf, headerVars, Rec, tvBytes, dwgFromDxf, previewBmp, fix2007, pack2007, r21Comp, r21Decomp, crc64, crcJ, sum21 };
   if(typeof module !== 'undefined' && module.exports) module.exports = api;
   root.DVDDwg = api;
 
