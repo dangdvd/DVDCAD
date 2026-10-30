@@ -798,8 +798,8 @@
       const secSummary = (() => { const F = new BW(256); for(const s of ['', '', '', '', '', 'DVDCAD', '', '']) T16(F, s);
         F.RL(0); F.RL(0); F.RL(jd[0]); F.RL(jd[1]); F.RL(jd[0]); F.RL(jd[1]); F.RS(0); F.RL(0); F.RL(0); return F.bytes(); })();
       const secAppInfo = (() => { const F = new BW(1024), z16 = () => { for(let i = 0; i < 16; i++) F.RC(0); };
-        F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.17.0'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
-        U16(F, '<ProductInformation name ="DVDCAD" build_version="5.17.0" registry_version="5.17" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
+        F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.18.0'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
+        U16(F, '<ProductInformation name ="DVDCAD" build_version="5.18.0" registry_version="5.18" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
       const secRev = Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0);
       const up32 = (n, q) => Math.max(q, Math.ceil(n / q) * q);
       // --- trang dữ liệu: đầu 32 byte (mã hoá XOR theo địa chỉ) + dữ liệu (nén / nguyên) + lấp dãy MAGIC tới bội 0x20 ---

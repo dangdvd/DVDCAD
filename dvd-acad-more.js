@@ -203,11 +203,24 @@
 
   /* ===================== PLOT (in theo khổ giấy & tỉ lệ như AutoCAD) ===================== */
   const PAPERS = { A4: [210, 297], A3: [297, 420], A2: [420, 594], A1: [594, 841], A0: [841, 1189] };
+  // khổ giấy như DWG To PDF.pc3 (mm, theo chiều dọc) + tên chuẩn của AutoCAD (canonical media name)
+  const IN = 25.4, PAPER_SIZES = {};
+  for(const k of ['A0', 'A1', 'A2', 'A3', 'A4']) PAPER_SIZES[k] = { w: PAPERS[k][0], h: PAPERS[k][1], label: 'ISO ' + k, iso: 1 };
+  PAPER_SIZES.A5 = { w: 148, h: 210, label: 'ISO A5', iso: 1 };
+  for(const [k, w, h] of [['A', 8.5, 11], ['B', 11, 17], ['C', 17, 22], ['D', 22, 34], ['E', 34, 44]]) PAPER_SIZES['ANSI_' + k] = { w: w * IN, h: h * IN, label: 'ANSI ' + k, inch: [w, h] };
+  for(const [k, w, h] of [['A', 9, 12], ['B', 12, 18], ['C', 18, 24], ['D', 24, 36], ['E1', 30, 42], ['E', 36, 48]]) PAPER_SIZES['ARCH_' + k] = { w: w * IN, h: h * IN, label: 'ARCH ' + k, inch: [w, h] };
+  const f2 = v => (+v).toFixed(2);
+  const paperName = () => PS.paper === 'custom' ? 'tự chọn' : ((PAPER_SIZES[PS.paper] || {}).label || PS.paper).replace(/^ISO /, '');
+  const paperLabel = k => { const P = PAPER_SIZES[k]; if(!P) return k; return P.label + (P.inch ? ' (' + f2(P.inch[0]) + ' x ' + f2(P.inch[1]) + ' Inches)' : ' (' + f2(P.w) + ' x ' + f2(P.h) + ' MM)'); };
+  // tên khổ của AutoCAD (mã 4 của PLOTSETTINGS), theo hướng ngang như DWG To PDF
+  A.paperMedia = (k, cw, ch) => { const P = PAPER_SIZES[k]; if(!P){ const W = Math.max(cw || 420, ch || 297), H = Math.min(cw || 420, ch || 297); return 'User_(' + f2(W) + '_x_' + f2(H) + '_MM)'; }
+    const t = k.replace(/_.*/, ''); return P.inch ? t + '_full_bleed_' + k.slice(t.length + 1) + '_(' + f2(P.inch[1]) + '_x_' + f2(P.inch[0]) + '_Inches)' : 'ISO_full_bleed_' + k + '_(' + f2(P.h) + '_x_' + f2(P.w) + '_MM)'; };
+  A.PAPER_SIZES = PAPER_SIZES;
   const SCALES = [1, 2, 5, 10, 20, 25, 50, 75, 100, 125, 150, 200, 250, 500, 1000, 2000, 5000];
   const PS = Object.assign({ paper: 'A3', land: true, area: 'extents', fit: true, scale: 100, center: true, style: 'mono', lw: true, margin: 5, win: null, fmt: 'pdf' }, (() => { try{ return JSON.parse(localStorage.getItem('dvd:plot') || '{}'); }catch(_){ return {}; } })());
   PS.win = null;
   // thiết lập trang có tên (Page Setup) theo bản vẽ — PLOT chọn / thêm; PSETUPIN nhập từ bản vẽ khác
-  const PSU_KEYS = ['paper', 'land', 'area', 'fit', 'scale', 'center', 'style', 'lw', 'margin', 'dev', 'ud'];
+  const PSU_KEYS = ['paper', 'land', 'area', 'fit', 'scale', 'center', 'style', 'lw', 'margin', 'dev', 'ud', 'cw', 'ch', 'tp', 'ps', 'slw'];
   const psuKey = () => 'dvd:psetups::' + ((typeof currentName === 'string' && currentName) || '');
   A.pageSetups = () => { try{ return JSON.parse(localStorage.getItem(psuKey()) || '{}') || {}; }catch(_){ return {}; } };
   A.pageSetupsSave = o => { try{ if(o && Object.keys(o).length) localStorage.setItem(psuKey(), JSON.stringify(o)); else localStorage.removeItem(psuKey()); }catch(_){} };
@@ -225,7 +238,7 @@
     if(!isFinite(a)){ const v = viewWorldAABB(); return { x0: v.minX, y0: v.minY, x1: v.maxX, y1: v.maxY }; }
     return { x0: a, y0: b, x1: c, y1: d };
   }
-  function paperMM(){ const D = LYT(); if(D) return [D.size[0], D.size[1]]; const p = PAPERS[PS.paper] || PAPERS.A3; return PS.land ? [p[1], p[0]] : [p[0], p[1]]; }
+  function paperMM(){ const D = LYT(); if(D) return [D.size[0], D.size[1]]; const P0 = PAPER_SIZES[PS.paper]; const p = P0 ? [P0.w, P0.h] : PS.paper === 'custom' && PS.cw > 0 && PS.ch > 0 ? [Math.min(PS.cw, PS.ch), Math.max(PS.cw, PS.ch)] : PAPERS.A3; return PS.land ? [p[1], p[0]] : [p[0], p[1]]; }
   // tỉ lệ thực: mm giấy trên 1 đơn vị bản vẽ
   function plotK(area, pw, ph){
     if(LYT()) return 1;
@@ -233,44 +246,52 @@
     if(PS.fit) return Math.min(pw / aw, ph / ah);
     return mmPerUnit() / (PS.scale || 1);
   }
-  function plotRender(dpi, forPreview){
+  // vec = true: ghi thành trang PDF vector (A.PdfCtx) thay cho ảnh; chữ nhỏ vẫn vẽ thành chữ (không thay bằng vạch) để phóng to đọc được
+  function plotRender(dpi, forPreview, vec){
     const [Wmm, Hmm] = paperMM(); const mg = LYT() ? 0 : Math.max(0, +PS.margin || 0); const pw = Wmm - 2 * mg, ph = Hmm - 2 * mg;
     const area = plotArea(); const k = plotK(area, pw, ph);
-    const pxPerMM = dpi / 25.4; let pxW = Math.round(Wmm * pxPerMM), pxH = Math.round(Hmm * pxPerMM);
-    const MAX = forPreview ? 400000 : 30000000; let sc = 1; if(pxW * pxH > MAX){ sc = Math.sqrt(MAX / (pxW * pxH)); pxW = Math.round(pxW * sc); pxH = Math.round(pxH * sc); }
-    const realPxPerMM = pxW / Wmm, CSS_PER_MM = 96 / 25.4, dpr = realPxPerMM / CSS_PER_MM;
-    const out = document.createElement('canvas'); out.width = pxW; out.height = pxH; const octx = out.getContext('2d'); let mask = null;
+    vec = !!(vec && A.PdfCtx); const CSS_PER_MM = 96 / 25.4;
+    const pxPerMM = vec ? CSS_PER_MM : dpi / 25.4; let pxW = Math.round(Wmm * pxPerMM), pxH = Math.round(Hmm * pxPerMM);
+    const MAX = forPreview ? 400000 : 30000000; let sc = 1; if(!vec && pxW * pxH > MAX){ sc = Math.sqrt(MAX / (pxW * pxH)); pxW = Math.round(pxW * sc); pxH = Math.round(pxH * sc); }
+    const realPxPerMM = vec ? CSS_PER_MM : pxW / Wmm, dpr = vec ? 1 : realPxPerMM / CSS_PER_MM;
+    const out = vec ? new A.PdfCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, 72 / 25.4 / CSS_PER_MM, { flip: !!PS.ud, imgMax: PS.dev === 'pdfsm' ? 1.5e6 : 16e6 }).canvas : document.createElement('canvas'); if(!vec){ out.width = pxW; out.height = pxH; }
+    const octx = out.getContext('2d'); let mask = null;
     const aw = area.x1 - area.x0, ah = area.y1 - area.y0;
     // vị trí vùng in trên giấy (mm, gốc trên-trái)
     let ox = mg, oy = mg; if(PS.center || PS.fit){ ox = (Wmm - aw * k) / 2; oy = (Hmm - ah * k) / 2; } else { oy = Hmm - mg - ah * k; }
     const sv = { ctx, rtw: _RTW, rth: _RTH, dpr: window.devicePixelRatio, plot: plotMode, lw: showLW, style: _plotStyle, cpm: _plotCssPerMM, v: { scale: view.scale, offsetX: view.offsetX, offsetY: view.offsetY, rot: view.rot }, grid: window.drawGrid, sb: window.drawScaleBar };
     _exporting = true; ctx = octx; _RTW = Wmm * CSS_PER_MM; _RTH = Hmm * CSS_PER_MM; view.rot = 0; plotMode = true;
-    _plotStyle = PS.style === 'color' ? '' : PS.style; showLW = !!PS.lw; _plotCssPerMM = PS.lw ? CSS_PER_MM : 0;
-    window.drawGrid = () => { try{ if(!LYT() && A.geomapPlotDraw) A.geomapPlotDraw(); }catch(_){} }; window.drawScaleBar = () => {};   // không in lưới; bản đồ nền (GEOMAP) đã chụp cho vùng in thì in dưới bản vẽ
+    // In theo kiểu in (tắt = in đúng màu bản vẽ), co giãn bề rộng nét theo tỉ lệ in, in độ trong suốt
+    const slw = PS.slw && !PS.fit && !LYT() ? Math.max(0.01, Math.min(100, k / mmPerUnit())) : 1, _tp = TPDISPLAY;
+    _plotStyle = PS.style === 'color' || PS.ps === false ? '' : PS.style; showLW = !!PS.lw; _plotCssPerMM = PS.lw ? CSS_PER_MM * slw : 0; TPDISPLAY = PS.tp !== false;
+    window.drawGrid = () => { try{ if(!LYT() && A.geomapPlotDraw) A.geomapPlotDraw(); }catch(_){} }; window.drawScaleBar = () => {}; const _tm = [window.__txtMax, window.__txtBar, window.__txtSkip]; if(vec){ window.__txtMax = 1e7; window.__txtBar = 0; window.__txtSkip = 0.02; }   // không in lưới; bản đồ nền (GEOMAP) đã chụp cho vùng in thì in dưới bản vẽ
     const _oh = OBJ_HIDE; if(LYT()){ const h = new Set(OBJ_HIDE || []); for(const e of entities) if(e.vpf) h.add(e); OBJ_HIDE = h; }   // khung nhìn & mép giấy: không in
     try{
       Object.defineProperty(window, 'devicePixelRatio', { value: dpr, configurable: true });
       view.scale = k * CSS_PER_MM; view.offsetX = ox * CSS_PER_MM - area.x0 * view.scale; view.offsetY = (oy + ah * k) * CSS_PER_MM + area.y0 * view.scale;
-      window.__plotClear = !!(A.plotDepth && A.plotDepth(PS.dev) !== 'tc');   // giảm màu: vẽ lên nền trong suốt (alpha = độ phủ, bỏ khử răng cưa như máy vẽ)
+      window.__plotClear = !vec && !!(A.plotDepth && A.plotDepth(PS.dev) !== 'tc');   // giảm màu: vẽ lên nền trong suốt (alpha = độ phủ, bỏ khử răng cưa như máy vẽ)
       bbDirty = true; buildBBoxCache(); draw();
       // cắt bỏ phần ngoài vùng in (như AutoCAD)
       octx.setTransform(1, 0, 0, 1, 0, 0); octx.fillStyle = '#ffffff';
       const X0 = ox * realPxPerMM - 2, Y0 = oy * realPxPerMM - 2, X1 = (ox + aw * k) * realPxPerMM + 2, Y1 = (oy + ah * k) * realPxPerMM + 2;
       octx.fillRect(0, 0, pxW, Math.max(0, Y0)); octx.fillRect(0, Y1, pxW, pxH - Y1); octx.fillRect(0, 0, Math.max(0, X0), pxH); octx.fillRect(X1, 0, pxW - X1, pxH);
       // giảm màu (256 màu / đen trắng) với bảng .ctb có màu tắt dither: vẽ thêm lượt mặt nạ cho biết điểm ảnh nào không dither
-      const MK = A.plotDitherMask && A.plotDitherMask();
+      const MK = !vec && A.plotDitherMask && A.plotDitherMask();
       if(MK){ mask = document.createElement('canvas'); mask.width = pxW; mask.height = pxH; ctx = mask.getContext('2d'); MK.begin(); try{ bbDirty = true; draw(); } finally { MK.end(); } }
     } finally {
-      window.__plotClear = false; OBJ_HIDE = _oh; ctx = sv.ctx; _RTW = sv.rtw; _RTH = sv.rth; _exporting = false; plotMode = sv.plot; showLW = sv.lw; _plotStyle = sv.style; _plotCssPerMM = sv.cpm;
+      window.__plotClear = false; [window.__txtMax, window.__txtBar, window.__txtSkip] = _tm; TPDISPLAY = _tp; OBJ_HIDE = _oh; ctx = sv.ctx; _RTW = sv.rtw; _RTH = sv.rth; _exporting = false; plotMode = sv.plot; showLW = sv.lw; _plotStyle = sv.style; _plotCssPerMM = sv.cpm;
       view.scale = sv.v.scale; view.offsetX = sv.v.offsetX; view.offsetY = sv.v.offsetY; view.rot = sv.v.rot; window.drawGrid = sv.grid; window.drawScaleBar = sv.sb;
       Object.defineProperty(window, 'devicePixelRatio', { value: sv.dpr, configurable: true }); bbDirty = true;
     }
-    const R = { canvas: out, pagePt: [Wmm * 72 / 25.4, Hmm * 72 / 25.4], k, area, Wmm, Hmm, ox, oy };
-    try{ if(A.plotPost) A.plotPost(R, forPreview); }catch(err){ console.warn('plotPost', err); }   // dấu in (PLOTSTAMP), in lộn ngược
-    try{ if(A.plotQuantize) A.plotQuantize(R, mask); }catch(err){ console.warn('plotQuantize', err); }   // độ sâu màu của máy vẽ + dither theo kiểu in
+    const R = { canvas: out, pagePt: [Wmm * 72 / 25.4, Hmm * 72 / 25.4], k, area, Wmm, Hmm, ox, oy }; if(vec) R.pdf = octx;
+    const ud = PS.ud; if(vec){ PS.ud = false; if(ud) octx.unflip(); }   // PDF: lộn ngược đã đặt trong ma trận trang (dấu in vẽ sau thì đứng thẳng)
+    try{ if(A.plotPost) A.plotPost(R, forPreview); }catch(err){ console.warn('plotPost', err); } finally { PS.ud = ud; }   // dấu in (PLOTSTAMP), in lộn ngược
+    try{ if(!vec && A.plotQuantize) A.plotQuantize(R, mask); }catch(err){ console.warn('plotQuantize', err); }   // độ sâu màu của máy vẽ + dither theo kiểu in
     return R;
   }
   A.plotRender = plotRender; A.PS = PS;
+  // PDF vector của thiết lập in hiện tại (PLOT / PUBLISH): trả Blob
+  A.plotPDF = async (title) => { const r = plotRender(0, false, true); return A.pdfBuild([{ ctx: r.pdf }], { title: title || ((typeof currentName === 'string' && currentName) || ''), version: A.version || '' }); };
   // khổ giấy, vùng in, tỉ lệ (mm giấy / đơn vị) và vị trí vùng in (mm từ góc trên trái) — như plotRender, không vẽ (máy vẽ HPGL/2)
   A.plotGeom = () => { const [Wmm, Hmm] = paperMM(); const mg = LYT() ? 0 : Math.max(0, +PS.margin || 0); const area = plotArea(); const k = plotK(area, Wmm - 2 * mg, Hmm - 2 * mg);
     const aw = area.x1 - area.x0, ah = area.y1 - area.y0; let ox = mg, oy = mg; if(PS.center || PS.fit){ ox = (Wmm - aw * k) / 2; oy = (Hmm - ah * k) / 2; } else { oy = Hmm - mg - ah * k; } return { Wmm, Hmm, area, k, ox, oy }; };
@@ -292,14 +313,25 @@
         await shareOrDownload(new Blob([txt.data], { type: 'application/vnd.hp-hpgl' }), nm, 'application/vnd.hp-hpgl'); log('Đã in ra ' + nm + ' (HPGL/2, ' + txt.pens + ' bút, khổ ' + PS.paper + ').'); }catch(err){ console.error(err); say('Không tạo được tệp HPGL/2.'); } return; }
     try{
       await mapPrep();
-      const r = plotRender(fmt === 'png' ? 200 : 300, false);
       const name = (typeof exportFilename === 'function') ? exportFilename(fmt === 'png' ? 'png' : 'pdf') : 'banve.' + fmt;
+      if(fmt === 'pdf' && A.pdfBuild && !PS.pdfRaster){   // DWG To PDF: PDF vector (đường nét + chữ nhúng phông), phóng to vẫn sắc nét
+        const blob = await A.plotPDF(); await shareOrDownload(blob, name, 'application/pdf'); const I = blob.dvdInfo || {};
+        log('Đã in PDF vector: khổ ' + PS.paper + (PS.land ? ' ngang' : ' dọc') + ', tỉ lệ ' + (PS.fit ? 'khít giấy' : '1:' + PS.scale) + (I.fonts && I.fonts.length ? ', phông nhúng: ' + [...new Set(I.fonts)].join(', ') : '') + (I.rasterText ? ' (' + I.rasterText + ' đoạn chữ thiếu phông vẽ thành ảnh)' : '') + '.'); return; }
+      const r = plotRender(fmt === 'png' || fmt === 'jpg' ? 200 : 300, false);
       if(fmt === 'pdf'){ const blob = await canvasToPDFPaper(r.canvas, r.pagePt); await shareOrDownload(blob, name, 'application/pdf'); }
+      else if(fmt === 'jpg'){ const blob = await new Promise(res => r.canvas.toBlob(res, 'image/jpeg', 0.92)); await shareOrDownload(blob, name.replace(/\.pdf$/i, '.jpg'), 'image/jpeg'); }
       else if(fmt === 'png'){ const blob = r.q && A.pngIndexed ? await A.pngIndexed(r.q, r.canvas.width / r.Wmm * 25.4) : await new Promise(res => r.canvas.toBlob(res, 'image/png')); await shareOrDownload(blob, name, 'image/png'); }
       else printCanvas(r.canvas, r.Wmm, r.Hmm);
       log('Đã in: khổ ' + PS.paper + (PS.land ? ' ngang' : ' dọc') + ', tỉ lệ ' + (PS.fit ? 'khít giấy (≈1:' + (+(mmPerUnit() / r.k).toPrecision(4)) + ')' : '1:' + PS.scale));
     }catch(err){ console.error(err); say('Không tạo được bản in.'); }
   }
+  // máy in / máy vẽ như danh sách của AutoCAD (.pc3)
+  const DEVICES = [['pdf', 'DWG To PDF.pc3'], ['pdfhq', 'AutoCAD PDF (High Quality Print).pc3'], ['pdfsm', 'AutoCAD PDF (Smallest File).pc3'], ['print', 'Máy in Windows (hệ thống)'], ['png', 'PublishToWeb PNG.pc3'], ['jpg', 'PublishToWeb JPG.pc3'], ['plt', 'HP DesignJet (HPGL/2).pc3']];
+  A.PLOT_DEVICES = DEVICES;
+  const devFmt = (d, toFile) => /^pdf/.test(d) || (d === 'print' && toFile) ? 'pdf' : d;   // máy in Windows + In ra file → tệp PDF
+  const layName = () => { try{ const L = dwgLayouts[currentLayout]; return !L || L.isModel ? 'Model' : 'layout "' + L.name + '"'; }catch(_){ return 'Model'; } };
+  const layKey = () => { let n = 'Model'; try{ const L = dwgLayouts[currentLayout]; if(L && !L.isModel) n = L.name; }catch(_){} return 'dvd:lplot::' + ((typeof currentName === 'string' && currentName) || '') + '::' + n; };
+  const lsGetL = k => { try{ return JSON.parse(localStorage.getItem(k) || 'null'); }catch(_){ return null; } }, lsSetL = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(_){} };
   function openPlot(){
     if(!hasDoc()){ say('Mở bản vẽ trước.'); return; }
     const opt = (v, t, s) => '<option value="' + esc(v) + '"' + (s ? ' selected' : '') + '>' + esc(t) + '</option>';
@@ -307,35 +339,43 @@
     const F = (t, h, st) => '<fieldset class="acw-grp"' + (st ? ' style="' + st + '"' : '') + '><legend>' + t + '</legend>' + h + '</fieldset>', R = (l, c) => '<label class="dvd-frow"><span>' + l + '</span><span class="v">' + c + '</span></label>';
     const dev = PS.dev || 'pdf';
     const html = '<div class="pl-wrap"><div class="pl-left">' +
-      F('Thiết lập trang', R('Tên:', '<select id="plSetup" style="max-width:180px">' + opt('', '<Không>', true) + Object.keys(A.pageSetups()).map(n => opt(n, n, false)).join('') + '</select> <button type="button" class="acw-btn" id="plSetupAdd">Thêm…</button> <button type="button" class="acw-btn" id="plSetupIn" title="Nhập thiết lập trang từ bản vẽ khác (PSETUPIN)">Nhập…</button>')) +
-      F('Máy in / máy vẽ', R('Tên:', '<select id="plDev">' + opt('pdf', 'DWG To PDF.pc3', dev === 'pdf') + opt('print', 'Máy in Windows (hệ thống)', dev === 'print') + opt('png', 'PublishToWeb PNG.pc3', dev === 'png') + opt('plt', 'HP DesignJet (HPGL/2).pc3', dev === 'plt') + '</select>') +
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px"><div class="acw-note" id="plDevN" style="margin:0 0 2px"></div><button type="button" class="acw-btn" id="plDevP" title="Trình sửa cấu hình máy vẽ: độ sâu màu">Thuộc tính…</button></div><label class="acw-ck dis"><input type="checkbox" disabled checked><span>In ra file</span></label>') +
-      '<div style="display:flex;gap:8px">' + F('Khổ giấy', '<select id="plPaper" style="width:100%">' + Object.keys(PAPERS).map(k => opt(k, 'ISO ' + k + ' (' + PAPERS[k][0] + '.00 x ' + PAPERS[k][1] + '.00 MM)', k === PS.paper)).join('') + '</select>', 'flex:1') +
+      F('Thiết lập trang', R('Tên:', '<select id="plSetup" style="min-width:120px;max-width:180px">' + opt('', '<Không>', true) + Object.keys(A.pageSetups()).map(n => opt(n, n, false)).join('') + '</select> <button type="button" class="acw-btn" id="plSetupAdd">Thêm…</button> <button type="button" class="acw-btn" id="plSetupIn" title="Nhập thiết lập trang từ bản vẽ khác (PSETUPIN)">Nhập…</button>')) +
+      F('Máy in / máy vẽ', R('Tên:', '<select id="plDev">' + DEVICES.map(([v, t]) => opt(v, t, dev === v)).join('') + '</select>') +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px"><div class="acw-note" id="plDevN" style="margin:0 0 2px"></div><button type="button" class="acw-btn" id="plDevP" title="Trình sửa cấu hình máy vẽ: độ sâu màu">Thuộc tính…</button></div><label class="acw-ck"><input type="checkbox" id="plFile"' + (PS.toFile ? ' checked' : '') + '><span>In ra file</span></label>') +
+      '<div style="display:flex;gap:8px">' + F('Khổ giấy', '<select id="plPaper" style="width:100%">' + Object.keys(PAPER_SIZES).map(k => opt(k, paperLabel(k), k === PS.paper)).join('') + opt('custom', 'Khổ tự chọn…', PS.paper === 'custom') + '</select>' +
+          '<div id="plCus" style="display:' + (PS.paper === 'custom' ? 'flex' : 'none') + ';gap:4px;align-items:center;margin-top:4px">Rộng <input id="plCw" inputmode="decimal" style="width:60px" value="' + esc(PS.cw || 420) + '"> × Cao <input id="plCh" inputmode="decimal" style="width:60px" value="' + esc(PS.ch || 297) + '"> mm</div>', 'flex:1') +
         F('Số bản', '<input type="number" value="1" disabled style="width:60px">', 'flex:0 0 auto') + '</div>' +
       '<div style="display:flex;gap:8px">' + F('Vùng in', R('In gì:', '<select id="plArea">' + opt('extents', 'Phạm vi (Extents)', PS.area === 'extents') + opt('display', 'Màn hình (Display)', PS.area === 'display') + opt('window', 'Khung (Window)', PS.area === 'window') + '</select>') +
           '<button type="button" class="acw-btn" id="plWin">Khung&lt;</button>', 'flex:1') +
         F('Tỉ lệ in', '<label class="acw-ck"><input type="checkbox" id="plFit"' + (PS.fit ? ' checked' : '') + '><span>Khít khổ giấy</span></label>' +
           R('Tỉ lệ 1 :', '<input id="plScale" list="plScales" inputmode="decimal" style="width:80px" value="' + esc(PS.scale) + '"><datalist id="plScales">' + SCALES.map(v => '<option value="' + v + '">').join('') + '</datalist>') +
-          '<label class="acw-ck dis"><input type="checkbox" disabled><span>Co giãn bề rộng nét</span></label>', 'flex:1') + '</div>' +
+          '<label class="acw-ck"><input type="checkbox" id="plSlw"' + (PS.slw ? ' checked' : '') + '><span>Co giãn bề rộng nét</span></label>', 'flex:1') + '</div>' +
       F('Dời gốc in (gốc = vùng in được)', '<div style="display:flex;gap:10px;align-items:center">' + R('Lề (mm):', '<input id="plMargin" inputmode="decimal" style="width:60px" value="' + esc(PS.margin) + '">') + '<label class="acw-ck"><input type="checkbox" id="plCenter"' + (PS.center ? ' checked' : '') + '><span>Căn giữa bản in</span></label></div>') +
       '</div><div class="pl-right">' +
       F('Bảng kiểu in (gán bút)', '<select id="plStyle" style="width:calc(100% - 40px)">' + opt('mono', 'monochrome.ctb', PS.style === 'mono') + opt('color', 'Không (in theo màu bản vẽ)', PS.style === 'color') + opt('gray', 'grayscale.ctb', PS.style === 'gray') + '</select>') +
       F('Tuỳ chọn in', '<label class="acw-ck dis"><input type="checkbox" disabled><span>In nền</span></label><br><label class="acw-ck"><input type="checkbox" id="plLw"' + (PS.lw ? ' checked' : '') + '><span>In bề rộng nét của đối tượng</span></label><br>' +
-        '<label class="acw-ck dis"><input type="checkbox" disabled><span>In độ trong suốt</span></label><br><label class="acw-ck dis"><input type="checkbox" disabled checked><span>In theo kiểu in</span></label><br>' +
+        '<label class="acw-ck"><input type="checkbox" id="plTp"' + (PS.tp !== false ? ' checked' : '') + '><span>In độ trong suốt</span></label><br><label class="acw-ck"><input type="checkbox" id="plPs"' + (PS.ps !== false ? ' checked' : '') + '><span>In theo kiểu in</span></label><br>' +
         '<label class="acw-ck"><input type="checkbox" id="plStamp"' + (PS.stamp ? ' checked' : '') + '><span>Bật dấu in</span></label><button type="button" class="acw-btn" id="plStampB" title="Cài đặt dấu in (PLOTSTAMP)" style="min-width:0;padding:0 6px;height:20px">⚙</button>') +
       F('Hướng bản vẽ', '<label class="acw-ck"><input type="radio" name="plLand" value="0"' + (!PS.land ? ' checked' : '') + '><span>Dọc (Portrait)</span></label><br><label class="acw-ck"><input type="radio" name="plLand" value="1"' + (PS.land ? ' checked' : '') + '><span>Ngang (Landscape)</span></label><br><label class="acw-ck"><input type="checkbox" id="plUd"' + (PS.ud ? ' checked' : '') + '><span>In lộn ngược</span></label>') +
       '<div class="pl-prev"><canvas id="plPrev"></canvas></div><div class="pl-info" id="plInfo"></div></div></div>';
-    const d = A.dialog({ title: 'In — Model', wide: true, help: 'PLOT', html, okText: 'OK', left: '<button type="button" class="acw-btn" id="plPv">Xem trước…</button><button type="button" class="acw-btn" disabled>Áp cho layout</button>',
-      ok: () => { read(); if(PS.area === 'window' && !PS.win){ say('Chưa chọn khung in.'); return false; } const f = g('plDev').value; setTimeout(() => doPlot(f), 0); } });
+    const d = A.dialog({ title: 'In — Model', wide: true, help: 'PLOT', html, okText: 'OK', left: '<button type="button" class="acw-btn" id="plPv">Xem trước…</button><button type="button" class="acw-btn" id="plApply" title="Lưu các thiết lập này cho layout hiện hành (lần sau mở PLOT tự dùng lại)">Áp cho layout</button>',
+      ok: () => { read(); if(PS.area === 'window' && !PS.win){ say('Chưa chọn khung in.'); return false; } const f = g('plDev').value; setTimeout(() => doPlot(devFmt(f, PS.toFile)), 0); } });
     const root = d.root; root.querySelector('.modal').classList.add('pl-modal');
     const g = id => root.querySelector('#' + id);
     const read = () => { PS.paper = g('plPaper').value; PS.land = (root.querySelector('input[name=plLand]:checked') || { value: PS.land ? '1' : '0' }).value === '1'; PS.dev = g('plDev').value; const dep = A.plotDepth ? A.plotDepth(PS.dev) : 'tc', depT = dep === 'tc' ? '' : ' · ' + ((A.PLOT_DEPTHS || []).find(x => x[0] === dep) || ['', dep])[1]; g('plDevP').disabled = !(PS.dev === 'png' || PS.dev === 'pdf' || PS.dev === 'print');
-      g('plDevN').textContent = PS.dev === 'pdf' ? 'Xuất file PDF' + depT : PS.dev === 'png' ? 'Xuất ảnh PNG' + depT : PS.dev === 'plt' ? 'Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in' : 'Mở hộp in của hệ điều hành' + depT; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit; psSave(); };
+      g('plDevN').textContent = /^pdf/.test(PS.dev) ? (PS.dev === 'pdfsm' ? 'PDF vector, ảnh nén nhỏ' : 'PDF vector — đường nét và chữ, phóng to vẫn sắc nét') : PS.dev === 'jpg' ? 'Xuất ảnh JPG' + depT : PS.dev === 'png' ? 'Xuất ảnh PNG' + depT : PS.dev === 'plt' ? 'Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in' : 'Mở hộp in của hệ điều hành' + depT; PS.area = g('plArea').value; PS.fit = g('plFit').checked; const sc = parseFloat(String(g('plScale').value).replace(',', '.')); if(sc > 0) PS.scale = sc; PS.center = g('plCenter').checked; const m = parseFloat(g('plMargin').value); PS.margin = m >= 0 ? Math.min(m, 40) : 5; PS.style = g('plStyle').value; PS.lw = g('plLw').checked; PS.stamp = g('plStamp').checked; PS.ud = g('plUd').checked; g('plScale').disabled = PS.fit;
+      PS.tp = g('plTp').checked; PS.ps = g('plPs').checked; g('plStyle').disabled = !PS.ps; PS.slw = g('plSlw').checked; g('plSlw').disabled = PS.fit || !!LYT();
+      const cw = parseFloat(String(g('plCw').value).replace(',', '.')), ch = parseFloat(String(g('plCh').value).replace(',', '.')); if(cw >= 10 && cw <= 10000) PS.cw = cw; if(ch >= 10 && ch <= 10000) PS.ch = ch; g('plCus').style.display = PS.paper === 'custom' ? 'flex' : 'none';
+      const fileDev = PS.dev !== 'print'; g('plFile').disabled = fileDev; if(fileDev) g('plFile').checked = true; else PS.toFile = g('plFile').checked; psSave(); };
     g('plStampB').onclick = () => { try{ DVDCmd.run('PLOTSTAMP'); }catch(_){} };
     // thiết lập trang: chọn → điền các ô; Thêm… → lưu giá trị đang chọn thành thiết lập có tên
     const fillSetup = o => { if(!o) return; if(o.paper && g('plPaper').querySelector('option[value="' + o.paper + '"]')) g('plPaper').value = o.paper; if(o.dev) g('plDev').value = o.dev; if(o.area) g('plArea').value = o.area; if(o.fit != null) g('plFit').checked = !!o.fit; if(o.scale) g('plScale').value = o.scale;
+      if(o.cw) g('plCw').value = o.cw; if(o.ch) g('plCh').value = o.ch; if(o.tp != null) g('plTp').checked = !!o.tp; if(o.ps != null) g('plPs').checked = !!o.ps; if(o.slw != null) g('plSlw').checked = !!o.slw;
       if(o.center != null) g('plCenter').checked = !!o.center; if(o.margin != null) g('plMargin').value = o.margin; if(o.style) g('plStyle').value = o.style; if(o.lw != null) g('plLw').checked = !!o.lw; if(o.land != null){ const r0 = root.querySelector('input[name=plLand][value="' + (o.land ? '1' : '0') + '"]'); if(r0) r0.checked = true; } preview(); };
     g('plSetup').onchange = () => { const n = g('plSetup').value; if(n) fillSetup(A.pageSetups()[n]); };
+    // Áp cho layout: thiết lập in riêng của layout hiện hành (Model / tên layout), mở PLOT lần sau tự dùng lại như AutoCAD
+    g('plApply').onclick = () => { read(); lsSetL(layKey(), A.pageSetupOf()); say('Đã áp thiết lập in cho ' + layName() + '.'); log('PLOT: thiết lập in đã lưu cho ' + layName() + '.'); };
+    { const own = lsGetL(layKey()); if(own) fillSetup(own); }
     const setupList = sel => { const L = A.pageSetups(); g('plSetup').innerHTML = opt('', '<Không>', !sel) + Object.keys(L).map(n => opt(n, n, n === sel)).join(''); };
     g('plSetupAdd').onclick = () => { read(); A.dialog({ title: 'Thiết lập trang mới', html: '<div class="acw" style="width:320px"><label class="dvd-frow"><span>Tên thiết lập:</span><span class="v"><input id="psuN" value="Thiết lập ' + (Object.keys(A.pageSetups()).length + 1) + '"></span></label></div>',
       ok: r => { const n = r.querySelector('#psuN').value.trim(); if(!n) return false; const L = A.pageSetups(); L[n] = A.pageSetupOf(); A.pageSetupsSave(L); setupList(n); log('Đã lưu thiết lập trang "' + n + '".'); } }); };
@@ -348,7 +388,7 @@
         const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height); cx.drawImage(r.canvas, 0, 0, c.width, c.height);
         const mg = +PS.margin || 0; cx.strokeStyle = 'rgba(30,120,220,.55)'; cx.setLineDash([4, 3]); cx.strokeRect(mg * s * 1.6, mg * s * 1.6, (Wmm - 2 * mg) * s * 1.6, (Hmm - 2 * mg) * s * 1.6);
         mapPrep().then(v => { if(v === 2) preview(); });   // bản đồ nền vừa tải xong → vẽ lại bản xem trước
-        const inf = plotInfo(); if(LYT()){ g('plInfo').innerHTML = 'Đang in <b>layout "' + esc(LYT().name) + '"</b>: khổ ' + LYT().paper + ' ' + Wmm + '×' + Hmm + ' mm, tỉ lệ 1:1 trên giấy (tỉ lệ khung nhìn đặt trong layout).'; return; } g('plInfo').innerHTML = 'Khổ ' + PS.paper + ' ' + (PS.land ? 'ngang' : 'dọc') + ' · ' + Wmm + '×' + Hmm + ' mm<br>Tỉ lệ ' + (PS.fit ? 'khít giấy ≈ <b>1:' + (+inf.N.toPrecision(4)) + '</b>' : '<b>1:' + PS.scale + '</b>') + ' · hình in ' + Math.round(inf.wmm) + '×' + Math.round(inf.hmm) + ' mm' + (!inf.fits ? '<br><span style="color:#ffb347">⚠ Hình lớn hơn khổ giấy — sẽ bị cắt. Chọn tỉ lệ nhỏ hơn hoặc khổ lớn hơn.</span>' : '') + (mmPerUnit() === 1 && !unitToMM() ? '<br><span style="color:#8f99a8">Bản vẽ không ghi đơn vị — coi 1 đơn vị = 1 mm.</span>' : '');
+        const inf = plotInfo(); if(LYT()){ g('plInfo').innerHTML = 'Đang in <b>layout "' + esc(LYT().name) + '"</b>: khổ ' + LYT().paper + ' ' + Wmm + '×' + Hmm + ' mm, tỉ lệ 1:1 trên giấy (tỉ lệ khung nhìn đặt trong layout).'; return; } g('plInfo').innerHTML = 'Khổ ' + paperName() + ' ' + (PS.land ? 'ngang' : 'dọc') + ' · ' + Wmm + '×' + Hmm + ' mm<br>Tỉ lệ ' + (PS.fit ? 'khít giấy ≈ <b>1:' + (+inf.N.toPrecision(4)) + '</b>' : '<b>1:' + PS.scale + '</b>') + ' · hình in ' + Math.round(inf.wmm) + '×' + Math.round(inf.hmm) + ' mm' + (!inf.fits ? '<br><span style="color:#ffb347">⚠ Hình lớn hơn khổ giấy — sẽ bị cắt. Chọn tỉ lệ nhỏ hơn hoặc khổ lớn hơn.</span>' : '') + (mmPerUnit() === 1 && !unitToMM() ? '<br><span style="color:#8f99a8">Bản vẽ không ghi đơn vị — coi 1 đơn vị = 1 mm.</span>' : '');
       }catch(err){ console.warn(err); }
     }, 60); };
     root.querySelectorAll('select,input').forEach(el => { el.addEventListener('change', preview); el.addEventListener('input', preview); });

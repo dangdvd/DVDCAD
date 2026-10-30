@@ -2239,16 +2239,16 @@ function drawEntityBody(e,col){
       if(e.light){ ctx.strokeStyle=col; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(p.x,p.y,7,0,2*Math.PI); ctx.stroke(); for(let k=0;k<8;k++){ const a=k*Math.PI/4; ctx.moveTo(p.x+Math.cos(a)*10,p.y+Math.sin(a)*10); ctx.lineTo(p.x+Math.cos(a)*14,p.y+Math.sin(a)*14); } ctx.stroke(); }
       if(e.cam3){ const t=toScreen(e.x+e.cam3.dx,e.y+e.cam3.dy); ctx.strokeStyle=col; ctx.lineWidth=1.2; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(t.x,t.y); ctx.stroke(); ctx.setLineDash([]); const an=Math.atan2(t.y-p.y,t.x-p.x); ctx.translate(p.x,p.y); ctx.rotate(an); ctx.strokeRect(-9,-6,12,12); ctx.beginPath(); ctx.moveTo(3,-3); ctx.lineTo(10,-7); ctx.lineTo(10,7); ctx.lineTo(3,3); ctx.stroke(); }
       ctx.restore();break;}
-    case 'TEXT':{const size=e.h*view.scale;if(size<1.2||!e.text)break;const p=toScreen(e.x,e.y);const _dpr=(ctx===_realCtx?(window.devicePixelRatio||1):(ctx.getTransform?ctx.getTransform().a:1));
+    case 'TEXT':{const size=e.h*view.scale;if(size<(window.__txtSkip!=null?window.__txtSkip:1.2)||!e.text)break;const p=toScreen(e.x,e.y);const _dpr=(ctx===_realCtx?(window.devicePixelRatio||1):(ctx.getTransform?ctx.getTransform().a:1));
       const _r=-(e.rot||0)*Math.PI/180+view.rot, _c=Math.cos(_r), _s=Math.sin(_r); let _xs=e.xs||1; if(!(_xs&&Math.abs(_xs-1)>0.002)) _xs=1;
       const _T0=ctx.getTransform?ctx.getTransform():null;
       ctx.fillStyle=col;
-      if(size<4||QTEXT){ // chữ quá nhỏ: thanh mờ thay chữ (đọc không được, vẽ nhanh) · QTEXT: khung chữ
+      if(size<(window.__txtBar!=null?window.__txtBar:4)||QTEXT){ // chữ quá nhỏ: thanh mờ thay chữ (đọc không được, vẽ nhanh) · QTEXT: khung chữ
         const _ls=String(e.text).split('\n'); const w=Math.max(..._ls.map(l=>l.length))*size*0.6*_xs, hh=size*0.7*_ls.length; const ha=e.ha||'left', va=e.va||'alphabetic';
         const x0=ha==='center'?-w/2:(ha==='right'||ha==='end')?-w:0, y0=va==='middle'?-hh/2:va==='top'?0:-hh;
         if(_T0) ctx.setTransform(_T0.a*_c+_T0.c*_s,_T0.b*_c+_T0.d*_s,-_T0.a*_s+_T0.c*_c,-_T0.b*_s+_T0.d*_c,_T0.a*p.x+_T0.c*p.y+_T0.e,_T0.b*p.x+_T0.d*p.y+_T0.f);
         if(QTEXT&&size>=4){ ctx.strokeStyle=col; ctx.lineWidth=1; ctx.strokeRect(x0,y0,w,hh); } else { const ga=ctx.globalAlpha; ctx.globalAlpha=ga*0.45; ctx.fillRect(x0,y0,w,hh); ctx.globalAlpha=ga; } if(_T0) ctx.setTransform(_T0); break; }
-      const fsz=Math.min(size,200);const _f=`${fsz}px ${e.ff?('"'+e.ff+'",'):''}-apple-system,system-ui,"Segoe UI",Roboto,Arial,"Noto Sans","Helvetica Neue",sans-serif`; if(_f!==_txtFont||ctx!==_txtCtx||ctx.font!==_txtNorm){ ctx.font=_f; _txtFont=_f; _txtCtx=ctx; _txtNorm=ctx.font; }
+      const fsz=Math.min(size,window.__txtMax||200);const _f=`${fsz}px ${e.ff?('"'+e.ff+'",'):''}-apple-system,system-ui,"Segoe UI",Roboto,Arial,"Noto Sans","Helvetica Neue",sans-serif`; if(_f!==_txtFont||ctx!==_txtCtx||ctx.font!==_txtNorm){ ctx.font=_f; _txtFont=_f; _txtCtx=ctx; _txtNorm=ctx.font; }
       ctx.textAlign=e.ha||'left';ctx.textBaseline=e.va||'alphabetic';
       if(_T0){ const _Xa=_T0.a*_c+_T0.c*_s, _Xb=_T0.b*_c+_T0.d*_s; let _Ya=-_T0.a*_s+_T0.c*_c, _Yb=-_T0.b*_s+_T0.d*_c; if(e.ud){ _Ya=-_Ya; _Yb=-_Yb; } if(e.obl){ const _t=Math.tan(e.obl*Math.PI/180); _Ya-=_t*_Xa; _Yb-=_t*_Xb; }   // lộn ngược / góc nghiêng (như AutoCAD)
         ctx.setTransform(_Xa*_xs,_Xb*_xs,_Ya,_Yb,_T0.a*p.x+_T0.c*p.y+_T0.e,_T0.b*p.x+_T0.d*p.y+_T0.f); } else { ctx.save(); ctx.translate(p.x,p.y); if(_r) ctx.rotate(_r); if(_xs!==1) ctx.scale(_xs,1); if(e.ud) ctx.scale(1,-1); }
@@ -6185,6 +6185,7 @@ if('serviceWorker' in navigator && !window.dvdDesktop){
 <script src="./dvd-acad-x21.js"></script>
 <script src="./dvd-acad-x22.js"></script>
 <script src="./dvd-acad-x23.js"></script>
+<script src="./dvd-acad-x24.js"></script>
 <script src="./dvd-lisp.js"></script>
 <script src="./dvd-addins.js"></script>
 <script src="./dvd-acad-pgp.js"></script>

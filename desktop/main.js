@@ -195,6 +195,36 @@ ipcMain.handle('fs:writeSide', async (_e, cad, name, data) => {
   try{ await fs.promises.writeFile(tmp, Buffer.from(data)); await fs.promises.rename(tmp, p); }catch(e){ fs.promises.unlink(tmp).catch(() => {}); throw e; }
   return p;
 });
+// phông của hệ thống cho PDF vector (chữ nhúng phông như DWG To PDF): chỉ đọc tệp .ttf / .otf / .ttc trong thư mục phông, tìm theo tên họ phông
+const FONT_DIRS = () => process.platform === 'win32' ? [path.join(process.env.WINDIR || 'C:\\Windows', 'Fonts'), path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'Windows', 'Fonts')]
+  : process.platform === 'darwin' ? ['/System/Library/Fonts', '/Library/Fonts', path.join(app.getPath('home'), 'Library', 'Fonts')]
+  : ['/usr/share/fonts', '/usr/local/share/fonts', path.join(app.getPath('home'), '.fonts'), path.join(app.getPath('home'), '.local', 'share', 'fonts')];
+let fontIdx = null;
+async function fontNames(file){   // [{ face, fam, sub }] từ bảng name (ID 16/17 hoặc 1/2) — chỉ đọc phần đầu tệp và bảng name
+  const fh = await fs.promises.open(file, 'r'); const out = [];
+  try{ const rd = async (pos, n) => { const b = Buffer.alloc(n); const { bytesRead } = await fh.read(b, 0, n, pos); return b.subarray(0, bytesRead); };
+    const h = await rd(0, 12); let offs = [0]; if(h.toString('latin1', 0, 4) === 'ttcf'){ const n = Math.min(h.readUInt32BE(8), 32); const t = await rd(12, 4 * n); offs = []; for(let i = 0; i < n; i++) offs.push(t.readUInt32BE(4 * i)); }
+    for(let face = 0; face < offs.length; face++){ const d = await rd(offs[face], 12); if(d.length < 12) continue; const nt = d.readUInt16BE(4); const dir = await rd(offs[face] + 12, 16 * nt); let no = -1, nl = 0;
+      for(let i = 0; i < nt; i++) if(dir.toString('latin1', 16 * i, 16 * i + 4) === 'name'){ no = dir.readUInt32BE(16 * i + 8); nl = dir.readUInt32BE(16 * i + 12); }
+      if(no < 0 || nl > 4e6) continue; const t = await rd(no, nl), cnt = t.readUInt16BE(2), so = t.readUInt16BE(4), N = {};
+      for(let i = 0; i < cnt; i++){ const r = 6 + 12 * i, pid = t.readUInt16BE(r), lang = t.readUInt16BE(r + 4), id = t.readUInt16BE(r + 6), L = t.readUInt16BE(r + 8), o = so + t.readUInt16BE(r + 10);
+        if(![1, 2, 16, 17].includes(id) || o + L > t.length) continue; let v = ''; if(pid === 3 || pid === 0){ for(let k = 0; k + 1 < L; k += 2) v += String.fromCharCode(t.readUInt16BE(o + k)); } else v = t.toString('latin1', o, o + L);
+        if(!N[id] || (pid === 3 && (lang & 0x3FF) === 9)) N[id] = v; }
+      const fam = N[16] || N[1], sub = N[17] || N[2] || ''; if(fam) out.push({ face, fam: fam.toLowerCase(), alt: (N[1] || '').toLowerCase(), sub: sub.toLowerCase() }); } }
+  finally{ await fh.close(); }
+  return out;
+}
+async function buildFontIdx(){ const idx = []; const walk = async (d, depth) => { let L = []; try{ L = await fs.promises.readdir(d, { withFileTypes: true }); }catch(_){ return; }
+    for(const e of L){ const p = path.join(d, e.name); if(e.isDirectory()){ if(depth < 4) await walk(p, depth + 1); continue; } if(!/\.(ttf|otf|ttc)$/i.test(e.name)) continue;
+      try{ for(const n of await fontNames(p)) idx.push(Object.assign({ file: p }, n)); }catch(_){} } };
+  for(const d of FONT_DIRS()) await walk(d, 0); return idx; }
+ipcMain.handle('font:find', async (_e, fam, bold, italic) => {
+  if(!fontIdx) fontIdx = buildFontIdx(); const idx = await fontIdx; const f = String(fam || '').toLowerCase().trim(); if(!f) return null;
+  const C = idx.filter(x => x.fam === f || x.alt === f); if(!C.length) return null;
+  const score = x => { const b = /bold|black|heavy|semibold|demibold/.test(x.sub), i = /italic|oblique/.test(x.sub); return (b === !!bold ? 2 : 0) + (i === !!italic ? 2 : 0) + (/^(regular|normal|book|roman|bold|italic|bold italic)$/.test(x.sub) ? 1 : 0); };
+  const best = C.sort((a, b) => score(b) - score(a))[0]; const buf = await fs.promises.readFile(best.file);
+  return { data: new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength), face: best.face, file: path.basename(best.file) };
+});
 ipcMain.handle('fs:dropped', (_e, list) => { const ok = []; for(const p of [].concat(list || [])) if(p && CAD_EXT.test(p)){ grantRead(p); addRecent(p); ok.push(norm(p)); } return ok; });
 
 // stat bất đồng bộ, có hạn giờ: ổ mạng / USB đã rút không làm treo trang Bắt đầu

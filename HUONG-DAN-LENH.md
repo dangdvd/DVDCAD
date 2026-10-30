@@ -1,4 +1,4 @@
-# DVDCAD v5x — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5y — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,23 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v5y)
+- **PDF vector khi in** (`PLOT` → **DWG To PDF.pc3**, và `PUBLISH`):
+  - Bản vẽ ghi thành đường nét PDF thật (đường, cung, hatch, vùng tô, gradient, nét đứt, bề rộng nét), không còn là ảnh chụp. Phóng to bao nhiêu cũng sắc nét, tệp nhỏ hơn.
+  - Chữ là chữ thật: nhúng phông TrueType / OpenType của Windows (chỉ các ký tự dùng tới), đủ dấu tiếng Việt; chọn, tìm, sao chép được trong trình đọc PDF.
+  - Chữ phông SHX in bằng nét đơn của phông. Chữ rất nhỏ vẫn in thành chữ, không thay bằng vạch như bản in ảnh.
+  - Ảnh (IMAGE, bản đồ nền) nhúng đúng chỗ. Layout in đúng khung nhìn (cả khung nhìn xoay, đa giác cắt). Dấu in, in lộn ngược như bản in ảnh.
+- **Hộp `PLOT` đủ như AutoCAD**:
+  - Máy in / máy vẽ: DWG To PDF.pc3, AutoCAD PDF (High Quality Print).pc3, AutoCAD PDF (Smallest File).pc3 (ảnh nén nhỏ), máy in Windows, PublishToWeb PNG.pc3, PublishToWeb JPG.pc3, HP DesignJet (HPGL/2).pc3.
+  - Khổ giấy: ISO A0–A5, ANSI A–E, ARCH A–E1, **Khổ tự chọn…** (nhập rộng × cao, mm).
+  - **In ra file**: với máy in Windows thì ghi ra tệp PDF thay vì gửi máy in. Các thiết bị khác luôn ra tệp như AutoCAD.
+  - **In độ trong suốt**, **In theo kiểu in** (tắt = in đúng màu bản vẽ), **Co giãn bề rộng nét** (bề rộng nét theo tỉ lệ in) đều dùng được.
+  - **Áp cho layout**: lưu thiết lập in cho Model / layout hiện hành, mở `PLOT` lần sau tự dùng lại.
+  - Thiết lập trang có tên ghi vào DXF / DWG đúng tên khổ của AutoCAD (vd `ANSI_full_bleed_D_(34.00_x_22.00_Inches)`, `User_(500.00_x_350.00_MM)`) và đúng máy in .pc3.
+- **Chưa có**:
+  - Bản chạy trên trình duyệt (không phải bản Windows) không đọc được phông của máy: chữ trong PDF vẽ thành ảnh nét mịn, phần còn lại vẫn là vector.
+  - Máy in Windows (in thẳng ra giấy) vẫn gửi ảnh 300 dpi. Muốn bản vector thì chọn **In ra file** hoặc DWG To PDF rồi in tệp PDF.
 
 ## Bổ sung như AutoCAD 2027 (v5x)
 - **Xoay nhìn khung nhìn (VIEWTWIST)** trong layout:

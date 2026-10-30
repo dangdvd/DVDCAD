@@ -8384,5 +8384,18 @@
 "bản vẽ —": "drawings —",
 "bản vẽ — bản vẽ hiện hành sửa ngay trong ô của nó; bấm ô khác để chuyển; □ = trở về một cửa sổ.": "drawings — edit the current drawing right in its window; click another window to switch; □ = back to a single window.",
 "bấm vào thanh để mở bản vẽ, Esc để trở lại.": "click a bar to open the drawing, Esc to go back.",
-"⌖ = về Model, bấm 1 điểm làm tâm khung nhìn. Tỉ lệ 1:N theo đơn vị bản vẽ hiện tại. Xoay nhìn = VIEWTWIST (ngược chiều kim đồng hồ).": "⌖ = go to Model and click a point as the viewport center. Scale 1:N in current drawing units. View twist = VIEWTWIST (counterclockwise)."
+"⌖ = về Model, bấm 1 điểm làm tâm khung nhìn. Tỉ lệ 1:N theo đơn vị bản vẽ hiện tại. Xoay nhìn = VIEWTWIST (ngược chiều kim đồng hồ).": "⌖ = go to Model and click a point as the viewport center. Scale 1:N in current drawing units. View twist = VIEWTWIST (counterclockwise).",
+", phông nhúng:": ", embedded fonts:",
+";gap:4px;align-items:center;margin-top:4px\">Rộng <input id=\"plCw\" inputmode=\"decimal\" style=\"width:60px\" value=\"": ";gap:4px;align-items:center;margin-top:4px\">Width <input id=\"plCw\" inputmode=\"decimal\" style=\"width:60px\" value=\"",
+"Khổ tự chọn…": "Custom size…",
+"Lưu các thiết lập này cho layout hiện hành (lần sau mở PLOT tự dùng lại)": "Save these settings to the current layout (PLOT reuses them next time)",
+"PDF vector — đường nét và chữ, phóng to vẫn sắc nét": "Vector PDF — lines and text stay sharp when zoomed",
+"PDF vector, ảnh nén nhỏ": "Vector PDF, compressed images",
+"PLOT: thiết lập in đã lưu cho": "PLOT: plot settings saved to",
+"Phông thiếu bảng": "Font is missing tables",
+"khít giấy": "fit to paper",
+"tự chọn": "custom",
+"Đã in PDF vector: khổ": "Plotted vector PDF: paper",
+"Đã áp thiết lập in cho": "Plot settings applied to",
+"đoạn chữ thiếu phông vẽ thành ảnh)": "text items without a font drawn as images)"
 }

@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld('dvdDesktop', {
   recentRemove: p => call('recent:remove', p),
   dwgConvert: (dxf, ver) => call('dwg:convert', dxf, ver),
   odaInfo: () => call('dwg:oda'),
+  // phông hệ thống (theo tên họ phông) để nhúng vào PDF vector khi in
+  font: (fam, bold, italic) => call('font:find', fam, !!bold, !!italic),
   odaPick: () => call('dwg:odaPick'),
   openExternal: url => call('shell:external', url),
   reveal: p => call('shell:reveal', p)

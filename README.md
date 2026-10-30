@@ -6,6 +6,27 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5y: PDF vector khi in (DWG To PDF), hộp PLOT đủ máy in / khổ giấy / tuỳ chọn
+- Tệp mới `dvd-acad-x24.js` (nạp sau x23, có trong cache của `sw.js`).
+- **`A.PdfCtx(w, h, f, { flip, imgMax })`**: ngữ cảnh vẽ giả lập `CanvasRenderingContext2D`. `draw()` vẽ vào đây như vào canvas:
+  - Đường, cung, ellipse, Bézier, `rect` / `fillRect` / `clearRect` (giấy trắng), `clip`, `save` / `restore` → `q` / `Q`.
+  - Nét đứt, đầu / nối nét, `globalAlpha` + rgba → ExtGState, gradient → Shading kiểu 2 / 3, `drawImage` → XObject RGB nén + SMask.
+  - Toạ độ được nhân ma trận lúc thêm vào đường như canvas. Bề rộng nét nhân hệ số co giãn của ma trận lúc vẽ.
+  - `fillText` ghi lại (font, canh lề, `alphabeticBaseline` đo bằng canvas thật). Ghép phông lúc xuất (bất đồng bộ).
+- **`A.pdfBuild(pages, info)`**:
+  - Nhiều trang. Phông Type0 / CIDFontType2 (Identity-H, CID = GID), bảng `W`, ToUnicode để tìm / chép chữ. Phông CFF nhúng dạng FontFile3 / OpenType.
+  - Phông glyf được cắt gọn: giữ nguyên số glyph, chỉ giữ dữ liệu glyph dùng tới (kể cả glyph thành phần), loca dạng dài.
+  - Nén Flate bằng `CompressionStream`. Ký tự không có trong phông đầu thì lấy phông sau trong chuỗi (phông của chữ → Arial → Segoe UI → …). Không có phông nào thì đoạn chữ thành ảnh độ phân giải cao.
+- **Nguồn phông**: `A.pdfFontSource` (móc thử nghiệm) → `dvdDesktop.font(family, bold, italic)` (Electron) → Local Font Access (chỉ khi đã có quyền).
+  - Electron: `font:find` trong `main.js` dò thư mục phông của hệ thống, đọc bảng `name` (ID 16/17 hoặc 1/2, cả .ttc) và chỉ trả tệp phông.
+- **`plotRender(dpi, preview, vec)`**:
+  - `vec = true` vẽ vào PdfCtx: không dither / giảm màu. Lộn ngược bằng ma trận trang (`unflip()` trước dấu in).
+  - `__txtBar` / `__txtSkip` / `__txtMax` cho phép chữ nhỏ / lớn vẫn vẽ thành chữ.
+  - `A.plotPDF(title)` cho PLOT. PUBLISH ghép nhiều trang vector.
+- **PLOT**:
+  - `A.PAPER_SIZES` (ISO / ANSI / ARCH), `A.paperMedia()` (tên khổ AutoCAD, khổ tự chọn `User_(W_x_H_MM)`), `A.PLOT_DEVICES`.
+  - Tuỳ chọn mới `PS.tp`, `PS.ps`, `PS.slw`, `PS.toFile`, `PS.cw` / `PS.ch`. Áp cho layout lưu ở `dvd:lplot::<bản vẽ>::<layout>`.
+
 ## v5x: xoay nhìn khung nhìn (VIEWTWIST), MTEXT nhiều phông / SHX, PLOTSETTINGS có tên trong DXF / DWG, SYSWINDOWS cửa sổ con
 - **Khung nhìn xoay** — `v.tw` (radian), DCS = R(tw)·(P − đích):
   - `index.html`: `_vpWorldC()` đổi tâm nhìn DCS (12/22 hoặc `VIEWCTR`) + đích (17/27, `targetPoint`) về toạ độ mô hình.

@@ -764,6 +764,9 @@
 ", mặc định 6 như AutoCAD)": [
 "dvd-acad-x14.js"
 ],
+", phông nhúng:": [
+"dvd-acad-more.js"
+],
 ", trong vùng chọn": [
 "dvd-acad-x7.js"
 ],
@@ -992,6 +995,9 @@
 ],
 ";; Ví dụ: gõ mã rồi bấm Chạy (defun c:XINCHAO () (princ \"\\nXin chào từ AutoLISP!\") (princ)) (+ 1 2.5)": [
 "dvd-addins.js"
+],
+";gap:4px;align-items:center;margin-top:4px\">Rộng <input id=\"plCw\" inputmode=\"decimal\" style=\"width:60px\" value=\"": [
+"dvd-acad-more.js"
 ],
 "< Nhỏ hơn": [
 "dvd-acad-more.js"
@@ -10682,6 +10688,9 @@
 "Khổ giấy PDF": [
 "index.html:html"
 ],
+"Khổ tự chọn…": [
+"dvd-acad-more.js"
+],
 "Khớp": [
 "dvd-acad-dlg.js"
 ],
@@ -11874,6 +11883,9 @@
 ],
 "Lưu cài đặt": [
 "dvd-acad-x3.js"
+],
+"Lưu các thiết lập này cho layout hiện hành (lần sau mở PLOT tự dùng lại)": [
+"dvd-acad-more.js:attr"
 ],
 "Lưu danh sách": [
 "dvd-acad-dlg2.js"
@@ -14378,6 +14390,12 @@
 "PDF làm nền": [
 "dvd-acad-x16.js"
 ],
+"PDF vector — đường nét và chữ, phóng to vẫn sắc nét": [
+"dvd-acad-more.js"
+],
+"PDF vector, ảnh nén nhỏ": [
+"dvd-acad-more.js"
+],
 "PDF → nét vẽ, chữ": [
 "dvd-acad-x16.js"
 ],
@@ -14401,6 +14419,9 @@
 ],
 "PLOT dùng máy:": [
 "dvd-acad-x22.js"
+],
+"PLOT: thiết lập in đã lưu cho": [
+"dvd-acad-more.js"
 ],
 "POLAR (góc cực)": [
 "dvd-acad-core.js"
@@ -14587,6 +14608,9 @@
 "Phông chữ": [
 "dvd-acad-dlg.js",
 "dvd-acad-dlg.js:attr"
+],
+"Phông thiếu bảng": [
+"dvd-acad-x24.js"
 ],
 "Phông:": [
 "dvd-acad-dlg2.js"
@@ -19545,9 +19569,6 @@
 "Xuất file": [
 "dvd-acad-ui.js"
 ],
-"Xuất file PDF": [
-"dvd-acad-more.js"
-],
 "Xuất khung nhìn hiện tại thành ảnh BMP": [
 "dvd-acad-x16.js"
 ],
@@ -19606,6 +19627,7 @@
 "dvd-acad-ui.js"
 ],
 "Xuất ảnh JPG": [
+"dvd-acad-more.js",
 "dvd-acad-ui.js"
 ],
 "Xuất ảnh PNG": [
@@ -20327,6 +20349,9 @@
 ],
 "khác biệt:": [
 "dvd-acad-dlg.js"
+],
+"khít giấy": [
+"dvd-acad-more.js"
 ],
 "khít giấy (≈1:": [
 "dvd-acad-more.js"
@@ -21085,6 +21110,9 @@
 ],
 "từ điểm,": [
 "dvd-acad-dlg2.js"
+],
+"tự chọn": [
+"dvd-acad-more.js"
 ],
 "tự là chú thích theo tỉ lệ.": [
 "dvd-acad-x3.js"
@@ -22614,6 +22642,9 @@
 "Đã huỷ thay đổi khối.": [
 "dvd-acad-ext.js"
 ],
+"Đã in PDF vector: khổ": [
+"dvd-acad-more.js"
+],
 "Đã in ra": [
 "dvd-acad-more.js"
 ],
@@ -23231,6 +23262,9 @@
 ],
 "Đã áp kiểu": [
 "dvd-acad-dlg.js",
+"dvd-acad-more.js"
+],
+"Đã áp thiết lập in cho": [
 "dvd-acad-more.js"
 ],
 "Đã áp thuộc tính cho": [
@@ -24942,6 +24976,9 @@
 ],
 "đoạn (một nhóm — EXPLODE để sửa từng nét).": [
 "dvd-acad-x2.js"
+],
+"đoạn chữ thiếu phông vẽ thành ảnh)": [
+"dvd-acad-more.js"
 ],
 "đoạn dài:": [
 "index.html"

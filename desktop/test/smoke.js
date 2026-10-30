@@ -129,6 +129,18 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
     check(v5w.shx, 'phông SHX: nạp phông shapes 1.0, bề rộng chữ theo bước tiến của phông');
   }
   {
+    // v5y: PLOT → PDF vector, chữ nhúng phông TrueType của hệ thống (lấy qua cầu nối dvdDesktop.font)
+    const v5y = await win.evaluate(async fam => { const A = DVDAcad, w = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      const f = await window.dvdDesktop.font(fam, false, false); out.font = !!(f && f.data && f.data.length > 10000);
+      A.newDrawing(); await w(600); try{ A.hideStart && A.hideStart(); }catch(_){}
+      A.commit({ add: [A.newProps({ type: 'LINE', x1: 0, y1: 0, x2: 200, y2: 100 }), A.newProps({ type: 'TEXT', x: 10, y: 50, h: 5, text: 'Mặt bằng tầng 1 — ĐƯỜNG ỐNG Ø100', ff: fam })] });
+      Object.assign(A.PS, { paper: 'A4', land: true, fit: true, dev: 'pdf' }); const bl = await A.plotPDF('kiem-tra'); const u = new Uint8Array(await bl.arrayBuffer());
+      out.pdf = String.fromCharCode.apply(null, u.slice(0, 8)) === '%PDF-1.7' && u.length > 1000; out.info = bl.dvdInfo; out.ui = (A.PLOT_DEVICES || []).length; return out; }, process.platform === 'win32' ? 'Arial' : 'DejaVu Sans');
+    check(v5y.font, 'cầu nối dvdDesktop.font: đọc được phông hệ thống (' + (process.platform === 'win32' ? 'Arial' : 'DejaVu Sans') + ')');
+    check(v5y.pdf && v5y.info && v5y.info.fonts.length >= 1 && v5y.info.rasterText === 0, 'PLOT DWG To PDF: PDF vector, chữ tiếng Việt nhúng phông ' + ((v5y.info && v5y.info.fonts) || []).join(', '));
+    check(v5y.ui === 7, 'hộp PLOT có 7 máy in / máy vẽ (DWG To PDF, AutoCAD PDF, máy in Windows, PNG, JPG, HPGL/2)');
+  }
+  {
     // v5x: MTEXT nhiều phông (\F SHX / \f TrueType), thiết lập trang có tên → PLOTSETTINGS, khung nhìn xoay (VIEWTWIST) → DWG đọc lại
     const v5x = await win.evaluate(async () => { const A = DVDAcad, w = ms => new Promise(r => setTimeout(r, ms)), out = {};
       const R = A.mtextRuns('{\\Ftxt|c0;AB}{\\fArial|b0|i0|c0|p34;CD}'); out.runs = !!R && R[0].ff === 'txt.shx' && R[1].ff === 'Arial';

@@ -47,6 +47,8 @@
   const PAPERS_RE = /(?:^|_)A(\d)(?:_|$)/i;
   // một thiết lập in (mã nhóm DXF: 2 máy in, 4 khổ giấy, 7 bảng kiểu in, 70 cờ, 73 xoay, 74 vùng in, 75 tỉ lệ chuẩn, 142 / 143 tỉ lệ) → thiết lập trang DVDCAD
   function psFrom(cur){ const P = {}; const paper = cur[4] || ''; const m = PAPERS_RE.exec(paper.replace(/ISO_(full_bleed_|expand_)?/i, '')); if(m) P.paper = 'A' + m[1];
+    else { const q = /^(ANSI|ARCH)_(?:full_bleed_|expand_)?(E1|[A-E])_/i.exec(paper); if(q && A.PAPER_SIZES && A.PAPER_SIZES[q[1].toUpperCase() + '_' + q[2].toUpperCase()]) P.paper = q[1].toUpperCase() + '_' + q[2].toUpperCase();
+      else { const d = /\(([\d.]+)_x_([\d.]+)_(MM|Inches|Pixels)\)/i.exec(paper), k = d && /inch/i.test(d[3]) ? 25.4 : 1; if(d && !/pixel/i.test(d[3])){ P.paper = 'custom'; P.cw = +(+d[1] * k).toFixed(2); P.ch = +(+d[2] * k).toFixed(2); } } }
     const dims = /\(([\d.]+)_x_([\d.]+)_(MM|Inches)\)/i.exec(paper); const wide = dims ? +dims[1] >= +dims[2] : (cur.pw > 0 && cur.ph > 0 ? cur.pw >= cur.ph : true); const rot = +(cur[73] || 0); P.land = (rot % 2 === 1) ? !wide : wide;
     const pt = cur[74] == null || cur[74] === '' ? 1 : +cur[74]; P.area = pt === 0 || pt === 3 ? 'display' : pt === 4 ? 'window' : 'extents';
     const fl = +(cur[70] || 0); P.center = !!(fl & 4); P.lw = !!(fl & 128) || !(fl & 32);
@@ -54,7 +56,7 @@
     const num = +(cur[142] || 1), den = +(cur[143] || 1), std = +(cur[75] || 0), f147 = +(cur[147] || 0);
     if((fl & 16) && std === 0) P.fit = true; else { P.fit = false; const sc = (fl & 16) ? (f147 > 0 ? 1 / f147 : null) : (num > 0 ? den / num : null); if(sc > 0) P.scale = +sc.toPrecision(6); }
     const ctb = String(cur[7] || '').toLowerCase(); P.style = /mono/.test(ctb) ? 'mono' : /gray/.test(ctb) ? 'gray' : ctb ? 'mono' : 'color';
-    const dev = String(cur[2] || '').toLowerCase(); P.dev = /pdf/.test(dev) ? 'pdf' : /png|publishtoweb/.test(dev) ? 'png' : /hpgl|designjet|\.pc3/.test(dev) && !/pdf|png/.test(dev) ? 'plt' : 'print';
+    const dev = String(cur[2] || '').toLowerCase(); P.dev = /high quality/.test(dev) ? 'pdfhq' : /smallest/.test(dev) ? 'pdfsm' : /pdf/.test(dev) ? 'pdf' : /jpg|jpeg/.test(dev) ? 'jpg' : /png|publishtoweb/.test(dev) ? 'png' : /hpgl|designjet|\.pc3/.test(dev) && !/pdf|png/.test(dev) ? 'plt' : 'print';
     return P; }
   // DXF: PLOTSETTINGS (thiết lập trang có tên) + thiết lập riêng của từng LAYOUT (tên *Layout1* như Page Setup Manager của AutoCAD)
   function setupsFromDXF(text, opt){

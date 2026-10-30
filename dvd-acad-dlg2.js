@@ -1271,10 +1271,11 @@
     $('pbPv').onclick = async () => { const x = L[sel]; if(!x) return; const cur = currentLayout; try{ goLay(x.i); await new Promise(r => setTimeout(r, 60)); const r = A.plotRender(80, false); const url = r.canvas.toDataURL('image/png');
         A.dialog({ title: 'Xem trước — ' + nm(x), cls: 'acw-free', help: 'PUBLISH', noCancel: true, html: '<div class="acw" style="width:min(760px,90vw)"><img src="' + url + '" style="max-width:100%;max-height:70vh;background:#fff;display:block;margin:auto"></div>' }); }catch(err){ say('Không xem trước được: ' + (err.message || err)); } finally{ if(!noLay) switchLayout(cur); } };
     async function run(){ if($('pbTo').value === 'plot'){ setTimeout(() => DVDCmd.run('PLOT'), 0); return; } const cur = currentLayout, pages = []; say('Đang xuất bản ' + L.length + ' trang…');
-      try{ for(const x of L){ goLay(x.i); await new Promise(r => setTimeout(r, 60)); const r = A.plotRender(200, false);
+      const vec = !!A.pdfBuild;   // PDF vector (như DWG To PDF): mỗi trang là đường nét + chữ nhúng phông
+      try{ for(const x of L){ goLay(x.i); await new Promise(r => setTimeout(r, 60)); const r = A.plotRender(200, false, vec);
           if(O.stamp){ try{ const g = r.canvas.getContext('2d'); g.save(); g.fillStyle = '#000'; g.font = Math.round(r.canvas.height / 90) + 'px sans-serif'; g.fillText(nm(x) + ' · ' + new Date().toLocaleString() + ' · DVDCAD', 12, r.canvas.height - 12); g.restore(); }catch(_){} }
-          pages.push({ canvas: r.canvas, pagePt: r.pagePt }); }
-        const blob = await canvasesToPDF(pages); const fn = dn + '.pdf'; if(O.open){ try{ window.open(URL.createObjectURL(blob), '_blank'); }catch(_){} } await shareOrDownload(blob, fn, 'application/pdf'); log('PUBLISH: ' + pages.length + ' trang → ' + fn); lsSet(PK, L);
+          pages.push(r.pdf ? { ctx: r.pdf } : { canvas: r.canvas, pagePt: r.pagePt }); }
+        const blob = vec ? await A.pdfBuild(pages, { title: dn, version: A.version || '' }) : await canvasesToPDF(pages); const fn = dn + '.pdf'; if(O.open){ try{ window.open(URL.createObjectURL(blob), '_blank'); }catch(_){} } await shareOrDownload(blob, fn, 'application/pdf'); log('PUBLISH: ' + pages.length + ' trang → ' + fn); lsSet(PK, L);
       }catch(err){ console.error(err); say('Không xuất bản được: ' + (err.message || err)); } finally{ if(!noLay) switchLayout(cur); } }
     render();
   }
