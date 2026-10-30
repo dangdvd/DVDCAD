@@ -327,7 +327,11 @@
   A.plotDepth = depthOf; A.PLOT_DEPTHS = DEPTHS;
   const ctbOn = () => { const P = A.PS || {}; return typeof P.style === 'string' && P.style.startsWith('ctb:') && A.ctb ? A.ctb.get(P.style.slice(4)) : null; };
   let maskOn = false;
-  { const _pc = window.plotColor; if(_pc) window.plotColor = function(hex){ if(maskOn){ const T = ctbOn(), st = T && T.st && T.st[A.aciOf ? A.aciOf(hex) : 7]; return st && st.nd ? '#ff0000' : '#000000'; } return _pc.apply(this, arguments); }; }
+  let vqOn = false; const vqNd = new Map();   // in vector giảm màu: màu đầu ra → kiểu in tắt dither?
+  { const _pc = window.plotColor; if(_pc) window.plotColor = function(hex){ if(maskOn){ const T = ctbOn(), st = T && T.st && T.st[A.aciOf ? A.aciOf(hex) : 7]; return st && st.nd ? '#ff0000' : '#000000'; }
+      const r = _pc.apply(this, arguments);
+      if(vqOn){ try{ const T = ctbOn(), st = T && T.st && T.st[A.aciOf ? A.aciOf(hex) : 7], k = String(r).toLowerCase(); vqNd.set(k, vqNd.get(k) !== false && !!(st && st.nd)); }catch(_){} }
+      return r; }; }
   // plotRender gọi: có cần lượt mặt nạ không (chỉ khi giảm màu và bảng .ctb có màu tắt dither)
   A.plotDitherMask = () => { if(depthOf((A.PS || {}).dev) === 'tc') return null; const T = ctbOn(); if(!T || !T.st || !Object.values(T.st).some(x => x && x.nd)) return null;
     return { begin: () => { maskOn = true; }, end: () => { maskOn = false; } }; };
@@ -373,6 +377,38 @@
       const t = e0; e0 = e1; e1 = t; }
     g.putImageData(im, 0, 0); R.q = { w: W, h: H, idx, pal: P, bits: one ? 1 : 8 }; }
   A.plotQuantize = plotQuantize;
+  /* in vector cho máy in giảm màu (SvgCtx opt.q): màu → màu gần nhất của bảng màu máy in; màu không có trong bảng mà kiểu in bật dither
+     → mẫu chấm Bayer 4×4 (ô `cell` đơn vị SVG) trộn 2 màu gần nhất — giống chấm Floyd–Steinberg của bản in ảnh nhưng vẫn là nét vector */
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  A.plotVecQuant = cell => { const dep = depthOf((A.PS || {}).dev); if(dep === 'tc') return null; vqNd.clear();
+    const one = dep === '1', P = one ? [[0, 0, 0], [255, 255, 255]] : pal8(), L = one ? null : lut8(P), pats = new Map();
+    const hx = c => '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+    const near = (r, g, b) => one ? ((0.299 * r + 0.587 * g + 0.114 * b) < 128 ? 0 : 1) : L[((cl(r) >> 3) << 10) | ((cl(g) >> 3) << 5) | (cl(b) >> 3)];
+    const solid = (r, g, b) => hx(P[near(r * 255, g * 255, b * 255)]);
+    const nd = c => { const k = hx([c.r * 255, c.g * 255, c.b * 255]); return vqNd.get(k) === true; };
+    const pat = (i1, i2, lv, defs) => { const key = i1 + ':' + i2 + ':' + lv; let id = pats.get(key);
+      if(!id){ id = 'q' + pats.size; pats.set(key, id); let r = ''; for(let j = 0; j < 16; j++) if(BAYER[j] < lv) r += '<rect x="' + ((j & 3) * cell) + '" y="' + ((j >> 2) * cell) + '" width="' + cell + '" height="' + cell + '"/>';
+        defs.push('<pattern id="' + id + '" patternUnits="userSpaceOnUse" width="' + 4 * cell + '" height="' + 4 * cell + '"><rect width="' + 4 * cell + '" height="' + 4 * cell + '" fill="' + hx(P[i1]) + '"/><g fill="' + hx(P[i2]) + '">' + r + '</g></pattern>'); }
+      return 'url(#' + id + ')'; };
+    return { cell, begin: () => { vqOn = true; }, end: () => { vqOn = false; }, solid,
+      paint(r, g, b, src, defs){ let R = r * 255, G = g * 255, B = b * 255; if(Math.max(R, G, B) <= 30 && Math.max(R, G, B) - Math.min(R, G, B) < 4) R = G = B = 0;   // mực đen khi in (#1A1A1A) = màu 7 → đen của bảng
+        const i1 = near(R, G, B), p1 = P[i1];
+        if(nd(src)) return hx(p1);
+        let i2, t;
+        if(one){ const l = 0.299 * R + 0.587 * G + 0.114 * B; i2 = 1 - i1; t = i1 ? (255 - l) / 255 : l / 255; }
+        else { i2 = near(2 * R - p1[0], 2 * G - p1[1], 2 * B - p1[2]); const p2 = P[i2], dx = p2[0] - p1[0], dy = p2[1] - p1[1], dz = p2[2] - p1[2], dd = dx * dx + dy * dy + dz * dz;
+          t = dd ? ((R - p1[0]) * dx + (G - p1[1]) * dy + (B - p1[2]) * dz) / dd : 0; }
+        const lv = Math.round(Math.max(0, Math.min(1, t)) * 16); return lv <= 2 || i2 === i1 ? hx(p1) : lv >= 14 ? hx(P[i2]) : pat(i1, i2, lv, defs); },   // gần màu bảng (≤ 1/8) → nét đặc
+      // ảnh trong bản in: giảm màu từng điểm ảnh (Floyd–Steinberg) — ảnh nằm trên giấy trắng
+      image(cv, ga){ const W = cv.width, H = cv.height, g2 = cv.getContext('2d'), im = g2.getImageData(0, 0, W, H), d = im.data, nc = one ? 1 : 3; let e0 = new Float32Array((W + 2) * nc), e1 = new Float32Array((W + 2) * nc);
+        for(let y = 0; y < H; y++){ e1.fill(0); for(let x = 0; x < W; x++){ const o = (y * W + x) * 4, a = d[o + 3] / 255 * (ga == null ? 1 : ga), ia = 255 * (1 - a), ei = (x + 1) * nc;
+            let r = d[o] * a + ia, gg = d[o + 1] * a + ia, b = d[o + 2] * a + ia, er;
+            if(one){ const l = cl(0.299 * r + 0.587 * gg + 0.114 * b + e0[ei]), q = l < 128 ? 0 : 255; er = [l - q]; r = gg = b = q; }
+            else { r = cl(r + e0[ei]); gg = cl(gg + e0[ei + 1]); b = cl(b + e0[ei + 2]); const p = P[near(r, gg, b)]; er = [r - p[0], gg - p[1], b - p[2]]; [r, gg, b] = p; }
+            d[o] = r; d[o + 1] = gg; d[o + 2] = b; d[o + 3] = 255;
+            for(let ch = 0; ch < nc; ch++){ const v = er[ch]; if(!v) continue; e0[ei + nc + ch] += v * 0.4375; e1[ei - nc + ch] += v * 0.1875; e1[ei + ch] += v * 0.3125; e1[ei + nc + ch] += v * 0.0625; } }
+          const t = e0; e0 = e1; e1 = t; }
+        g2.putImageData(im, 0, 0); } }; };
   // PNG bảng màu (IHDR color type 3) — đúng 8 bit / 1 bit như PublishToWeb PNG của AutoCAD
   const CRCT = (() => { const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
   const crc32 = u => { let c = 0xFFFFFFFF; for(let i = 0; i < u.length; i++) c = CRCT[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };

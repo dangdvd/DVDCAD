@@ -179,14 +179,20 @@
       else { ins(i); i++; } }
     if(lit < n || last < 0) flushLit(n);
     return out.length < n || force ? Uint8Array.from(out) : null; }
-  // CRC-64 (đa thức ECMA 0x42F0E1EBA9EA3693, đọc từng 8 byte theo thứ tự 6,7,4,5,2,3,0,1) — CRC header 0x110 byte và CRC dữ liệu header nén
-  const CRC64T = (() => { const t = []; const M = (1n << 64n) - 1n; for(let i = 0n; i < 256n; i++){ let v = i << 56n; for(let b = 0; b < 8; b++) v = (v & (1n << 63n)) ? ((v << 1n) ^ 0x42f0e1eba9ea3693n) & M : (v << 1n) & M; t.push(v); } return t; })();
-  function crc64(u, n){ const M = (1n << 64n) - 1n; let c = BigInt.asUintN(64, (BigInt(n) * 0x343fdn + 0x269ec3n));
-    c = BigInt.asUintN(64, c * ((1n << 32n) + 0x343fdn) + (BigInt(n) + 0x269ec3n)); c = ~c & M;   // hạt giống theo độ dài (như AutoCAD)
-    const ord = []; let p = 0; while(n - p >= 8){ ord.push(p + 6, p + 7, p + 4, p + 5, p + 2, p + 3, p, p + 1); p += 8; }
-    for(const t of ({ 7: [0, 1, 2, 3, 4, 5, 6], 6: [0, 1, 2, 3, 4, 5], 5: [0, 1, 2, 3, 4], 4: [2, 3, 0, 1], 3: [0, 1, 2], 2: [0, 1], 1: [0], 0: [] })[n - p]) ord.push(p + t);
-    for(const i of ord) c = CRC64T[Number(((c >> 56n) ^ BigInt(u[i])) & 0xffn)] ^ ((c << 8n) & M);
-    return ~c & M; }
+  // CRC-64 của DWG 2007: dữ liệu đọc theo khối 8 byte thứ tự 6,7,4,5,2,3,0,1; phần dư 4…7 byte: 2,3,0,1 rồi tiếp theo thứ tự (như checksum)
+  const ORD64 = n => { const o = []; let p = 0; while(n - p >= 8){ o.push(p + 6, p + 7, p + 4, p + 5, p + 2, p + 3, p, p + 1); p += 8; }
+    for(const t of [[], [0], [0, 1], [0, 1, 2], [2, 3, 0, 1], [2, 3, 0, 1, 4], [2, 3, 0, 1, 4, 5], [2, 3, 0, 1, 4, 5, 6]][n - p]) o.push(p + t); return o; };
+  const M64 = (1n << 64n) - 1n;
+  // ECMA 0x42F0E1EBA9EA3693 (MSB trước, đảo bit cuối): CRC header 0x110 byte và CRC dữ liệu header nén
+  const CRC64T = (() => { const t = []; for(let i = 0n; i < 256n; i++){ let v = i << 56n; for(let b = 0; b < 8; b++) v = (v & (1n << 63n)) ? ((v << 1n) ^ 0x42f0e1eba9ea3693n) & M64 : (v << 1n) & M64; t.push(v); } return t; })();
+  function crc64(u, n){ let c = BigInt.asUintN(64, (BigInt(n) * 0x343fdn + 0x269ec3n));
+    c = BigInt.asUintN(64, c * ((1n << 32n) + 0x343fdn) + (BigInt(n) + 0x269ec3n)); c = ~c & M64;   // hạt giống theo độ dài (như AutoCAD)
+    for(const i of ORD64(n)) c = CRC64T[Number(((c >> 56n) ^ BigInt(u[i])) & 0xffn)] ^ ((c << 8n) & M64);
+    return ~c & M64; }
+  // Jones 0xAD93D23594C935A9 (phản xạ, không đảo bit cuối): CRC từng trang dữ liệu (dữ liệu nén) và bản đồ trang / section
+  const CRCJT = (() => { const t = [], R = 0x95ac9329ac4bc9b5n; for(let i = 0n; i < 256n; i++){ let w = i; for(let b = 0; b < 8; b++) w = (w & 1n) ? (w >> 1n) ^ R : w >> 1n; t.push(w); } return t; })();
+  function crcJ(u, n, seed){ let s = BigInt.asUintN(64, (BigInt(seed || 0) + BigInt(n)) * 0x343fdn + 0x269ec3n); s = BigInt.asUintN(64, s | BigInt.asUintN(64, s * (0x343fdn << 32n) + (0x269ec3n << 32n)));
+    let c = ~s & M64; for(const i of ORD64(n)) c = CRCJT[Number((c ^ BigInt(u[i])) & 0xffn)] ^ (c >> 8n); return c; }
   // checksum trang dữ liệu 2007: tổng Adler (mod 0xFFF1) từng cặp byte theo thứ tự 6,4,2,0 trong mỗi 8 byte, hạt giống từ độ dài
   function sum21(u, n){ const s0 = BigInt.asUintN(64, BigInt(n) * 0x343fdn + 0x269ec3n); let s1 = Number(s0 & 0xffffn), s2 = Number((s0 >> 16n) & 0xffffn), p = 0, left = n;
     const b = v => { s1 += v; s2 += s1; }, pr = o => { b(u[p + o]); b(u[p + o + 1]); };
@@ -889,7 +895,7 @@
           let bytes;
           if(raw){ let sz = a32(chunk.length + 4); const nb0 = Math.ceil(a8(chunk.length) / 251); if(sz === a32(nb0 * 255)) sz += 32; bytes = new Uint8Array(sz); bytes.set(chunk); }
           else { const nb = Math.ceil(a8(comp.length) / 251); const pe = new Uint8Array(nb * 251); pe.set(comp); bytes = new Uint8Array(a32(nb * 255)); RS(0x11D, 251).enc(pe, nb, bytes, 0); }
-          pages.push({ id, bytes }); return { id, uncomp: chunk.length, comp: comp.length, sum: sum21(chunk, chunk.length) }; };
+          pages.push({ id, bytes }); return { id, uncomp: chunk.length, comp: comp.length, sum: sum21(chunk, chunk.length), crc: crcJ(comp, comp.length) }; };
         const SECS = [];
         const addSec = (name, hash, data, max, raw) => { const d = { name, hash, size: data.length, max, enc: raw ? 1 : 4, pages: [] }; SECS.push(d);
           const nP = Math.max(1, Math.ceil(data.length / max));
@@ -928,7 +934,7 @@
           for(const d of recs){ const nl = d.name ? (d.name.length + 1) * 2 : 0;
             for(const v of [d.size, d.max, 0, d.hash, nl, 0, d.enc, d.pages.length]){ L64(sm, q, v); q += 8; }
             for(let i = 0; i < d.name.length; i++){ sm[q] = d.name.charCodeAt(i); q += 2; } if(nl) q += 2;
-            for(const pg of d.pages){ for(const v of [pg.off, d.pages.length > 1 ? pg.uncomp : d.max, pg.id, pg.uncomp, pg.comp, pg.sum, 0]){ L64(sm, q, v); q += 8; } } }
+            for(const pg of d.pages){ for(const v of [pg.off, d.pages.length > 1 ? pg.uncomp : d.max, pg.id, pg.uncomp, pg.comp, pg.sum, pg.crc]){ L64(sm, q, v); q += 8; } } }
           const smRep = 4, smP = sysPage(sm, smRep), smId1 = newId(), smId2 = newId(); pages.push({ id: smId1, bytes: smP.bytes }, { id: smId2, bytes: smP.bytes.slice() });
           // bản đồ trang: (cỡ, id) mỗi trang theo thứ tự trong file
           const pm = new Uint8Array(pages.length * 16); pages.forEach((p, i) => { L64(pm, i * 16, p.bytes ? p.bytes.length : pmSize); L64(pm, i * 16 + 8, p.id); });
@@ -939,8 +945,8 @@
           const fileSize = 0x480 + body + 0x400;
           // header 0x110 byte (34 số 64 bit)
           const hd = new Uint8Array(0x110);
-          const hv64 = [0x70, fileSize, 0, pmRep, 0, pmSize, pmId2, 0, pmId1, body, pmP.comp.length, pm.length, pages.length, nextId - 1, 0x20, 0x40, 0, 0xf800, 4, 1,
-            recs.length, 0, smP.comp.length, smId2, smId1, sm.length, 0, smRep, 0, 0x60100, 0, 0, BigInt(Math.floor(Math.random() * 0x7fffffff)) * 0x100000000n + BigInt(Math.floor(Math.random() * 0xffffffff)), 0];
+          const hv64 = [0x70, fileSize, crcJ(pmP.comp, pmP.comp.length), pmRep, 0, pmSize, pmId2, 0, pmId1, body, pmP.comp.length, pm.length, pages.length, nextId - 1, 0x20, 0x40, crcJ(pm, pm.length), 0xf800, 4, 1,
+            recs.length, crcJ(sm, sm.length), smP.comp.length, smId2, smId1, sm.length, crcJ(smP.comp, smP.comp.length), smRep, 0, 0x60100, 0, 0, BigInt(Math.floor(Math.random() * 0x7fffffff)) * 0x100000000n + BigInt(Math.floor(Math.random() * 0xffffffff)), 0];
           hv64.forEach((v, i) => L64(hd, i * 8, v)); L64(hd, 0x108, crc64(hd, 0x110));
           const hc = r21Comp(hd, true);
           const pre = new Uint8Array(3 * 239); L64(pre, 0, 0); L64(pre, 8, 0); L64(pre, 16, crc64(hc, hc.length)); new DataView(pre.buffer).setInt32(24, hc.length, true); new DataView(pre.buffer).setInt32(28, 0, true); pre.set(hc, 32);
@@ -1117,7 +1123,7 @@
         if(!out) out = u.slice(); const d = deRS(pg.at, nb, 251); out.set(d.subarray(0, un), pg.at); } }
     return out ? out.buffer : buf; }catch(_){ return buf; } }
 
-  const api = { BW, crc16, parseDxf, headerVars, Rec, tvBytes, dwgFromDxf, previewBmp, fix2007, r21Comp, r21Decomp, crc64, sum21 };
+  const api = { BW, crc16, parseDxf, headerVars, Rec, tvBytes, dwgFromDxf, previewBmp, fix2007, r21Comp, r21Decomp, crc64, crcJ, sum21 };
   if(typeof module !== 'undefined' && module.exports) module.exports = api;
   root.DVDDwg = api;
 

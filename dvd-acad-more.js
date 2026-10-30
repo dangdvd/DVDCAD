@@ -254,7 +254,8 @@
     const pxPerMM = vec ? CSS_PER_MM : dpi / 25.4; let pxW = Math.round(Wmm * pxPerMM), pxH = Math.round(Hmm * pxPerMM);
     const MAX = forPreview ? 400000 : 30000000; let sc = 1; if(!vec && pxW * pxH > MAX){ sc = Math.sqrt(MAX / (pxW * pxH)); pxW = Math.round(pxW * sc); pxH = Math.round(pxH * sc); }
     const realPxPerMM = vec ? CSS_PER_MM : pxW / Wmm, dpr = vec ? 1 : realPxPerMM / CSS_PER_MM;
-    const out = kind === 'svg' ? new A.SvgCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, { flip: !!PS.ud, imgMax: 4e6 }).canvas : kind ? new A.PdfCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, 72 / 25.4 / CSS_PER_MM, { flip: !!PS.ud, imgMax: PS.dev === 'pdfsm' ? 1.5e6 : 16e6 }).canvas : document.createElement('canvas'); if(!vec){ out.width = pxW; out.height = pxH; }
+    const VQ = kind === 'svg' && A.plotVecQuant ? A.plotVecQuant(CSS_PER_MM * 0.254) : null;   // máy in giảm màu: màu bảng máy in + chấm dither vector (ô 0,254 mm)
+    const out = kind === 'svg' ? new A.SvgCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, { flip: !!PS.ud, imgMax: 4e6, q: VQ }).canvas : kind ? new A.PdfCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, 72 / 25.4 / CSS_PER_MM, { flip: !!PS.ud, imgMax: PS.dev === 'pdfsm' ? 1.5e6 : 16e6 }).canvas : document.createElement('canvas'); if(!vec){ out.width = pxW; out.height = pxH; }
     const octx = out.getContext('2d'); let mask = null;
     const aw = area.x1 - area.x0, ah = area.y1 - area.y0;
     // vị trí vùng in trên giấy (mm, gốc trên-trái)
@@ -270,7 +271,7 @@
       Object.defineProperty(window, 'devicePixelRatio', { value: dpr, configurable: true });
       view.scale = k * CSS_PER_MM; view.offsetX = ox * CSS_PER_MM - area.x0 * view.scale; view.offsetY = (oy + ah * k) * CSS_PER_MM + area.y0 * view.scale;
       window.__plotClear = !vec && !!(A.plotDepth && A.plotDepth(PS.dev) !== 'tc');   // giảm màu: vẽ lên nền trong suốt (alpha = độ phủ, bỏ khử răng cưa như máy vẽ)
-      bbDirty = true; buildBBoxCache(); draw();
+      bbDirty = true; buildBBoxCache(); if(VQ) VQ.begin(); try{ draw(); } finally { if(VQ) VQ.end(); }
       // cắt bỏ phần ngoài vùng in (như AutoCAD)
       octx.setTransform(1, 0, 0, 1, 0, 0); octx.fillStyle = '#ffffff';
       const X0 = ox * realPxPerMM - 2, Y0 = oy * realPxPerMM - 2, X1 = (ox + aw * k) * realPxPerMM + 2, Y1 = (oy + ah * k) * realPxPerMM + 2;
@@ -324,8 +325,8 @@
       if(fmt === 'pdf' && A.pdfBuild && !PS.pdfRaster){   // DWG To PDF: PDF vector (đường nét + chữ nhúng phông), phóng to vẫn sắc nét
         const blob = await A.plotPDF(); await shareOrDownload(blob, name, 'application/pdf'); const I = blob.dvdInfo || {};
         log('Đã in PDF vector: khổ ' + PS.paper + (PS.land ? ' ngang' : ' dọc') + ', tỉ lệ ' + (PS.fit ? 'khít giấy' : '1:' + PS.scale) + (I.fonts && I.fonts.length ? ', phông nhúng: ' + [...new Set(I.fonts)].join(', ') : '') + (I.rasterText ? ' (' + I.rasterText + ' đoạn chữ thiếu phông vẽ thành ảnh)' : '') + '.'); return; }
-      // máy in Windows: in nét vector (SVG — đường nét và chữ sắc nét, tệp in nhỏ); giảm màu / dither của máy in thì in ảnh như trước
-      if(fmt === 'print' && A.SvgCtx && !(A.plotDepth && A.plotDepth(PS.dev) !== 'tc')){ const rs = plotRender(0, false, 'svg'); printSVG(rs.svg, rs.Wmm, rs.Hmm); log('Đã gửi bản in vector ra máy in: khổ ' + paperName() + (PS.land ? ' ngang' : ' dọc') + ', tỉ lệ ' + (PS.fit ? 'khít giấy' : '1:' + PS.scale) + '.'); return; }
+      // máy in Windows: in nét vector (SVG — đường nét và chữ sắc nét, tệp in nhỏ); máy in giảm màu: màu theo bảng máy in, dither = mẫu chấm vector
+      if(fmt === 'print' && A.SvgCtx && !PS.printRaster){ const rs = plotRender(0, false, 'svg'); printSVG(rs.svg, rs.Wmm, rs.Hmm); log('Đã gửi bản in vector ra máy in: khổ ' + paperName() + (PS.land ? ' ngang' : ' dọc') + ', tỉ lệ ' + (PS.fit ? 'khít giấy' : '1:' + PS.scale) + '.'); return; }
       const r = plotRender(fmt === 'png' || fmt === 'jpg' ? 200 : 300, false);
       if(fmt === 'pdf'){ const blob = await canvasToPDFPaper(r.canvas, r.pagePt); await shareOrDownload(blob, name, 'application/pdf'); }
       else if(fmt === 'jpg'){ const blob = await new Promise(res => r.canvas.toBlob(res, 'image/jpeg', 0.92)); await shareOrDownload(blob, name.replace(/\.pdf$/i, '.jpg'), 'image/jpeg'); }

@@ -282,7 +282,11 @@
   const xe = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const rgb = c => 'rgb(' + Math.round(c.r * 255) + ',' + Math.round(c.g * 255) + ',' + Math.round(c.b * 255) + ')';
   class SvgCtx extends PdfCtx {
-    constructor(w, h, opt){ super(w, h, 1, opt); this.base = opt && opt.flip ? [-1, 0, 0, -1, w, h] : [1, 0, 0, 1, 0, 0]; this.out = []; this.defs = []; this.grp = [0]; this.nid = 0; }
+    constructor(w, h, opt){ super(w, h, 1, opt); this.base = opt && opt.flip ? [-1, 0, 0, -1, w, h] : [1, 0, 0, 1, 0, 0]; this.out = []; this.defs = []; this.grp = [0]; this.nid = 0;
+      this.q = opt && opt.q || null; }   // q: máy in giảm màu (256 màu / đen trắng) — màu → bảng màu máy in, dither = mẫu chấm vector
+    // màu vẽ (+ độ mờ): giảm màu thì trộn với giấy trắng rồi quy về bảng màu, không còn độ trong suốt (như máy vẽ)
+    _pc(c, am){ const a = Math.max(0, Math.min(1, c.a * am)); if(!this.q) return [rgb(c), this._op(a)];
+      return [this.q.paint(c.r * a + 1 - a, c.g * a + 1 - a, c.b * a + 1 - a, c, this.defs), null]; }
     unflip(){ this.base = [1, 0, 0, 1, 0, 0]; this.beginPath(); }
     _o(){}   // không dùng toán tử PDF
     _d(){ return this.path.map(t => { const q = t.split(' '), op = q.pop(); return op === 'm' ? 'M' + q.join(' ') : op === 'l' ? 'L' + q.join(' ') : op === 'c' ? 'C' + q.join(' ') : 'Z'; }).join(''); }
@@ -290,25 +294,25 @@
     restore(){ const s = this.stk.pop(); if(!s) return; this.M = s.M; this.st = s.st; this.raw = s.raw; const n = this.grp.pop() || 0; for(let i = 0; i < n; i++) this.out.push('</g>'); }
     _op(a){ a = Math.max(0, Math.min(1, a)); return a < 0.999 ? a : null; }
     stroke(){ if(!this.path.length) return; const S = this.st, c = S.strokeStyle._pdfGrad ? (S.strokeStyle.stops[0] || [0, color('#000')])[1] : S.strokeStyle; if(c.a === 0 || S.globalAlpha === 0) return; const k = this._sc(), o = this._op(c.a * S.globalAlpha);
-      this.out.push('<path d="' + this._d() + '" fill="none" stroke="' + rgb(c) + '" stroke-width="' + num(S.lineWidth * k) + '"' + (o != null ? ' stroke-opacity="' + num(o) + '"' : '') + (S.lineCap !== 'butt' ? ' stroke-linecap="' + S.lineCap + '"' : '') + (S.lineJoin !== 'miter' ? ' stroke-linejoin="' + S.lineJoin + '"' : ' stroke-miterlimit="' + num(S.miterLimit) + '"') +
+      const [pc, o2] = this._pc(c, S.globalAlpha); this.out.push('<path d="' + this._d() + '" fill="none" stroke="' + pc + '" stroke-width="' + num(S.lineWidth * k) + '"' + (o2 != null ? ' stroke-opacity="' + num(o2) + '"' : '') + (S.lineCap !== 'butt' ? ' stroke-linecap="' + S.lineCap + '"' : '') + (S.lineJoin !== 'miter' ? ' stroke-linejoin="' + S.lineJoin + '"' : ' stroke-miterlimit="' + num(S.miterLimit) + '"') +
         (S.dash.length ? ' stroke-dasharray="' + S.dash.map(v => num(v * k)).join(' ') + '"' + (S.lineDashOffset ? ' stroke-dashoffset="' + num(S.lineDashOffset * k) + '"' : '') : '') + '/>'); }
     fill(rule){ if(!this.path.length) return; const F = this.st.fillStyle, ev = rule === 'evenodd';
-      if(F._pdfGrad){ this._shade(F, ev); return; } if(F.a === 0 || this.st.globalAlpha === 0) return; const o = this._op(F.a * this.st.globalAlpha);
-      this.out.push('<path d="' + this._d() + '" fill="' + rgb(F) + '"' + (o != null ? ' fill-opacity="' + num(o) + '"' : '') + (ev ? ' fill-rule="evenodd"' : '') + '/>'); }
+      if(F._pdfGrad){ this._shade(F, ev); return; } if(F.a === 0 || this.st.globalAlpha === 0) return; const [pc, o] = this._pc(F, this.st.globalAlpha);
+      this.out.push('<path d="' + this._d() + '" fill="' + pc + '"' + (o != null ? ' fill-opacity="' + num(o) + '"' : '') + (ev ? ' fill-rule="evenodd"' : '') + '/>'); }
     clip(rule){ if(!this.path.length) return; const id = 'c' + (++this.nid); this.defs.push('<clipPath id="' + id + '"><path d="' + this._d() + '"' + (rule === 'evenodd' ? ' clip-rule="evenodd"' : '') + '/></clipPath>'); this.out.push('<g clip-path="url(#' + id + ')">'); this.grp[this.grp.length - 1]++; }
-    _shade(G, ev){ if(!G.stops.length) return; const id = 'g' + (++this.nid), m = mmul(this.base, this.M), c = G.c, st = G.stops.map(([t, k]) => '<stop offset="' + num(t) + '" stop-color="' + rgb(k) + '"' + (k.a < 1 ? ' stop-opacity="' + num(k.a) + '"' : '') + '/>').join('');
+    _shade(G, ev){ if(!G.stops.length) return; const id = 'g' + (++this.nid), m = mmul(this.base, this.M), c = G.c, q = this.q, st = G.stops.map(([t, k]) => '<stop offset="' + num(t) + '" stop-color="' + (q ? q.solid(k.r * k.a + 1 - k.a, k.g * k.a + 1 - k.a, k.b * k.a + 1 - k.a) : rgb(k)) + '"' + (k.a < 1 && !q ? ' stop-opacity="' + num(k.a) + '"' : '') + '/>').join('');
       this.defs.push(G.kind === 'L' ? '<linearGradient id="' + id + '" gradientUnits="userSpaceOnUse" x1="' + num(c[0]) + '" y1="' + num(c[1]) + '" x2="' + num(c[2]) + '" y2="' + num(c[3]) + '" gradientTransform="matrix(' + mstr(m) + ')">' + st + '</linearGradient>'
         : '<radialGradient id="' + id + '" gradientUnits="userSpaceOnUse" fx="' + num(c[0]) + '" fy="' + num(c[1]) + '" cx="' + num(c[3]) + '" cy="' + num(c[4]) + '" r="' + num(c[5]) + '" gradientTransform="matrix(' + mstr(m) + ')">' + st + '</radialGradient>');
-      const o = this._op(this.st.globalAlpha); this.out.push('<path d="' + this._d() + '" fill="url(#' + id + ')"' + (o != null ? ' fill-opacity="' + num(o) + '"' : '') + (ev ? ' fill-rule="evenodd"' : '') + '/>'); }
+      const o = this.q ? null : this._op(this.st.globalAlpha); this.out.push('<path d="' + this._d() + '" fill="url(#' + id + ')"' + (o != null ? ' fill-opacity="' + num(o) + '"' : '') + (ev ? ' fill-rule="evenodd"' : '') + '/>'); }
     fillText(text, x, y){ text = String(text == null ? '' : text); if(!text.trim() || this.st.fillStyle.a === 0) return;
       const g = sc(); g.font = this.st.font; g.textBaseline = this.st.textBaseline; const mt = g.measureText(text); let dy = 0; if(mt.alphabeticBaseline != null && this.st.textBaseline !== 'alphabetic') dy = -mt.alphabeticBaseline;
       const F = this.st.fillStyle._pdfGrad ? (this.st.fillStyle.stops[0] || [0, color('#000')])[1] : this.st.fillStyle, s = famOf(this.st.font), o = this._op(F.a * this.st.globalAlpha), al = this.st.textAlign, m = mmul(this.base, this.M);
       const fam = s.fams.map(f => GENERIC.test(f) ? (/mono/i.test(f) ? 'monospace' : /^serif$/i.test(f) ? 'serif' : 'sans-serif') : "'" + f.replace(/'/g, '') + "'").filter((v, i, a) => a.indexOf(v) === i).join(',');
       this.out.push('<text xml:space="preserve" transform="matrix(' + mstr(m) + ')" x="' + num(x) + '" y="' + num(y + dy) + '" font-family="' + xe(fam) + '" font-size="' + num(s.px) + '"' + (s.bold ? ' font-weight="bold"' : '') + (s.italic ? ' font-style="italic"' : '') +
-        (al === 'center' ? ' text-anchor="middle"' : al === 'right' || al === 'end' ? ' text-anchor="end"' : '') + ' fill="' + rgb(F) + '"' + (o != null ? ' fill-opacity="' + num(o) + '"' : '') + '>' + xe(text.normalize('NFC')) + '</text>'); this.texts++; }
+        (al === 'center' ? ' text-anchor="middle"' : al === 'right' || al === 'end' ? ' text-anchor="end"' : '') + ' fill="' + this._pc(F, this.st.globalAlpha)[0] + '"' + (this.q || o == null ? '' : ' fill-opacity="' + num(o) + '"') + '>' + xe(text.normalize('NFC')) + '</text>'); this.texts++; }
     drawImage(img, a, b, c, d, e, f, g, h){ let sx = 0, sy = 0, sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height, dx, dy, dw, dh;
       if(arguments.length <= 3){ dx = a; dy = b; dw = sw; dh = sh; } else if(arguments.length <= 5){ dx = a; dy = b; dw = c; dh = d; } else { sx = a; sy = b; sw = c; sh = d; dx = e; dy = f; dw = g; dh = h; }
-      if(!(sw > 0 && sh > 0 && dw && dh)) return; let url = null; try{ const k = Math.min(1, Math.sqrt(this.imgMax / (sw * sh))), cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(sw * k)); cv.height = Math.max(1, Math.round(sh * k)); cv.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, cv.width, cv.height); url = cv.toDataURL('image/png'); }catch(_){ return; }
+      if(!(sw > 0 && sh > 0 && dw && dh)) return; let url = null; try{ const k = Math.min(1, Math.sqrt(this.imgMax / (sw * sh))), cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(sw * k)); cv.height = Math.max(1, Math.round(sh * k)); cv.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, cv.width, cv.height); if(this.q && this.q.image) this.q.image(cv, this.st.globalAlpha); url = cv.toDataURL('image/png'); }catch(_){ return; }
       const o = this._op(this.st.globalAlpha); this.out.push('<image transform="matrix(' + mstr(mmul(this.base, this.M)) + ')" x="' + num(dx) + '" y="' + num(dy) + '" width="' + num(dw) + '" height="' + num(dh) + '" preserveAspectRatio="none" href="' + url + '"' + (o != null ? ' opacity="' + num(o) + '"' : '') + '/>'); }
     // SVG hoàn chỉnh, kích thước theo mm của khổ giấy
     toSVG(Wmm, Hmm){ let close = ''; for(const n of this.grp) close += '</g>'.repeat(n);
