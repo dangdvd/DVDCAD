@@ -267,7 +267,7 @@
     if(live && live !== cur && psSer(live) === psSer(cur)){ D.ps = live; return live; } for(const e of cur) if(e) e.userAdded = true; PSLIVE.set(key, cur); D.ps = cur; return cur; }
   function toLayout(D){
     const k = n => mmU() / n;   // mm giấy trên 1 đơn vị bản vẽ
-    const vps = (D.vps || []).map(v => ({ vcx: v.x + v.w / 2, vcy: v.y + v.h / 2, w: v.w, h: v.h, dcx: v.cx, dcy: v.cy, vh: v.h / k(v.n), vx: v.vx || undefined }));
+    const vps = (D.vps || []).map(v => ({ vcx: v.x + v.w / 2, vcy: v.y + v.h / 2, w: v.w, h: v.h, dcx: v.cx, dcy: v.cy, vh: v.h / k(v.n), tw: v.tw || undefined, vx: v.vx || undefined }));
     return { name: D.name, tabOrder: 100 + (D.ord || 0), isModel: false, user: true, def: D, paper: { paperPrims: sheetPrims(D).concat(psOf(D)), viewports: vps } };
   }
   function installLayouts(){
@@ -289,7 +289,7 @@
   function fileDef(L){
     if(!L || L.user || L.isModel || !L.paper) return null;
     const P = L.paper, ps = (P.paperPrims || []).filter(e => e && !e.vpf);
-    const vps = (P.viewports || []).map((v, k) => { const o = { x: v.vcx - v.w / 2, y: v.vcy - v.h / 2, w: v.w, h: v.h, n: v.vh * mmU() / v.h, cx: v.dcx, cy: v.dcy }; let vx = null; try{ vx = window.vpExtra ? window.vpExtra(L, k) : v.vx; }catch(_){} if(vx) o.vx = JSON.parse(JSON.stringify(vx)); return o; });
+    const vps = (P.viewports || []).map((v, k) => { const o = { x: v.vcx - v.w / 2, y: v.vcy - v.h / 2, w: v.w, h: v.h, n: v.vh * mmU() / v.h, cx: v.dcx, cy: v.dcy }; if(v.tw) o.tw = v.tw; let vx = null; try{ vx = window.vpExtra ? window.vpExtra(L, k) : v.vx; }catch(_){} if(vx) o.vx = JSON.parse(JSON.stringify(vx)); return o; });
     let b = P.lim ? { x0: P.lim.x0, y0: P.lim.y0, x1: P.lim.x1, y1: P.lim.y1 } : null;
     if(!b){ let a = Infinity, c = Infinity, d = -Infinity, f = -Infinity; const add = bb => { if(!bb) return; if(bb.x0 < a) a = bb.x0; if(bb.y0 < c) c = bb.y0; if(bb.x1 > d) d = bb.x1; if(bb.y1 > f) f = bb.y1; };
       for(const e of ps){ try{ add(entBBox(e)); }catch(_){} } for(const v of vps) add({ x0: v.x, y0: v.y, x1: v.x + v.w, y1: v.y + v.h });
@@ -367,9 +367,9 @@
   });
   function vpEdit(){
     const U = needUser(); if(!U) return; const D = deep(U.def); if(!(D.vps || []).length){ log('Layout chưa có khung nhìn — dùng MVIEW.'); return; }
-    const render = root => { root.querySelector('tbody').innerHTML = D.vps.map((v, i) => '<tr data-i="' + i + '"><td>#' + (i + 1) + '</td><td>' + Math.round(v.w) + '×' + Math.round(v.h) + ' mm</td><td>1:<input data-f="n" value="' + (+v.n.toPrecision(5)) + '" style="width:70px"></td><td><input data-f="cx" value="' + (+v.cx.toFixed(2)) + '" style="width:100px"> , <input data-f="cy" value="' + (+v.cy.toFixed(2)) + '" style="width:100px"></td><td style="white-space:nowrap"><button class="tg" data-a="pick" title="Chọn tâm trên Model">⌖</button><button class="tg" data-a="fit" title="Vừa toàn bản vẽ">⤢</button><button class="tg" data-a="del" title="Xoá khung nhìn">✕</button></td></tr>').join(''); };
-    const pull = root => root.querySelectorAll('tr[data-i]').forEach(tr => { const v = D.vps[+tr.dataset.i]; for(const inp of tr.querySelectorAll('input[data-f]')){ const val = parseFloat(String(inp.value).replace(',', '.')); if(isFinite(val) && (inp.dataset.f !== 'n' || val > 0)) v[inp.dataset.f] = val; } });
-    A.dialog({ title: 'Khung nhìn của "' + D.name + '"', wide: true, html: '<div class="lm-tbl"><table><thead><tr><th></th><th>Kích thước</th><th>Tỉ lệ</th><th>Tâm vùng hiển thị (toạ độ Model)</th><th></th></tr></thead><tbody></tbody></table></div><p style="margin:6px 0 0">⌖ = về Model, bấm 1 điểm làm tâm khung nhìn. Tỉ lệ 1:N theo đơn vị bản vẽ hiện tại.</p>',
+    const render = root => { root.querySelector('tbody').innerHTML = D.vps.map((v, i) => '<tr data-i="' + i + '"><td>#' + (i + 1) + '</td><td>' + Math.round(v.w) + '×' + Math.round(v.h) + ' mm</td><td>1:<input data-f="n" value="' + (+v.n.toPrecision(5)) + '" style="width:70px"></td><td><input data-f="cx" value="' + (+v.cx.toFixed(2)) + '" style="width:100px"> , <input data-f="cy" value="' + (+v.cy.toFixed(2)) + '" style="width:100px"></td><td><input data-f="twd" value="' + (+((v.tw || 0) * 180 / Math.PI).toFixed(4)) + '" style="width:60px"></td><td style="white-space:nowrap"><button class="tg" data-a="pick" title="Chọn tâm trên Model">⌖</button><button class="tg" data-a="fit" title="Vừa toàn bản vẽ">⤢</button><button class="tg" data-a="del" title="Xoá khung nhìn">✕</button></td></tr>').join(''); };
+    const pull = root => root.querySelectorAll('tr[data-i]').forEach(tr => { const v = D.vps[+tr.dataset.i]; for(const inp of tr.querySelectorAll('input[data-f]')){ const val = parseFloat(String(inp.value).replace(',', '.')); if(!isFinite(val)) continue; if(inp.dataset.f === 'twd'){ const t = ((val % 360) + 360) % 360; if(t > 1e-9) v.tw = t * Math.PI / 180; else delete v.tw; } else if(inp.dataset.f !== 'n' || val > 0) v[inp.dataset.f] = val; } });
+    A.dialog({ title: 'Khung nhìn của "' + D.name + '"', wide: true, html: '<div class="lm-tbl"><table><thead><tr><th></th><th>Kích thước</th><th>Tỉ lệ</th><th>Tâm vùng hiển thị (toạ độ Model)</th><th>Xoay nhìn (°)</th><th></th></tr></thead><tbody></tbody></table></div><p style="margin:6px 0 0">⌖ = về Model, bấm 1 điểm làm tâm khung nhìn. Tỉ lệ 1:N theo đơn vị bản vẽ hiện tại. Xoay nhìn = VIEWTWIST (ngược chiều kim đồng hồ).</p>',
       onOpen: root => { render(root); root.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if(!b) return; pull(root); const i = +b.closest('tr').dataset.i; const v = D.vps[i];
         if(b.dataset.a === 'del'){ D.vps.splice(i, 1); render(root); }
         if(b.dataset.a === 'fit'){ const ext = modelExtents(); v.n = fitN(v.w, v.h, ext); v.cx = (ext.x0 + ext.x1) / 2; v.cy = (ext.y0 + ext.y1) / 2; render(root); }

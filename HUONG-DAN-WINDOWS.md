@@ -31,6 +31,8 @@ Gỡ cài đặt: **Settings → Apps → DVDCAD → Uninstall**.
 | In | `PLOT` / **Ctrl+P**: xuất PDF đúng khổ giấy và tỉ lệ, hoặc in ra máy in |
 | Đổi phiên bản DWG hàng loạt | `DWGCONVERT`: thêm nhiều file DWG / DXF, chọn DWG 2018 / 2013 / 2010 / 2004 / 2000 hoặc DXF → tải về một file .zip. Bản vẽ đang mở không bị ảnh hưởng |
 | Phông SHX của bản vẽ | `SHXFONTS` → **Nạp phông…**: chọn các tệp `.shx` có trên máy (ví dụ thư mục `Fonts` của AutoCAD đã cài). Chữ của kiểu chữ dùng phông đó vẽ bằng nét SHX như AutoCAD; phông được nhớ cho lần sau |
+| Nhiều bản vẽ cạnh nhau | `SYSWINDOWS` (tab Hiển thị → Xếp bản vẽ): **Lát dọc / Lát ngang / Xếp chồng**. Bản vẽ hiện hành vẽ, sửa ngay trong ô của nó; bấm ô khác để chuyển; nút □ trở về một cửa sổ |
+| Thiết lập trang có tên | Lưu trong hộp PLOT (**Thêm…**) hoặc nhập bằng `PSETUPIN`. Khi lưu DWG / DXF, AutoCAD thấy các thiết lập này trong Page Setup Manager |
 | Hình chiếu từ mô hình 3D | Tab **Bố cục**: `VIEWBASE` (hình chiếu cơ sở + hình chiếu phụ), `VIEWSECTION` (mặt cắt), `VIEWDETAIL` (hình trích), `VIEWUPDATE` sau khi sửa mô hình |
 
 **Lệnh tắt như AutoCAD:** bảng lệnh tắt mặc định giống `acad.pgp`, ví dụ `L`, `C`, `CO`/`CP`, `TR`, `EX`, `O`, `F`, `H`, `DLI`, `T` = MTEXT, `DT` = TEXT, `DO` = DONUT, `PA` = PASTESPEC, `RE` / `REA`.

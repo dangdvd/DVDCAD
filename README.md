@@ -6,6 +6,27 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5x: xoay nhìn khung nhìn (VIEWTWIST), MTEXT nhiều phông / SHX, PLOTSETTINGS có tên trong DXF / DWG, SYSWINDOWS cửa sổ con
+- **Khung nhìn xoay** — `v.tw` (radian), DCS = R(tw)·(P − đích):
+  - `index.html`: `_vpWorldC()` đổi tâm nhìn DCS (12/22 hoặc `VIEWCTR`) + đích (17/27, `targetPoint`) về toạ độ mô hình.
+  - `vpMatrix(v)` (giấy = tâm + tỉ lệ·R(tw)·(P − tâm nhìn)), `vpToModel` / `vpToPaper` dùng chung cho `buildPaperEntities`, `CHSPACE`, `VPSYNC`, `ALIGNSPACE`.
+  - DXF ghi mã 51 (độ), tâm nhìn 12/22 theo DCS. Bộ ghi DWG lấy từ DXF (BD radian).
+  - Layout tự tạo lưu `tw` trong `D.vps[i]`. `VPEDIT` có cột Xoay nhìn.
+- **Chữ có định dạng nhiều phông** (`dvd-acad-dlg.js`):
+  - Đoạn `{ t, b, i, u, o, ff, f }` thêm `ff`: phông riêng của đoạn (TrueType hoặc `.shx`).
+  - `segW()` đo bề rộng theo SHX (`A.shxRun`, `A.shxLine` của x23) hoặc theo canvas.
+  - `drawRichText(ctx, e, px, T0)` vẽ đoạn SHX bằng nét (stroke theo `T0`).
+  - `A.richShxStrokes(e)` trả nét khi mọi đoạn là SHX; `A.shxStrokes` gọi hàm này cho chữ có định dạng.
+  - `A.mtextRuns` đọc `\F` / `\f`; `richPieces` ghi `{\Ftệp.shx;…}` / `{\fTên|b|i|c0|p34;…}`.
+  - Tab Soạn chữ: có vùng bôi đen thì chọn phông = `setFont()` cho đoạn đó.
+- **PLOTSETTINGS**:
+  - `dvd-acad-dxf.js` ghi thiết lập trang có tên (`A.pageSetups()`) vào ACAD_PLOTSETTINGS. `dvd-dwg.js` mã hoá PLOTSETTINGS cùng phần AcDbPlotSettings với LAYOUT.
+  - `libredwg-web.js` đọc PLOTSETTINGS tại `tio − 8`: cùng bố cục phần plotsettings của LAYOUT, đã đối chiếu với `gh109_1.dwg` (AutoCAD 2013, bộ thử libredwg).
+  - `psFrom()` (x22): cờ 16 + mã 75 = 0 → vừa khổ giấy; cờ 16 với mã 75 khác 0 → tỉ lệ theo 147; không có cờ 16 → tỉ lệ 142 : 143. Mã 74 = 0 là Display.
+- **SYSWINDOWS** (x23):
+  - Ở chế độ lát / xếp chồng, `cvPlace()` đặt `#cv` và 2 lớp phủ (`#dvdOvS`, `#dvdOvC`) vào ô của bản vẽ hiện hành (`setProperty(…, 'important')`), rồi gọi `resize()` và giữ tâm nhìn.
+  - Bấm ô khác → `A.switchTab()`; vòng kiểm 250 ms xếp lại khi đổi bản vẽ hoặc số tab. Nút □ hoặc gõ lại lệnh = một cửa sổ.
+
 ## v5w: WMFIN, mặt cắt nửa / bậc / xoay, phông SHX cho chữ, GCSMOOTH, ALIGNSPACE, SYSWINDOWS, PSETUPIN đọc DWG của AutoCAD
 - Tệp mới `dvd-acad-x23.js` (nạp sau `dvd-acad-x22.js`, có trong cache của `sw.js`).
 - **WMFIN** — `A.parseWMF(buf, { wire, wide })`:

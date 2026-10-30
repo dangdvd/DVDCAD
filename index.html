@@ -1274,7 +1274,8 @@ function parseDXF(text){
         let j=i+1; const g=[];
         while(j<end && pairs[j].code!==0){ g.push(pairs[j]); j++; }
         if(type==='VIEWPORT'){   // khung nhìn của layout: tâm/cỡ trên giấy (10,20,40,41), tâm nhìn DCS + đích (12,22 + 17,27), cao vùng nhìn (45)
-          vports.push({vcx:num(g,10),vcy:num(g,20),w:num(g,40),h:num(g,41),dcx:(num(g,12)||0)+(num(g,17)||0),dcy:(num(g,22)||0)+(num(g,27)||0),vh:num(g,45),st:num(g,68),id:num(g,69),ps:num(g,67)===1,fl:num(g,90)||0,clipH:(str(g,340)||'').toUpperCase(),frzH:g.filter(it=>it.code===331||it.code===341).map(it=>String(it.value).trim().toUpperCase())});
+          const _tw=(num(g,51)||0)*Math.PI/180, _dc=_vpWorldC(num(g,12)||0,num(g,22)||0,num(g,17)||0,num(g,27)||0,_tw);   // 51 = góc xoay nhìn (VIEWTWIST, độ)
+          vports.push({vcx:num(g,10),vcy:num(g,20),w:num(g,40),h:num(g,41),dcx:_dc.x,dcy:_dc.y,tw:_tw,vh:num(g,45),st:num(g,68),id:num(g,69),ps:num(g,67)===1,fl:num(g,90)||0,clipH:(str(g,340)||'').toUpperCase(),frzH:g.filter(it=>it.code===331||it.code===341).map(it=>String(it.value).trim().toUpperCase())});
           lastIns=null; i=j; continue; }
         let e=build(type,g); if(Array.isArray(e)){ for(const x of e){ x.aci=num(g,62); entExtra(x,g,type); out.push(x); } e=null; lastIns=null; }
         if(e){ if(e.aci===undefined) e.aci=num(g,62); entExtra(e,g,type);
@@ -2252,7 +2253,7 @@ function drawEntityBody(e,col){
       if(_T0){ const _Xa=_T0.a*_c+_T0.c*_s, _Xb=_T0.b*_c+_T0.d*_s; let _Ya=-_T0.a*_s+_T0.c*_c, _Yb=-_T0.b*_s+_T0.d*_c; if(e.ud){ _Ya=-_Ya; _Yb=-_Yb; } if(e.obl){ const _t=Math.tan(e.obl*Math.PI/180); _Ya-=_t*_Xa; _Yb-=_t*_Xb; }   // lộn ngược / góc nghiêng (như AutoCAD)
         ctx.setTransform(_Xa*_xs,_Xb*_xs,_Ya,_Yb,_T0.a*p.x+_T0.c*p.y+_T0.e,_T0.b*p.x+_T0.d*p.y+_T0.f); } else { ctx.save(); ctx.translate(p.x,p.y); if(_r) ctx.rotate(_r); if(_xs!==1) ctx.scale(_xs,1); if(e.ud) ctx.scale(1,-1); }
       if(e.ff&&/\.shx$/i.test(e.ff)&&!(e.cols||(e.rt&&e.rtx===e.text))&&window.DVDAcad&&DVDAcad.shxText&&DVDAcad.shxText(ctx,e,size,col,_T0)){ if(!_T0) ctx.restore(); ctx.textAlign='left'; ctx.textBaseline='alphabetic'; break; }   // phông SHX: nét của phông như AutoCAD
-      if((e.cols||(e.rt&&e.rtx===e.text))&&window.DVDAcad&&DVDAcad.drawRichText){ DVDAcad.drawRichText(ctx,e,fsz); _txtFont=null; }   // chữ có định dạng (đậm, nghiêng, gạch chân, trường) / có cột
+      if((e.cols||(e.rt&&e.rtx===e.text))&&window.DVDAcad&&DVDAcad.drawRichText){ DVDAcad.drawRichText(ctx,e,fsz,_T0); _txtFont=null; }   // chữ có định dạng (đậm, nghiêng, gạch chân, trường) / có cột
       else { const _ls=String(e.text).split('\n');if(_ls.length<=1){ctx.fillText(e.text,0,0);}else{const lh=fsz*1.3,va=e.va||'alphabetic';let st=(va==='middle')?-(_ls.length-1)/2*lh:(va==='top')?0:-(_ls.length-1)*lh;for(let _i=0;_i<_ls.length;_i++)ctx.fillText(_ls[_i],0,st+_i*lh);} }
       if(_T0) ctx.setTransform(_T0); else ctx.restore(); ctx.textAlign='left'; ctx.textBaseline='alphabetic'; break;}
     case 'XLINE':{const P=toScreen(e.x,e.y);const s=clipInfiniteLine(P.x,P.y,e.dx,-e.dy,W(),H(),e.ray);if(s){ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();}break;}
@@ -2920,7 +2921,7 @@ function hitHandle(screen){
 function polyDist(w,v,closed){ let d=Infinity; for(let i=1;i<v.length;i++){const dd=distToSeg(w,v[i-1],v[i]); if(dd<d)d=dd;} if(closed&&v.length>2){const dd=distToSeg(w,v[v.length-1],v[0]); if(dd<d)d=dd;} return d; }
 // Hộp bao chữ trong hệ cục bộ (gốc tại điểm chèn, theo canh lề ha/va, có hệ số rộng xs, nhiều dòng)
 function textExtent(e){
-  if(e.ff&&/\.shx$/i.test(e.ff)&&window.DVDAcad&&DVDAcad.shxExtent){ try{ const r=DVDAcad.shxExtent(e); if(r) return r; }catch(_){} }
+  if(e.ff&&/\.shx$/i.test(e.ff)&&!(e.cols||(e.rt&&e.rtx===e.text))&&window.DVDAcad&&DVDAcad.shxExtent){ try{ const r=DVDAcad.shxExtent(e); if(r) return r; }catch(_){} }
   if((e.cols||(e.rt&&e.rtx===e.text))&&window.DVDAcad&&DVDAcad.richExtent){ try{ const r=DVDAcad.richExtent(e); if(r) return r; }catch(_){} }
   const h=e.h||10; const ls=String(e.text||'').split('\n'); let mx=1; for(const t of ls){ const n=[...t].length; if(n>mx)mx=n; }
   const _xs=e.xs||1; const W=Math.max(h*0.6, mx*h*0.62*Math.abs(_xs)); const n=ls.length, lh=h*1.3;
@@ -4833,7 +4834,8 @@ function buildLayouts(db, recs, blocks){
         if(v.isVisible===false) continue;
         if(!(v.width>0&&v.height>0&&v.viewHeight>0)) continue;
         if(!v.viewportCenter||!v.displayCenter) continue;
-        const o={vcx:v.viewportCenter.x, vcy:v.viewportCenter.y, w:v.width, h:v.height, dcx:v.displayCenter.x, dcy:v.displayCenter.y, vh:v.viewHeight};
+        const tw=+v.viewTwistAngle||0, tp=v.targetPoint||{}, dc=_vpWorldC(v.displayCenter.x, v.displayCenter.y, +tp.x||0, +tp.y||0, tw);   // tâm nhìn DCS + đích → toạ độ mô hình
+        const o={vcx:v.viewportCenter.x, vcy:v.viewportCenter.y, w:v.width, h:v.height, dcx:dc.x, dcy:dc.y, vh:v.viewHeight}; if(Math.abs(tw)>1e-9) o.tw=tw;
         const frz=(v.frozenLayerIds||[]).map(h=>LH[up(h)]).filter(Boolean); let cp=null;   // VPLAYER / VPCLIP của tệp
         if(v.clipBoundaryId){ const c=raw.find(e=>e&&up(e.handle)===up(v.clipBoundaryId)); if(c&&Array.isArray(c.vertices)&&c.vertices.length>=3){ cp=_cpPts(c.vertices); clipUsed.add(c); } }
         if(frz.length||cp) o.vx=Object.assign(frz.length?{frz}:{}, cp?{cp}:{});
@@ -4855,10 +4857,16 @@ function _vpOk(list){
     if(v.id===1||v.st===0) continue;
     if(!(v.w>0&&v.h>0&&v.vh>0)||![v.vcx,v.vcy,v.dcx,v.dcy].every(isFinite)) continue;
     if(!has1&&out.length===0&&Math.abs(v.vh-v.h)<1e-6&&Math.abs(v.dcx-v.vcx)<1e-6&&Math.abs(v.dcy-v.vcy)<1e-6) continue;   // khung nhìn tổng không ghi ID
-    const o={vcx:v.vcx, vcy:v.vcy, w:v.w, h:v.h, dcx:v.dcx, dcy:v.dcy, vh:v.vh}; if(v.vx) o.vx=v.vx; out.push(o);
+    const o={vcx:v.vcx, vcy:v.vcy, w:v.w, h:v.h, dcx:v.dcx, dcy:v.dcy, vh:v.vh}; if(v.tw&&isFinite(v.tw)&&Math.abs(v.tw)>1e-9) o.tw=v.tw; if(v.vx) o.vx=v.vx; out.push(o);
   }
   return out;
 }
+// góc xoay nhìn của khung nhìn (VIEWTWIST, radian): DCS = R(tw)·(P − đích) → tâm nhìn (DCS) đổi về toạ độ mô hình
+function _vpWorldC(cx,cy,tx,ty,tw){ const c=Math.cos(tw||0), s=Math.sin(tw||0); return {x:tx+c*cx+s*cy, y:ty-s*cx+c*cy}; }
+// mô hình → giấy của khung nhìn: giấy = tâm khung + tỉ lệ·R(tw)·(P − tâm nhìn)
+function vpMatrix(v){ const k=v.h/v.vh; return mMul(mT(v.vcx,v.vcy), mMul(mS(k,k), mMul(mR(v.tw||0), mT(-v.dcx,-v.dcy)))); }
+function vpToModel(v,p){ const k=v.h/v.vh, c=Math.cos(v.tw||0), s=Math.sin(v.tw||0), x=(p.x-v.vcx)/k, y=(p.y-v.vcy)/k; return {x:v.dcx+c*x+s*y, y:v.dcy-s*x+c*y}; }
+function vpToPaper(v,p){ const k=v.h/v.vh, c=Math.cos(v.tw||0), s=Math.sin(v.tw||0), x=p.x-v.dcx, y=p.y-v.dcy; return {x:v.vcx+k*(c*x-s*y), y:v.vcy+k*(s*x+c*y)}; }
 // tờ giấy của layout tệp: viền khổ giấy (không in, không chọn); giới hạn không chắc chắn (DWG LIMMIN/LIMMAX) chỉ dùng khi bao được nội dung giấy
 function _paperSheet(lim, prims, vps, trust){
   if(!lim) return null;
@@ -4907,12 +4915,12 @@ function buildPaperEntities(L){
   for(let vi=0; vi<L.paper.viewports.length; vi++){ const v=L.paper.viewports[vi];
     const VX=window.vpExtra?vpExtra(L,vi):null;                         // VPLAYER (lớp đóng băng riêng khung nhìn), VPCLIP (đa giác cắt)
     const frz=VX&&VX.frz&&VX.frz.length?new Set(VX.frz):null;
-    const scale=v.h/v.vh;                                              // tỉ lệ giấy/model
-    const M=mMul(mT(v.vcx,v.vcy), mMul(mS(scale,scale), mT(-v.dcx,-v.dcy)));
+    const M=vpMatrix(v);                                               // tỉ lệ giấy/model + xoay nhìn
     const clip={x:v.vcx-v.w/2, y:v.vcy-v.h/2, w:v.w, h:v.h};           // hình chữ nhật khung nhìn (giấy)
     if(VX&&VX.cp&&VX.cp.length>=3) clip.poly=VX.cp;
-    const mw=v.vh*(v.w/v.h);                                           // bề rộng vùng model nhìn thấy
-    const wx0=v.dcx-mw/2, wx1=v.dcx+mw/2, wy0=v.dcy-v.vh/2, wy1=v.dcy+v.vh/2;
+    const mw=v.vh*(v.w/v.h), tc=Math.abs(Math.cos(v.tw||0)), ts=Math.abs(Math.sin(v.tw||0));   // vùng model nhìn thấy (bao của khung đã xoay)
+    const hx=(mw*tc+v.vh*ts)/2, hy=(mw*ts+v.vh*tc)/2;
+    const wx0=v.dcx-hx, wx1=v.dcx+hx, wy0=v.dcy-hy, wy1=v.dcy+hy;
     const mg=Math.max(mw,v.vh)*0.03;
     const xcm=new Map(), clipOf=xc=>{ let c=xcm.get(xc); if(!c){ const P=(xc.poly||[{x:xc.x,y:xc.y},{x:xc.x+xc.w,y:xc.y},{x:xc.x+xc.w,y:xc.y+xc.h},{x:xc.x,y:xc.y+xc.h}]).map(q=>mApply(M,q.x,q.y)); c=Object.assign({},clip,{sub:P}); xcm.set(xc,c); } return c; };
     for(const e of modelEntities){

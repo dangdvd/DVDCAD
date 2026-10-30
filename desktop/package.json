@@ -1,7 +1,7 @@
 {
   "name": "dvdcad-desktop",
   "productName": "DVDCAD",
-  "version": "5.16.0",
+  "version": "5.17.0",
   "description": "DVDCAD cho Windows — vẽ và sửa bản vẽ DWG/DXF kiểu AutoCAD, chạy offline",
   "main": "main.js",
   "author": "DVDCAD",

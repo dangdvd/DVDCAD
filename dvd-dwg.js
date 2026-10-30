@@ -168,7 +168,7 @@
     DICTWDFLT: 500, PLACEHOLDER: 501, LAYOUT: 502 };
   const ODBX = 'ObjectDBX Classes';
   // lớp (class) dùng được: tên DXF → [lớp C++, ứng dụng, cờ proxy, là thực thể]; số lớp (500, 501…) cấp theo thứ tự dùng
-  const CLASSDEF = { ACDBDICTIONARYWDFLT: ['AcDbDictionaryWithDefault', ODBX, 0, 0], ACDBPLACEHOLDER: ['AcDbPlaceHolder', ODBX, 0, 0], LAYOUT: ['AcDbLayout', ODBX, 0, 0],
+  const CLASSDEF = { ACDBDICTIONARYWDFLT: ['AcDbDictionaryWithDefault', ODBX, 0, 0], ACDBPLACEHOLDER: ['AcDbPlaceHolder', ODBX, 0, 0], LAYOUT: ['AcDbLayout', ODBX, 0, 0], PLOTSETTINGS: ['AcDbPlotSettings', ODBX, 0, 0],
     // khối động (như AutoCAD): đồ thị đánh giá, tham số hiển thị + grip, chống purge, dữ liệu biểu diễn của bản chèn
     ACAD_EVALUATION_GRAPH: ['AcDbEvalGraph', ODBX, 1153, 0], BLOCKVISIBILITYPARAMETER: ['AcDbBlockVisibilityParameter', ODBX, 1153, 0], BLOCKVISIBILITYGRIP: ['AcDbBlockVisibilityGrip', ODBX, 1153, 0],
     BLOCKLINEARPARAMETER: ['AcDbBlockLinearParameter', ODBX, 1153, 0], BLOCKLINEARGRIP: ['AcDbBlockLinearGrip', ODBX, 1153, 0], BLOCKSTRETCHACTION: ['AcDbBlockStretchAction', ODBX, 1153, 0],
@@ -381,7 +381,7 @@
     // từ điển mở rộng của thực thể (INSERT của khối động → AcDbBlockRepresentation) được giữ, các đối tượng khác thuộc thực thể thì bỏ
     const entXd = new Set(); if(R07) for(const [, bi] of blockInfo) for(const r of bi.main) for(const v of r.group102('ACAD_XDICTIONARY')) entXd.add(ref(v));
     { const dropped = new Set(); let changed = true; const isEnt = h => entH.has(h);
-      const cand = objsDxf.filter(r => ['DICTIONARY', 'ACDBDICTIONARYWDFLT', 'ACDBPLACEHOLDER', 'MLINESTYLE', 'LAYOUT', 'XRECORD', 'IMAGEDEF', 'IMAGEDEF_REACTOR', 'RASTERVARIABLES'].includes(r.type) || (hasWipe && r.type === 'WIPEOUTVARIABLES') || (R10 && r.type === 'GEODATA') || (R07 && DYNT.includes(r.type)));
+      const cand = objsDxf.filter(r => ['DICTIONARY', 'ACDBDICTIONARYWDFLT', 'ACDBPLACEHOLDER', 'MLINESTYLE', 'LAYOUT', 'PLOTSETTINGS', 'XRECORD', 'IMAGEDEF', 'IMAGEDEF_REACTOR', 'RASTERVARIABLES'].includes(r.type) || (hasWipe && r.type === 'WIPEOUTVARIABLES') || (R10 && r.type === 'GEODATA') || (R07 && DYNT.includes(r.type)));
       for(const r of objsDxf) if(!cand.includes(r)) dropped.add(ref(r.get(5)));
       while(changed){ changed = false; for(const r of cand){ const h = ref(r.get(5)); if(dropped.has(h)) continue; const ow = ref(r.plain().get(330)); if(h !== H_NOD && ((isEnt(ow) && !entXd.has(h) && r.type !== 'IMAGEDEF_REACTOR') || dropped.has(ow))){ dropped.add(h); changed = true; } } }
       for(const r of cand){ const h = ref(r.get(5)); if(!dropped.has(h)){ keep.push(r); outObjH.add(h); } } }
@@ -650,12 +650,14 @@
         const ls = []; let L = null; for(const x of s.g){ if(x[0] === 49){ L = { off: parseFloat(x[1]) || 0, col: 256, lt: 'BYLAYER' }; ls.push(L); } else if(L && x[0] === 62) L.col = parseInt(x[1], 10) || 0; else if(L && x[0] === 6) L.lt = x[1]; }
         o.d.RC(ls.length); for(const q of ls){ o.d.BD(q.off); o.d.CMC(q.col & 0xffff); const u = up(q.lt);
           if(R18) o.hd.H(5, LTYPES.get(u) || hLtByLayer); else o.d.BS(u === 'BYBLOCK' ? 32766 : u === 'BYLAYER' ? 32767 : 0); } }   // R2018+: handle kiểu nét thay cho số
-      else if(r.type === 'LAYOUT'){ const o = obj(cls('LAYOUT'), h); objCommon(o, owner, rx); const s = r.after('AcDbPlotSettings'), l = r.after('AcDbLayout');
+      else if(r.type === 'LAYOUT' || r.type === 'PLOTSETTINGS'){ const o = obj(cls(r.type), h); objCommon(o, owner, rx); const s = r.after('AcDbPlotSettings'), l = r.after('AcDbLayout');
+        // AcDbPlotSettings: chung cho LAYOUT và thiết lập trang có tên (PLOTSETTINGS trong ACAD_PLOTSETTINGS)
         o.T(s.get(1, '')); o.T(s.get(2, '')); o.d.BS(s.int(70)); for(const k of [40, 41, 42, 43, 44, 45]) o.d.BD(s.num(k)); o.T(s.get(4, ''));
         o.d.BD2([s.num(46), s.num(47)]); o.d.BS(s.int(72)); o.d.BS(s.int(73)); o.d.BS(s.int(74)); o.d.BD2([s.num(48), s.num(49)]); o.d.BD2([s.num(140), s.num(141)]);
         if(R04) o.hd.H(4, 0); else o.T(s.get(6, ''));   // khung nhìn in: R2004+ là handle VIEW
         o.d.BD(s.num(142, 1)); o.d.BD(s.num(143, 1)); o.T(s.get(7, '')); o.d.BS(s.int(75)); o.d.BD(s.num(147, 1)); o.d.BD2([s.num(148), s.num(149)]);
         if(R04){ o.d.BS(s.int(76)); o.d.BS(s.int(77, 2)); o.d.BS(s.int(78, 300)); } if(R07) o.hd.H(4, 0);   // in tô bóng: kiểu, độ phân giải, DPI; (R2007+) kiểu hiển thị khi in
+        if(r.type === 'PLOTSETTINGS') continue;
         o.T(l.get(1, '')); o.d.BS(l.int(71)); o.d.BS(l.int(70)); o.d.BD3(l.pt(12)); o.d.RD2([l.num(10), l.num(20)]); o.d.RD2([l.num(11), l.num(21)]);
         o.d.BD3(l.pt(13)); o.d.BD3([l.num(16, 1), l.num(26), l.num(36)]); o.d.BD3([l.num(17), l.num(27, 1), l.num(37)]); o.d.BD(l.num(146)); o.d.BS(l.int(76)); o.d.BD3(l.pt(14)); o.d.BD3(l.pt(15));
         const lbr = ref(l.get(330)), vps = R04 ? ((blockInfo.get(lbr) || { main: [] }).main.filter(e => e.type === 'VIEWPORT').map(e => ref(e.get(5)))) : [];
@@ -796,8 +798,8 @@
       const secSummary = (() => { const F = new BW(256); for(const s of ['', '', '', '', '', 'DVDCAD', '', '']) T16(F, s);
         F.RL(0); F.RL(0); F.RL(jd[0]); F.RL(jd[1]); F.RL(jd[0]); F.RL(jd[1]); F.RS(0); F.RL(0); F.RL(0); return F.bytes(); })();
       const secAppInfo = (() => { const F = new BW(1024), z16 = () => { for(let i = 0; i < 16; i++) F.RC(0); };
-        F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.16.0'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
-        U16(F, '<ProductInformation name ="DVDCAD" build_version="5.16.0" registry_version="5.16" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
+        F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.17.0'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
+        U16(F, '<ProductInformation name ="DVDCAD" build_version="5.17.0" registry_version="5.17" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
       const secRev = Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0);
       const up32 = (n, q) => Math.max(q, Math.ceil(n / q) * q);
       // --- trang dữ liệu: đầu 32 byte (mã hoá XOR theo địa chỉ) + dữ liệu (nén / nguyên) + lấp dãy MAGIC tới bội 0x20 ---

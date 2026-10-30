@@ -1,4 +1,4 @@
-# DVDCAD v5w — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5x — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,29 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v5x)
+- **Xoay nhìn khung nhìn (VIEWTWIST)** trong layout:
+  - Đọc và ghi góc xoay khung nhìn của tệp DXF (mã 51) và DWG 2000 / 2004 / 2018 như AutoCAD. Mô hình hiện nghiêng đúng góc trên giấy.
+  - `VPEDIT` có cột **Xoay nhìn (°)**, đo ngược chiều kim đồng hồ.
+  - `ALIGNSPACE` với hai cặp điểm lệch hướng: khung nhìn **xoay theo**, rồi đổi tỉ lệ và vị trí để cả hai cặp điểm trùng nhau.
+  - Khi xoay nhìn, `VPSYNC`, `CHSPACE` và `VPMAX` đều tính cả góc xoay. `VPMAX` xoay khung Model theo khung nhìn.
+- **MTEXT nhiều phông, phông SHX trong chữ có định dạng**:
+  - Mỗi đoạn chữ có thể dùng phông riêng: bôi đen đoạn chữ rồi chọn phông trong tab **Soạn chữ**. Hộp phông có cả phông `.shx` đã nạp.
+  - Đoạn dùng phông SHX vẽ bằng nét phông. Bề rộng, xuống dòng và cột tính theo phông thật.
+  - Đọc mã `\F` (phông SHX) và `\f` (phông TrueType) trong MTEXT của AutoCAD. Lưu DXF / DWG ghi lại đúng mã đó.
+  - Nếu mọi đoạn đều dùng phông SHX thì in, xuất EPS / WMF / HPGL và `TXTEXP` theo nét đơn của phông.
+- **Thiết lập trang có tên ghi vào DXF / DWG** (PLOTSETTINGS trong từ điển ACAD_PLOTSETTINGS):
+  - Thiết lập lưu bằng PLOT / PAGESETUP / `PSETUPIN` có trong Page Setup Manager của AutoCAD: khổ ISO, hướng, vùng in, tỉ lệ, giữa trang, bảng kiểu in, máy in (.pc3).
+  - `PSETUPIN` đọc thiết lập trang có tên trong DWG của AutoCAD. Đã đối chiếu với tệp DWG 2013 thật do AutoCAD lưu.
+  - Đã sửa: vùng in **Display** (màn hình) trước đây bị đọc thành Extents. Tỉ lệ chuẩn "vừa khổ giấy" đọc đúng như AutoCAD.
+- **`SYSWINDOWS` thành cửa sổ con thật**:
+  - **Lát dọc / Lát ngang / Xếp chồng**: bản vẽ hiện hành vẽ và sửa ngay trong ô của nó (lệnh, chọn, bắt điểm như thường). Các ô khác hiện ảnh bản vẽ.
+  - Bấm một ô khác: bản vẽ đó thành hiện hành ngay trong ô của nó. Phần sửa ở bản vẽ trước vẫn giữ.
+  - Nút **□** trên thanh tên, hoặc gõ `SYSWINDOWS` lần nữa: trở về một cửa sổ. **Thu nhỏ**: các thanh tên ở đáy, bấm để mở.
+- **Chưa có**:
+  - Hình chiếu lưu cùng bản vẽ dạng nét thường: AutoCAD thấy đủ nét nhưng không coi là hình chiếu liên kết với mô hình.
+  - Mỗi lúc chỉ một bản vẽ hiện hành (như AutoCAD). Ô của bản vẽ khác hiện ảnh lúc rời bản vẽ đó.
 
 ## Bổ sung như AutoCAD 2027 (v5w)
 - **`WMFIN`**: nhập Windows Metafile (`.wmf`) thành khối `WMF0`, `WMF1`… như AutoCAD.
@@ -57,11 +80,7 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - **`PSETUPIN` đọc DWG của AutoCAD**:
   - Liệt kê thiết lập trang có tên và thiết lập riêng của từng layout (`*Layout1*`… như Page Setup Manager). Khổ giấy, hướng, vùng in, tỉ lệ, máy in, bảng kiểu in.
   - Kết quả giống như khi đọc bản DXF của cùng bản vẽ.
-- **Chưa có**:
-  - `SYSWINDOWS` chưa có cửa sổ sửa song song: các ô chỉ để xem và chọn bản vẽ.
-  - `ALIGNSPACE` chưa xoay khung nhìn (VIEWTWIST). Nếu hai cặp điểm lệch hướng thì căn theo điểm thứ nhất và khoảng cách.
-  - Phông SHX chưa dùng cho chữ có định dạng riêng từng đoạn (MTEXT nhiều phông).
-  - Hình chiếu lưu cùng bản vẽ dạng nét thường: AutoCAD thấy đủ nét nhưng không coi là hình chiếu liên kết với mô hình.
+- Các hạn chế còn lại của v5w đã được xử lý ở v5x (xem mục trên).
 
 ## Bổ sung như AutoCAD 2027 (v5v)
 - Ribbon có thêm tab **Bố cục** (*Layout*): **Hình chiếu**, **Layout**, **Thiết lập trang**. Các lệnh mới khác nằm trong tab Chèn, Tham số, Hiển thị, Quản lý, Xuất và tab Trang chủ của không gian 3D.

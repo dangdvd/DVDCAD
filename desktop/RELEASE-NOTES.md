@@ -1,50 +1,46 @@
-## DVDCAD 5.16.0 — WMFIN, mặt cắt nửa / bậc / xoay, phông SHX cho chữ, GCSMOOTH, ALIGNSPACE, SYSWINDOWS
+## DVDCAD 5.17.0 — khung nhìn xoay (VIEWTWIST), MTEXT nhiều phông / SHX, thiết lập trang có tên trong DWG, SYSWINDOWS cửa sổ con
 
 Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Windows. Tên lệnh, lệnh tắt và cách dùng giống AutoCAD để người dùng chuyển sang không bỡ ngỡ.
 
 ### Tải về
-- **DVDCAD-Setup-5.16.0.exe** — bộ cài.
+- **DVDCAD-Setup-5.17.0.exe** — bộ cài.
   - Cài cho tài khoản Windows đang dùng, không cần quyền quản trị.
   - Có lối tắt Desktop và Start Menu.
   - Nhấp đúp file .dwg / .dxf là mở bằng DVDCAD.
-- **DVDCAD-5.16.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
+- **DVDCAD-5.17.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
 
 Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More info → Run anyway**.
 
 ### Có gì mới
-Bản này xử lý các hạn chế còn lại của 5.15.0.
+Bản này xử lý các hạn chế còn lại của 5.16.0.
 
-- **Phông SHX cho chữ** (`SHXFONTS`, hoặc STYLE → **Phông SHX…**):
-  - Nạp các tệp `.shx` có trên máy, ví dụ thư mục `Fonts` của AutoCAD đã cài. Đọc được phông thường (txt, simplex, romans…), unifont và bigfont (chữ Trung / Nhật / Hàn).
-  - Chữ của kiểu chữ dùng phông `.shx` vẽ bằng nét của phông như AutoCAD, kể cả chữ trong DXF / DWG của AutoCAD.
-  - In, xuất PDF / EPS / WMF / HPGL và `TXTEXP` đều theo nét phông.
-  - Ký tự phông không có thì lấy từ big font, không có nữa thì vẽ bằng phông TrueType.
-  - Hộp STYLE có **Dùng Big Font** và xem trước bằng nét phông.
-  - Phông đã nạp được nhớ cho lần sau. Mở bản vẽ thiếu phông thì dòng lệnh báo tên phông.
-- **`VIEWSECTION`** đủ 4 kiểu mặt cắt như AutoCAD:
-  - **Toàn phần**.
-  - **Nửa**: nửa cắt, nửa nhìn ngoài.
-  - **Bậc** (offset): đường cắt gấp khúc, mỗi đoạn cắt đúng chỗ của nó.
-  - **Cắt xoay** (aligned): đoạn xiên được trải phẳng.
-- **`WMFIN` / `WMFOPTS`**: nhập Windows Metafile (`.wmf`) thành khối `WMF0`… Có nét, hình, chữ (cả tiếng Việt), vùng tô đặc và tô gạch.
-- **`GCSMOOTH`**: ràng buộc trơn G2. Spline nối liền đầu đường thẳng / cung / đa tuyến / spline khác, cùng tiếp tuyến và độ cong; sửa đường kia thì spline tự chỉnh theo.
-- **`ALIGNSPACE`**: căn tỉ lệ và vị trí khung nhìn layout theo cặp điểm mô hình ↔ giấy.
-- **`SYSWINDOWS`**: xếp các bản vẽ đang mở Lát dọc / Lát ngang / Xếp chồng / Thu nhỏ. Bấm một ô để làm bản vẽ hiện hành.
-- **`PSETUPIN` đọc DWG của AutoCAD**: lấy thiết lập trang của từng layout (`*Layout1*`…) và thiết lập trang có tên. Kết quả giống khi đọc bản DXF của cùng bản vẽ.
+- **Khung nhìn xoay (VIEWTWIST)** trong layout:
+  - Mở DXF / DWG có khung nhìn xoay thì mô hình hiện nghiêng đúng góc trên giấy. Lưu lại DXF / DWG 2000 / 2004 / 2018 vẫn giữ góc xoay.
+  - `ALIGNSPACE`: hai cặp điểm lệch hướng thì khung nhìn **xoay theo**, các điểm trùng đúng chỗ.
+  - `VPEDIT` có cột **Xoay nhìn (°)**. `VPSYNC`, `CHSPACE`, `VPMAX` tính cả góc xoay.
+- **MTEXT nhiều phông, phông SHX trong chữ có định dạng**:
+  - Bôi đen một đoạn chữ, chọn phông trong tab **Soạn chữ**: đoạn đó dùng phông riêng. Có cả phông `.shx` đã nạp.
+  - Đoạn dùng phông SHX vẽ bằng nét phông. Bề rộng và xuống dòng tính theo phông thật.
+  - Đọc và ghi đúng mã `\F` (SHX) và `\f` (TrueType) trong MTEXT của AutoCAD.
+- **Thiết lập trang có tên lưu vào DWG / DXF**: thiết lập lưu trong hộp PLOT hoặc nhập bằng `PSETUPIN` có trong **Page Setup Manager** của AutoCAD (khổ giấy, hướng, vùng in, tỉ lệ, bảng kiểu in, máy in).
+- **`PSETUPIN` đọc DWG của AutoCAD đã được kiểm chứng**:
+  - Đối chiếu với tệp DWG 2013 thật do AutoCAD lưu.
+  - Sửa lỗi: vùng in *Display* trước đây bị đọc thành *Extents*. "Vừa khổ giấy" đọc đúng như AutoCAD.
+- **`SYSWINDOWS` thành cửa sổ con thật** (Lát dọc / Lát ngang / Xếp chồng):
+  - Bản vẽ hiện hành vẽ và sửa ngay trong ô của nó. Bấm ô khác để chuyển bản vẽ, phần đã sửa vẫn giữ.
+  - Nút **□** để trở về một cửa sổ.
 
 ### Kiểm thử
 - GitHub Actions trên Windows:
-  1. Kiểm thử nhanh như 5.15.0, thêm: có đủ lệnh v5w; WMFIN đọc Windows Metafile; phông SHX nạp được và chữ có bề rộng đúng theo phông.
-  2. ODA File Converter đọc + audit, ACadSharp đọc lại các file DWG vừa ghi.
+  1. Kiểm thử nhanh như 5.16.0, thêm: đọc MTEXT nhiều phông; layout có khung nhìn xoay 30° cùng thiết lập trang có tên → DXF / DWG 2018 / 2000 → mở lại đúng.
+  2. ODA File Converter đọc + audit các file DWG vừa ghi (cả file có khung nhìn xoay và PLOTSETTINGS). ACadSharp đọc lại.
   3. Cài lặng bộ cài, chạy kiểm thử trên chính `DVDCAD.exe` đã cài, gỡ cài.
-- Thiết lập trang đọc từ DWG 2000 / 2004 / 2018 do AutoCAD lưu được đối chiếu với tệp DXF của cùng bản vẽ.
+- Đọc PLOTSETTINGS đã đối chiếu với tệp DWG 2013 thật do AutoCAD lưu (bộ tệp thử của LibreDWG): khổ, hướng, vùng in, tỉ lệ khớp với DXF của cùng bản vẽ.
 
 ### Giới hạn
-- DVDCAD không kèm phông SHX của AutoCAD (thuộc bản quyền của Autodesk); bạn nạp phông có sẵn trên máy. Chữ có định dạng nhiều phông trong một MTEXT vẫn vẽ bằng phông TrueType.
-- `SYSWINDOWS`: các ô chỉ để xem và chọn bản vẽ, chưa sửa song song nhiều cửa sổ.
-- `ALIGNSPACE` chưa xoay khung nhìn (VIEWTWIST).
-- `PSETUPIN` với DWG của AutoCAD: thiết lập trang có tên nào không đọc được thì có thông báo — lưu tệp thành DXF trong AutoCAD rồi nhập.
-- Hình chiếu (VIEWBASE…) lưu cùng bản vẽ dạng nét thường: AutoCAD thấy đủ nét nhưng không coi là hình chiếu liên kết với mô hình.
+- DVDCAD không kèm phông SHX của AutoCAD (thuộc bản quyền của Autodesk); bạn nạp phông có sẵn trên máy.
+- `SYSWINDOWS`: mỗi lúc chỉ một bản vẽ hiện hành (như AutoCAD); ô của bản vẽ khác hiện ảnh lúc rời bản vẽ đó.
+- Hình chiếu (VIEWBASE…) lưu cùng bản vẽ dạng nét thường: AutoCAD thấy đủ nét nhưng không coi là hình chiếu liên kết với mô hình. Định dạng liên kết này Autodesk không công bố.
 - DWG 2007 thật (AC1021) vẫn cần ODA File Converter. Không có ODA thì DVDCAD ghi DWG 2004.
 - DVDCAD không phải sản phẩm của Autodesk và không dùng logo, biểu tượng hay mã của Autodesk. AutoCAD là thương hiệu của Autodesk, Inc. ODA File Converter là sản phẩm của Open Design Alliance.
 

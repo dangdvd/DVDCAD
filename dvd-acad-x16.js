@@ -103,8 +103,8 @@
     let sl = await pickVPs(L, 'Bấm vào khung nhìn cần đồng bộ'); if(!sl.length) sl = L.paper.viewports.map((_, i) => i); sl = sl.filter(i => i !== m); if(!sl.length) return;
     const M = L.paper.viewports[m]; const s = M.h / M.vh;
     const D = L.user && L.def ? deep(L.def) : null;
-    for(const i of sl){ const v = L.paper.viewports[i]; v.vh = v.h / s; v.dcx = M.dcx + (v.vcx - M.vcx) / s; v.dcy = M.dcy + (v.vcy - M.vcy) / s;
-      if(D && D.vps[i] && D.vps[m]){ D.vps[i].n = D.vps[m].n; D.vps[i].cx = v.dcx; D.vps[i].cy = v.dcy; } }
+    for(const i of sl){ const v = L.paper.viewports[i]; v.vh = v.h / s; const c = window.vpToModel(M, { x: v.vcx, y: v.vcy }); v.dcx = c.x; v.dcy = c.y; if(M.tw) v.tw = M.tw; else delete v.tw;   // cùng xoay nhìn với khung chính
+      if(D && D.vps[i] && D.vps[m]){ D.vps[i].n = D.vps[m].n; D.vps[i].cx = v.dcx; D.vps[i].cy = v.dcy; if(M.tw) D.vps[i].tw = M.tw; else delete D.vps[i].tw; } }
     if(D && A.saveLayoutDef) A.saveLayoutDef(D); else rebuild();
     log('VPSYNC: ' + sl.length + ' khung nhìn đã theo tỉ lệ và vị trí của khung nhìn #' + (m + 1) + (D ? '.' : ' (layout của file DWG: giữ đến khi mở lại file).'));
   });

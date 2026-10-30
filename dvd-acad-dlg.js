@@ -1082,23 +1082,28 @@
   const measure = (t, font) => { if(!mctx) mctx = document.createElement('canvas').getContext('2d'); mctx.font = font; return mctx.measureText(t).width; };
   const COLBRK = '\f';   // ngắt cột (Alt+Enter)
   const FK = ['b', 'i', 'u', 'o'];
-  const fkey = r => (r.b ? 'b' : '') + (r.i ? 'i' : '') + (r.u ? 'u' : '') + (r.o ? 'o' : '');
-  const rtCell = r => { const o = { t: String(r.t == null ? '' : r.t) }; for(const k of FK) if(r[k]) o[k] = 1; if(r.f) o.f = r.f; return o; };
+  const fkey = r => (r.b ? 'b' : '') + (r.i ? 'i' : '') + (r.u ? 'u' : '') + (r.o ? 'o' : '') + (r.ff ? '|' + r.ff : '');
+  // ff = phông riêng của đoạn (TrueType hoặc tệp .shx), như mã \f / \F của MTEXT
+  const rtCell = r => { const o = { t: String(r.t == null ? '' : r.t) }; for(const k of FK) if(r[k]) o[k] = 1; if(r.ff) o.ff = String(r.ff); if(r.f) o.f = r.f; return o; };
   function rtNorm(runs){ const out = []; for(const r0 of runs || []){ if(!r0) continue; const r = rtCell(r0); if(!r.t && !r.f) continue; const L = out[out.length - 1]; if(L && !L.f && !r.f && fkey(L) === fkey(r)) L.t += r.t; else out.push(r); } return out; }
   const rtPlain = runs => (runs || []).map(r => r.t).join('');
-  const rtFancy = runs => (runs || []).some(r => r.f || r.b || r.i || r.u || r.o || r.t.indexOf(COLBRK) >= 0);
+  const rtFancy = runs => (runs || []).some(r => r.f || r.b || r.i || r.u || r.o || r.ff || r.t.indexOf(COLBRK) >= 0);
   const rtValid = e => !!(e && e.rt && e.rt.length && e.rtx === e.text);
-  const rfont = (r, px, ff) => (r.i ? 'italic ' : '') + (r.b ? 'bold ' : '') + px + 'px ' + FAM(ff);
+  const rfont = (r, px, ff) => (r.i ? 'italic ' : '') + (r.b ? 'bold ' : '') + px + 'px ' + FAM(r.ff || ff);
+  // đoạn dùng phông SHX đã nạp → bộ phông (big font của kiểu chữ chỉ đi với phông của kiểu chữ)
+  const isShxF = f => /\.shx$/i.test(String(f || ''));
+  const shxFs = (r, ff, ffb) => { const f = r.ff || ff; if(!A.shxRun || !isShxF(f)) return null; return A.shxRun(f, r.ff && r.ff !== ff ? null : ffb); };
+  const segW = (t, r, px, ff, ffb) => { const fs = shxFs(r, ff, ffb); return fs ? A.shxLine(fs, t).w * px : measure(t, rfont(r, px, ff)); };
   A.rtOf = e => rtValid(e) ? e.rt.map(rtCell) : null;
   // dàn dòng: xuống dòng cứng (\n), ngắt cột (\f), ngắt mềm theo bề rộng wpx (đo bằng phông thật, cỡ px); từ dài hơn khung thì tràn như AutoCAD
-  function rtLines(runs, px, ff, wpx, xs){
+  function rtLines(runs, px, ff, wpx, xs, ffb){
     xs = Math.abs(xs || 1) || 1; const lines = []; let segs = [], lw = 0, cb = false;
     const endLine = soft => {
-      if(soft) for(let k = segs.length - 1; k >= 0; k--){ const s = segs[k]; if(s.f) break; const t = s.t.replace(/\s+$/, ''); if(t === s.t) break; lw -= s.w; s.t = t; s.w = t ? measure(t, rfont(s, px, ff)) : 0; lw += s.w; if(t) break; segs.pop(); }
+      if(soft) for(let k = segs.length - 1; k >= 0; k--){ const s = segs[k]; if(s.f) break; const t = s.t.replace(/\s+$/, ''); if(t === s.t) break; lw -= s.w; s.t = t; s.w = t ? segW(t, s, px, ff, ffb) : 0; lw += s.w; if(t) break; segs.pop(); }
       lines.push({ segs, w: lw, cb }); segs = []; lw = 0; cb = false; };
-    const add = tok => { const w = measure(tok.t, rfont(tok, px, ff)), wt = tok.f ? w : measure(tok.t.replace(/\s+$/, ''), rfont(tok, px, ff));
+    const add = tok => { const w = segW(tok.t, tok, px, ff, ffb), wt = tok.f ? w : segW(tok.t.replace(/\s+$/, ''), tok, px, ff, ffb);
       if(wpx > 0 && segs.length && (lw + wt) * xs > wpx + 0.01) endLine(true);
-      const L = segs[segs.length - 1]; if(L && !L.f && !tok.f && fkey(L) === fkey(tok)){ L.t += tok.t; L.w += w; } else segs.push(Object.assign({}, tok, { w })); lw += w; };
+      const L = segs[segs.length - 1]; if(L && !L.f && !tok.f && fkey(L) === fkey(tok)){ L.t += tok.t; L.w = segW(L.t, L, px, ff, ffb); } else segs.push(Object.assign({}, tok, { w })); lw += w; };
     for(const r of runs || []){ if(r.f){ add(rtCell(r)); continue; }
       for(const part of String(r.t).split(/(\n|\f)/)){ if(part === '\n'){ endLine(false); continue; } if(part === COLBRK){ endLine(false); cb = true; continue; } if(!part) continue;
         for(const wd of part.split(/(?<=\s)/)) if(wd) add(Object.assign(rtCell(r), { t: wd })); } }
@@ -1112,9 +1117,9 @@
   const LAY = new WeakMap(), LAYX = new WeakMap();
   function entLines(e, px, cache){
     // khoá rẻ (không chuỗi hoá các đoạn mỗi khung hình): đối tượng được thay mới khi sửa, nên so tham chiếu e.rt là đủ
-    const ww = wrapW(e), C = e.cols, key = px + '|' + e.ff + '|' + ww + '|' + (e.xs || 1) + '|' + e.text + '|' + (e.rtx === e.text) + '|' + (C ? C.n + ',' + C.w + ',' + C.g + ',' + C.h + ',' + (C.dyn ? 1 : 0) : 0) + '|' + (e.mtp || '');
+    const ww = wrapW(e), C = e.cols, key = px + '|' + e.ff + '|' + (e.ffb || '') + '|' + (A.shxVer || 0) + '|' + ww + '|' + (e.xs || 1) + '|' + e.text + '|' + (e.rtx === e.text) + '|' + (C ? C.n + ',' + C.w + ',' + C.g + ',' + C.h + ',' + (C.dyn ? 1 : 0) : 0) + '|' + (e.mtp || '');
     const c = cache.get(e); if(c && c.key === key && c.rt === e.rt) return c.lines;
-    const lines = rtLines(srcOf(e), px, e.ff, ww > 0 ? ww * px / (e.h || 1) : 0, e.xs); cache.set(e, { key, rt: e.rt, lines }); return lines;
+    const lines = rtLines(srcOf(e), px, e.ff, ww > 0 ? ww * px / (e.h || 1) : 0, e.xs, e.ffb); cache.set(e, { key, rt: e.rt, lines }); return lines;
   }
   // chữ thuần theo dàn dòng (có ngắt mềm) — e.text của chữ có định dạng / có cột
   const layoutPlain = e => linesPlain(entLines(e, 100, LAYX));
@@ -1134,13 +1139,33 @@
   }
   const plotting = () => { try{ return !!plotMode; }catch(_){ return false; } };
   // vẽ (ctx đã dời về điểm chèn, xoay, nhân hệ số rộng — gọi từ bộ vẽ TEXT của index.html)
-  A.drawRichText = function(ctx, e, px){
+  A.drawRichText = function(ctx, e, px, T0){
     const lines = entLines(e, px, LAY), P = place(e, lines, px), va = e.va || 'alphabetic', bo = (BOFF[va] || 0) * px, th = Math.max(1, px * 0.06), fill = ctx.fillStyle, pl = plotting();
+    let path = false;
     ctx.textAlign = 'left'; ctx.textBaseline = va;
     lines.forEach((L, i) => { let x = P[i].x; const y = P[i].y;
       for(const s of L.segs){ if(!s.t) continue; ctx.font = rfont(s, px, e.ff);
         if(s.f && !pl){ ctx.fillStyle = 'rgba(150,150,150,.32)'; ctx.fillRect(x, y + bo - 0.92 * px, s.w, 1.18 * px); ctx.fillStyle = fill; }   // nền xám của trường (FIELDDISPLAY), không in
-        ctx.fillText(s.t, x, y); if(s.u) ctx.fillRect(x, y + bo + 0.12 * px, s.w, th); if(s.o) ctx.fillRect(x, y + bo - 0.9 * px, s.w, th); x += s.w; } });
+        const fs = shxFs(s, e.ff, e.ffb);
+        if(fs){ const G = A.shxLine(fs, s.t), by = y + bo; if(!path){ ctx.beginPath(); path = true; }   // phông SHX: nét của phông (ký tự thiếu vẽ bằng phông thay thế)
+          for(const ln of G.lines){ ctx.moveTo(x + ln[0][0] * px, by - ln[0][1] * px); for(let k = 1; k < ln.length; k++) ctx.lineTo(x + ln[k][0] * px, by - ln[k][1] * px); }
+          if(G.miss.length){ ctx.font = (px / 0.72) + 'px Arial,"Noto Sans",sans-serif'; ctx.textBaseline = 'alphabetic'; for(const m of G.miss) ctx.fillText(m.ch, x + m.x * px, by); ctx.textBaseline = va; } }
+        else ctx.fillText(s.t, x, y);
+        if(s.u) ctx.fillRect(x, y + bo + 0.12 * px, s.w, th); if(s.o) ctx.fillRect(x, y + bo - 0.9 * px, s.w, th); x += s.w; } });
+    if(path){ ctx.save(); const lw = ctx.lineWidth; if(T0) ctx.setTransform(T0); ctx.strokeStyle = fill; ctx.lineWidth = Math.max(1, lw || 1); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(); ctx.restore(); }
+  };
+  // nét chữ ra toạ độ bản vẽ (máy vẽ, EPS, WMF, TXTEXP) — chỉ khi mọi đoạn dùng phông SHX đã nạp
+  A.richShxStrokes = function(e){
+    const px = 100, lines = entLines(e, px, LAYX), P = place(e, lines, px), bo = (BOFF[e.va || 'alphabetic'] || 0) * px, k = px / (e.h || 1), xs = e.xs || 1;
+    const r = (e.rot || 0) * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r), ob = e.obl ? Math.tan(e.obl * Math.PI / 180) : 0, ud = e.ud ? -1 : 1;
+    const T = (x, y) => { const lx = (x + y * ob) * xs / k, ly = y * ud / k; return { x: e.x + lx * c - ly * sn, y: e.y + lx * sn + ly * c }; };
+    const out = [];
+    for(let i = 0; i < lines.length; i++){ let x = P[i].x; const by = -(P[i].y + bo);
+      for(const s of lines[i].segs){ if(!s.t){ continue; } const fs = shxFs(s, e.ff, e.ffb); if(!fs){ if(s.t.trim()) return null; x += s.w; continue; }
+        const G = A.shxLine(fs, s.t); if(G.miss.some(m => m.ch.trim())) return null;
+        for(const ln of G.lines) out.push(ln.map(q => T(x + q[0] * px, by + q[1] * px)));
+        if(s.u) out.push([T(x, by - 0.12 * px), T(x + s.w, by - 0.12 * px)]); if(s.o) out.push([T(x, by + 1.12 * px), T(x + s.w, by + 1.12 * px)]); x += s.w; } }
+    return out;
   };
   // khung bao (toạ độ riêng của chữ, trục y hướng lên) — cho chọn / bắt điểm / phóng vừa
   A.richExtent = function(e){
@@ -1155,7 +1180,10 @@
   A.richPieces = function(e, mtesc){
     const px = 100, lines = entLines(e, px, LAYX), P = place(e, lines, px), k = px / (e.h || 1), xs = e.xs || 1, bo = (BOFF[e.va || 'alphabetic'] || 0) * px;
     const font = e.ff || (A.TS && A.TS.list[e.style] && A.TS.list[e.style].font) || 'Arial', ha = e.ha === 'end' ? 'right' : (e.ha || 'left');
-    const code = s => { const t = mtesc(s.t); if(!(s.b || s.i || s.u || s.o)) return t; return '{' + ((s.b || s.i) ? '\\f' + font + '|b' + (s.b ? 1 : 0) + '|i' + (s.i ? 1 : 0) + '|c0|p34;' : '') + (s.u ? '\\L' : '') + (s.o ? '\\O' : '') + t + '}'; };
+    // phông riêng của đoạn: SHX → \F<tệp>; (không đậm / nghiêng như AutoCAD), TrueType → \f<tên>|b|i|c0|p34;
+    const code = s => { const t = mtesc(s.t), rf = s.ff && s.ff !== e.ff ? s.ff : null, shx = isShxF(rf || font);
+      const fc = rf ? (shx ? '\\F' + rf + ';' : '\\f' + rf + '|b' + (s.b ? 1 : 0) + '|i' + (s.i ? 1 : 0) + '|c0|p34;') : (!shx && (s.b || s.i)) ? '\\f' + font + '|b' + (s.b ? 1 : 0) + '|i' + (s.i ? 1 : 0) + '|c0|p34;' : '';
+      if(!fc && !s.u && !s.o) return t; return '{' + fc + (s.u ? '\\L' : '') + (s.o ? '\\O' : '') + t + '}'; };
     const groups = []; lines.forEach((L, i) => { (groups[P[i].c] = groups[P[i].c] || []).push(i); });
     const r = (e.rot || 0) * Math.PI / 180, cs = Math.cos(r), sn = Math.sin(r);
     return groups.filter(Boolean).map(idx => { const p0 = P[idx[0]];
@@ -1166,7 +1194,7 @@
   };
   // đọc mã định dạng MTEXT của AutoCAD (\L \O \f…|b1|i1; {…}) thành các đoạn — null nếu không có định dạng
   A.mtextRuns = function(raw){
-    const s = String(raw || ''); if(!/\\[LlOo]|\|[bi]1/.test(s)) return null;
+    const s = String(raw || ''); if(!/\\[LlOo]|\|[bi]1|\\[fF][^;]/.test(s)) return null;   // có định dạng, hoặc có mã phông (nhiều phông trong một MTEXT)
     if(/\\f[^;|]*(VNI|\.Vn|TCVN|ABC|VSCII)/i.test(s)) return null;   // phông tiếng Việt cũ: để decodeCAD giải mã
     const Z = { b: 0, i: 0, u: 0, o: 0 }, out = [], stack = []; let f = Object.assign({}, Z), buf = '';
     const flush = () => { if(buf){ out.push(Object.assign({ t: buf }, f)); buf = ''; } };
@@ -1185,13 +1213,16 @@
       if(n === 'U' && s[i + 2] === '+' && /^[0-9a-f]{4}$/i.test(s.substr(i + 3, 4))){ buf += String.fromCodePoint(parseInt(s.substr(i + 3, 4), 16)); i += 6; continue; }
       if(n === 'M' && s[i + 2] === '+' && /^[0-9a-f]{4}$/i.test(s.substr(i + 4, 4))){ buf += String.fromCodePoint(parseInt(s.substr(i + 4, 4), 16)); i += 7; continue; }
       const sc = s.indexOf(';', i + 2), end = sc < 0 ? s.length : sc, spec = s.slice(i + 2, end);
-      if(n === 'f'){ const mb = /\|b([01])/.exec(spec), mi = /\|i([01])/.exec(spec); set({ b: mb ? +mb[1] : 0, i: mi ? +mi[1] : 0 }); i = end; continue; }
+      if(n === 'f' || n === 'F'){ const nm = spec.split('|')[0].trim(), o = {}; if(n === 'f'){ const mb = /\|b([01])/.exec(spec), mi = /\|i([01])/.exec(spec); o.b = mb ? +mb[1] : 0; o.i = mi ? +mi[1] : 0; }
+        if(nm) o.ff = n === 'F' && !/\.[a-z0-9]{2,4}$/i.test(nm) ? nm + '.shx' : nm; set(o); i = end; continue; }   // \F = phông SHX
       if(n === 'S'){ buf += spec.replace(/[#^]/, '/'); i = end; continue; }
       if(/[FACcHQTWpa]/.test(n)){ i = end; continue; }
       buf += n; i++; }
     flush();
     const sym = t => t.replace(/%%[Dd]/g, '°').replace(/%%[Cc]/g, 'Ø').replace(/%%[Pp]/g, '±').replace(/%%%/g, '%');
-    const runs = rtNorm(out.map(r => Object.assign(r, { t: sym(r.t).normalize('NFC') }))); return rtFancy(runs) ? runs : null;
+    const R0 = out.map(r => Object.assign(r, { t: sym(r.t).normalize('NFC') }));
+    if(new Set(R0.filter(r => r.t.trim()).map(r => r.ff || '')).size < 2) for(const r of R0) delete r.ff;   // cả chữ một phông: phông của kiểu chữ
+    const runs = rtNorm(R0); return rtFancy(runs) ? runs : null;
   };
   // trường trong chữ có định dạng: tính lại giá trị (UPDATEFIELD, mở / lưu bản vẽ)
   A.rtFieldsRefresh = e => { if(!rtValid(e) || !A.fieldValue || !e.rt.some(r => r.f)) return null; let ch = false;
@@ -1211,10 +1242,12 @@
   // các phép sửa trên đoạn (theo vị trí trong chữ thuần; trường là một khối, không cắt giữa)
   const explode = runs => { const c = []; for(const r of runs || []){ if(r.f){ c.push(rtCell(r)); continue; } for(const ch of r.t) c.push(Object.assign(rtCell(r), { t: ch })); } return c; };
   const cellIdx = (cells, p, down) => { let n = 0; for(let i = 0; i < cells.length; i++){ const L = cells[i].t.length; if(p <= n) return i; if(p < n + L) return down ? i : i + 1; n += L; } return cells.length; };
-  const fmtAt = (runs, p) => { const c = explode(runs), i = cellIdx(c, p); const r = c[i - 1] || c[i] || {}; const o = {}; for(const k of FK) if(r[k]) o[k] = 1; return o; };
+  const fmtAt = (runs, p) => { const c = explode(runs), i = cellIdx(c, p); const r = c[i - 1] || c[i] || {}; const o = {}; for(const k of FK) if(r[k]) o[k] = 1; if(r.ff) o.ff = r.ff; return o; };
   function rtReplace(runs, a, b, text, fmt){ const c = explode(runs), i = cellIdx(c, a, true), j = cellIdx(c, b); const ins = text ? [Object.assign({}, fmt || fmtAt(runs, a), { t: text })] : []; c.splice(i, Math.max(0, j - i), ...ins); return rtNorm(c); }
   function rtToggle(runs, a, b, key){ const c = explode(runs), i = cellIdx(c, a, true), j = cellIdx(c, b); const sel = c.slice(i, j).filter(x => x.t.trim() || x.f); const on = !(sel.length && sel.every(x => x[key]));
     for(let k = i; k < j; k++){ if(on) c[k][key] = 1; else delete c[k][key]; } return { runs: rtNorm(c), on }; }
+  function rtSetFont(runs, a, b, ff){ const c = explode(runs), i = cellIdx(c, a, true), j = cellIdx(c, b); for(let k = i; k < j; k++){ if(ff) c[k].ff = ff; else delete c[k].ff; } return rtNorm(c); }
+  const rtFontOf = (runs, a, b) => { const c = explode(runs), i = cellIdx(c, a, true), j = cellIdx(c, b); const S = new Set(c.slice(i, j).filter(x => x.t.trim() || x.f).map(x => x.ff || '')); return S.size === 1 ? [...S][0] : null; };
   function rtMap(runs, a, b, fn){ const c = explode(runs), i = cellIdx(c, a, true), j = cellIdx(c, b); for(let k = i; k < j; k++) if(!c[k].f) c[k].t = fn(c[k].t); return rtNorm(c); }
   const rtAllOn = (runs, a, b, key) => { const c = explode(runs), i = cellIdx(c, a, true), j = cellIdx(c, b); const sel = c.slice(i, j).filter(x => x.t.trim() || x.f); return sel.length ? sel.every(x => x[key]) : !!fmtAt(runs, a)[key]; };
 
@@ -1257,15 +1290,17 @@
   A.textEditor = () => TE.cur;
   // ---- vùng soạn (contenteditable) ↔ các đoạn ----
   function runsHtml(runs){ let h = '';
-    for(const r of runs || []){ const st = (r.b ? 'font-weight:bold;' : '') + (r.i ? 'font-style:italic;' : '') + (r.u || r.o ? 'text-decoration-line:' + (r.u ? 'underline' : '') + (r.u && r.o ? ' ' : '') + (r.o ? 'overline' : '') + ';' : '');
-      if(r.f){ h += '<span class="te-fld" contenteditable="false" data-f="' + esc(JSON.stringify(r.f)) + '"' + (st ? ' style="' + st + '"' : '') + '>' + esc(r.t) + '</span>'; continue; }
+    for(const r of runs || []){ const st = (r.b ? 'font-weight:bold;' : '') + (r.i ? 'font-style:italic;' : '') + (r.u || r.o ? 'text-decoration-line:' + (r.u ? 'underline' : '') + (r.u && r.o ? ' ' : '') + (r.o ? 'overline' : '') + ';' : '') + (r.ff ? 'font-family:' + esc(FAM(r.ff.replace(/"/g, ''))) + ';' : '');
+      const dff = r.ff ? ' data-ff="' + esc(r.ff) + '"' : '';
+      if(r.f){ h += '<span class="te-fld" contenteditable="false" data-f="' + esc(JSON.stringify(r.f)) + '"' + dff + (st ? ' style="' + st + '"' : '') + '>' + esc(r.t) + '</span>'; continue; }
       const body = esc(r.t).replace(/\n/g, '<br>').replace(/\f/g, '<span class="te-cb" contenteditable="false"></span>');
-      h += st ? '<span style="' + st + '">' + body + '</span>' : body; }
+      h += st ? '<span' + dff + ' style="' + st + '">' + body + '</span>' : body; }
     return h + '<br>';   // <br> cuối chỉ giữ chỗ (để dòng trống cuối hiện được)
   }
   function fmtOfEl(el, p){ const f = Object.assign({}, p), t = el.tagName; if(t === 'B' || t === 'STRONG') f.b = 1; if(t === 'I' || t === 'EM') f.i = 1; if(t === 'U') f.u = 1;
     const s = el.style; if(s){ const fw = s.fontWeight; if(fw) f.b = (fw === 'bold' || fw === 'bolder' || +fw >= 600) ? 1 : 0; if(s.fontStyle) f.i = /italic|oblique/.test(s.fontStyle) ? 1 : 0;
-      const td = s.textDecorationLine || s.textDecoration || ''; if(td){ f.u = /underline/.test(td) ? 1 : 0; f.o = /overline/.test(td) ? 1 : 0; } } return f; }
+      const td = s.textDecorationLine || s.textDecoration || ''; if(td){ f.u = /underline/.test(td) ? 1 : 0; f.o = /overline/.test(td) ? 1 : 0; } }
+    if(el.dataset && el.dataset.ff != null){ if(el.dataset.ff) f.ff = el.dataset.ff; else delete f.ff; } return f; }
   function readRuns(root, keepLast){
     const out = [];
     const walk = (node, fmt) => { for(const n of node.childNodes){
@@ -1344,7 +1379,8 @@
       const insertText = (t, fmtOver) => { const S = sel(), R = readRuns(ce); const f = Object.assign({}, fmtAt(R, S.s), pend && pendAt === S.s ? pend : {}, fmtOver || {}); for(const k of FK) if(!f[k]) delete f[k];
         setRuns(rtReplace(R, S.s, S.e, t, f), S.s + t.length); pend = null; };
       const fmtUi = () => { const S = selOf(ce); if(!S) return; const R = readRuns(ce);
-        for(const k of FK){ const on = pend && pendAt === S.s && S.s === S.e && k in pend ? !!pend[k] : rtAllOn(R, S.s, S.e, k); document.querySelectorAll('[data-c="TX_' + k.toUpperCase() + '"]').forEach(b => b.classList.toggle('on', on)); } };
+        for(const k of FK){ const on = pend && pendAt === S.s && S.s === S.e && k in pend ? !!pend[k] : rtAllOn(R, S.s, S.e, k); document.querySelectorAll('[data-c="TX_' + k.toUpperCase() + '"]').forEach(b => b.classList.toggle('on', on)); }
+        if(multi){ const ff = S.e > S.s ? rtFontOf(R, S.s, S.e) : (fmtAt(R, S.s).ff || ''); document.querySelectorAll('#acadTop select[data-p="font"]').forEach(sl => { const v = ff == null ? null : (ff || (st.fontSet ? st.font : '')); if(v != null && [...sl.options].some(o => o.value === v)) sl.value = v; }); } };
       let done = false, raf = 0; const wasBusy = !!(A.busy && A.busy());
       const tick = () => { if(done) return; const r = cv.getBoundingClientRect(); if([view.scale, view.offsetX, view.offsetY, view.rot, r.left, r.top, r.width].join(',') !== sig) layout();
         if(wasBusy && !A.busy()){ finish(false); return; } raf = requestAnimationFrame(tick); };
@@ -1365,7 +1401,8 @@
       function outside(e){ if(TE.picking) return; if(box.contains(e.target) || (e.target.closest && e.target.closest(KEEP))) return; const onCanvas = e.target === cv; finish(true); if(onCanvas){ e.preventDefault(); e.stopPropagation(); } }
       // giữ con trỏ trong ô chữ khi bấm nút trên ribbon (không lấy mất vùng bôi đen)
       function keepFocus(e){ const t = e.target; if(t.closest && t.closest('#acadTop,.ac-slide,.acw-ctx') && !t.closest('select,input,textarea')) e.preventDefault(); }
-      function onSel(){ if(document.activeElement !== ce) return; const S = selOf(ce); if(pend && (!S || S.s !== pendAt || S.s !== S.e)) pend = null; fmtUi(); }
+      let lastSel = null;   // vùng bôi đen gần nhất (giữ lại khi bấm sang hộp chọn phông trên ribbon)
+      function onSel(){ if(document.activeElement !== ce) return; const S = selOf(ce); if(S) lastSel = S; if(pend && (!S || S.s !== pendAt || S.s !== S.e)) pend = null; fmtUi(); }
       ce.addEventListener('keydown', e => { e.stopPropagation();
         const K2 = e.key.length === 1 ? e.key.toLowerCase() : e.key, mod = e.ctrlKey || e.metaKey;
         if(e.key === 'Escape'){ e.preventDefault(); finish(!multi && !single && rtPlain(readRuns(ce)).trim() !== ''); return; }
@@ -1390,7 +1427,9 @@
       ce.addEventListener('wheel', e => { e.preventDefault(); cv.dispatchEvent(new WheelEvent('wheel', e)); }, { passive: false });
       ce.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); teMenu(e.clientX, e.clientY); });
       document.addEventListener('pointerdown', outside, true); document.addEventListener('mousedown', keepFocus, true); document.addEventListener('selectionchange', onSel); window.addEventListener('resize', layout);
-      TE.cur = { st, ce, o, multi, single, finish, layout, focus, toggle, insertText, setRuns, undo, redo, sel, pushH, fmtUi: () => fmtUi(),
+      // phông cho đoạn đang bôi đen (MTEXT): '' = theo phông chung của chữ
+      const setFont = ff => { const S = lastSel; if(!multi || !S || S.e <= S.s) return false; setRuns(rtSetFont(readRuns(ce), S.s, S.e, ff || null), S.s, S.e); return true; };
+      TE.cur = { st, ce, o, multi, single, finish, layout, focus, toggle, insertText, setRuns, undo, redo, sel, pushH, setFont, fmtUi: () => fmtUi(),
         runs: () => readRuns(ce), plain: () => rtPlain(readRuns(ce)), select: (s, e) => { focus(); setSelOf(ce, s, e == null ? s : e); fmtUi(); },
         setCols: C => { st.cols = C ? Object.assign({}, C) : null; layout(); focus(); }, defH: () => st.boxH > 0 ? st.boxH : st.h * 1.3 * 10, defW: () => st.w > 0 ? st.w : st.h * 30 };
       layout(); focus(); pushH();
@@ -1504,12 +1543,14 @@
         el.querySelector('[data-p="style"]').onchange = e => { const n = e.target.value, d = A.TS && A.TS.list[n]; s.style = n; s.styleSet = true; if(d){ s.font = d.font || ''; s.fontSet = false; if(+d.h > 0) s.h = +d.h; } T.layout(); try{ A.ribbon.render(); }catch(_){} refocus(); };
         el.querySelector('[data-p="h"]').onchange = e => { const v = num(e.target.value); if(v > 0){ s.h = v; T.layout(); } else e.target.value = r6(s.h); refocus(); }; } };
     const FB = [['B', 'Đậm (Ctrl+B)', 'font-weight:700'], ['I', 'Nghiêng (Ctrl+I)', 'font-style:italic'], ['U', 'Gạch chân (Ctrl+U)', 'text-decoration:underline'], ['O', 'Gạch trên', 'text-decoration:overline']];
-    const format = { t: 'html', html: () => { const T = TE.cur, s = T ? T.st : { font: '', col: 'BYLAYER' }; const fonts = (A.FONTS || []).slice(); if(s.font && !fonts.includes(s.font)) fonts.unshift(s.font);
+    const format = { t: 'html', html: () => { const T = TE.cur, s = T ? T.st : { font: '', col: 'BYLAYER' }; const fonts = (A.FONTS || []).slice(); try{ for(const F of (A.shxFontList ? A.shxFontList() : [])) if(F.type !== 'bigfont' && !fonts.includes(F.file.toLowerCase())) fonts.push(F.file.toLowerCase()); }catch(_){}
+        if(s.font && !fonts.includes(s.font)) fonts.unshift(s.font);
         return '<div class="tx-fr"><div class="r">' + FB.map(([c, t, css]) => '<button type="button" data-c="TX_' + c + '" title="' + t + '" style="' + css + '">' + c + '</button>').join('') +
           '<button type="button" data-c="TX_UPPER" title="Chữ HOA">AA</button><button type="button" data-c="TX_LOWER" title="chữ thường">aa</button></div>' +
           '<div class="r"><select data-p="font" title="Phông chữ"><option value="">(theo kiểu chữ)</option>' + fonts.map(f => opt(f, f, s.font)).join('') + '</select></div><div class="r">' + K.colorSel('txCol', s.col, { noBlock: 1 }).replace('<select ', '<select title="Màu chữ" ') + '</div></div>'; },
       bind: el => { stop(el); const T = TE.cur; if(!T) return; const s = T.st;
-        el.querySelector('[data-p="font"]').onchange = e => { s.font = e.target.value || ((A.TS && A.TS.list[s.style] && A.TS.list[s.style].font) || ''); s.fontSet = true; T.layout(); refocus(); };
+        el.querySelector('[data-p="font"]').onchange = e => { if(T.setFont && T.setFont(e.target.value)){ refocus(); return; }   // có vùng bôi đen: đổi phông riêng cho đoạn đó
+          s.font = e.target.value || ((A.TS && A.TS.list[s.style] && A.TS.list[s.style].font) || ''); s.fontSet = true; T.layout(); refocus(); };
         K.bindColors(el, sl => { s.col = sl.value || 'BYLAYER'; s.colSet = true; T.layout(); refocus(); }); setTimeout(() => { if(TE.cur) TE.cur.fmtUi(); }, 0); } };
     const para = { t: 'html', html: () => { const T = TE.cur, s = T ? T.st : { ha: 'left', va: 'top' }, j = jOf(s.ha, s.va), ks = Object.keys(JUST).slice(0, 9);
         return '<div class="tx-p w"><label><span>Canh lề</span><select data-p="j">' + ks.map(k => opt(k, k + ' — ' + JNAME[k], j)).join('') + '</select></label></div>'; },

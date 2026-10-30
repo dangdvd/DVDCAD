@@ -646,8 +646,10 @@
   /* ---------- CHSPACE — Change Space (Model ↔ Paper qua khung nhìn) ---------- */
   const vpOf = (L, i) => { const v = L.paper.viewports[i]; return v ? { v, s: v.h / v.vh } : null; };
   function vpAt(L, p){ const V = L.paper.viewports || []; for(let i = V.length - 1; i >= 0; i--){ const v = V[i]; if(Math.abs(p.x - v.vcx) <= v.w / 2 && Math.abs(p.y - v.vcy) <= v.h / 2) return i; } return -1; }
-  const toPaperXf = (w, q) => { window.scaleEnt(w, q.s, { x: q.v.dcx, y: q.v.dcy }); window.translateEnt(w, q.v.vcx - q.v.dcx, q.v.vcy - q.v.dcy); return w; };
-  const toModelXf = (w, q) => { window.scaleEnt(w, 1 / q.s, { x: q.v.vcx, y: q.v.vcy }); window.translateEnt(w, q.v.dcx - q.v.vcx, q.v.dcy - q.v.vcy); return w; };
+  // xoay nhìn của khung nhìn (VIEWTWIST): giấy = tâm khung + tỉ lệ·R(tw)·(P − tâm nhìn)
+  const twD = q => (q.v.tw || 0) * 180 / Math.PI;
+  const toPaperXf = (w, q) => { const c = { x: q.v.dcx, y: q.v.dcy }; if(twD(q)) window.rotateEnt(w, twD(q), c); window.scaleEnt(w, q.s, c); window.translateEnt(w, q.v.vcx - q.v.dcx, q.v.vcy - q.v.dcy); return w; };
+  const toModelXf = (w, q) => { const c = { x: q.v.vcx, y: q.v.vcy }; window.scaleEnt(w, 1 / q.s, c); if(twD(q)) window.rotateEnt(w, -twD(q), c); window.translateEnt(w, q.v.dcx - q.v.vcx, q.v.dcy - q.v.vcy); return w; };
   const clean = e => { const w = deep(e); delete w.userAdded; delete w.clip; delete w._src; return w; };
   // một bước hoàn tác cho cả 2 không gian
   function moveSpace(name, fromModel, toPaper, fromPaper, toModel, label){
@@ -672,9 +674,9 @@
       const q = vpOf(userLayout() || L, vi); const toM = sel.map(e => toModelXf(clean(e), q));
       moveSpace(name, [], [], sel, toM, 'CHSPACE: đã chuyển ' + sel.length + ' đối tượng từ giấy vào Model (tỉ lệ 1:' + r6(1 / q.s * (typeof unitToMM === 'function' ? (unitToMM() || 1) : 1)) + ').');
       return; }
-    const vi = await pickVp(L); if(vi < 0) return; const q0 = vpOf(L, vi), v = q0.v, mw = v.vh * (v.w / v.h);
+    const vi = await pickVp(L); if(vi < 0) return; const q0 = vpOf(L, vi), v = q0.v, tc = Math.abs(Math.cos(v.tw || 0)), ts = Math.abs(Math.sin(v.tw || 0)), mw0 = v.vh * (v.w / v.h), mw = mw0 * tc + v.vh * ts, mh = mw0 * ts + v.vh * tc;
     // chuyển sang Model để chọn (đổi tab huỷ lệnh đang chạy → chạy tiếp bằng lệnh thứ hai), xong quay lại layout
-    setTimeout(() => { const mi = dwgLayouts.findIndex(x => x.isModel); if(mi < 0) return; switchLayout(mi); try{ zoomToWorldRect(v.dcx - mw / 2, v.dcy - v.vh / 2, v.dcx + mw / 2, v.dcy + v.vh / 2); draw(); }catch(_){}
+    setTimeout(() => { const mi = dwgLayouts.findIndex(x => x.isModel); if(mi < 0) return; switchLayout(mi); try{ zoomToWorldRect(v.dcx - mw / 2, v.dcy - mh / 2, v.dcx + mw / 2, v.dcy + mh / 2); draw(); }catch(_){}
       const back = () => setTimeout(() => { const j = dwgLayouts.findIndex(x => x.user && x.name === name); if(j >= 0 && j !== currentLayout) switchLayout(j); }, 0);
       A.run('CHSPACE', async () => { let sel = [];
         try{ const s = await A.getSel('Chọn đối tượng Model cần đưa ra giấy (khung nhìn #' + (vi + 1) + ')'); sel = (s.sel || []).filter(e => !A.isLocked(e) && modelEntities.includes(e)); }

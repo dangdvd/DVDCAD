@@ -86,6 +86,9 @@
         const vxOf = k => { try{ return window.vpExtra ? window.vpExtra(X, k) : null; }catch(_){ return null; } };   // VPLAYER (lớp đóng băng riêng), VPCLIP (đa giác cắt)
         return { name: String(X.name || ('Layout' + (i + 1))), tab: i + 1, ents: list, vps: (X.paper.viewports || []).map((v, k) => v && v.w > 0 && v.h > 0 && v.vh > 0 ? Object.assign({}, v, { vx: vxOf(k) }) : null).filter(Boolean), sheet: r,
           hLay: i ? H() : hLayPaper, hBR: i ? H() : hBRpaper, hB: i ? H() : hBlkPaper, hE: i ? H() : hEndPaper, bn: i ? '*Paper_Space' + (i - 1) : '*Paper_Space', hVp: H() }; }); })();
+    // thiết lập trang có tên (PAGESETUP / PSETUPIN) → PLOTSETTINGS trong ACAD_PLOTSETTINGS: AutoCAD thấy trong Page Setup Manager
+    const psets = (() => { if(!full) return []; let U = {}; try{ U = (A.pageSetups && A.pageSetups()) || {}; }catch(_){} const seen = new Set(), out = [];
+      for(const k of Object.keys(U)){ const nm = String(k).replace(/[<>\/\\":;?*|,=`]/g, '').trim(); if(!nm || seen.has(nm.toUpperCase()) || !U[k]) continue; seen.add(nm.toUpperCase()); out.push({ name: nm, P: U[k], h: H() }); } return out; })();
     if(!lays.length) lays.push({ name: 'Layout1', tab: 1, ents: [], vps: [], sheet: null, hLay: hLayPaper, hBR: hBRpaper, hB: hBlkPaper, hE: hEndPaper, bn: '*Paper_Space', hVp: null });
     const scanE = ents.concat(...lays.map(l => l.ents));
     // ---------- lớp / kiểu nét / kiểu chữ ----------
@@ -210,6 +213,7 @@
         ['CELLSTYLEMAP', 'AcDbCellStyleMap', ODBX, 1152], ['MENTALRAYRENDERSETTINGS', 'AcDbMentalRayRenderSettings', 'SCENEOE', 1024], ['ACDBDETAILVIEWSTYLE', 'AcDbDetailViewStyle', ODBX, 1025],
         ['ACDBSECTIONVIEWSTYLE', 'AcDbSectionViewStyle', ODBX, 1025], ['RASTERVARIABLES', 'AcDbRasterVariables', 'ISM', 0], ['ACDBPLACEHOLDER', 'AcDbPlaceHolder', ODBX, 0], ['LAYOUT', 'AcDbLayout', ODBX, 0]]) cls(c[0], c[1], c[2], c[3]); }
     if(geo) cls('GEODATA', 'AcDbGeoData', 'ObjectDBX Classes', 4095);
+    if(psets.length) cls('PLOTSETTINGS', 'AcDbPlotSettings', 'ObjectDBX Classes', 0);
     if(imgDefs.size){ cls('IMAGE', 'AcDbRasterImage', 'ISM', 127, true); cls('IMAGEDEF', 'AcDbRasterImageDef', 'ISM', 0); cls('IMAGEDEF_REACTOR', 'AcDbRasterImageDefReactor', 'ISM', 1); if(!V2007) cls('RASTERVARIABLES', 'AcDbRasterVariables', 'ISM', 0); }
     if(DYNX && dynBase.size){ const O = 'ObjectDBX Classes', used = new Set(); for(const B of dynBase.values()) if(B.g){ used.add('ACAD_EVALUATION_GRAPH'); used.add('ACDB_DYNAMICBLOCKPURGEPREVENTER_VERSION'); for(const n of B.g.N) used.add(n.t); }
       for(const c of [['ACAD_EVALUATION_GRAPH', 'AcDbEvalGraph'], ['BLOCKVISIBILITYPARAMETER', 'AcDbBlockVisibilityParameter'], ['BLOCKVISIBILITYGRIP', 'AcDbBlockVisibilityGrip'],
@@ -376,9 +380,10 @@
     }
     let curOwner = hBRmodel, curPS = false;
     // khung nhìn: ID 1 = khung nhìn tổng của tờ giấy; còn lại = khung nhìn Model (tâm giấy 10/20, cỡ 40/41, tâm nhìn 12/22, cao vùng nhìn 45)
-    const vport = (owner, h, id, cx, cy, w, hh, vx, vy, vh, X) => { P(0, 'VIEWPORT'); P(5, h || H()); P(330, owner); P(100, 'AcDbEntity'); P(67, 1); P(8, '0'); P(100, 'AcDbViewport');
+    const vport = (owner, h, id, cx, cy, w, hh, vx, vy, vh, X, tw) => { tw = tw || 0; if(tw){ const c = Math.cos(tw), s = Math.sin(tw); [vx, vy] = [c * vx - s * vy, s * vx + c * vy]; }   // xoay nhìn: tâm nhìn ghi theo DCS (đích = 0)
+      P(0, 'VIEWPORT'); P(5, h || H()); P(330, owner); P(100, 'AcDbEntity'); P(67, 1); P(8, '0'); P(100, 'AcDbViewport');
       P(10, cx); P(20, cy); P(30, 0); P(40, w); P(41, hh); P(68, id === 1 ? 1 : 2); P(69, id); P(12, vx); P(22, vy); P(13, 0); P(23, 0); P(14, 10); P(24, 10); P(15, 10); P(25, 10);
-      P(16, 0); P(26, 0); P(36, 1); P(17, 0); P(27, 0); P(37, 0); P(42, 50); P(43, 0); P(44, 0); P(45, vh); P(50, 0); P(51, 0); P(72, 1000);
+      P(16, 0); P(26, 0); P(36, 1); P(17, 0); P(27, 0); P(37, 0); P(42, 50); P(43, 0); P(44, 0); P(45, vh); P(50, 0); P(51, tw * 180 / Math.PI); P(72, 1000);
       for(const n of (X && X.frz) || []){ const hl = layH.get(String(n)); if(hl) P(331, hl); }   // lớp đóng băng riêng khung nhìn (VPLAYER)
       P(90, X && X.clipH ? 32864 | 65536 : 32864); if(X && X.clipH) P(340, X.clipH);   // đa giác cắt (VPCLIP)
       P(1, ''); P(281, 0); P(71, 1); P(74, 0);
@@ -386,7 +391,7 @@
     const paperBody = Lp => { curPS = true; try{ if(Lp.sheet){ const S = Lp.sheet, w = S.x1 - S.x0, hh = S.y1 - S.y0; vport(Lp.hBR, Lp.hVp, 1, (S.x0 + S.x1) / 2, (S.y0 + S.y1) / 2, w * 1.05, hh * 1.05, (S.x0 + S.x1) / 2, (S.y0 + S.y1) / 2, hh * 1.05); }
         Lp.vps.forEach((v, k) => { const X = v.vx ? { frz: v.vx.frz || [], clipH: null } : null; const hv = H(), cp = v.vx && Array.isArray(v.vx.cp) && v.vx.cp.length >= 3 ? v.vx.cp : null;
           if(cp){ X.clipH = H(); P(0, 'LWPOLYLINE'); P(5, X.clipH); P(102, '{ACAD_REACTORS'); P(330, hv); P(102, '}'); P(330, Lp.hBR); P(100, 'AcDbEntity'); P(67, 1); P(8, '0'); P(100, 'AcDbPolyline'); P(90, cp.length); P(70, 1); P(43, 0); for(const q of cp){ P(10, q.x); P(20, q.y); } }
-          vport(Lp.hBR, hv, k + 2, v.vcx, v.vcy, v.w, v.h, v.dcx, v.dcy, v.vh, X); });
+          vport(Lp.hBR, hv, k + 2, v.vcx, v.vcy, v.w, v.h, v.dcx, v.dcy, v.vh, X, v.tw || 0); });
         for(const e of Lp.ents) emit(e, Lp.hBR); } finally { curPS = false; } };
     // ---------- BLOCKS ----------
     P(0, 'SECTION'); P(2, 'BLOCKS');
@@ -448,7 +453,15 @@
     dict(hGroupD, hRoot, []);
     dict(hLayoutD, hRoot, lays.map(Lp => [dxfStr(Lp.name), Lp.hLay]).concat([['Model', hLayModel]]));
     dict(hMlsD, hRoot, [['Standard', hMlsStd]]);
-    dict(hPsetD, hRoot, []);
+    dict(hPsetD, hRoot, psets.map(q => [dxfStr(q.name), q.h]));
+    // thiết lập DVDCAD → mã AutoCAD: máy in (.pc3), khổ ISO (ngang), xoay 90° = dọc, vùng in (74), cờ 70: 4 giữa trang, 16 tỉ lệ chuẩn (75 = 0: vừa giấy), 32 + 128 in nét dày, 1024 cho Model
+    const ISO = { A0: [1189, 841], A1: [841, 594], A2: [594, 420], A3: [420, 297], A4: [297, 210] };
+    for(const q of psets){ const S = q.P, pk = ISO[S.paper] ? S.paper : 'A3', [W, Hh] = ISO[pk], fit = S.fit !== false, sc = +S.scale > 0 ? +S.scale : 1;
+      const dev = S.dev === 'pdf' ? 'DWG To PDF.pc3' : S.dev === 'png' ? 'PublishToWeb PNG.pc3' : S.dev === 'plt' ? 'DesignJet 750C C4708B.pc3' : 'none_device';
+      P(0, 'PLOTSETTINGS'); P(5, q.h); P(102, '{ACAD_REACTORS'); P(330, hPsetD); P(102, '}'); P(330, hPsetD); P(100, 'AcDbPlotSettings');
+      P(1, dxfStr(q.name)); P(2, dev); P(4, 'ISO_full_bleed_' + pk + '_(' + W.toFixed(2) + '_x_' + Hh.toFixed(2) + '_MM)'); P(6, ''); P(40, 0); P(41, 0); P(42, 0); P(43, 0); P(44, W); P(45, Hh); P(46, 0); P(47, 0); P(48, 0); P(49, 0); P(140, 0); P(141, 0);
+      P(142, 1); P(143, fit ? 1 : sc); P(70, 1024 | 32 | (S.lw === false ? 0 : 128) | (S.center === false ? 0 : 4) | (fit ? 16 : 0)); P(72, 1); P(73, S.land === false ? 1 : 0); P(74, S.area === 'display' ? 0 : S.area === 'window' ? 4 : 1);
+      P(7, S.style === 'mono' ? 'monochrome.ctb' : S.style === 'gray' ? 'Grayscale.ctb' : ''); P(75, 0); P(147, fit ? 1 : 1 / sc); P(148, 0); P(149, 0); }
     P(0, 'ACDBDICTIONARYWDFLT'); P(5, hPsnD); P(102, '{ACAD_REACTORS'); P(330, hRoot); P(102, '}'); P(330, hRoot); P(100, 'AcDbDictionary'); P(281, 1); P(3, 'Normal'); P(350, hPsnNormal); P(100, 'AcDbDictionaryWithDefault'); P(340, hPsnNormal);
     P(0, 'ACDBPLACEHOLDER'); P(5, hPsnNormal); P(102, '{ACAD_REACTORS'); P(330, hPsnD); P(102, '}'); P(330, hPsnD);
     P(0, 'MLINESTYLE'); P(5, hMlsStd); P(102, '{ACAD_REACTORS'); P(330, hMlsD); P(102, '}'); P(330, hMlsD); P(100, 'AcDbMlineStyle'); P(2, 'Standard'); P(70, 0); P(3, ''); P(62, 256); P(51, 90); P(52, 90); P(71, 2); P(49, 0.5); P(62, 256); P(6, 'BYLAYER'); P(49, -0.5); P(62, 256); P(6, 'BYLAYER');

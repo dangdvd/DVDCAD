@@ -129,6 +129,30 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
     check(v5w.shx, 'phông SHX: nạp phông shapes 1.0, bề rộng chữ theo bước tiến của phông');
   }
   {
+    // v5x: MTEXT nhiều phông (\F SHX / \f TrueType), thiết lập trang có tên → PLOTSETTINGS, khung nhìn xoay (VIEWTWIST) → DWG đọc lại
+    const v5x = await win.evaluate(async () => { const A = DVDAcad, w = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      const R = A.mtextRuns('{\\Ftxt|c0;AB}{\\fArial|b0|i0|c0|p34;CD}'); out.runs = !!R && R[0].ff === 'txt.shx' && R[1].ff === 'Arial';
+      A.newDrawing(); await w(600); try{ A.hideStart && A.hideStart(); }catch(_){}
+      A.commit({ add: [A.newProps({ type: 'LINE', x1: 0, y1: 0, x2: 1000, y2: 0 }), A.newProps({ type: 'CIRCLE', cx: 500, cy: 250, r: 100 })] });
+      A.pageSetupsSave({ 'Ban in A3': { paper: 'A3', land: true, area: 'extents', fit: true, center: true, style: 'mono', lw: true, dev: 'pdf' } });
+      DVDCmd.run('LAYOUT'); await w(400); const ok = document.querySelector('.dvd-dlg .dvd-ok'); if(ok) ok.click(); await w(800);
+      const L = dwgLayouts[currentLayout]; if(L && L.user && L.def){ const D = JSON.parse(JSON.stringify(L.def)); D.vps[0].tw = Math.PI / 6; A.saveLayoutDef(D); await w(300); }
+      out.tw = !!(dwgLayouts[currentLayout] && dwgLayouts[currentLayout].paper.viewports[0] && Math.abs(dwgLayouts[currentLayout].paper.viewports[0].tw - Math.PI / 6) < 1e-12);
+      const pv = A.dxfVer; A.dxfVer = 'R2018'; const dx = A.dxfR2000(modelEntities); A.dxfVer = pv;
+      out.dxf = /\n\s*0\r?\nPLOTSETTINGS\r?\n/.test(dx) && !!A.setupsFromDXF(dx)['Ban in A3'];
+      out.dwg = {}; for(const v of ['R2018', 'R2000']){ const d = A.dwgNative(modelEntities, { version: v }); let bin = ''; for(let i = 0; i < d.length; i += 0x8000) bin += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000));
+        await loadDWG(d.slice().buffer, 'layout-xoay.dwg'); await w(500);
+        const F = (dwgLayouts._file || []).find(x => !x.isModel && x.paper && x.paper.viewports.length), q = (window._dwgPageSetups || []).find(x => x && x.name === 'Ban in A3');
+        out.dwg[v] = { tw: !!F && Math.abs(F.paper.viewports[0].tw - Math.PI / 6) < 1e-9, ps: !!q && q.media === 'ISO_full_bleed_A3_(420.00_x_297.00_MM)' && q.printer === 'DWG To PDF.pc3', b64: btoa(bin) }; }
+      A.pageSetupsSave({}); return out; });
+    check(v5x.runs, 'MTEXT nhiều phông: đọc mã \\F (SHX) / \\f (TrueType) thành đoạn có phông riêng');
+    check(v5x.tw && v5x.dxf, 'khung nhìn xoay nhìn 30° + thiết lập trang có tên → DXF có PLOTSETTINGS');
+    const outDir = process.env.DVD_DWG_OUT || '';
+    for(const v of Object.keys(v5x.dwg)){ const q = v5x.dwg[v];
+      check(q.tw && q.ps, 'DWG ' + v.slice(1) + ': khung nhìn xoay 30° và thiết lập trang "Ban in A3" (PLOTSETTINGS) đọc lại đúng');
+      if(outDir){ fs.mkdirSync(outDir, { recursive: true }); fs.writeFileSync(path.join(outDir, 'layout-xoay-' + v + '.dwg'), Buffer.from(q.b64, 'base64')); } }
+  }
+  {
     const stubSave = p => app.evaluate(({ dialog }, p) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: p }); }, p);
     const head = p => { try{ return fs.readFileSync(p, 'latin1').slice(0, 6); }catch(_){ return ''; } };
     const reopen = p => win.evaluate(async p => { const r = await window.dvdDesktop.readFile(p); const u = new Uint8Array(r.data); await loadDWG(u.slice().buffer, 'kiem-tra.dwg'); await new Promise(q => setTimeout(q, 300)); return modelEntities.length; }, p);

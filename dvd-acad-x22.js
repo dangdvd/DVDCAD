@@ -48,9 +48,11 @@
   // một thiết lập in (mã nhóm DXF: 2 máy in, 4 khổ giấy, 7 bảng kiểu in, 70 cờ, 73 xoay, 74 vùng in, 75 tỉ lệ chuẩn, 142 / 143 tỉ lệ) → thiết lập trang DVDCAD
   function psFrom(cur){ const P = {}; const paper = cur[4] || ''; const m = PAPERS_RE.exec(paper.replace(/ISO_(full_bleed_|expand_)?/i, '')); if(m) P.paper = 'A' + m[1];
     const dims = /\(([\d.]+)_x_([\d.]+)_(MM|Inches)\)/i.exec(paper); const wide = dims ? +dims[1] >= +dims[2] : (cur.pw > 0 && cur.ph > 0 ? cur.pw >= cur.ph : true); const rot = +(cur[73] || 0); P.land = (rot % 2 === 1) ? !wide : wide;
-    const pt = +(cur[74] || 1); P.area = pt === 0 || pt === 3 ? 'display' : pt === 4 ? 'window' : 'extents';
+    const pt = cur[74] == null || cur[74] === '' ? 1 : +cur[74]; P.area = pt === 0 || pt === 3 ? 'display' : pt === 4 ? 'window' : 'extents';
     const fl = +(cur[70] || 0); P.center = !!(fl & 4); P.lw = !!(fl & 128) || !(fl & 32);
-    const num = +(cur[142] || 1), den = +(cur[143] || 1); const std = +(cur[75] || 0); P.fit = std === 0 && !(fl & 16) ? (num === 1 && den === 1 ? true : false) : false; if(!P.fit && num > 0) P.scale = +(den / num).toPrecision(6);
+    // tỉ lệ: cờ 16 = dùng tỉ lệ chuẩn (75 = 0 → vừa khổ giấy, khác 0 → hệ số 147); không có cờ 16 → tỉ lệ riêng 142 : 143
+    const num = +(cur[142] || 1), den = +(cur[143] || 1), std = +(cur[75] || 0), f147 = +(cur[147] || 0);
+    if((fl & 16) && std === 0) P.fit = true; else { P.fit = false; const sc = (fl & 16) ? (f147 > 0 ? 1 / f147 : null) : (num > 0 ? den / num : null); if(sc > 0) P.scale = +sc.toPrecision(6); }
     const ctb = String(cur[7] || '').toLowerCase(); P.style = /mono/.test(ctb) ? 'mono' : /gray/.test(ctb) ? 'gray' : ctb ? 'mono' : 'color';
     const dev = String(cur[2] || '').toLowerCase(); P.dev = /pdf/.test(dev) ? 'pdf' : /png|publishtoweb/.test(dev) ? 'png' : /hpgl|designjet|\.pc3/.test(dev) && !/pdf|png/.test(dev) ? 'plt' : 'print';
     return P; }
@@ -63,11 +65,11 @@
       if(c === 0){ flush(); if(v === 'PLOTSETTINGS' || v === 'LAYOUT') cur = { kind: v }; continue; }
       if(!cur) continue; if(c === 100 && v === 'AcDbLayout'){ cur.lay = true; continue; }
       if(c === 1 && cur.lay && cur.layName == null){ cur.layName = v; continue; }
-      if(c === 1 && !cur.lay && cur.name == null){ cur.name = v; continue; } if([2, 4, 7, 70, 73, 74, 75, 142, 143].includes(c) && !cur.lay && cur[c] == null) cur[c] = v; if((c === 44 || c === 45) && !cur.lay) cur[c === 44 ? 'pw' : 'ph'] = +v; }
+      if(c === 1 && !cur.lay && cur.name == null){ cur.name = v; continue; } if([2, 4, 7, 70, 73, 74, 75, 142, 143, 147].includes(c) && !cur.lay && cur[c] == null) cur[c] = v; if((c === 44 || c === 45) && !cur.lay) cur[c === 44 ? 'pw' : 'ph'] = +v; }
     flush(); delete out['']; return opt && opt.layouts ? { named: out, layouts: lay } : out;
   }
   // DWG (đọc trong khung ẩn): thiết lập in của LAYOUT + PLOTSETTINGS có tên → cùng dạng mã nhóm như DXF
-  const psCodes = q => ({ 2: q.printer, 4: q.media, 7: q.style, 70: q.flags, 73: q.rot, 74: q.type, 75: q.stdType, 142: q.pu, 143: q.du, pw: q.pw, ph: q.ph });
+  const psCodes = q => ({ 2: q.printer, 4: q.media, 7: q.style, 70: q.flags, 73: q.rot, 74: q.type, 75: q.stdType, 142: q.pu, 143: q.du, 147: q.stdFactor, pw: q.pw, ph: q.ph });
   A.setupsFromDWGFrame = w => { const named = {}, layouts = {}; let unread = 0;
     try{ for(const q of (w._dwgPageSetups || [])){ if(!q || q.unreadable){ unread++; continue; } if(q.name) named[q.name] = psFrom(psCodes(q)); } }catch(_){}
     try{ for(const L of (w.eval('dwgLayouts') || [])) if(L && L.plot) layouts['*' + L.name + '*'] = psFrom(psCodes(L.plot)); }catch(_){}

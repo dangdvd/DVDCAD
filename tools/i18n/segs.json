@@ -781,6 +781,9 @@
 ", tổng": [
 "dvd-acad-core.js"
 ],
+", xoay nhìn": [
+"dvd-acad-x23.js"
+],
 ", xoá": [
 "dvd-acad-x16.js"
 ],
@@ -8264,9 +8267,6 @@
 "Hai chiều (Double)": [
 "dvd-acad-dlg.js"
 ],
-"Hai cặp điểm lệch hướng": [
-"dvd-acad-x23.js"
-],
 "Hai dọc": [
 "dvd-acad-ui.js",
 "dvd-acad-x7.js"
@@ -14534,6 +14534,9 @@
 "dvd-acad-ui.js",
 "index.html:attr"
 ],
+"Phóng to (một cửa sổ)": [
+"dvd-acad-x23.js:attr"
+],
 "Phóng to / thu nhỏ": [
 "dvd-acad-dlg4.js"
 ],
@@ -14998,6 +15001,9 @@
 ],
 "SYSVARMONITOR: đặt lại": [
 "dvd-acad-x22.js"
+],
+"SYSWINDOWS: trở về một cửa sổ.": [
+"dvd-acad-x23.js"
 ],
 "Sai lệch (Deviation)": [
 "dvd-acad-dlg.js"
@@ -19216,6 +19222,9 @@
 "Xoay một bản sao.": [
 "dvd-acad-cmds.js"
 ],
+"Xoay nhìn (°)": [
+"dvd-acad-pro.js"
+],
 "Xoay nhóm quanh tâm chung": [
 "index.html"
 ],
@@ -19648,7 +19657,7 @@
 "dvd-acad-ui.js",
 "dvd-acad-x23.js"
 ],
-"Xếp các bản vẽ đang mở: Xếp chồng / Lát ngang / Lát dọc / Thu nhỏ — bấm vào ô để làm bản vẽ hiện hành (Esc = đóng)": [
+"Xếp các bản vẽ đang mở thành cửa sổ con: Xếp chồng / Lát ngang / Lát dọc / Thu nhỏ — bản vẽ hiện hành vẽ, sửa ngay trong ô; bấm ô khác để chuyển; □ = một cửa sổ": [
 "dvd-acad-x23.js"
 ],
 "Xếp gợi ý theo lệnh hay dùng": [
@@ -19777,10 +19786,16 @@
 "bản vẽ \"": [
 "dvd-cloud.js"
 ],
+"bản vẽ hiện hành sửa ngay trong ô của nó; bấm ô khác để chuyển; □ = trở về một cửa sổ.": [
+"dvd-acad-x23.js"
+],
 "bản vẽ khác? Thay đổi chưa lưu ở các bản vẽ đó sẽ mất.": [
 "dvd-acad-x22.js"
 ],
-"bản vẽ — bấm vào ô để làm bản vẽ hiện hành, Esc để trở lại.": [
+"bản vẽ —": [
+"dvd-acad-x23.js"
+],
+"bản vẽ — bản vẽ hiện hành sửa ngay trong ô của nó; bấm ô khác để chuyển; □ = trở về một cửa sổ.": [
 "dvd-acad-x23.js"
 ],
 "bản vẽ.": [
@@ -19818,6 +19833,9 @@
 ],
 "bấm tổ hợp phím…": [
 "dvd-acad-dlg3.js:attr"
+],
+"bấm vào thanh để mở bản vẽ, Esc để trở lại.": [
+"dvd-acad-x23.js"
 ],
 "bật": [
 "dvd-acad-cmds.js",
@@ -21192,9 +21210,6 @@
 ],
 "° · phương vị": [
 "dvd-acad-3d.js"
-],
-"° — khung nhìn chưa xoay được, đã căn theo điểm thứ nhất và khoảng cách.": [
-"dvd-acad-x23.js"
 ],
 "°. Xem bằng RENDER (kiểu Thực tế).": [
 "dvd-acad-x16.js"
@@ -25896,7 +25911,7 @@
 "⌕ Tìm trên ribbon": [
 "dvd-cmd.js"
 ],
-"⌖ = về Model, bấm 1 điểm làm tâm khung nhìn. Tỉ lệ 1:N theo đơn vị bản vẽ hiện tại.": [
+"⌖ = về Model, bấm 1 điểm làm tâm khung nhìn. Tỉ lệ 1:N theo đơn vị bản vẽ hiện tại. Xoay nhìn = VIEWTWIST (ngược chiều kim đồng hồ).": [
 "dvd-acad-pro.js"
 ],
 "⌖ Bấm để đặt gốc mới": [

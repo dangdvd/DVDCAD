@@ -8374,5 +8374,15 @@
 "bậc": "offset",
 "Cắt xoay": "Aligned",
 "cắt xoay": "aligned",
-"Đường cắt bậc: các đoạn phải song song hoặc vuông góc với đoạn đầu (dùng kiểu Cắt xoay cho đoạn xiên).": "Offset section line: segments must be parallel or perpendicular to the first one (use Aligned for slanted segments)."
+"Đường cắt bậc: các đoạn phải song song hoặc vuông góc với đoạn đầu (dùng kiểu Cắt xoay cho đoạn xiên).": "Offset section line: segments must be parallel or perpendicular to the first one (use Aligned for slanted segments).",
+", xoay nhìn": ", view twist",
+"Phóng to (một cửa sổ)": "Maximize (single window)",
+"SYSWINDOWS: trở về một cửa sổ.": "SYSWINDOWS: back to a single window.",
+"Xoay nhìn (°)": "View twist (°)",
+"Xếp các bản vẽ đang mở thành cửa sổ con: Xếp chồng / Lát ngang / Lát dọc / Thu nhỏ — bản vẽ hiện hành vẽ, sửa ngay trong ô; bấm ô khác để chuyển; □ = một cửa sổ": "Arrange open drawings as child windows: Cascade / Tile Horizontally / Tile Vertically / Minimize — the current drawing is drawn and edited right in its window; click another window to switch; □ = single window",
+"bản vẽ hiện hành sửa ngay trong ô của nó; bấm ô khác để chuyển; □ = trở về một cửa sổ.": "edit the current drawing right in its window; click another window to switch; □ = back to a single window.",
+"bản vẽ —": "drawings —",
+"bản vẽ — bản vẽ hiện hành sửa ngay trong ô của nó; bấm ô khác để chuyển; □ = trở về một cửa sổ.": "drawings — edit the current drawing right in its window; click another window to switch; □ = back to a single window.",
+"bấm vào thanh để mở bản vẽ, Esc để trở lại.": "click a bar to open the drawing, Esc to go back.",
+"⌖ = về Model, bấm 1 điểm làm tâm khung nhìn. Tỉ lệ 1:N theo đơn vị bản vẽ hiện tại. Xoay nhìn = VIEWTWIST (ngược chiều kim đồng hồ).": "⌖ = go to Model and click a point as the viewport center. Scale 1:N in current drawing units. View twist = VIEWTWIST (counterclockwise)."
 }

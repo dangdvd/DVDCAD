@@ -7248,7 +7248,9 @@ class LibreDwgConverter {
               break;
             case Dwg_Object_Type.DWG_TYPE_PLOTSETTINGS:
               { // DVDCAD: thiết lập trang có tên (ACAD_PLOTSETTINGS) — PSETUPIN
-                let ps = null; for (const d of [-8, -4, 0, -12]) { const q = this.readPlotSettingsAt(tio + d); if (q && q.name) { ps = q; break; } }
+                // Dwg_Object_PLOTSETTINGS = phần AcDbPlotSettings của LAYOUT (ở LAYOUT + 8) → cùng độ lệch trường khi base = tio − 8
+                // (đối chiếu tệp AutoCAD 2013 gh109_1.dwg của bộ thử libredwg với DXF cùng bản vẽ); thiết lập không tên = của đối tượng khác, không phải page setup
+                const ps = this.readPlotSettingsAt(tio - 8);
                 (db.objects.PLOTSETTINGS || (db.objects.PLOTSETTINGS = [])).push(ps || { unreadable: true });
               }
               break;

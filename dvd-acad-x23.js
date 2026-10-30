@@ -243,15 +243,20 @@
     for(const p of L){ x0 = Math.min(x0, p.dx); x1 = Math.max(x1, p.dx + p.l.w); for(const ln of p.l.lines) for(const q of ln){ y0 = Math.min(y0, q[1] + p.dy); y1 = Math.max(y1, q[1] + p.dy); } y0 = Math.min(y0, p.dy); y1 = Math.max(y1, p.dy + 1); }
     if(!isFinite(x0)) return null; let xmin = x0 * h * Math.abs(xs), xmax = x1 * h * Math.abs(xs); if(xs < 0){ const t = xmin; xmin = -xmax; xmax = -t; } const ymin = y0 * h, ymax = y1 * h; return e.ud ? { xmin, xmax, ymin: -ymax, ymax: -ymin } : { xmin, xmax, ymin, ymax }; };
   // nét chữ ra toạ độ bản vẽ (máy vẽ, EPS, WMF, TXTEXP)
-  A.shxStrokes = e => { const fs = fontsOf(e); if(!fs) return null; const h = e.h || 2.5, xs = e.xs || 1, r = (e.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r), ob = e.obl ? Math.tan(e.obl * Math.PI / 180) : 0, ud = e.ud ? -1 : 1;
+  A.shxStrokes = e => { if(e && (e.cols || (e.rt && e.rtx === e.text)) && A.richShxStrokes) return A.richShxStrokes(e);   // chữ có định dạng: chỉ khi mọi đoạn dùng phông SHX
+    const fs = fontsOf(e); if(!fs) return null; const h = e.h || 2.5, xs = e.xs || 1, r = (e.rot || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r), ob = e.obl ? Math.tan(e.obl * Math.PI / 180) : 0, ud = e.ud ? -1 : 1;
     const T = (x, y) => { const lx = (x + y * ob) * h * xs, ly = y * h * ud; return { x: e.x + lx * c - ly * s, y: e.y + lx * s + ly * c }; };
     const out = []; for(const p of place(e, fs, layoutOf(e, fs))) for(const ln of p.l.lines) out.push(ln.map(q => T(q[0] + p.dx, q[1] + p.dy))); return out; };
+  // đoạn chữ của MTEXT có định dạng (phông riêng từng đoạn): bộ phông + bố cục 1 dòng (đơn vị = cỡ chữ)
+  A.shxRun = (ff, ffb) => fontsOf({ ff, ffb });
+  A.shxLine = (fs, t) => { const key = 'L1|' + fs.main.file + '|' + (fs.big ? fs.big.file : '') + '|' + t; let L = lineCache.get(key); if(L) return L; if(lineCache.size > 4000) lineCache.clear(); L = layoutLine(fs, String(t)); lineCache.set(key, L); return L; };
+  A.shxVer = 0;
   A.shxFontList = () => [...FONTS.values()].map(F => ({ file: F.file, type: F.type, n: F.glyph.size }));
   A.shxFontHas = f => FONTS.has(fontKey(f));
   // lưu phông trong IndexedDB (phông bigfont có thể vài MB)
   let fdb = null; const fdbOpen = () => fdb || (fdb = new Promise((res, rej) => { const r = indexedDB.open('dvdcad-pro', 1); r.onupgradeneeded = () => { r.result.createObjectStore('files'); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
   const fdbTx = async (mode, fn) => { const d = await fdbOpen(); return new Promise((res, rej) => { const t = d.transaction('files', mode), st = t.objectStore('files'); const q = fn(st); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); };
-  const redraw = () => { lineCache.clear(); for(const F of FONTS.values()) F.cache = null; try{ if(typeof requestDraw === 'function') requestDraw(); else if(typeof draw === 'function') draw(); }catch(_){} };
+  const redraw = () => { lineCache.clear(); A.shxVer++; for(const F of FONTS.values()) F.cache = null; try{ if(typeof requestDraw === 'function') requestDraw(); else if(typeof draw === 'function') draw(); }catch(_){} };
   async function addFont(u8, file, keep){ const F = parseFont(u8, file); FONTS.set(F.file, F); if(keep !== false){ try{ await fdbTx('readwrite', st => st.put(u8, 'shxf:' + F.file)); const L = new Set((await fdbTx('readonly', st => st.get('shxf:list'))) || []); L.add(F.file); await fdbTx('readwrite', st => st.put([...L], 'shxf:list')); }catch(_){} } redraw(); return F; }
   A.shxFontAdd = addFont;
   A.shxFontRemove = async file => { const k = fontKey(file); FONTS.delete(k); try{ await fdbTx('readwrite', st => st.delete('shxf:' + k)); const L = new Set((await fdbTx('readonly', st => st.get('shxf:list'))) || []); L.delete(k); await fdbTx('readwrite', st => st.put([...L], 'shxf:list')); }catch(_){} redraw(); };
@@ -283,14 +288,18 @@
      ================================================================== */
   const curPaper = () => { try{ const L = dwgLayouts[currentLayout]; if(L && !L.isModel && L.paper && (L.paper.viewports || []).length) return L; }catch(_){} return null; };
   const vpAt = (L, p) => { let best = -1, ba = Infinity; L.paper.viewports.forEach((v, i) => { if(Math.abs(p.x - v.vcx) <= v.w / 2 + 1e-9 && Math.abs(p.y - v.vcy) <= v.h / 2 + 1e-9 && v.w * v.h < ba){ ba = v.w * v.h; best = i; } }); return best; };
-  const toModel = (v, p) => { const s = v.h / v.vh; return { x: v.dcx + (p.x - v.vcx) / s, y: v.dcy + (p.y - v.vcy) / s }; };
-  function vpApply(L, i, sNew, dc){
-    const v = L.paper.viewports[i], vh0 = v.vh; v.vh = v.h / sNew; v.dcx = dc.x; v.dcy = dc.y;
-    if(L.user && L.def && A.saveLayoutDef){ const D = JSON.parse(JSON.stringify(L.def)); const q = D.vps && D.vps[i]; if(q){ q.n = q.n * (v.vh / vh0); q.cx = dc.x; q.cy = dc.y; } A.saveLayoutDef(D); return true; }
+  const toModel = (v, p) => window.vpToModel(v, p);   // tính cả xoay nhìn (VIEWTWIST)
+  const nrm = a => { a %= 2 * Math.PI; if(a < 0) a += 2 * Math.PI; return a < 1e-9 || 2 * Math.PI - a < 1e-9 ? 0 : a; };
+  function vpApply(L, i, sNew, dc, tw){
+    const v = L.paper.viewports[i], vh0 = v.vh; v.vh = v.h / sNew; v.dcx = dc.x; v.dcy = dc.y; if(tw) v.tw = tw; else delete v.tw;
+    if(L.user && L.def && A.saveLayoutDef){ const D = JSON.parse(JSON.stringify(L.def)); const q = D.vps && D.vps[i]; if(q){ q.n = q.n * (v.vh / vh0); q.cx = dc.x; q.cy = dc.y; if(tw) q.tw = tw; else delete q.tw; } A.saveLayoutDef(D); return true; }
     try{ entities = buildPaperEntities(L); }catch(_){} try{ redraw(); A.paint(); }catch(_){} return false;
   }
-  A.alignSpace = (L, i, m1, p1, m2, p2) => { const v = L.paper.viewports[i]; let s = v.h / v.vh; if(m2 && p2){ const dm = Math.hypot(m2.x - m1.x, m2.y - m1.y), dp = Math.hypot(p2.x - p1.x, p2.y - p1.y); if(dm > 1e-12 && dp > 1e-12) s = dp / dm; }
-    return { s, user: vpApply(L, i, s, { x: m1.x - (p1.x - v.vcx) / s, y: m1.y - (p1.y - v.vcy) / s }) }; };
+  // 2 cặp điểm: tỉ lệ = khoảng cách giấy / mô hình, xoay nhìn = hướng giấy − hướng mô hình; điểm mô hình 1 nằm đúng điểm giấy 1
+  A.alignSpace = (L, i, m1, p1, m2, p2, noRot) => { const v = L.paper.viewports[i]; let s = v.h / v.vh, tw = v.tw || 0;
+    if(m2 && p2){ const dm = Math.hypot(m2.x - m1.x, m2.y - m1.y), dp = Math.hypot(p2.x - p1.x, p2.y - p1.y); if(dm > 1e-12 && dp > 1e-12){ s = dp / dm; if(!noRot) tw = nrm(Math.atan2(p2.y - p1.y, p2.x - p1.x) - Math.atan2(m2.y - m1.y, m2.x - m1.x)); } }
+    const c = Math.cos(tw), sn = Math.sin(tw), x = (p1.x - v.vcx) / s, y = (p1.y - v.vcy) / s;
+    return { s, tw, user: vpApply(L, i, s, { x: m1.x - (c * x + sn * y), y: m1.y - (-sn * x + c * y) }, tw) }; };
   ecmd(['ALIGNSPACE'], 'Căn khung nhìn layout (Express Tools): 1–2 điểm trong mô hình (bấm trong khung nhìn) và 1–2 điểm tương ứng trên giấy → đổi tỉ lệ và vị trí nhìn cho trùng', async () => {
     const L = curPaper(); if(!L){ log('Mở một layout có khung nhìn trước (tab layout phía dưới).'); return; }
     const a = await A.getPoint('Chỉ định điểm căn thứ nhất trong không gian MÔ HÌNH', { noLim: true }); if(!a.pt) return; const i = vpAt(L, a.pt); if(i < 0){ log('Điểm không nằm trong khung nhìn nào.'); return; }
@@ -300,9 +309,8 @@
     const c = await A.getPoint('Chỉ định điểm căn thứ nhất trong không gian GIẤY', { noLim: true }); if(!c.pt) return; let p2 = null;
     if(m2){ const d = await A.getPoint('Chỉ định điểm căn thứ hai trong không gian GIẤY', { base: c.pt, noLim: true }); if(!d.pt) return; p2 = d.pt; }
     const r = A.alignSpace(L, i, m1, c.pt, m2, p2);
-    let msg = 'ALIGNSPACE: khung nhìn #' + (i + 1) + ' tỉ lệ ' + (r.s >= 1 ? (+r.s.toPrecision(5)) + ':1' : '1:' + (+(1 / r.s).toPrecision(5))) + (r.user ? '.' : ' (layout của tệp: giữ đến khi mở lại tệp).');
-    if(m2 && p2){ const am = Math.atan2(m2.y - m1.y, m2.x - m1.x), ap = Math.atan2(p2.y - c.pt.y, p2.x - c.pt.x); let dA = (ap - am) * 180 / Math.PI; dA = ((dA + 540) % 360) - 180; if(Math.abs(dA) > 0.01) msg += ' Hai cặp điểm lệch hướng ' + (+dA.toFixed(2)) + '° — khung nhìn chưa xoay được, đã căn theo điểm thứ nhất và khoảng cách.'; }
-    log(msg);
+    const twd = r.tw * 180 / Math.PI;
+    log('ALIGNSPACE: khung nhìn #' + (i + 1) + ' tỉ lệ ' + (r.s >= 1 ? (+r.s.toPrecision(5)) + ':1' : '1:' + (+(1 / r.s).toPrecision(5))) + (twd ? ', xoay nhìn ' + (+twd.toFixed(4)) + '°' : '') + (r.user ? '.' : ' (layout của tệp: giữ đến khi mở lại tệp).'));
   });
 
   /* ==================================================================
@@ -313,30 +321,66 @@
   const grab = (w) => { try{ const c = document.getElementById('cv'); const k = Math.min(1, (w || 900) / Math.max(1, c.width)); const o = document.createElement('canvas'); o.width = Math.max(1, Math.round(c.width * k)); o.height = Math.max(1, Math.round(c.height * k)); const g = o.getContext('2d'); g.fillStyle = getComputedStyle(c).backgroundColor || '#212830'; g.fillRect(0, 0, o.width, o.height); g.drawImage(c, 0, 0, o.width, o.height); return o.toDataURL('image/jpeg', 0.85); }catch(_){ return null; } };
   const keepShot = () => { const id = curTabId(); if(id != null){ const u = grab(); if(u) SHOT.set(id, u); } };
   for(const fn of ['loadDXF', 'loadDWG']){ const f0 = window[fn]; if(typeof f0 === 'function') window[fn] = function(){ try{ keepShot(); }catch(_){} return f0.apply(this, arguments); }; }
-  let SW = null;
-  const swClose = () => { if(SW){ SW.remove(); SW = null; document.removeEventListener('keydown', swKey, true); } };
-  const swKey = e => { if(e.key === 'Escape'){ e.stopPropagation(); swClose(); } };
-  function sysWin(mode){
-    swClose(); const T = (A.TABS || []).slice(); const cur = curTabId(); keepShot();
+  // Lát dọc / Lát ngang / Xếp chồng: ô của bản vẽ hiện hành chứa canvas thật (vẽ, sửa như thường); ô khác là ảnh bản vẽ — bấm để làm hiện hành ngay trong ô đó.
+  // Thu nhỏ: các thanh tên ở đáy, bấm để mở. Nút □ trên thanh tên (hoặc SYSWINDOWS lần nữa) = trở về một cửa sổ.
+  let SW = null;   // { box, mode, cur, n, t }
+  const cvEl = () => document.getElementById('cv');
+  function cvPlace(R){ const cv = cvEl(); let cw = null; try{ if(!view.rot) cw = toWorld(W() / 2, H() / 2); }catch(_){}
+    // canvas + 2 lớp phủ (con trỏ, khung chọn) cùng chỗ; 'important' thắng quy tắc thu hẹp khi mở bảng Thuộc tính
+    for(const c of [cv, document.getElementById('dvdOvS'), document.getElementById('dvdOvC')]){ if(!c) continue;
+      if(R){ for(const [k, v] of [['left', R.x + 'px'], ['top', R.y + 'px'], ['width', R.w + 'px'], ['height', R.h + 'px'], ['right', 'auto'], ['bottom', 'auto']]) c.style.setProperty(k, v, 'important'); }
+      else for(const k of ['left', 'top', 'width', 'height', 'right', 'bottom']) c.style.removeProperty(k); }
+    if(!R){ const o = document.getElementById('dvdOvS'); for(const c of [o, document.getElementById('dvdOvC')]) if(c){ c.style.inset = '0'; c.style.width = '100%'; c.style.height = '100%'; } }
+    try{ resize(); }catch(_){}
+    if(cw){ try{ view.offsetX = W() / 2 - cw.x * view.scale; view.offsetY = H() / 2 + cw.y * view.scale; draw(); A.paint(); }catch(_){} } }   // giữ tâm nhìn khi đổi cỡ ô
+  const swKey = e => { if(e.key === 'Escape' && SW && SW.mode === 'A'){ e.stopPropagation(); swClose(); } };
+  const swClose = () => { if(!SW) return; clearInterval(SW.t); window.removeEventListener('resize', swRelay); document.removeEventListener('keydown', swKey, true); SW.box.remove(); const live = SW.mode !== 'A'; SW = null; if(live) cvPlace(null); };
+  const swRelay = () => { if(SW) layoutSW(); };
+  function layoutSW(){
+    const mode = SW.mode, T = (A.TABS || []).slice(), cur = curTabId(); SW.cur = cur; SW.n = T.length;
     const items = T.length ? T.map(t => ({ id: t.id, name: t.name, on: t.id === cur })) : [{ id: cur, name: (typeof currentName === 'string' && currentName) || 'Drawing', on: true }];
-    const host = document.getElementById('cv').parentElement, r = host.getBoundingClientRect();
-    const box = document.createElement('div'); box.className = 'sw-host'; box.style.cssText = 'position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;z-index:45;background:#2a3038;overflow:hidden';
+    if(mode === 'C'){ const k = items.findIndex(it => it.on); if(k >= 0) items.push(items.splice(k, 1)[0]); }   // xếp chồng: bản vẽ hiện hành nằm trên cùng
+    const stage = cvEl().parentElement, r0 = stage.getBoundingClientRect(), box = SW.box; box.innerHTML = '';
+    const r = { left: r0.left, top: r0.top, width: r0.width - (document.documentElement.classList.contains('dvd-props-on') ? 290 : 0), height: r0.height };   // chừa chỗ bảng Thuộc tính
+    Object.assign(box.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
     const n = items.length, cols = mode === 'V' ? n : mode === 'H' ? 1 : Math.ceil(Math.sqrt(n)), rows = mode === 'V' ? 1 : mode === 'H' ? n : Math.ceil(n / cols);
-    const pane = (it, x, y, w, h, z) => { const d = document.createElement('div'); d.className = 'sw-pane' + (it.on ? ' on' : ''); d.dataset.id = it.id; d.style.cssText = 'position:absolute;left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;z-index:' + z + ';display:flex;flex-direction:column;border:1px solid ' + (it.on ? '#0696d7' : '#59647a') + ';background:#1e232b;box-shadow:0 4px 14px rgba(0,0,0,.45);cursor:pointer';
-      const img = SHOT.get(it.id); d.innerHTML = '<div style="flex:0 0 22px;display:flex;align-items:center;gap:6px;padding:0 8px;background:' + (it.on ? '#0b5a86' : '#3a4250') + ';color:#fff;font:12px system-ui,sans-serif;white-space:nowrap;overflow:hidden"><span translate="no" style="overflow:hidden;text-overflow:ellipsis">' + String(it.name).replace(/[&<]/g, c => c === '&' ? '&amp;' : '&lt;') + '</span></div>' +
-        (mode === 'A' ? '' : '<div style="flex:1;min-height:0;background:#212830 center/contain no-repeat' + (img ? ' url(' + img + ')' : '') + ';display:grid;place-items:center;color:#8f99a8;font:12px system-ui">' + (img ? '' : 'Bấm để mở bản vẽ') + '</div>');
-      d.onclick = () => { swClose(); if(!it.on && A.switchTab) A.switchTab(it.id); }; box.appendChild(d); };
-    if(mode === 'C'){ const off = 28, w = r.width * 0.68, h = r.height * 0.68; items.forEach((it, i) => pane(it, 12 + i * off, 12 + i * off, w, h, i + 1)); }
-    else if(mode === 'A'){ items.forEach((it, i) => pane(it, 8 + i * 168, r.height - 32, 160, 24, 1)); }
-    else { const W = r.width / cols, H = r.height / rows; items.forEach((it, i) => pane(it, (i % cols) * W + 2, Math.floor(i / cols) * H + 2, W - 4, H - 4, 1)); }
-    document.body.appendChild(box); SW = box; document.addEventListener('keydown', swKey, true);
+    const rects = mode === 'C' ? items.map((_, i) => ({ x: 12 + i * 28, y: 12 + i * 28, w: r.width * 0.68, h: r.height * 0.68 })) : mode === 'A' ? items.map((_, i) => ({ x: 8 + i * 168, y: r.height - 32, w: 160, h: 24 }))
+      : items.map((_, i) => { const w = r.width / cols, h = r.height / rows; return { x: (i % cols) * w + 2, y: Math.floor(i / cols) * h + 2, w: w - 4, h: h - 4 }; });
+    const act = rects[items.findIndex(it => it.on)];
+    const nm = s => String(s).replace(/[&<]/g, c => c === '&' ? '&amp;' : '&lt;');
+    items.forEach((it, i) => { const R = rects[i], live = it.on && mode !== 'A', d = document.createElement('div'); d.className = 'sw-pane' + (it.on ? ' on' : '') + (live ? ' live' : ''); d.dataset.id = it.id;
+      d.style.cssText = 'position:absolute;left:' + R.x + 'px;top:' + R.y + 'px;width:' + R.w + 'px;height:' + R.h + 'px;z-index:' + (i + 1) + ';display:flex;flex-direction:column;border:1px solid ' + (it.on ? '#0696d7' : '#59647a') + ';box-sizing:border-box;' + (live ? 'pointer-events:none' : 'background:#1e232b;box-shadow:0 4px 14px rgba(0,0,0,.45);cursor:pointer;pointer-events:auto');
+      // xếp chồng: phần ô cũ bị ô hiện hành che thì cắt bỏ (để canvas bên dưới lộ ra)
+      if(mode === 'C' && !it.on && act){ const ax = act.x - R.x, ay = act.y - R.y; if(ax < R.w && ay < R.h) d.style.clipPath = 'polygon(0 0,' + R.w + 'px 0,' + R.w + 'px ' + Math.max(0, ay) + 'px,' + Math.max(0, ax) + 'px ' + Math.max(0, ay) + 'px,' + Math.max(0, ax) + 'px ' + R.h + 'px,0 ' + R.h + 'px)'; }
+      const img = SHOT.get(it.id);
+      d.innerHTML = '<div class="sw-tt" style="flex:0 0 22px;display:flex;align-items:center;gap:6px;padding:0 4px 0 8px;background:' + (it.on ? '#0b5a86' : '#3a4250') + ';color:#fff;font:12px system-ui,sans-serif;white-space:nowrap;overflow:hidden;pointer-events:auto;cursor:' + (it.on ? 'default' : 'pointer') + '"><span translate="no" style="flex:1;overflow:hidden;text-overflow:ellipsis">' + nm(it.name) + '</span>' +
+        (mode === 'A' ? '' : '<button type="button" class="sw-max" title="Phóng to (một cửa sổ)" style="border:0;background:none;color:#fff;font:13px system-ui;cursor:pointer;padding:0 4px">□</button>') + '</div>' +
+        (mode === 'A' || live ? '' : '<div style="flex:1;min-height:0;background:#212830 center/contain no-repeat' + (img ? ' url(' + img + ')' : '') + ';display:grid;place-items:center;color:#8f99a8;font:12px system-ui">' + (img ? '' : 'Bấm để mở bản vẽ') + '</div>');
+      d.addEventListener('click', ev => { const mx = ev.target.closest('.sw-max');
+        if(mx){ ev.stopPropagation(); const go = !it.on; swClose(); if(go && A.switchTab){ keepShot(); A.switchTab(it.id); } return; }
+        if(it.on) return; if(mode === 'A'){ swClose(); if(A.switchTab) A.switchTab(it.id); return; }
+        keepShot(); if(A.switchTab) A.switchTab(it.id); });
+      box.appendChild(d); });
+    if(mode !== 'A' && act) cvPlace({ x: act.x + 1, y: act.y + 23, w: Math.max(40, act.w - 2), h: Math.max(30, act.h - 24) });
     return items.length;
   }
+  function sysWin(mode){
+    if(SW) swClose(); keepShot();
+    const box = document.createElement('div'); box.className = 'sw-host'; box.style.cssText = 'position:fixed;z-index:45;overflow:hidden;pointer-events:none;' + (mode === 'A' ? 'background:rgba(42,48,56,.92);pointer-events:auto' : '');
+    document.body.appendChild(box); SW = { box, mode, cur: null, n: 0, t: 0 };
+    const n = layoutSW();
+    if(mode === 'A') document.addEventListener('keydown', swKey, true);
+    else { window.addEventListener('resize', swRelay);
+      // đổi bản vẽ (bấm ô, tab tệp, mở / đóng bản vẽ) → xếp lại; ảnh bản vẽ hiện hành được làm mới định kỳ
+      let k = 0; SW.t = setInterval(() => { if(!SW) return; const c = curTabId(), m = (A.TABS || []).length; if(m < 2 && SW.n >= 2){ swClose(); return; } if(c !== SW.cur || m !== SW.n) layoutSW(); else if(++k % 8 === 0) keepShot(); }, 250); }
+    return n;
+  }
   A.sysWindows = sysWin;
-  try{ if(A.ribbonAct) for(const m of ['V', 'H', 'C']) A.ribbonAct('SYSWINDOWS|' + m, () => { const n = sysWin(m); log('SYSWINDOWS: ' + n + ' bản vẽ — bấm vào ô để làm bản vẽ hiện hành, Esc để trở lại.'); }); }catch(_){}
-  ecmd(['SYSWINDOWS'], 'Xếp các bản vẽ đang mở: Xếp chồng / Lát ngang / Lát dọc / Thu nhỏ — bấm vào ô để làm bản vẽ hiện hành (Esc = đóng)', async () => {
+  try{ if(A.ribbonAct) for(const m of ['V', 'H', 'C']) A.ribbonAct('SYSWINDOWS|' + m, () => { const n = sysWin(m); log('SYSWINDOWS: ' + n + ' bản vẽ — bản vẽ hiện hành sửa ngay trong ô của nó; bấm ô khác để chuyển; □ = trở về một cửa sổ.'); }); }catch(_){}
+  ecmd(['SYSWINDOWS'], 'Xếp các bản vẽ đang mở thành cửa sổ con: Xếp chồng / Lát ngang / Lát dọc / Thu nhỏ — bản vẽ hiện hành vẽ, sửa ngay trong ô; bấm ô khác để chuyển; □ = một cửa sổ', async () => {
+    if(SW && SW.mode !== 'A'){ swClose(); log('SYSWINDOWS: trở về một cửa sổ.'); return; }
     const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: 'C', t: 'Xếp chồng' }, { k: 'H', t: 'Lát ngang' }, { k: 'V', t: 'Lát dọc' }, { k: 'A', t: 'Thu nhỏ' }], def: 'Lát dọc' });
-    const m = k.kw || (k.none ? 'V' : null); if(!m) return; const n = sysWin(m); log('SYSWINDOWS: ' + n + ' bản vẽ — bấm vào ô để làm bản vẽ hiện hành, Esc để trở lại.');
+    const m = k.kw || (k.none ? 'V' : null); if(!m) return; const n = sysWin(m); log('SYSWINDOWS: ' + n + ' bản vẽ — ' + (m === 'A' ? 'bấm vào thanh để mở bản vẽ, Esc để trở lại.' : 'bản vẽ hiện hành sửa ngay trong ô của nó; bấm ô khác để chuyển; □ = trở về một cửa sổ.'));
   });
   /* ---- WMFOPTS ---- */
   const OPT = () => Object.assign({ wire: false, wide: true }, lsGet('dvd:wmfopts', {}));
