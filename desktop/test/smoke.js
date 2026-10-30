@@ -185,6 +185,15 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       let s = ''; for(let i = 0; i < Math.min(u.length, 4096); i++) s += String.fromCharCode(u[i]); out.dwgIn = /\.dwg/.test(s); return out; });
     check(v6d.dxf && v6d.dwg === 40, 'độ trong suốt lớp 40%: DXF ghi XDATA AcCmTransparency, DWG 2018 đọc lại ' + v6d.dwg + '%');
     check(v6d.zip && v6d.dwgIn, 'ETRANSMIT: gói .zip nén, bản vẽ DWG trong gói');
+    // v6e: tiện ích AutoLISP — hộp thoại DCL, vla- / vlax-curve-, thư mục hỗ trợ
+    const v6e = await win.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      await DVDLisp.fs.put('smk.dcl', 'smk : dialog { label = "Smoke"; : edit_box { key = "v"; label = "Giá trị"; value = "7"; } ok_cancel; }');
+      const run = DVDLisp.evalToString('(progn (setq id (load_dialog "smk.dcl")) (new_dialog "smk" id) (action_tile "accept" "(setq *v* (get_tile \\"v\\")) (done_dialog 1)") (setq st (start_dialog)) (list st *v*))');
+      await w(400); const b = document.querySelector('.dcl-dlg [data-dcl-key="accept"]'); out.dlg = !!b; if(b) b.click(); out.dcl = await run;
+      out.vla = await DVDLisp.evalToString('(progn (vl-load-com) (setq ln (vla-AddLine (vla-get-ModelSpace (vla-get-ActiveDocument (vlax-get-acad-object))) (vlax-3d-point 0 0 0) (vlax-3d-point 3 4 0))) (list (vla-get-Length ln) (vlax-curve-getDistAtParam ln 2.5)))');
+      return out; });
+    check(v6e.dlg && v6e.dcl === '(1 "7")', 'AutoLISP: hộp thoại DCL hiện và trả giá trị ' + v6e.dcl);
+    check(v6e.vla === '(5.0 2.5)', 'AutoLISP: vla-AddLine / vla-get-Length / vlax-curve ' + v6e.vla);
   }
   {
     // v5x: MTEXT nhiều phông (\F SHX / \f TrueType), thiết lập trang có tên → PLOTSETTINGS, khung nhìn xoay (VIEWTWIST) → DWG đọc lại

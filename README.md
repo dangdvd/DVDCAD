@@ -6,6 +6,16 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6e: chạy bộ tiện ích AutoLISP như AutoCAD — DCL, vla- / vlax- / vlax-curve-, thư mục hỗ trợ
+- `dvd-lisp2.js` (nạp sau `dvd-lisp.js`, dùng `DVDLisp.ext` = BI / G / ev / withBindings / kiểu dữ liệu…):
+  - **Thư mục hỗ trợ** `DVDLisp.fs` (IndexedDB `dvdcad-lispfs`, tên tệp không phân biệt hoa thường): `findfile`, `load` (tìm trong kho trước; `.fas/.vlx` báo rõ), `autoload` (đăng ký lệnh, nạp khi gõ), `open/read-line/write-line/close` (lớp `LFile`), `vl-file-*`, `getfiled`.
+  - **DCL**: `dclParse` (định nghĩa, kế thừa, tham chiếu, `@include`) + `base.dcl` rút gọn (`ok_cancel`…, nhãn nút theo ngôn ngữ giao diện); `build()` dựng HTML (cột / hàng / khung, 1 ký tự ≈ 7,2 px); `start_dialog` trả Promise, sự kiện → `action_tile` chạy trong `withBindings($key $value $reason $data $x $y)`; `translate="no"` để chữ của LISP không bị tự dịch.
+  - **ActiveX**: `VObj` (app / doc / space / util / coll / item / ent), `Variant`, `SArr`; `getProp` / `putProp` (thuộc tính đúng / sai ↔ `:vlax-true` / `:vlax-false`); `METHODS`; tên `vla-get-X` / `vla-put-X` / `vla-X` sinh khi tra `G`. Biến đổi dùng `A.xformEnt(e, M)` (ma trận a b c d e f); Offset dùng `G.offsetEntity` (chọn phía như AutoCAD); khối dùng `A.instBlock`.
+  - **vlax-curve**: `pathOf` gom đoạn thẳng / cung (cả cung của đa tuyến theo bulge), tham số: đoạn thẳng = khoảng cách, cung / tròn / elip = góc, đa tuyến = chỉ số đỉnh.
+  - `grread` (bắt `pointerdown` ở pha capture của `window`, trước `.stage`), `grdraw/grvecs`, `tblnext/tblobjname`, `entmake` INSERT + `entmakex`, `textbox`, `cvunit`, registry / cfg (localStorage), `acet-*` hay dùng, `vlr-*` (chưa phát sinh sự kiện).
+  - `DVDLisp.startup(suite)`: acad.lsp → acaddoc.lsp → *.mnl → Startup Suite → `S::STARTUP`.
+- `dvd-addins.js`: **Nạp cả thư mục…** (`webkitdirectory`) / gói `.zip` (`A.unzip` từ `dlg3`) → `installSet` (tệp hỗ trợ vào kho, chọn `.lsp` nạp + Startup Suite, liệt kê `.fas/.vlx/.dll/.arx` bị bỏ qua); giải mã UTF-8, sai thì Windows-1258; `.lsp` lớn chỉ giữ trong kho (`codeOf`); lệnh `SUPPORTFILES`.
+
 ## v6d: độ trong suốt theo lớp (DXF / DWG), ETRANSMIT gói DWG nén, REVCLOUD Sửa, POLYSOLID Cung, EXTEND cung đa tuyến
 - **Độ trong suốt lớp**: `LS.layTP` + `LAYER_TP` (đã dùng sẵn trong `tpOf`); `A.layerTP(n)`, `A.setLayerTP(n, %)`; bảng Lớp (cột Độ trong suốt), `-LAYER` › TR, LAYERSTATE, đổi tên lớp.
   - DXF: LAYER + XDATA `1001 AcCmTransparency` / `1071 0x02000000 | alpha` (APPID ghi thêm); đọc: `layerTpOf(g)`.

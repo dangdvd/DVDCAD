@@ -7,7 +7,9 @@ DVDCAD nạp được 2 loại add-in bằng lệnh `APPLOAD` (ribbon › thẻ 
 | AutoLISP | `.lsp` | Đã có sẵn lisp dùng cho AutoCAD, cần chạy lại trên DVDCAD |
 | JavaScript | `.js` | Viết mới, cần giao diện, tải file, tính toán nhiều |
 
-Không chạy được: `.fas` / `.vlx` (LISP đã biên dịch), `.dll` / `.arx` / `.dbx` (add-in .NET / ObjectARX), `.dvb` (VBA). Đây là add-in Windows chỉ chạy bên trong AutoCAD, trình duyệt không chạy được. Muốn dùng thì chuyển phần xử lý sang `.js` hoặc dùng bản mã nguồn `.lsp`.
+Bộ tiện ích nhiều tệp (`.lsp` + `.dcl` + `.lin` / `.pat`…, kiểu bộ LISP cho kết cấu, kiến trúc, dự toán): APPLOAD › **Nạp cả thư mục…** hoặc chọn gói **.zip**. Mọi tệp được chép vào **thư mục hỗ trợ** (như Support File Search Path của AutoCAD), rồi chọn tệp `.lsp` nào nạp ngay và tự nạp khi mở DVDCAD.
+
+Không chạy được: `.fas` / `.vlx` (LISP đã biên dịch và mã hoá), `.dll` / `.arx` / `.dbx` (add-in .NET / ObjectARX), `.dvb` (VBA). Đây là mã chỉ chạy bên trong AutoCAD. Muốn dùng thì xin tác giả bản mã nguồn `.lsp`, hoặc chuyển phần xử lý sang `.js`.
 
 > ⚠ Add-in chạy với toàn quyền trong DVDCAD (sửa / xoá bản vẽ, gửi dữ liệu ra mạng). Chỉ nạp file từ nguồn tin cậy.
 
@@ -20,7 +22,9 @@ Startup Suite: đánh dấu **Khởi động** trong APPLOAD thì add-in tự n�
 - `(defun c:TEN () ...)` tạo lệnh `TEN`, gõ ở dòng lệnh như lệnh thường.
 - Gõ thẳng biểu thức ở dòng lệnh: `(+ 1 2)`, `(setq r 5)`. Khi lệnh đang hỏi, gõ `!r` để dùng giá trị biến `r`.
 - Bảng gõ thử: lệnh `VLISP` (Ctrl+Enter = chạy, có nút Lưu thành add-in).
-- `(load "ten")` nạp file `ten.lsp` đã có trong APPLOAD.
+- `(load "ten")` nạp `ten.lsp` trong APPLOAD hoặc thư mục hỗ trợ. `(autoload "ten" '("LENH1" "LENH2"))` nạp tệp khi gõ lệnh lần đầu.
+- `acad.lsp`, `acaddoc.lsp`, `*.mnl` trong thư mục hỗ trợ tự chạy khi mở DVDCAD, rồi tới Startup Suite, cuối cùng là `S::STARTUP` (thứ tự như AutoCAD).
+- Tệp `.lsp` soạn trên Windows (bảng mã ANSI tiếng Việt Windows-1258) được đọc đúng dấu; tệp UTF-8 cũng được.
 
 Hàm có sẵn:
 
@@ -42,10 +46,58 @@ Mã DXF trong `entget` / `entmod` / `entmake`:
 - LINE `10 11`, CIRCLE `10 40`, ARC `10 40 50 51` (radian), POINT `10`.
 - TEXT / MTEXT `10 11 40 1 50 7 72 73`.
 - LWPOLYLINE `90 70 10 42 40 41 43`.
-- INSERT `2 10 41 50` (chỉ đọc; `entmod` đổi được lớp / màu).
+- INSERT `2 10 41 50 8`: `entmake` chèn khối có trong bản vẽ hoặc thư viện khối; `entmod` đổi được lớp / màu. `entmakex` trả về tên đối tượng mới.
 - DIMENSION `1 42 13 14` (chỉ đọc).
 
-Chưa có: hàm `vla-` / `vlax-` (ActiveX), DCL (`load_dialog` …), `grread`, `entmake` cho INSERT / HATCH / khối, bảng `tblnext`, reactor.
+### Tệp, thư mục hỗ trợ
+
+| Nhóm | Hàm |
+|---|---|
+| Tìm / nạp | `findfile findtrustedfile load autoload getfiled` (chọn tệp trên máy, chép vào thư mục hỗ trợ) |
+| Đọc / ghi | `open close read-line read-char peek-char write-line write-char` `princ prin1 print` có đối số tệp |
+| Quản lý | `vl-file-size vl-file-delete vl-file-rename vl-file-copy vl-file-directory-p vl-file-systime vl-directory-files vl-mkdir` `vl-filename-base vl-filename-directory vl-filename-extension vl-filename-mktemp` |
+
+Tệp do LISP ghi (`open … "w"`) nằm trong thư mục hỗ trợ của DVDCAD (lệnh `SUPPORTFILES` để xem / xoá), không ghi thẳng ra ổ đĩa.
+
+### Hộp thoại DCL
+
+`load_dialog unload_dialog new_dialog start_dialog done_dialog term_dialog action_tile set_tile get_tile get_attr mode_tile client_data_tile start_list add_list end_list dimx_tile dimy_tile start_image fill_image vector_image end_image`, biến `$key $value $reason $data $x $y`.
+
+- Tệp `.dcl` đọc được: định nghĩa `name : dialog { … }`, kế thừa (`: my_button { … }`), tham chiếu tile có tên (`ok_cancel;`), `@include`.
+- Tile: `row column boxed_row boxed_column radio_row radio_column boxed_radio_row boxed_radio_column text text_part paragraph concatenation spacer spacer_0 spacer_1 edit_box button toggle radio_button list_box popup_list slider image image_button errtile ok_only ok_cancel ok_cancel_help ok_cancel_help_info`.
+- Thuộc tính: `label key value width height fixed_width edit_width alignment is_enabled is_default is_cancel action list multiple_select mnemonic color aspect_ratio min_value max_value small_increment`.
+- Enter = nút `is_default`, Esc = nút `is_cancel`. Nhấp đúp `list_box` cho `$reason` 4.
+- Chưa có: `slide_image` (ảnh .sld trong hộp thoại), `text_image`.
+
+### ActiveX (vla- / vlax-)
+
+`(vl-load-com)` rồi dùng như trong AutoCAD:
+
+```lisp
+(setq doc (vla-get-ActiveDocument (vlax-get-acad-object))
+      ms  (vla-get-ModelSpace doc))
+(setq ln (vla-AddLine ms (vlax-3d-point 0 0 0) (vlax-3d-point 3000 0 0)))
+(vla-put-Layer ln "TRUC")
+(princ (vla-get-Length ln))
+(vlax-for l (vla-get-Layers doc) (princ (strcat "\n" (vla-get-Name l))))
+```
+
+- Đối tượng: `Application` › `ActiveDocument` › `ModelSpace` / `PaperSpace` / `Utility` / `Layers` / `Blocks` / `TextStyles` / `Linetypes` / `Layouts` / `Documents`.
+- Thuộc tính (`vla-get-X` / `vla-put-X`, `vlax-get-property`, `vlax-get`, `getpropertyvalue`): `Layer Color Linetype LinetypeScale Lineweight EntityTransparency Visible Handle ObjectName ObjectID OwnerID StartPoint EndPoint Center Radius Diameter Circumference StartAngle EndAngle TotalAngle ArcLength Length Area Closed Coordinates ConstantWidth Elevation Normal Thickness TextString Height Rotation InsertionPoint TextAlignmentPoint StyleName Name EffectiveName XScaleFactor YScaleFactor ZScaleFactor HasAttributes Measurement PatternName`, lớp: `Name Color LayerOn Freeze Lock Linetype Lineweight`, tài liệu: `ActiveLayer Name FullName Path`.
+- Phương thức (`vla-X`, `vlax-invoke-method`, `vlax-invoke`): `AddLine AddCircle AddArc AddPoint AddLightWeightPolyline AddPolyline AddText AddMText AddEllipse AddBlockReference Add` (lớp, khối…) `Item Delete Move Copy Rotate ScaleEntity Mirror Offset Explode GetBoundingBox IntersectWith GetBulge SetBulge GetWidth SetWidth AddVertex` `Utility: GetPoint GetEntity GetString GetReal GetInteger GetDistance GetAngle PolarPoint Prompt AngleToReal DistanceToReal RealToString` `SendCommand GetVariable SetVariable StartUndoMark EndUndoMark Regen`.
+- Thuộc tính đúng / sai (`Closed LayerOn Freeze Lock Visible HasAttributes`…) trả `:vlax-true` / `:vlax-false` như AutoCAD; `vla-put-…` nhận `:vlax-true`, `:vlax-false`, `T`, `nil`, `-1`, `0`.
+- Kiểu dữ liệu: `vlax-3d-point vlax-make-safearray vlax-make-variant vlax-safearray-fill vlax-safearray->list vlax-variant-value vlax-variant-type vlax-variant-change-type vlax-safearray-get-element/put-element/get-l-bound/get-u-bound/get-dim`, `vlax-ename->vla-object vlax-vla-object->ename vlax-property-available-p vlax-method-applicable-p vlax-erased-p vlax-release-object vlax-dump-object`, `vlax-ldata-put/get/delete`.
+- Đường cong (`vlax-curve-`), nhận cả tên đối tượng lẫn VLA-object: `getStartParam getEndParam getStartPoint getEndPoint getDistAtParam getParamAtDist getPointAtParam getPointAtDist getDistAtPoint getParamAtPoint getClosestPointTo getClosestPointToProjection getFirstDeriv getSecondDeriv getArea isClosed isPeriodic isPlanar`. Tham số như AutoCAD: đoạn thẳng = khoảng cách, cung / tròn / elip = góc (radian), đa tuyến = chỉ số đỉnh (1,5 = giữa đoạn thứ 2, tính cả đoạn cung).
+
+### Hàm khác
+
+`grread` (phím, di chuột, bấm chuột) `grdraw grvecs grclear grtext redraw` `tblnext tblobjname regapp xdroom xdsize namedobjdict dictsearch dictnext dictadd dictremove dictrename` `osnap trans textbox ssnamex ssgetfirst layoutlist cvunit ver getcfg setcfg vl-registry-read vl-registry-write vl-registry-delete vl-registry-descendents` `vl-string-position vl-string-translate vl-string-elt vl-string-mismatch vl-symbol-value vl-symbolp vl-list* vl-bb-ref vl-bb-set vl-doc-ref vl-doc-set vl-propagate vl-exit-with-value vl-exit-with-error` `acad_colordlg acad_truecolordlg` `acet-error-init acet-error-restore acet-sysvar-set acet-sysvar-restore acet-ui-progress acet-str-replace acet-geom-midpoint acet-list-remove-duplicates` (vài hàm Express Tools hay dùng) `snvalid menucmd setview startapp help`.
+
+Chưa làm được như AutoCAD:
+- Reactor (`vlr-…`): tạo được nhưng DVDCAD chưa phát sinh sự kiện (thông báo một lần).
+- `trans` trả nguyên điểm (DVDCAD vẽ trên một hệ toạ độ WCS); `osnap` trả nguyên điểm.
+- `entmake` cho HATCH, DIMENSION, định nghĩa khối (`BLOCK` … `ENDBLK`) chưa có; dùng `(command "_.-BLOCK" …)` / `(command "_.HATCH" …)`.
+- Registry, `getcfg` lưu trong máy (trình duyệt), không phải registry Windows.
 
 Ví dụ:
 

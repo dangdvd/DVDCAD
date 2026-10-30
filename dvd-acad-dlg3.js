@@ -579,6 +579,7 @@
       if(x.meth === 0) return x.raw; if(x.meth !== 8 || typeof DecompressionStream === 'undefined') throw new Error('Không giải nén được ' + name);
       const st = new Blob([x.raw]).stream().pipeThrough(new DecompressionStream('deflate-raw')); return new Uint8Array(await new Response(st).arrayBuffer()); };
     return { names: [...out.keys()], get }; }
+  A.unzip = unzip;
   const DXFDBL = { LINE: 'LINE', LWPOLYLINE: 'POLYLINE', POLYLINE: 'POLYLINE', '2DPOLYLINE': 'POLYLINE', CIRCLE: 'CIRCLE', ARC: 'ARC', ELLIPSE: 'ELLIPSE', SPLINE: 'SPLINE', TEXT: 'TEXT', MTEXT: 'MTEXT', HATCH: 'HATCH', INSERT: 'INSERT', ATTBLOCKREF: 'ATTRIB', ATTDYNBLOCKREF: 'ATTRIB', DYNBLOCKREF: 'INSERT', ATTRIB: 'ATTRIB', ATTDEF: 'ATTRIB', DIMENSION: 'DIMENSION', ACAD_TABLE: 'TABLE', IMAGE: 'IMAGE', POINT: 'POINT', '3DSOLID': 'SOLID3D' };
   // XML MenuGroup (.cui) → tuỳ biến DVDCAD: macro chỉ gọi một lệnh có sẵn → dùng thẳng lệnh đó; macro khác → lệnh tự tạo
   function cuiFromXml(xml, fname, more){

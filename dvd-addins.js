@@ -27,23 +27,27 @@
     const before = new Set(DVDCmd.commands.flatMap(c => c.k));
     try{
       if(item.type === 'js'){ curAddin = item.name; const f = new Function('DVDCAD', '"use strict";\n' + item.code + '\n//# sourceURL=addin-' + item.name.replace(/[^\w.-]/g, '_')); await f(API); curAddin = null; }
-      else { if(!window.DVDLisp) throw new Error('Thiếu bộ thông dịch AutoLISP'); await DVDLisp.load(item.code, baseName(item.name)); }
+      else { if(!window.DVDLisp) throw new Error('Thiếu bộ thông dịch AutoLISP'); await DVDLisp.load(codeOf(item), baseName(item.name)); }
     }catch(err){ curAddin = null; log('Add-in "' + item.name + '" lỗi: ' + (err && err.message || err)); console.error(err); return false; }
     const cmds = DVDCmd.commands.flatMap(c => c.k).filter(k => !before.has(k));
     loaded.set(item.name, { type: item.type, cmds }); refreshRibbon();
     log('Đã nạp "' + item.name + '"' + (cmds.length ? ' · lệnh mới: ' + cmds.join(', ') : '') + '.');
     return true;
   }
-  async function addFile(name, code, startup){
+  // mã của add-in: lưu thẳng trong danh sách, hoặc (nạp từ thư mục / gói zip) nằm trong kho tệp hỗ trợ của AutoLISP
+  function codeOf(item){ if(item.code != null) return item.code; const f = window.DVDLisp && DVDLisp.fs && DVDLisp.fs.get(item.name); if(!f) throw new Error('Không thấy "' + item.name + '" trong thư mục hỗ trợ'); return f.text; }
+  async function addFile(name, code, startup, inFs){
     const type = typeOf(name);
     if(type === 'fas'){ say('File .fas / .vlx là LISP đã biên dịch của AutoCAD — DVDCAD chỉ chạy được mã nguồn .lsp.'); return null; }
     if(type === 'native'){ say('File .dll / .arx / .dvb là add-in Windows cho riêng AutoCAD — trình duyệt không chạy được. Dùng .lsp hoặc .js.'); return null; }
     if(code.length > 1.5e6){ say('File quá lớn (giới hạn 1,5 MB).'); return null; }
     const l = list().filter(x => x.name !== name); const item = { name, type, code, startup: startup !== false, added: Date.now(), size: code.length };
+    // .lsp cũng được chép vào kho tệp hỗ trợ để (load "ten") / autoload tìm thấy; tệp lớn chỉ giữ ở đó
+    if(type === 'lsp' && window.DVDLisp && DVDLisp.fs){ await DVDLisp.fs.put(name, code); if(inFs || code.length > 200000) delete item.code; }
     l.push(item); save(l); await run(item); return item;
   }
   A.addinAdd = addFile;
-  const sourceOf = k => { const it = list().find(x => x.type === 'lsp' && baseName(x.name).toUpperCase().replace(/\.LSP$/, '') === String(k).toUpperCase()); return it ? it.code : null; };
+  const sourceOf = k => { const it = list().find(x => x.type === 'lsp' && baseName(x.name).toUpperCase().replace(/\.LSP$/, '') === String(k).toUpperCase()); return it ? (() => { try{ return codeOf(it); }catch(_){ return null; } })() : null; };
 
   /* ---------------- API cho add-in JavaScript ---------------- */
   let curAddin = null;
@@ -112,7 +116,48 @@
   }
 
   /* ---------------- APPLOAD ---------------- */
-  function pickFiles(){ return new Promise(res => { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.accept = '.lsp,.js,.fas,.vlx,.dll,.arx,.dvb,.txt'; inp.onchange = async () => { const out = []; for(const f of inp.files) out.push({ name: f.name, code: await f.text() }); res(out); }; inp.click(); }); }
+  // byte → chữ: UTF-8, nếu không hợp lệ thì theo bảng mã ANSI tiếng Việt (Windows-1258) như LISP soạn trên Windows
+  const decode = u8 => { try{ return new TextDecoder('utf-8', { fatal: true }).decode(u8).replace(/^\uFEFF/, ''); }catch(_){ try{ return new TextDecoder('windows-1258').decode(u8); }catch(__){ return new TextDecoder('latin1').decode(u8); } } };
+  const SUPPORT = /\.(dcl|txt|lin|pat|csv|mnl|scr|ini|dat|cfg|xml|json|mnu|mns|shp|sld|lsp)$/i;
+  function pickFiles(dir){ return new Promise(res => { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; if(dir) inp.webkitdirectory = true; else inp.accept = '.lsp,.js,.dcl,.zip,.fas,.vlx,.dll,.arx,.dvb,.txt,.lin,.pat,.csv,.mnl,.scr,.ini,.dat,.cfg,.sld';
+    inp.onchange = async () => { const out = []; for(const f of inp.files) out.push({ name: f.name, path: f.webkitRelativePath || f.name, bytes: new Uint8Array(await f.arrayBuffer()) }); res(out); }; inp.click(); }); }
+  // giải các gói .zip thành danh sách tệp như khi chọn cả thư mục
+  async function expand(files){ const out = [];
+    for(const f of files){ if(/\.zip$/i.test(f.name) && A.unzip){ try{ const z = await A.unzip(f.bytes.buffer.slice(f.bytes.byteOffset, f.bytes.byteOffset + f.bytes.byteLength)); for(const n of z.names){ if(/\/$/.test(n)) continue; const b = await z.get(n); if(b) out.push({ name: baseName(n), path: f.name + '/' + n, bytes: b }); } }catch(err){ say('Không mở được ' + f.name + ': ' + (err.message || err)); } }
+      else out.push(f); }
+    return out; }
+  // nạp một bộ tiện ích (cả thư mục / gói zip): tệp hỗ trợ vào kho, chọn .lsp nào nạp và tự nạp
+  async function installSet(files){
+    files = await expand(files); if(!files.length) return;
+    const lsp = [], js = [], sup = [], fas = [], nat = [];
+    for(const f of files){ const t = typeOf(f.name); if(/\.lsp$/i.test(f.name)) lsp.push(f); else if(t === 'js') js.push(f); else if(t === 'fas') fas.push(f); else if(t === 'native') nat.push(f); else if(SUPPORT.test(f.name)) sup.push(f); }
+    if(!lsp.length && !js.length && !sup.length){ say('Không có tệp .lsp / .dcl / .js nào' + (fas.length ? ' — chỉ có .fas / .vlx (LISP đã biên dịch, DVDCAD không chạy được).' : '.')); return; }
+    const auto = lsp.filter(f => /^(acad|acaddoc)\.lsp$/i.test(f.name)).length;
+    const rows = lsp.concat(js).map((f, i) => '<tr><td><input type="checkbox" data-ld="' + i + '"' + (/^(acad|acaddoc)\.lsp$/i.test(f.name) ? '' : ' checked') + ' style="width:auto"></td><td translate="no">' + esc(f.path) + '</td><td style="color:#9aa4b2">' + (f.bytes.length / 1024).toFixed(1) + ' KB</td></tr>').join('');
+    const ok = await new Promise(res => A.dialog({ title: 'Nạp bộ tiện ích', wide: true,
+      html: '<div class="acw" style="width:640px;max-width:100%"><div style="line-height:1.55;margin-bottom:6px">Tìm thấy <b>' + lsp.length + '</b> tệp .lsp, <b>' + js.length + '</b> tệp .js, <b>' + sup.length + '</b> tệp hỗ trợ (.dcl, .lin, .pat…)' + (fas.length ? ', <b style="color:#f6c445">' + fas.length + '</b> tệp .fas/.vlx' : '') + (nat.length ? ', <b style="color:#f6c445">' + nat.length + '</b> tệp .dll/.arx' : '') + '.</div>'
+        + (lsp.length + js.length ? '<div style="max-height:240px;overflow:auto;border:1px solid rgba(255,255,255,.1);border-radius:6px"><table style="width:100%;font-size:12.5px"><tr style="color:#aab3c0;text-align:left"><th><input type="checkbox" id="isAll" checked style="width:auto"></th><th>Nạp ngay và đưa vào Startup Suite</th><th></th></tr>' + rows + '</table></div>' : '')
+        + (auto ? '<div style="color:#9aa4b2;font-size:12px;margin-top:6px">acad.lsp / acaddoc.lsp tự chạy mỗi khi mở DVDCAD (như AutoCAD), không cần đánh dấu.</div>' : '')
+        + '<div style="color:#9aa4b2;font-size:12px;margin-top:6px">Mọi tệp .lsp và .dcl được chép vào <b>thư mục hỗ trợ</b> của DVDCAD để <code>load</code>, <code>load_dialog</code>, <code>findfile</code> tìm thấy như trong Support File Search Path của AutoCAD.</div>'
+        + (fas.length || nat.length ? '<div style="color:#f6c445;font-size:12px;margin-top:6px">⚠ Bỏ qua ' + fas.concat(nat).map(f => esc(f.name)).slice(0, 8).join(', ') + (fas.length + nat.length > 8 ? '…' : '') + ': .fas / .vlx là LISP đã biên dịch và mã hoá cho riêng AutoCAD; .dll / .arx là chương trình Windows nối vào bên trong AutoCAD. Cần bản mã nguồn .lsp từ tác giả.</div>' : '')
+        + '<div style="color:#f6c445;font-size:12px;margin-top:6px">⚠ Tiện ích chạy với toàn quyền trong DVDCAD. Chỉ nạp từ nguồn bạn tin cậy.</div></div>',
+      onOpen: r => { const all = r.querySelector('#isAll'); if(all) all.onchange = () => r.querySelectorAll('[data-ld]').forEach(b => { b.checked = all.checked; }); },
+      ok: r => res([...r.querySelectorAll('[data-ld]')].filter(b => b.checked).map(b => +b.dataset.ld)), cancel: () => res(null) }));
+    if(!ok) return;
+    for(const f of sup.concat(lsp)) await DVDLisp.fs.put(f.name, decode(f.bytes), f.path.replace(/[\\/][^\\/]*$/, ''));
+    const pick = lsp.concat(js); let n = 0;
+    for(const i of ok){ const f = pick[i]; if(!f) continue; if(/\.lsp$/i.test(f.name)){ await addFile(f.name, decode(f.bytes), true, true); n++; } else { await addFile(f.name, decode(f.bytes), true); n++; } }
+    if(auto) await DVDLisp.startup();
+    log('Đã chép ' + (sup.length + lsp.length) + ' tệp vào thư mục hỗ trợ, nạp ' + n + ' tệp.' + (fas.length + nat.length ? ' Bỏ qua ' + (fas.length + nat.length) + ' tệp đã biên dịch / native.' : ''));
+  }
+  A.addinInstallSet = installSet;
+  // xem / xoá tệp trong thư mục hỗ trợ
+  function supportDlg(){ let root = null; const fs = DVDLisp.fs;
+    const render = () => { const L = fs.list().sort((a, b) => a.name.localeCompare(b.name)); root.querySelector('#sfList').innerHTML = L.length ? '<table style="width:100%;font-size:12.5px"><tr style="color:#aab3c0;text-align:left"><th>Tệp</th><th>Thư mục gốc</th><th></th></tr>' + L.map(f => '<tr style="border-top:1px solid rgba(255,255,255,.06)"><td translate="no">' + esc(f.name) + '</td><td translate="no" style="color:#9aa4b2">' + esc(f.folder || '') + '</td><td><button type="button" class="acw-btn" data-del="' + esc(f.name) + '">Xoá</button></td></tr>').join('') + '</table>' : '<div style="color:#7c8696">Chưa có tệp nào.</div>';
+      root.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { await fs.del(b.dataset.del); render(); }); };
+    A.dialog({ title: 'Thư mục hỗ trợ (Support File Search Path)', wide: true, noOk: true, cancelText: 'Đóng',
+      html: '<div class="acw" style="width:600px;max-width:100%"><div style="color:#9aa4b2;font-size:12px;margin-bottom:6px">Các tệp .lsp, .dcl, .lin, .pat… mà tiện ích LISP tìm bằng <code>findfile</code>, <code>load</code>, <code>load_dialog</code>, <code>open</code>. Lưu trong máy, giữ qua các lần mở DVDCAD.</div><div id="sfList" class="acw-list" style="max-height:320px;overflow:auto;padding:4px"></div></div>',
+      onOpen: r => { root = r; fs.ready.then(render); } }); }
   async function confirmTrust(names){
     return new Promise(res => A.dialog({ title: 'Nạp add-in', html: '<div style="line-height:1.55">Nạp <b>' + names.map(esc).join(', ') + '</b>?<br><span style="color:#f6c445">⚠ Add-in chạy với toàn quyền trong DVDCAD (sửa / xoá bản vẽ, gửi dữ liệu ra mạng). Chỉ nạp file từ nguồn bạn tin cậy.</span><label style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="adSt" checked style="width:auto"> Tự nạp mỗi khi mở DVDCAD (Startup Suite)</label></div>', ok: r => res({ startup: r.querySelector('#adSt').checked }), cancel: () => res(null) }));
   }
@@ -127,12 +172,17 @@
       root.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { const l2 = list(); const it = l2.splice(+b.dataset.rm, 1)[0]; save(l2); log('Đã gỡ "' + it.name + '" khỏi danh sách (lệnh đã nạp vẫn dùng được tới khi mở lại app).'); render(); });
     };
     A.dialog({ title: 'Nạp ứng dụng (APPLOAD)', wide: true, noOk: true, cancelText: 'Đóng',
-      html: '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><button type="button" id="adFile">＋ Nạp file… (.lsp, .js)</button><button type="button" id="adUrl">＋ Nạp từ đường link…</button><button type="button" id="adCon">Bảng LISP (VLISP)</button><button type="button" id="adDoc">Hướng dẫn viết add-in</button></div>'
+      html: '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><button type="button" id="adFile">＋ Nạp file… (.lsp, .js, .dcl, .zip)</button><button type="button" id="adDir">＋ Nạp cả thư mục…</button><button type="button" id="adSup">Thư mục hỗ trợ</button><button type="button" id="adUrl">＋ Nạp từ đường link…</button><button type="button" id="adCon">Bảng LISP (VLISP)</button><button type="button" id="adDoc">Hướng dẫn viết add-in</button></div>'
         + '<div id="adList"></div>'
         + '<div class="dvd-sub" style="margin-top:12px">Add-in mẫu</div>' + SAMPLES.map((s, i) => '<div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-top:1px solid rgba(255,255,255,.06)"><div style="flex:1"><b>' + esc(s.name) + '</b><div style="color:#9aa4b2;font-size:12px">' + esc(s.desc) + '</div></div><button type="button" data-smp="' + i + '">Cài</button></div>').join('')
-        + '<div style="color:#7c8696;font-size:11.5px;margin-top:10px;line-height:1.5">DVDCAD chạy add-in AutoLISP dạng mã nguồn (.lsp) và JavaScript (.js). File .fas / .vlx (LISP đã biên dịch), .dll / .arx / .dvb (add-in Windows của AutoCAD) không chạy được trong trình duyệt. Có thể gõ thẳng biểu thức LISP ở dòng lệnh, ví dụ <code>(+ 1 2)</code>.</div>',
+        + '<div style="color:#7c8696;font-size:11.5px;margin-top:10px;line-height:1.5">DVDCAD chạy add-in AutoLISP dạng mã nguồn (.lsp, kèm hộp thoại .dcl, hàm vla- / vlax-) và JavaScript (.js). Bộ tiện ích nhiều tệp: bấm "Nạp cả thư mục…" hoặc chọn gói .zip. File .fas / .vlx (LISP đã biên dịch, mã hoá), .dll / .arx / .dvb (chương trình Windows nối vào AutoCAD) không chạy được — cần bản .lsp từ tác giả. Có thể gõ thẳng biểu thức LISP ở dòng lệnh, ví dụ <code>(+ 1 2)</code>.</div>',
       onOpen: r => { root = r; render();
-        r.querySelector('#adFile').onclick = async () => { const fs = await pickFiles(); if(!fs.length) return; const ok = await confirmTrust(fs.map(f => f.name)); if(!ok) return; for(const f of fs) await addFile(f.name, f.code, ok.startup); render(); };
+        r.querySelector('#adFile').onclick = async () => { const fs = await pickFiles(); if(!fs.length) return;
+          // nhiều tệp, có .dcl hoặc gói .zip → coi như một bộ tiện ích
+          if(fs.length > 1 || fs.some(f => /\.(zip|dcl)$/i.test(f.name)) || typeOf(fs[0].name) === 'fas'){ await installSet(fs); render(); return; }
+          const ok = await confirmTrust(fs.map(f => f.name)); if(!ok) return; for(const f of fs) await addFile(f.name, decode(f.bytes), ok.startup); render(); };
+        r.querySelector('#adDir').onclick = async () => { const fs = await pickFiles(true); if(fs.length) await installSet(fs); render(); };
+        r.querySelector('#adSup').onclick = () => supportDlg();
         r.querySelector('#adUrl').onclick = async () => { const url = window.prompt('Đường link tới file .lsp hoặc .js (máy chủ phải cho phép tải chéo — CORS):', 'https://'); if(!url || !/^https?:\/\//.test(url)) return;
           try{ const t = await (await fetch(url)).text(); const name = baseName(url.split('?')[0]) || 'addin.lsp'; const ok = await confirmTrust([name]); if(!ok) return; await addFile(name, t, ok.startup); render(); }catch(err){ say('Không tải được: ' + (err.message || err)); } };
         r.querySelector('#adCon').onclick = () => { DVDCmd.run('VLISP'); };
@@ -156,9 +206,11 @@
         r.querySelector('#vlSave').onclick = async () => { const n = window.prompt('Tên file add-in (.lsp):', 'cua-toi.lsp'); if(!n) return; await addFile(/\.lsp$/i.test(n) ? n : n + '.lsp', src.value, true); outEl.textContent = 'Đã lưu "' + n + '" vào APPLOAD (tự nạp khi mở app).'; };
       } });
   });
+  plain(['SUPPORTFILES', 'THUMUCHOTRO'], 'Thư mục hỗ trợ của AutoLISP: tệp .lsp / .dcl / .lin / .pat dùng chung cho add-in', () => { if(window.DVDLisp && DVDLisp.fs) supportDlg(); });
   plain(['ADDINAPI'], 'Hướng dẫn viết add-in (JavaScript / AutoLISP)', () => { try{ window.open('./ADDIN-API.md', '_blank'); }catch(_){} });
 
   /* ---------------- Startup Suite ---------------- */
   window.DVDAddins = { list, save, add: addFile, run, sourceOf, refreshRibbon, API, loaded };
-  setTimeout(async () => { refreshRibbon(); for(const it of list()) if(it.startup) await run(it); }, 0);
+  const suite = async () => { for(const it of list()) if(it.startup) await run(it); };
+  setTimeout(async () => { refreshRibbon(); if(window.DVDLisp && DVDLisp.startup) await DVDLisp.startup(suite); else await suite(); }, 0);
 })();
