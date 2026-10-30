@@ -164,7 +164,7 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       out.tw = !!(dwgLayouts[currentLayout] && dwgLayouts[currentLayout].paper.viewports[0] && Math.abs(dwgLayouts[currentLayout].paper.viewports[0].tw - Math.PI / 6) < 1e-12);
       const pv = A.dxfVer; A.dxfVer = 'R2018'; const dx = A.dxfR2000(modelEntities); A.dxfVer = pv;
       out.dxf = /\n\s*0\r?\nPLOTSETTINGS\r?\n/.test(dx) && !!A.setupsFromDXF(dx)['Ban in A3'];
-      out.dwg = {}; for(const v of ['R2018', 'R2000']){ const d = A.dwgNative(modelEntities, { version: v }); let bin = ''; for(let i = 0; i < d.length; i += 0x8000) bin += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000));
+      out.dwg = {}; for(const v of ['R2018', 'R2007', 'R2000']){ const d = A.dwgNative(modelEntities, { version: v }); let bin = ''; for(let i = 0; i < d.length; i += 0x8000) bin += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000));
         await loadDWG(d.slice().buffer, 'layout-xoay.dwg'); await w(500);
         const F = (dwgLayouts._file || []).find(x => !x.isModel && x.paper && x.paper.viewports.length), q = (window._dwgPageSetups || []).find(x => x && x.name === 'Ban in A3');
         out.dwg[v] = { tw: !!F && Math.abs(F.paper.viewports[0].tw - Math.PI / 6) < 1e-9, ps: !!q && q.media === 'ISO_full_bleed_A3_(420.00_x_297.00_MM)' && q.printer === 'DWG To PDF.pc3', b64: btoa(bin) }; }
@@ -189,8 +189,8 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
     check(await until(() => head(dwgNat) === 'AC1032', 60000), 'SAVEDWG mặc định ghi DWG 2018 gốc (AC1032), không cần ODA File Converter');
     keep(dwgNat, 'mat-bang-tang-1-R2018.dwg');
     check(await reopen(dwgNat) === n0, 'mở lại DWG 2018 vừa ghi: đủ ' + n0 + ' đối tượng');
-    // các phiên bản khác của bộ ghi gốc: 2013 / 2010 / 2004 / 2000 → mở lại đủ đối tượng
-    for(const [v, ac] of [['R2013', 'AC1027'], ['R2010', 'AC1024'], ['R2004', 'AC1018'], ['R2000', 'AC1015']]){
+    // các phiên bản khác của bộ ghi gốc: 2013 / 2010 / 2007 / 2004 / 2000 → mở lại đủ đối tượng
+    for(const [v, ac] of [['R2013', 'AC1027'], ['R2010', 'AC1024'], ['R2007', 'AC1021'], ['R2004', 'AC1018'], ['R2000', 'AC1015']]){
       const r = await win.evaluate(async v => { const ents = modelEntities.slice(), d = DVDAcad.dwgNative(ents, { version: v }); let s = ''; for(let i = 0; i < d.length; i += 0x8000) s += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000));
         await loadDWG(d.slice().buffer, 'kiem-tra-' + v + '.dwg'); await new Promise(q => setTimeout(q, 300)); const n = modelEntities.length; return { b64: btoa(s), n }; }, v);
       const pv = path.join(tmp, 'luu-' + v + '.dwg'); fs.writeFileSync(pv, Buffer.from(r.b64, 'base64'));
@@ -224,7 +224,7 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       const dsig = () => modelEntities.filter(e => e.bm && e.bm.name === 'CUA_DONG').map(e => (e.vh ? 'h' : 'v') + ((e.dyn || {}).st || '') + ((e.dyn && e.dyn.L) || {}).Dai + ((e.dyn || {}).fx ? 'F' : '') + (e.dvs || []).join('/') + '@' + Math.round(Math.min(e.x1, e.x2)) + ':' + Math.round(Math.max(e.x1, e.x2)) + (e.bm.a < 0 ? '-' : '+')).sort().join(',');
       const sig = () => modelEntities.map(e => e.type + (e.blk ? '*' : '') + (e.wipe ? 'W' : '') + (e.p3 ? 'P3:' + e.vertices.map(v => v.z || 0).join('/') : '') + (e.face ? 'F' + (e.ie || 0) + ':' + (e.zs || []).join('/') : '') + '|' + (e.layer || '0') + '|' + (e.lt || '') + '|' + (e.text || '')).sort().join('\n');
       const s0 = sig(), d0 = dsig(), ents = modelEntities.slice(), res = {};
-      for(const v of ['R2018', 'R2013', 'R2010', 'R2004', 'R2000']){ const dwg = A.dwgNative(ents, { version: v }); await loadDWG(dwg.slice().buffer, 'tong-hop.dwg'); await w(300);
+      for(const v of ['R2018', 'R2013', 'R2010', 'R2007', 'R2004', 'R2000']){ const dwg = A.dwgNative(ents, { version: v }); await loadDWG(dwg.slice().buffer, 'tong-hop.dwg'); await w(300);
         let bin = ''; for(let i = 0; i < dwg.length; i += 0x8000) bin += String.fromCharCode.apply(null, dwg.subarray(i, i + 0x8000));
         res[v] = { same: sig() === s0, dyn: d0.length > 0 && dsig() === d0, n: modelEntities.length, s3d: modelEntities.some(e => e.type === 'SOLID3D'), wipe: modelEntities.some(e => e.wipe), b64: btoa(bin) }; }
       return res; });

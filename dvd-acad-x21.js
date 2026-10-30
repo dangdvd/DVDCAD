@@ -137,7 +137,7 @@
   /* ==================================================================
      DWGCONVERT — đổi phiên bản hàng loạt (khung ẩn: bản vẽ đang mở không bị ảnh hưởng)
      ================================================================== */
-  const TGT = [['R2018', 'DWG 2018'], ['R2013', 'DWG 2013'], ['R2010', 'DWG 2010'], ['R2004', 'DWG 2004'], ['R2000', 'DWG 2000'], ['DXF:R2018', 'DXF 2018'], ['DXF:R2013', 'DXF 2013'], ['DXF:R2010', 'DXF 2010'], ['DXF:R2007', 'DXF 2007'], ['DXF:R2004', 'DXF 2004'], ['DXF:R2000', 'DXF 2000']];
+  const TGT = [['R2018', 'DWG 2018'], ['R2013', 'DWG 2013'], ['R2010', 'DWG 2010'], ['R2007', 'DWG 2007'], ['R2004', 'DWG 2004'], ['R2000', 'DWG 2000'], ['DXF:R2018', 'DXF 2018'], ['DXF:R2013', 'DXF 2013'], ['DXF:R2010', 'DXF 2010'], ['DXF:R2007', 'DXF 2007'], ['DXF:R2004', 'DXF 2004'], ['DXF:R2000', 'DXF 2000']];
   let FR = null;
   function frame(){ if(FR && FR.ready) return FR.ready;
     const f = document.createElement('iframe'); f.setAttribute('aria-hidden', 'true'); f.tabIndex = -1; f.style.cssText = 'position:fixed;left:-20000px;top:0;width:1200px;height:800px;border:0;visibility:hidden';
@@ -157,7 +157,7 @@
     const d = w.DVDAcad.dwgNative(ME2, { version: tgt }); return { name: base + '.dwg', data: d, n: ME2.length };
   }
   A.dwgConvertFiles = async (files, tgt, onEach, onLoaded) => { const w = await frame(); const out = [], bad = []; try{ for(const f of files){ try{ const r = await convertOne(w, f, tgt, onLoaded); out.push(r); if(onEach) onEach(f, r); }catch(err){ bad.push([f.name, err.message || String(err)]); if(onEach) onEach(f, null, err); } } } finally { dropFrame(); } return { out, bad }; };
-  plain(['DWGCONVERT'], 'Đổi phiên bản DWG hàng loạt (DWG Convert): danh sách tệp DWG / DXF → DWG 2018 / 2013 / 2010 / 2004 / 2000 hoặc DXF, đóng gói .zip', () => {
+  plain(['DWGCONVERT'], 'Đổi phiên bản DWG hàng loạt (DWG Convert): danh sách tệp DWG / DXF → DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000 hoặc DXF, đóng gói .zip', () => {
     if(A.busy && A.busy()) A.cancel(true);
     let L = []; let tgt = lsGet('dvd:dwgconv', 'R2018');
     const html = '<div class="acw" style="width:560px"><div class="acw-cols"><div class="c1"><div class="lm-grid" style="height:220px"><table><thead><tr><th>Tệp</th><th style="width:80px">Cỡ</th><th style="width:150px">Trạng thái</th></tr></thead><tbody id="dcB"></tbody></table></div></div>' +

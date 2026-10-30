@@ -2,7 +2,7 @@
 # - Mỗi lần đẩy mã lên main / bấm "Run workflow": tải file .exe ở mục Artifacts của lần chạy.
 # - Đẩy thẻ phiên bản (vd: git tag v5.9.0 && git push origin v5.9.0), hoặc bấm "Run workflow" trên main và nhập
 #   release_tag (vd v5.9.0): tạo thêm GitHub Release kèm file .exe (thẻ được tạo trên đúng commit vừa dựng).
-# - Kiểm tra DWG: smoke test ghi DWG 2018 / 2013 / 2010 / 2004 / 2000 gốc, rồi ODA File Converter đọc + audit và ACadSharp đọc lại
+# - Kiểm tra DWG: smoke test ghi DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000 gốc, rồi ODA File Converter đọc + audit và ACadSharp đọc lại
 #   các file đó (artifact DVDCAD-DWG-kiem-tra).
 # - Ký số (không bắt buộc, xem HUONG-DAN-WINDOWS.md): có secret WIN_CSC_LINK (+ WIN_CSC_KEY_PASSWORD) thì ký bằng file .pfx;
 #   có secret AZURE_CLIENT_SECRET và biến AZURE_SIGN_ENDPOINT thì ký bằng Azure Trusted Signing. Không có thì dựng bản chưa ký như cũ.
@@ -93,6 +93,11 @@ jobs:
             if(-not (Test-Path $dxf) -or (Get-Item $dxf).Length -lt 1000){ Write-Host "::error::ODA File Converter không đọc được $($f.Name)"; $bad++ }
             else { Write-Host "✓ ODA đọc được $($f.Name) ($($f.Length) byte) → DXF $((Get-Item $dxf).Length) byte" }
           }
+          # DWG 2007: ODA ghi lại bản vẽ tổng hợp thành AC1021 → so header / CRC / checksum với tệp DVDCAD ghi
+          $o7 = Join-Path $env:RUNNER_TEMP 'dwg-oda07'; New-Item -ItemType Directory -Force $o7 | Out-Null
+          Start-Process $exe.FullName -ArgumentList "`"$res`"", "`"$o7`"", 'ACAD2007', 'DWG', '0', '1', 'tong-hop-R2018.dxf' -Wait -NoNewWindow
+          $l7 = @(Get-ChildItem $o7 -Filter *.dwg | ForEach-Object FullName) + @(Get-ChildItem $out -Filter *R2007*.dwg | ForEach-Object FullName)
+          if($l7.Count){ node test/dwg2007-info.js @l7 }
           if($bad){ exit 1 }
 
       # Bộ đọc DWG độc lập thứ hai (ACadSharp, MIT, .NET): đọc từng file DWG gốc của DVDCAD, in số đối tượng + cảnh báo.
@@ -132,6 +137,7 @@ jobs:
           path: |
             ${{ runner.temp }}/dwg-out
             ${{ runner.temp }}/dwg-oda
+            ${{ runner.temp }}/dwg-oda07
           if-no-files-found: ignore
 
       - name: Dựng bộ cài và bản portable (chưa ký số)

@@ -4565,6 +4565,8 @@ async function getLibreDwg(){
   const mod=await import('./libredwg-web.js');     // bundle GPL-3.0 + WASM
   _DwgType=mod.Dwg_File_Type;
   _libredwg=await mod.LibreDwg.create('.');         // tìm libredwg-web.wasm cùng thư mục
+  { const rd=_libredwg.dwg_read_data.bind(_libredwg);   // v6a: DWG 2007 — giải mã sẵn trang không nén mà bản libredwg-web này chép thẳng (mọi chỗ mở DWG)
+    _libredwg.dwg_read_data=(buf,type)=>rd(window.DVDAcad&&DVDAcad.dwg2007Fix?DVDAcad.dwg2007Fix(buf):buf,type); }
   return _libredwg;
 }
 // Chuyển 1 thực thể DWG -> node nội bộ (hình gốc hoặc INSERT). Trả null nếu bỏ qua.

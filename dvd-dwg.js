@@ -15,10 +15,10 @@
   'use strict';
   const D2R = Math.PI / 180;
   const fin = v => { v = +v; return isFinite(v) ? v : 0; };
-  // phiên bản đang ghi (đặt ở đầu dwgFromDxf): 15 = AC1015 (2000), 18 = AC1018 (2004), 24 = AC1024 (2010), 27 = AC1027 (2013), 32 = AC1032 (2018)
+  // phiên bản đang ghi (đặt ở đầu dwgFromDxf): 15 = AC1015 (2000), 18 = AC1018 (2004), 21 = AC1021 (2007), 24 = AC1024 (2010), 27 = AC1027 (2013), 32 = AC1032 (2018)
   let VER = 15;
-  const VCODE = { R2000: 15, R2004: 18, R2010: 24, R2013: 27, R2018: 32 };
-  const ACV = { 15: 'AC1015', 18: 'AC1018', 24: 'AC1024', 27: 'AC1027', 32: 'AC1032' };
+  const VCODE = { R2000: 15, R2004: 18, R2007: 21, R2010: 24, R2013: 27, R2018: 32 };
+  const ACV = { 15: 'AC1015', 18: 'AC1018', 21: 'AC1021', 24: 'AC1024', 27: 'AC1027', 32: 'AC1032' };
 
   /* ---------------- CRC-16 (đa thức 0xA001; table[1] = 0xC0C1) ---------------- */
   const CRCT = (() => { const t = new Uint16Array(256); for(let i = 0; i < 256; i++){ let c = i; for(let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xA001 : c >>> 1; t[i] = c; } return t; })();
@@ -127,6 +127,74 @@
     if(n <= 0x12) out.push(n - 3); else { out.push(0); let r = n - 0x12; while(r > 0xff){ r -= 0xff; out.push(0); } out.push(r); }
     for(let i = 0; i < n; i++) out.push(src[from + i]); }
 
+  /* ---------------- DWG 2007 (AC1021): mã Reed–Solomon, nén LZ kiểu 2007, CRC-64, checksum ---------------- */
+  // RS(255, k) hệ thống: k byte dữ liệu ở đầu khối, 255-k byte chẵn lẻ ở cuối; nghiệm α^1…α^(255-k).
+  // Trang hệ thống / header: trường 0x169, k = 239; trang dữ liệu: trường 0x11D, k = 251.
+  const RS = (() => { const C = {};
+    return (poly, k) => { const key = poly + ':' + k; if(C[key]) return C[key];
+      const EXP = new Uint8Array(512), LOG = new Uint8Array(256); let x = 1; for(let i = 0; i < 255; i++){ EXP[i] = x; LOG[x] = i; x <<= 1; if(x & 256) x ^= poly; } for(let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+      const mul = (a, b) => a && b ? EXP[LOG[a] + LOG[b]] : 0, inv = a => EXP[255 - LOG[a]], n = 255 - k;
+      // ma trận A[j][t] = α^((j+1)(k+t)); giải A·p = D (D_j = dữ liệu tại α^(j+1)) bằng khử Gauss một lần
+      const A = []; for(let j = 0; j < n; j++){ const r = new Uint8Array(2 * n); for(let t = 0; t < n; t++) r[t] = EXP[((j + 1) * (k + t)) % 255]; r[n + j] = 1; A.push(r); }
+      for(let c = 0; c < n; c++){ let p = c; while(!A[p][c]) p++; [A[c], A[p]] = [A[p], A[c]]; const iv = inv(A[c][c]); for(let t = 0; t < 2 * n; t++) A[c][t] = mul(A[c][t], iv);
+        for(let r = 0; r < n; r++) if(r !== c && A[r][c]){ const f = A[r][c]; for(let t = 0; t < 2 * n; t++) A[r][t] ^= mul(f, A[c][t]); } }
+      const I = A.map(r => r.slice(n)), D = new Uint8Array(n);
+      // mã hoá xen kẽ: byte j của khối i nằm ở vị trí i + j·nb
+      const enc = (data, nb, out, at) => { for(let i = 0; i < nb; i++){
+          for(let j = 0; j < n; j++){ const a = EXP[j + 1]; let y = 0; for(let q = k - 1; q >= 0; q--){ const v = data[i * k + q] || 0; y = mul(y, a) ^ v; } D[j] = y; }
+          for(let q = 0; q < k; q++) out[at + i + q * nb] = data[i * k + q] || 0;
+          for(let t = 0; t < n; t++){ let s = 0; for(let j = 0; j < n; j++) s ^= mul(I[t][j], D[j]); out[at + i + (k + t) * nb] = s; } } };
+      return (C[key] = { enc, k }); }; })();
+  // thứ tự byte của một đoạn chữ nguyên (literal) khi giải nén: theo khối 32 byte (4 nhóm 8 byte đảo thứ tự) + phần dư theo bảng riêng
+  const LIT_TAIL = [[], [[1, 0]], [[2, 0]], [[3, 0]], [[4, 0]], [[1, 4], [4, 0]], [[1, 5], [4, 1], [1, 0]], [[2, 5], [4, 1], [1, 0]], [[8, 0]], [[1, 8], [8, 0]], [[1, 9], [8, 1], [1, 0]], [[2, 9], [8, 1], [1, 0]],
+    [[4, 8], [8, 0]], [[1, 12], [4, 8], [8, 0]], [[1, 13], [4, 9], [8, 1], [1, 0]], [[2, 13], [4, 9], [8, 1], [1, 0]], [[16, 0]], [[8, 9], [1, 8], [8, 0]], [[1, 17], [16, 1], [1, 0]], [[3, 16], [16, 0]],
+    [[4, 16], [16, 0]], [[1, 20], [4, 16], [16, 0]], [[2, 20], [4, 16], [16, 0]], [[3, 20], [4, 16], [16, 0]], [[8, 16], [16, 0]], [[8, 17], [1, 16], [16, 0]], [[1, 25], [8, 17], [1, 16], [16, 0]],
+    [[2, 25], [8, 17], [1, 16], [16, 0]], [[4, 24], [8, 16], [16, 0]], [[1, 28], [4, 24], [8, 16], [16, 0]], [[2, 28], [4, 24], [8, 16], [16, 0]], [[1, 30], [4, 26], [8, 18], [16, 2], [2, 0]]];
+  // đặt n byte data[from…] vào out sao cho bộ giải nén chép ra đúng thứ tự: src[P[i]] = data[i]
+  function litPut(out, at, data, from, n){ let d = 0, s = 0;
+    const put = (cnt, o, rev) => { for(let t = 0; t < cnt; t++) out[at + s + o + (rev ? cnt - 1 - t : t)] = data[from + d++]; };
+    const p16 = o => { put(8, o + 8); put(8, o); };
+    while(n - d >= 32){ p16(16); p16(0); s += 32; }
+    for(const [c, o] of LIT_TAIL[n - d]){ if(c === 16) p16(o); else put(c, o, c === 2 || c === 3); } }
+  function litLen(out, L){ if(L < 0x17){ out.push(L - 8); return; } let r = L - 0x17; out.push(0x0f); if(r < 0xff){ out.push(r); return; } out.push(0xff); r -= 0xff;
+    while(r >= 0xffff){ out.push(0xff, 0xff); r -= 0xffff; } out.push(r & 0xff, r >> 8); }
+  // nén LZ kiểu 2007: đoạn đầu ≥ 8 byte chữ nguyên; lệnh chép 2 / 3 / 4 byte (mã 0x3_…0xE_ / 0x1_ / 0x2_); ≤ 7 byte chữ sau lệnh chép nằm ở 3 bit thấp
+  function r21Comp(src, force){ const n = src.length; if(n < 16 && !force) return null;
+    const out = [], head = new Int32Array(1 << 15).fill(-1), prev = new Int32Array(n).fill(-1);
+    const hash = i => ((src[i] * 0x9E3779B1 ^ src[i + 1] * 0x85EBCA77 ^ src[i + 2] * 0xC2B2AE3D ^ src[i + 3] * 0x27D4EB2F) >>> 17) & 0x7fff;
+    let lit = 0, i = 0, last = -1;
+    const flushLit = to => { const L = to - lit; if(last < 0){ litLen(out, L); } else if(L === 0) return; else if(L <= 7) out[last] |= L; else litLen(out, L);
+      const at = out.length; for(let t = 0; t < L; t++) out.push(0); litPut(out, at, src, lit, L); };
+    const ins = p => { if(p + 3 < n){ const h = hash(p); prev[p] = head[h]; head[h] = p; } };
+    while(i < n){ let bl = 0, bo = 0;
+      if(i - lit >= (last < 0 ? 8 : 0) && i + 4 <= n){ let c = head[hash(i)], depth = 32;
+        while(c >= 0 && i - c <= 0xffff && depth--){ let l = 0; while(i + l < n && src[c + l] === src[i + l] && l < 0x4000) l++; if(l > bl){ bl = l; bo = i - c; } c = prev[c]; } }
+      if(bl >= 3 && (bl >= 5 || bo <= 0x2000)){ flushLit(i); let L = bl;
+        while(L > 0){ let l = Math.min(L, 255); if(L - l > 0 && L - l < 3) l -= 3;   // phần dư ≥ 3 byte
+          if(l <= 14 && bo <= 0x200) out.push((l << 4) | ((bo - 1) & 15), ((bo - 1) >> 4) << 3);   // 2 byte: dài 3…14, cách ≤ 0x200
+          else if(l <= 18 && bo <= 0x2000) out.push(0x10 | (l - 3), (bo - 1) & 0xff, ((bo - 1) >> 8) << 3);   // 3 byte: dài 3…18, cách ≤ 0x2000
+          else out.push(0x20 | (l & 7), bo & 0xff, bo >> 8, l & 0xf8);   // 4 byte: dài ≤ 255, cách ≤ 0xFFFF
+          last = out.length - 1; L -= l; }
+        for(let t = 0; t < bl; t++) ins(i + t); i += bl; lit = i; }
+      else { ins(i); i++; } }
+    if(lit < n || last < 0) flushLit(n);
+    return out.length < n || force ? Uint8Array.from(out) : null; }
+  // CRC-64 (đa thức ECMA 0x42F0E1EBA9EA3693, đọc từng 8 byte theo thứ tự 6,7,4,5,2,3,0,1) — CRC header 0x110 byte và CRC dữ liệu header nén
+  const CRC64T = (() => { const t = []; const M = (1n << 64n) - 1n; for(let i = 0n; i < 256n; i++){ let v = i << 56n; for(let b = 0; b < 8; b++) v = (v & (1n << 63n)) ? ((v << 1n) ^ 0x42f0e1eba9ea3693n) & M : (v << 1n) & M; t.push(v); } return t; })();
+  function crc64(u, n){ const M = (1n << 64n) - 1n; let c = BigInt.asUintN(64, (BigInt(n) * 0x343fdn + 0x269ec3n));
+    c = BigInt.asUintN(64, c * ((1n << 32n) + 0x343fdn) + (BigInt(n) + 0x269ec3n)); c = ~c & M;   // hạt giống theo độ dài (như AutoCAD)
+    const ord = []; let p = 0; while(n - p >= 8){ ord.push(p + 6, p + 7, p + 4, p + 5, p + 2, p + 3, p, p + 1); p += 8; }
+    for(const t of ({ 7: [0, 1, 2, 3, 4, 5, 6], 6: [0, 1, 2, 3, 4, 5], 5: [0, 1, 2, 3, 4], 4: [2, 3, 0, 1], 3: [0, 1, 2], 2: [0, 1], 1: [0], 0: [] })[n - p]) ord.push(p + t);
+    for(const i of ord) c = CRC64T[Number(((c >> 56n) ^ BigInt(u[i])) & 0xffn)] ^ ((c << 8n) & M);
+    return ~c & M; }
+  // checksum trang dữ liệu 2007: tổng Adler (mod 0xFFF1) từng cặp byte theo thứ tự 6,4,2,0 trong mỗi 8 byte, hạt giống từ độ dài
+  function sum21(u, n){ const s0 = BigInt.asUintN(64, BigInt(n) * 0x343fdn + 0x269ec3n); let s1 = Number(s0 & 0xffffn), s2 = Number((s0 >> 16n) & 0xffffn), p = 0, left = n;
+    const b = v => { s1 += v; s2 += s1; }, pr = o => { b(u[p + o]); b(u[p + o + 1]); };
+    while(left){ const ch = Math.min(0x15b0, left); for(let i = 0, m = ch >> 3; i < m; i++){ pr(6); pr(4); pr(2); pr(0); p += 8; }
+      switch(ch & 7){ case 7: pr(2); pr(0); pr(4); b(u[p + 6]); break; case 6: pr(2); pr(0); pr(4); break; case 5: pr(2); pr(0); b(u[p + 4]); break; case 4: pr(2); pr(0); break; case 3: pr(0); b(u[p + 2]); break; case 2: pr(0); break; case 1: b(u[p]); break; }
+      p += ch & 7; left -= ch; s1 %= 0xfff1; s2 %= 0xfff1; }
+    return ((s2 << 16) | (s1 & 0xffff)) >>> 0; }
+
   /* ---------------- đọc DXF thành các bản ghi (mã nhóm, giá trị) ---------------- */
   class Rec {
     constructor(type){ this.type = type; this.g = []; }
@@ -193,7 +261,7 @@
     VER = VCODE[opt.version] || (ACV[opt.version] ? +opt.version : 15);
     const R04 = VER >= 18, R07 = VER >= 21, R10 = VER >= 24, R13 = VER >= 27, R18 = VER >= 32;
     // biến thể 2010/2013 có ghi bản bảo trì > 3 → section header/lớp thêm RL cao của cỡ (như AutoCAD)
-    const MAINT = { 15: 6, 18: 0x68, 24: 0x6d, 27: 0x7d, 32: 0x1d }[VER], DWGV = { 15: 0x17, 18: 0x19, 24: 0x1d, 27: 0x1f, 32: 0x21 }[VER], HI32 = VER >= 32 || (VER >= 24 && MAINT > 3);
+    const MAINT = { 15: 6, 18: 0x68, 21: 0, 24: 0x6d, 27: 0x7d, 32: 0x1d }[VER], DWGV = { 15: 0x17, 18: 0x19, 21: 0x1b, 24: 0x1d, 27: 0x1f, 32: 0x21 }[VER], HI32 = VER >= 32 || (VER >= 24 && MAINT > 3);
     // số lớp: cấp theo thứ tự dùng (500, 501…); R2004+ LAYOUT là kiểu cố định 82
     const clsUsed = [];
     const cls = n => { if(n === 'LAYOUT' && R04) return 82; let i = clsUsed.indexOf(n); if(i < 0){ clsUsed.push(n); i = clsUsed.length - 1; } return 500 + i; };
@@ -676,10 +744,15 @@
 
     /* ---------- mã hoá từng đối tượng ----------
        R2000/R2004: MS cỡ + [BS kiểu, RL bitsize, dữ liệu, handle] + CRC
+       R2007:       MS cỡ + [BS kiểu, RL bitsize, dữ liệu, luồng chuỗi + RS cỡ + bit có chuỗi, handle] + CRC
        R2010+:      MS cỡ + UMC số bit luồng handle + [BOT kiểu, dữ liệu, luồng chuỗi + RS cỡ + bit có chuỗi, handle] + CRC */
     const enc = o => {
-      if(!R10){ const w = new BW(((o.d.p + o.hd.p) >> 3) + 16); w.BS(o.type); w.RL(w.p + 32 + o.d.p); w.append(o.d); w.append(o.hd); w.pad();
+      if(!R07){ const w = new BW(((o.d.p + o.hd.p) >> 3) + 16); w.BS(o.type); w.RL(w.p + 32 + o.d.p); w.append(o.d); w.append(o.hd); w.pad();
         const n = w.p >> 3, f = new BW(n + 8); f.MS(n); f.append(w); f.crc(0); return f.bytes(); }
+      if(!R10){ // R2007: BS kiểu + RL bitsize (tới đầu luồng handle) + dữ liệu + luồng chuỗi (RS cỡ + bit có chuỗi) + handle
+        const sn = o.s.p, st = sn ? sn + (sn >= 0x8000 ? 32 : 16) + 1 : 1, w = new BW(((o.d.p + sn + o.hd.p) >> 3) + 24); w.BS(o.type); w.RL(w.p + 32 + o.d.p + st); w.append(o.d);
+        if(sn){ w.append(o.s); if(sn >= 0x8000){ w.RS((sn >> 15) & 0xffff); w.RS((sn & 0x7fff) | 0x8000); } else w.RS(sn); w.B(1); } else w.B(0);
+        w.append(o.hd); w.pad(); const n = w.p >> 3, f = new BW(n + 8); f.MS(n); f.append(w); f.crc(0); return f.bytes(); }
       const w = new BW(((o.d.p + o.s.p + o.hd.p) >> 3) + 24); w.BOT(o.type); w.append(o.d);
       if(o.s.p){ const n = o.s.p; w.append(o.s); if(n >= 0x8000){ w.RS((n >> 15) & 0xffff); w.RS((n & 0x7fff) | 0x8000); } else w.RS(n); w.B(1); } else w.B(0);
       const hs = w.p; w.append(o.hd); w.pad();
@@ -801,7 +874,85 @@
         F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.19.0'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
         U16(F, '<ProductInformation name ="DVDCAD" build_version="5.19.0" registry_version="5.19" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
       const secRev = Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0);
+      if(VER === 21) return file2007();
       const up32 = (n, q) => Math.max(q, Math.ceil(n / q) * q);
+      /* ---------- DWG 2007 (AC1021): trang mã Reed–Solomon, bản đồ trang / section dạng số 64 bit, header nén + CRC-64 ----------
+         0x00: 0x80 byte đầu file (như 2004); 0x80: khối 0x400 byte (header 0x110 byte nén, RS(255,239) ×3 xen kẽ + 0x28 byte kiểm tra);
+         0x480: bản đồ trang (2 bản), các trang dữ liệu, bản đồ section (2 bản), cuối file: bản sao khối 0x400 byte. */
+      function file2007(){
+        const L64 = (u, at, v) => { const dv = new DataView(u.buffer, u.byteOffset); v = BigInt.asUintN(64, BigInt(v)); dv.setUint32(at, Number(v & 0xffffffffn), true); dv.setUint32(at + 4, Number(v >> 32n), true); };
+        const a8 = n => (n + 7) & ~7, a32 = n => (n + 31) & ~31;
+        const pages = [];   // { id, bytes } theo thứ tự trong file (địa chỉ = 0x480 + tổng cỡ trang trước)
+        let nextId = 1; const newId = () => nextId++;
+        // trang dữ liệu: nén (nếu có lợi) → RS(255,251) xen kẽ, cỡ trên đĩa bội 32 — hoặc trang nguyên (mã hoá 1: SummaryInfo / Preview / AppInfo, để địa chỉ trỏ thẳng vào dữ liệu)
+        const dataPage = (chunk, raw) => { const id = newId(); let comp = raw ? null : r21Comp(chunk); if(!comp) comp = chunk;
+          let bytes;
+          if(raw){ let sz = a32(chunk.length + 4); const nb0 = Math.ceil(a8(chunk.length) / 251); if(sz === a32(nb0 * 255)) sz += 32; bytes = new Uint8Array(sz); bytes.set(chunk); }
+          else { const nb = Math.ceil(a8(comp.length) / 251); const pe = new Uint8Array(nb * 251); pe.set(comp); bytes = new Uint8Array(a32(nb * 255)); RS(0x11D, 251).enc(pe, nb, bytes, 0); }
+          pages.push({ id, bytes }); return { id, uncomp: chunk.length, comp: comp.length, sum: sum21(chunk, chunk.length) }; };
+        const SECS = [];
+        const addSec = (name, hash, data, max, raw) => { const d = { name, hash, size: data.length, max, enc: raw ? 1 : 4, pages: [] }; SECS.push(d);
+          const nP = Math.max(1, Math.ceil(data.length / max));
+          for(let k = 0; k < nP; k++){ const o0 = k * max, chunk = data.subarray(o0, Math.min(data.length, o0 + max)); const r = dataPage(chunk, raw); r.off = o0; d.pages.push(r); }
+          return d; };
+        // trang hệ thống: nén, lặp lại `rep` lần (đệm bội 8), RS(255,239) xen kẽ
+        const sysPage = (data, rep) => { const comp = r21Comp(data, true); const step = a8(comp.length), nb = Math.ceil(step * rep / 239);
+          const pe = new Uint8Array(nb * 239); for(let r = 0; r < rep; r++) pe.set(comp, r * step);
+          const bytes = new Uint8Array(a32(nb * 255)); RS(0x169, 239).enc(pe, nb, bytes, 0); return { comp, bytes }; };
+        // 2 bản bản đồ trang đứng đầu; cỡ cố định (tăng dần nếu không vừa)
+        let pmSize = 0x400;
+        for(;;){
+          pages.length = 0; SECS.length = 0; nextId = 1;
+          const pmId1 = newId(), pmId2 = newId(); pages.push({ id: pmId1, bytes: null }, { id: pmId2, bytes: null });
+          const base = 0x480 + 2 * pmSize;
+          const dSum = addSec('AcDb:SummaryInfo', 0x717a060f, secSummary, a32(secSummary.length) > 0x80 ? a32(secSummary.length) : 0x80, true);
+          const sumAt = base, pvAt = sumAt + pages[pages.length - 1].bytes.length;
+          const secPrev = (() => { const bmp = opt.bmp && opt.bmp.length ? opt.bmp : null; const F = new BW(64 + (bmp ? bmp.length : 0)); sentinel(F, SENT.THUMB_BEGIN);
+            if(bmp){ F.RL(1 + 9 + bmp.length); F.RC(1); F.RC(2); F.RL(pvAt + 16 + 4 + 1 + 9); F.RL(bmp.length); F.need(bmp.length * 8); F.u.set(bmp, F.byte); F.p += bmp.length * 8; }
+            else { F.RL(1); F.RC(0); } sentinel(F, SENT.THUMB_END); for(let i = 0; i < 32; i++) F.RC(0); return F.bytes(); })();   // + 32 byte đệm như AutoCAD (bộ đọc tính cỡ ảnh theo cỡ section)
+          addSec('AcDb:Preview', 0x40aa0473, secPrev, Math.max(0x400, a32(secPrev.length)), true);
+          const appAt = pvAt + pages[pages.length - 1].bytes.length;
+          addSec('AcDb:AppInfo', 0x3fa0043e, secAppInfo, Math.max(0x80, a32(secAppInfo.length)), true);
+          addSec('AcDb:RevHistory', 0x60a205b3, secRev, 0x1000);
+          addSec('AcDb:AcDbObjects', 0x674c05a9, secObjects, 0xf800);
+          addSec('AcDb:ObjFreeSpace', 0x77e2061f, secFree, 0xf800);
+          addSec('AcDb:Template', 0x4a1404ce, secTemplate, 0x400);
+          addSec('AcDb:Handles', 0x3f6e0450, secHandles, 0xf800);
+          addSec('AcDb:Classes', 0x3f54045f, secClasses, 0xf800);
+          addSec('AcDb:AuxHeader', 0x54f0050a, secAux, 0x800);
+          addSec('AcDb:Header', 0x32b803d9, secHeader, 0x800);
+          // bản đồ section: các section (như AutoCAD: từ cuối lên) + một bản ghi rỗng
+          const recs = SECS.slice().reverse().concat([{ name: '', hash: 0, size: 0, max: 0xf800, enc: 4, pages: [] }]);
+          let smLen = 0; for(const d of recs) smLen += 64 + (d.name ? (d.name.length + 1) * 2 : 0) + d.pages.length * 56;
+          const sm = new Uint8Array(smLen); let q = 0;
+          for(const d of recs){ const nl = d.name ? (d.name.length + 1) * 2 : 0;
+            for(const v of [d.size, d.max, 0, d.hash, nl, 0, d.enc, d.pages.length]){ L64(sm, q, v); q += 8; }
+            for(let i = 0; i < d.name.length; i++){ sm[q] = d.name.charCodeAt(i); q += 2; } if(nl) q += 2;
+            for(const pg of d.pages){ for(const v of [pg.off, d.pages.length > 1 ? pg.uncomp : d.max, pg.id, pg.uncomp, pg.comp, pg.sum, 0]){ L64(sm, q, v); q += 8; } } }
+          const smRep = 4, smP = sysPage(sm, smRep), smId1 = newId(), smId2 = newId(); pages.push({ id: smId1, bytes: smP.bytes }, { id: smId2, bytes: smP.bytes.slice() });
+          // bản đồ trang: (cỡ, id) mỗi trang theo thứ tự trong file
+          const pm = new Uint8Array(pages.length * 16); pages.forEach((p, i) => { L64(pm, i * 16, p.bytes ? p.bytes.length : pmSize); L64(pm, i * 16 + 8, p.id); });
+          const pmRep = 3, pmP = sysPage(pm, pmRep);
+          if(pmP.bytes.length > pmSize){ pmSize = a32(pmP.bytes.length + 0x100); continue; }
+          const pmB = new Uint8Array(pmSize); pmB.set(pmP.bytes); pages[0].bytes = pmB; pages[1].bytes = pmB.slice();
+          let body = 0; for(const p of pages) body += p.bytes.length;
+          const fileSize = 0x480 + body + 0x400;
+          // header 0x110 byte (34 số 64 bit)
+          const hd = new Uint8Array(0x110);
+          const hv64 = [0x70, fileSize, 0, pmRep, 0, pmSize, pmId2, 0, pmId1, body, pmP.comp.length, pm.length, pages.length, nextId - 1, 0x20, 0x40, 0, 0xf800, 4, 1,
+            recs.length, 0, smP.comp.length, smId2, smId1, sm.length, 0, smRep, 0, 0x60100, 0, 0, BigInt(Math.floor(Math.random() * 0x7fffffff)) * 0x100000000n + BigInt(Math.floor(Math.random() * 0xffffffff)), 0];
+          hv64.forEach((v, i) => L64(hd, i * 8, v)); L64(hd, 0x108, crc64(hd, 0x110));
+          const hc = r21Comp(hd, true);
+          const pre = new Uint8Array(3 * 239); L64(pre, 0, 0); L64(pre, 8, 0); L64(pre, 16, crc64(hc, hc.length)); new DataView(pre.buffer).setInt32(24, hc.length, true); new DataView(pre.buffer).setInt32(28, 0, true); pre.set(hc, 32);
+          const blk = new Uint8Array(0x400); RS(0x169, 239).enc(pre, 3, blk, 0);
+          // 0x80 byte đầu file
+          const H0 = new Uint8Array(0x80); const vs = 'AC1021'; for(let i = 0; i < 6; i++) H0[i] = vs.charCodeAt(i);
+          H0[0x0b] = 0x32; H0[0x0c] = 3; le(H0, 0x0d, pvAt); H0[0x11] = DWGV; H0[0x12] = MAINT; H0[0x13] = 30; H0[0x16] = DWGV; H0[0x17] = MAINT;
+          le(H0, 0x20, sumAt); le(H0, 0x28, 0x80); le(H0, 0x2c, appAt);
+          const pv = privBlock();
+          return cat([H0, blk].concat(pages.map(p => p.bytes), [blk], pv ? [pv] : []));
+        }
+      }
       // --- trang dữ liệu: đầu 32 byte (mã hoá XOR theo địa chỉ) + dữ liệu (nén / nguyên) + lấp dãy MAGIC tới bội 0x20 ---
       const pages = [], fileParts = [], descs = []; let pos = 0x100;
       const addSec = (name, id, data, comp, max) => { const d = { name, id, size: data.length, comp: comp ? 2 : 1, max, pages: [] }; descs.push(d);
@@ -928,15 +1079,54 @@
     }catch(_){ return null; }
   }
 
-  const api = { BW, crc16, parseDxf, headerVars, Rec, tvBytes, dwgFromDxf, previewBmp };
+  /* ---------------- đọc DWG 2007: giải nén LZ kiểu 2007 + sửa trang "không nén" cho libredwg-web ----------------
+     AutoCAD (và DVDCAD) ghi trang không nén được vẫn mã Reed–Solomon xen kẽ; bản libredwg-web kèm theo lại chép thẳng
+     các trang đó → hỏng dữ liệu. fix2007 giải xen kẽ các trang ấy ngay trong bộ nhớ trước khi đưa cho libredwg-web. */
+  function r21Decomp(src, size){ const dst = new Uint8Array(size); let s = 0, d = 0, len = 0, off = 0, op = src[s++]; const end = src.length;
+    const litCopy = n => { const ix = new Array(n), id = new Int32Array(n); for(let i = 0; i < n; i++) id[i] = i; litPut(ix, 0, id, 0, n);   // ix[k] = vị trí đích của byte nguồn k
+      for(let k = 0; k < n; k++){ const i = ix[k]; if(d + i < size) dst[d + i] = src[s + k]; } d += n; s += n; };
+    const instr = () => { switch(op >> 4){
+      case 0: len = (op & 0xf) + 0x13; off = src[s++]; op = src[s++]; len += (op >> 3) & 0x10; off = ((op & 0x78) << 5) + 1 + off; break;
+      case 1: len = (op & 0xf) + 3; off = src[s++]; op = src[s++]; off = ((op & 0xf8) << 5) + 1 + off; break;
+      case 2: off = src[s++]; off |= (src[s++] << 8) & 0xff00; len = op & 7; if(!(op & 8)){ op = src[s++]; len += op & 0xf8; } else { off++; len += src[s++] << 3; op = src[s++]; len += ((op & 0xf8) << 8) + 0x100; } break;
+      default: len = op >> 4; off = op & 15; op = src[s++]; off = ((op & 0xf8) << 1) + off + 1; } };
+    if((op & 0xf0) === 0x20){ s += 2; len = src[s++] & 7; }
+    while(s < end){
+      if(!len){ len = op + 8; if(len === 0x17){ let n = src[s++]; len += n; if(n === 0xff){ do { n = src[s++] | (src[s++] << 8); len += n; } while(n === 0xffff); } } }
+      litCopy(len); len = 0; if(s >= end) break;
+      op = src[s++]; instr();
+      for(;;){ for(let t = 0; t < len && d < size; t++, d++) dst[d] = dst[d - off]; len = op & 7; if(len || s >= end) break;
+        op = src[s++]; if(!(op >> 4)) break; if((op >> 4) === 0xf) op &= 0xf; instr(); } }
+    return dst; }
+  function fix2007(buf){ try{
+    const u = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+    if(u.length < 0x500 || String.fromCharCode(u[0], u[1], u[2], u[3], u[4], u[5]) !== 'AC1021') return buf;
+    const deRS = (at, nb, k) => { const o = new Uint8Array(nb * k); for(let i = 0; i < nb; i++) for(let j = 0; j < k; j++) o[i * k + j] = u[at + i + j * nb]; return o; };
+    const q64 = (b, at) => { const dv = new DataView(b.buffer, b.byteOffset); return dv.getUint32(at, true) + dv.getUint32(at + 4, true) * 4294967296; };
+    const pre = deRS(0x80, 3, 239), cl = new DataView(pre.buffer).getInt32(24, true);
+    const hd = cl > 0 ? r21Decomp(pre.subarray(32, 32 + cl), 0x110) : pre.slice(32, 32 + 0x110), H = i => q64(hd, i * 8);
+    const sys = (at, comp, unc, rep) => { const nb = Math.ceil(((comp + 7) & ~7) * rep / 239); const p = deRS(at, nb, 239).subarray(0, comp); return comp < unc ? r21Decomp(p, unc) : p.slice(0, unc); };
+    const pm = sys(0x480 + H(7), H(10), H(11), H(3)); const pages = new Map(); let at = 0x480;
+    for(let i = 0; i + 16 <= pm.length; i += 16){ const sz = q64(pm, i), id = Math.abs(new DataView(pm.buffer).getInt32(i + 8, true)); pages.set(id, { at, sz }); at += sz; }
+    const smp = pages.get(H(24)); if(!smp) return buf; const sm = sys(smp.at, H(22), H(25), H(27));
+    let b = 0, out = null;
+    while(b + 64 <= sm.length){ const f = []; for(let k = 0; k < 8; k++){ f.push(q64(sm, b)); b += 8; } b += f[4];
+      for(let i = 0; i < f[7]; i++){ const g = []; for(let k = 0; k < 7; k++){ g.push(q64(sm, b)); b += 8; }
+        const pg = pages.get(g[2]), un = g[3], co = g[4]; if(!pg || f[6] !== 4 || co !== un) continue;
+        const nb = Math.ceil(((co + 7) & ~7) / 251); if(pg.sz !== ((nb * 255 + 31) & ~31)) continue;
+        if(!out) out = u.slice(); const d = deRS(pg.at, nb, 251); out.set(d.subarray(0, un), pg.at); } }
+    return out ? out.buffer : buf; }catch(_){ return buf; } }
+
+  const api = { BW, crc16, parseDxf, headerVars, Rec, tvBytes, dwgFromDxf, previewBmp, fix2007, r21Comp, r21Decomp, crc64, sum21 };
   if(typeof module !== 'undefined' && module.exports) module.exports = api;
   root.DVDDwg = api;
 
-  /* ---------------- trong DVDCAD: A.dwgNative(ents, { version: 'R2000' | 'R2004' | 'R2010' | 'R2013' | 'R2018' }) → Uint8Array ---------------- */
+  /* ---------------- trong DVDCAD: A.dwgNative(ents, { version: 'R2000' | 'R2004' | 'R2007' | 'R2010' | 'R2013' | 'R2018' }) → Uint8Array ---------------- */
   const A = root.DVDAcad;
   if(A && !A._dwgNative){
     A._dwgNative = true;
-    A.dwgVersions = ['R2018', 'R2013', 'R2010', 'R2004', 'R2000'];
+    A.dwgVersions = ['R2018', 'R2013', 'R2010', 'R2007', 'R2004', 'R2000'];
+    A.dwg2007Fix = fix2007;
     A.dwgNative = (ents, opt) => {
       if(!A.dxfR2000) throw new Error('Thiếu bộ ghi DXF.');
       const o = Object.assign({}, opt); if(!VCODE[o.version]) o.version = 'R2000';
