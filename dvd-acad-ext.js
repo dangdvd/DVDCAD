@@ -174,16 +174,115 @@
     finish(); log('Đã lưu khối "' + R.name + '" cho ' + (inst.size + 1) + ' bản.');
   }
   A.refedit = startRefedit; A.refclose = endRefedit; A.inRefedit = () => !!RE;
+  // hình khối đang sửa ở toạ độ gốc khối (BSAVEAS)
+  A.refeditLocal = () => { if(!RE) return null; const Minv = inv(RE.bm); return { name: RE.name, ents: modelEntities.filter(e => e.grp === RE.gid && !e.att).map(m => { const w = xformEnt(deep(m), Minv); delete w.userAdded; delete w.grp; delete w.bip; delete w.bm; delete w.dimd; delete w.tbld; return w; }) }; };
+  A.refeditSave = () => { if(!RE) return; const n = RE.name; endRefedit(true); const e = modelEntities.find(x => x.bm && x.bm.name === n); if(e) setTimeout(() => { startRefedit(e); log('BSAVE: đã lưu khối "' + n + '" — tiếp tục sửa.'); }, 0); };   // BSAVE
   cmd(['REFEDIT', 'BEDIT', 'BE'], 'Sửa khối tại chỗ (mọi khối cùng tên được cập nhật)', async () => {
     const r = await A.getEnt('Chọn khối cần sửa', { filter: e => !!e.bm }); if(!r.ent) return; setTimeout(() => startRefedit(r.ent), 0);
   });
+  // REFSET: thêm / bớt đối tượng của bộ đang sửa (REFEDIT) — đối tượng thêm vào thuộc khối, đối tượng bớt ra thành đối tượng thường
+  cmd(['REFSET'], 'Thêm / bớt đối tượng của khối đang sửa tại chỗ (REFEDIT)', async () => {
+    if(!RE){ log('REFSET chỉ dùng khi đang sửa khối (REFEDIT / BEDIT).'); return; }
+    const k = await A.getKw('Chuyển đối tượng giữa bộ sửa và bản vẽ', { kw: [{ k: 'A', t: 'Thêm' }, { k: 'R', t: 'Bớt' }], def: 'Thêm' }); const add = k.kw !== 'R';
+    if(add){ const hid = OBJ_HIDE; OBJ_HIDE = R0Hide(); try{ draw(); }catch(_){} let sel;
+      try{ const s = await A.getSel('Chọn đối tượng thêm vào khối', { filter: e => e.grp !== RE.gid && !e.att, pre: false }); sel = (s.sel || []).filter(e => e.grp !== RE.gid && !e.att); } finally { OBJ_HIDE = hid; }
+      const rep = sel.map(e => { const w = deep(e); delete w.userAdded; w.grp = RE.gid; w.blk = RE.name; w.bm = RE.bm; if(RE.bip) w.bip = RE.bip; return [e, w]; });
+      if(rep.length){ A.commit({ rep }, 'REFSET: thêm ' + rep.length + ' đối tượng'); if(OBJ_HIDE) for(const [, w] of rep) OBJ_HIDE.delete(w); }
+      log('REFSET: thêm ' + rep.length + ' đối tượng vào khối "' + RE.name + '".'); try{ draw(); }catch(_){} return; }
+    const s = await A.getSel('Chọn đối tượng bớt ra khỏi khối', { filter: e => e.grp === RE.gid, pre: false }); const sel = (s.sel || []).filter(e => e.grp === RE.gid && !e.att);
+    const rep = sel.map(e => { const w = deep(e); delete w.userAdded; delete w.grp; delete w.blk; delete w.bm; delete w.bip; delete w.l0; return [e, w]; });
+    if(rep.length){ A.commit({ rep }, 'REFSET: bớt ' + rep.length + ' đối tượng'); if(OBJ_HIDE) for(const [, w] of rep) OBJ_HIDE.add(w); }
+    log('REFSET: bớt ' + rep.length + ' đối tượng khỏi khối "' + RE.name + '" (thành đối tượng thường).'); try{ draw(); }catch(_){}
+  });
+  const R0Hide = () => (RE && RE.hide0) || null;
   plain(['REFCLOSE', 'BCLOSE'], 'Kết thúc sửa khối (lưu / huỷ)', () => { if(!RE){ log('Không có khối nào đang sửa.'); return; } if(A.busy()) A.cancel(true); const ok = confirm('Lưu thay đổi cho mọi khối "' + RE.name + '"?\nOK = Lưu · Cancel = Huỷ thay đổi'); endRefedit(ok); });
   const _onLoadRE = A.onLoad; A.onLoad = function(){ if(RE){ RE = null; if(reBar){ reBar.remove(); reBar = null; } } if(_onLoadRE) _onLoadRE.apply(this, arguments); };
 
   /* =====================================================================
      4) TABLE — bảng
      ===================================================================== */
+  /* bảng theo kiểu bảng (TABLESTYLE, như AutoCAD): kiểu ô Title / Header / Data (+ kiểu ô riêng) — chữ, lề, căn, nền, định dạng, đường viền */
+  const TB_AL = { TL: ['left', 'top'], TC: ['center', 'top'], TR: ['right', 'top'], ML: ['left', 'middle'], MC: ['center', 'middle'], MR: ['right', 'middle'], BL: ['left', 'bottom'], BC: ['center', 'bottom'], BR: ['right', 'bottom'] };
+  const tblRowKind = (T, r) => (T.rs && T.rs[r]) || (T.title && r === 0 ? 'Title' : T.head && r === (T.title ? 1 : 0) ? 'Header' : 'Data');
+  A.tblRowKind = tblRowKind;
+  // định dạng ô (Table Cell Format): chung, số thập phân, phần trăm, tiền tệ, số nguyên, văn bản
+  A.tblFmt = function(v, f){ const s = String(v == null ? '' : v); if(!f || !f.t || f.t === 'gen' || f.t === 'text') return s; const n = parseFloat(s.replace(/\s/g, '').replace(',', '.')); if(!s.trim() || !isFinite(n) || !/^[\s+\-]?[\d\s]*[.,]?\d*\s*%?$/.test(s)) return s;
+    const p = Math.max(0, Math.min(8, f.p == null ? 2 : f.p | 0)), th = x => { const [i, d] = x.split('.'); return (f.sep ? i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : i) + (d ? '.' + d : ''); };
+    if(f.t === 'dec') return th(n.toFixed(p)); if(f.t === 'whole') return th(Math.round(n).toFixed(0));
+    if(f.t === 'pct') return th((/%/.test(s) ? n : n * 100).toFixed(p)) + '%';
+    if(f.t === 'cur'){ const sym = f.sym == null ? '$' : f.sym; return f.symEnd ? th(n.toFixed(p)) + ' ' + sym : sym + th(n.toFixed(p)); }
+    return s; };
+  function tblLay(T){
+    const S = T.tss; let CS = S.cells || {};
+    const rot = (T.rot || 0) * D2R, co = Math.cos(rot), si = Math.sin(rot);
+    const P = (x, y) => ({ x: T.o.x + x * co - y * si, y: T.o.y + x * si + y * co });
+    const nR = T.rh.length, nC = T.cw.length, up = S.dir === 'up';
+    const keyOf = (r, c) => { const k = (T.cs && T.cs[r + ',' + c]) || tblRowKind(T, r); return CS[k] ? k : (CS.Data ? 'Data' : Object.keys(CS)[0]); };
+    const sc = T.tsf > 0 ? T.tsf : 1, CS0 = CS; CS = {}; for(const k in CS0){ const s0 = CS0[k]; CS[k] = Object.assign({}, s0, { th: (s0.th > 0 ? s0.th : 2.5) * sc, hm: (s0.hm >= 0 ? s0.hm : 1) * sc, vm: (s0.vm >= 0 ? s0.vm : 1) * sc }); }   // bảng đã SCALE: nhân cao chữ, lề
+    const merged = r => { const s = CS[tblRowKind(T, r)]; return !!(s && s.merge); };
+    const cellAt = (r, c) => { const m = merged(r); const c0 = m ? 0 : c; const k = keyOf(r, c0); return { r, c0, c1: m ? nC : c + 1, k, s: CS[k] }; };
+    const txtOf = (r, c) => ((T.cells[r] || [])[c] == null ? '' : String(T.cells[r][c]));
+    // khối trong ô (TINSERT): T.cb['r,c'] = { name, src, sc, rot, fit, al }
+    const bcache = new Map();
+    const blkOf = (r, c) => { const b = T.cb && T.cb[r + ',' + c]; if(!b || !A.instBlock) return null; const key = b.name + '|' + (b.src || '') + '|' + (b.rot || 0); let v = bcache.get(key);
+      if(!v){ let ents = []; try{ ents = A.instBlock(b.name, b.src || 'lib', { x: 0, y: 0 }, 1, b.rot || 0) || []; }catch(_){} let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for(const e of ents){ const q = entBBox(e); if(!q) continue; x0 = Math.min(x0, q.x0); y0 = Math.min(y0, q.y0); x1 = Math.max(x1, q.x1); y1 = Math.max(y1, q.y1); }
+        v = { ents, bb: isFinite(x0) ? { x0, y0, x1, y1 } : null }; bcache.set(key, v); } return v.bb ? { b, ents: v.ents, bb: v.bb } : null; };
+    const rh = T.rh.map((h, r) => { let need = 0; for(let c = 0; c < nC; c++){ const C = cellAt(r, c); if(C.c0 !== c) continue; const n = Math.max(1, txtOf(r, c).split('\n').length); need = Math.max(need, n * C.s.th * 4 / 3 + 2 * C.s.vm); const K = blkOf(r, c); if(K && !K.b.fit) need = Math.max(need, (K.bb.y1 - K.bb.y0) * (K.b.sc || 1) * sc + 2 * C.s.vm); if(merged(r)) break; } return Math.max(h, need); });
+    const xs = [0]; for(let c = 0; c < nC; c++) xs.push(xs[c] + T.cw[c]);
+    const ys = [0]; for(let r = 0; r < nR; r++) ys.push(up ? ys[r] + rh[r] : ys[r] - rh[r]);
+    return { S, CS, P, nR, nC, up, merged, cellAt, txtOf, xs, ys, W: xs[nC], sc, blkOf };
+  }
+  // ô (hàng, cột) chứa điểm p của bảng — dùng cho MATCHCELL, chọn ô
+  A.tblCellAt = function(T, p){ const rot = (T.rot || 0) * D2R, co = Math.cos(rot), si = Math.sin(rot), dx = p.x - T.o.x, dy = p.y - T.o.y; const x = dx * co + dy * si, y = -dx * si + dy * co;
+    let xs, ys, nR = T.rh.length, nC = T.cw.length, mg = r => T.title && r === 0;
+    if(T.tss && T.tss.cells){ const L = tblLay(T); xs = L.xs; ys = L.ys; mg = L.merged; } else { xs = [0]; for(let c = 0; c < nC; c++) xs.push(xs[c] + T.cw[c]); ys = [0]; for(let r = 0; r < nR; r++) ys.push(ys[r] - T.rh[r]); }
+    if(x < 0 || x > xs[nC]) return null; let r = -1; for(let i = 0; i < nR; i++){ const a = Math.min(ys[i], ys[i + 1]), b = Math.max(ys[i], ys[i + 1]); if(y >= a && y <= b){ r = i; break; } } if(r < 0) return null;
+    let c = 0; while(c < nC - 1 && x > xs[c + 1]) c++; if(mg(r)) c = 0; return { r, c }; };
+  function tblStyled(T){
+    const { S, CS, P, nR, nC, up, merged, cellAt, txtOf, xs, ys, W, sc, blkOf } = tblLay(T); const out = [], fills = [], texts = [];
+    // nền ô
+    { let prev = [];   // gộp các ô liền nhau cùng màu nền thành một mảng (không lộ đường biên giữa các ô)
+      const flush = R => { for(const q of R) fills.push({ type: 'HATCH', solid: true, loops: [[P(xs[q.c0], ys[q.r0]), P(xs[q.c1], ys[q.r0]), P(xs[q.c1], ys[q.r1]), P(xs[q.c0], ys[q.r1])]], _col: q.f }); };
+      for(let r = 0; r < nR; r++){ const runs = []; for(let c = 0; c < nC; ){ const C = cellAt(r, c); const f = C.s.fill || ''; const L = runs[runs.length - 1]; if(f && L && L.f === f && L.c1 === C.c0) L.c1 = C.c1; else if(f) runs.push({ c0: C.c0, c1: C.c1, f, r0: r, r1: r + 1 }); c = C.c1; }
+        const next = []; for(const q of runs){ const i = prev.findIndex(o => o.c0 === q.c0 && o.c1 === q.c1 && o.f === q.f); if(i >= 0){ const o = prev.splice(i, 1)[0]; o.r1 = r + 1; next.push(o); } else next.push(q); }
+        flush(prev); prev = next; }
+      flush(prev); }
+    // đường viền: cạnh trong (cùng kiểu ô) / cạnh ngoài (giáp kiểu khác hoặc mép bảng)
+    const E = (s, k) => { const b = s && s.bd && s.bd[k]; return b && b.on ? b : null; };
+    const pk = b => b ? (b.col || '') + '|' + (b.lw == null ? '' : b.lw) + '|' + (b.lt || '') + '|' + (b.dbl ? b.sp || 1.125 : '') : '';
+    const seg1 = (a, b, bd) => { const p = P(a[0], a[1]), q = P(b[0], b[1]); const e = { type: 'LINE', x1: p.x, y1: p.y, x2: q.x, y2: q.y }; if(bd.col) e._col = bd.col; if(bd.lw != null && bd.lw !== '') e._lw = bd.lw; if(bd.lt) e._lt = bd.lt; out.push(e); };
+    // đường viền đôi: hai nét song song cách nhau "Khoảng cách"
+    const seg = (a, b, bd) => { if(!bd.dbl) return seg1(a, b, bd); const h = (bd.sp > 0 ? bd.sp : 1.125) * sc / 2, hor = Math.abs(a[1] - b[1]) < 1e-12; const dx = hor ? 0 : h, dy = hor ? h : 0;
+      seg1([a[0] - dx, a[1] - dy], [b[0] - dx, b[1] - dy], bd); seg1([a[0] + dx, a[1] + dy], [b[0] + dx, b[1] + dy], bd); };
+    for(let b = 0; b <= nR; b++){ const y = ys[b]; let run = null;
+      for(let c = 0; c <= nC; c++){ let bd = null;
+        if(c < nC){ const A1 = b > 0 ? cellAt(b - 1, c) : null, B1 = b < nR ? cellAt(b, c) : null; const hi = up ? B1 : A1, lo = up ? A1 : B1;
+          if(hi && lo) bd = hi.k === lo.k ? E(hi.s, 'h') : (E(hi.s, 'b') || E(lo.s, 't')); else if(lo) bd = E(lo.s, 't'); else if(hi) bd = E(hi.s, 'b'); }
+        const k = pk(bd); if(run && run.k !== k){ if(run.bd) seg([xs[run.c], y], [xs[c], y], run.bd); run = null; } if(!run) run = { c, k, bd }; } }
+    for(let k = 0; k <= nC; k++){ let run = null;
+      for(let r = 0; r <= nR; r++){ let bd = null;
+        if(r < nR && !(merged(r) && k > 0 && k < nC)){ const L = k > 0 ? cellAt(r, k - 1) : null, R = k < nC ? cellAt(r, k) : null;
+          if(L && R) bd = L.k === R.k ? E(L.s, 'v') : (E(L.s, 'r') || E(R.s, 'l')); else if(R) bd = E(R.s, 'l'); else if(L) bd = E(L.s, 'r'); }
+        const kk = pk(bd); if(run && run.k !== kk){ if(run.bd) seg([xs[k], ys[run.r]], [xs[k], ys[r]], run.bd); run = null; } if(!run) run = { r, k: kk, bd }; } }
+    // chữ trong ô
+    for(let r = 0; r < nR; r++){ const top = up ? ys[r + 1] : ys[r], bot = up ? ys[r] : ys[r + 1];
+      for(let c = 0; c < nC; ){ const C = cellAt(r, c), s = C.s; c = C.c1; const raw = txtOf(r, C.c0); if(!raw) continue; const txt = A.tblFmt(raw, s.fmt); const [ha, va] = TB_AL[s.al] || TB_AL.MC;
+        const x0 = xs[C.c0], x1 = xs[C.c1], tx = ha === 'left' ? x0 + s.hm : ha === 'right' ? x1 - s.hm : (x0 + x1) / 2, ty = va === 'top' ? top - s.vm : va === 'bottom' ? bot + s.vm : (top + bot) / 2;
+        const m = P(tx, ty), e = { type: 'TEXT', x: m.x, y: m.y, h: s.th, rot: (T.rot || 0) + (s.ang || 0), text: txt, ha, va };
+        const st = A.TS && A.TS.list && A.TS.list[s.ts || 'Standard']; if(st){ e.style = s.ts || 'Standard'; e.ff = st.font; if(st.wf && Math.abs(st.wf - 1) > 1e-3) e.xs = st.wf; } else if(T.ff) e.ff = T.ff;
+        if(s.col) e._col = s.col; texts.push(e); } }
+    // khối trong ô: tự khớp hoặc theo tỉ lệ, căn theo kiểu ô; giữ màu / lớp riêng của khối
+    const blks = []; const ro = T.rot || 0;
+    for(let r = 0; r < nR; r++){ const top = up ? ys[r + 1] : ys[r], bot = up ? ys[r] : ys[r + 1];
+      for(let c = 0; c < nC; ){ const C = cellAt(r, c), s = C.s; c = C.c1; const K = blkOf(r, C.c0); if(!K) continue; const b = K.b, bb = K.bb, bw = Math.max(1e-9, bb.x1 - bb.x0), bh = Math.max(1e-9, bb.y1 - bb.y0);
+        const x0 = xs[C.c0], x1 = xs[C.c1]; const k = b.fit ? Math.max(1e-9, Math.min((x1 - x0 - 2 * s.hm) / bw, (top - bot - 2 * s.vm) / bh)) : (b.sc || 1) * sc; const [ha, va] = TB_AL[b.al || s.al] || TB_AL.MC;
+        const tx = ha === 'left' ? x0 + s.hm - bb.x0 * k : ha === 'right' ? x1 - s.hm - bb.x1 * k : (x0 + x1) / 2 - (bb.x0 + bb.x1) / 2 * k, ty = va === 'top' ? top - s.vm - bb.y1 * k : va === 'bottom' ? bot + s.vm - bb.y0 * k : (top + bot) / 2 - (bb.y0 + bb.y1) / 2 * k;
+        for(const e0 of K.ents){ const e = JSON.parse(JSON.stringify(e0)); for(const f of ['grp', 'blk', 'bm', 'bip', 'att', 'attp', 'userAdded', 'cid']) delete e[f]; if(k !== 1) scaleEnt(e, k, { x: 0, y: 0 }); translateEnt(e, tx, ty); if(ro) rotateEnt(e, ro, { x: 0, y: 0 }); translateEnt(e, T.o.x, T.o.y); e._keep = 1; blks.push(e); } } }
+    if(!out.length && !texts.length && !blks.length){ const H = ys[nR]; out.push({ type: 'POLYLINE', vertices: [P(0, 0), P(W, 0), P(W, H), P(0, H)], closed: true }); }   // bảng không viền, không chữ vẫn cần một đối tượng để chọn
+    return fills.concat(out, texts, blks);
+  }
   function tblBuild(T){
+    if(T && T.tss && T.tss.cells) return tblStyled(T);
     const out = []; const rot = (T.rot || 0) * D2R, co = Math.cos(rot), si = Math.sin(rot);
     const P = (x, y) => ({ x: T.o.x + x * co - y * si, y: T.o.y + x * si + y * co });   // x sang phải, y xuống dưới là âm
     const W = T.cw.reduce((a, b) => a + b, 0), H = T.rh.reduce((a, b) => a + b, 0);
@@ -210,8 +309,17 @@
   }
   A.tblRegenFrom = function(w){
     const T = w.tbld; const ents = tblBuild(T);
-    return ents.map((e, i) => { e.layer = w.layer || '0'; if(w.bl){ e.bl = 1; e.col = A.layerHex(e.layer); } else e.col = w.col; e.grp = w.grp; e.blk = '*TABLE'; if(i === 0) e.tbld = deep(T); return e; });
+    let ci = ents.findIndex(e => e.type !== 'HATCH' && !e._keep); if(ci < 0) ci = ents.findIndex(e => e.type !== 'HATCH'); if(ci < 0) ci = 0;   // mang dữ liệu bảng: đối tượng đầu không phải nền ô
+    return ents.map((e, i) => { const ol = e.layer; e.layer = w.layer || '0';
+      const c = e._col, lw = e._lw, lt = e._lt, keep = e._keep; delete e._col; delete e._lw; delete e._lt; delete e._keep;
+      // nét của khối trong ô (TINSERT) giữ màu / lớp riêng; nét trên lớp 0 của khối theo lớp của bảng
+      if(keep){ if(e.l0){ if(e.bl) e.col = A.layerHex(e.layer); } else if(ol) e.layer = ol; e.grp = w.grp; e.blk = '*TABLE'; if(i === ci) e.tbld = deep(T); return e; }
+      if(c === 'BYLAYER'){ e.bl = 1; e.col = A.layerHex(e.layer); } else if(c){ e.col = c; } else if(w.bl){ e.bl = 1; e.col = A.layerHex(e.layer); } else e.col = w.col;
+      if(lw === -1 || lw === '-1'){ /* ByLayer */ } else if(lw != null && +lw > 0) e.lw = +lw; else if(lw == null && w.lw > 0) e.lw = w.lw;
+      if(lt && lt !== 'BYLAYER') e.lt = lt; else if(!lt && w.lt && e.type === 'LINE') e.lt = w.lt;
+      e.grp = w.grp; e.blk = '*TABLE'; if(i === ci) e.tbld = deep(T); return e; });
   };
+  A.tblBuild = T => tblBuild(T);
   function tblFromTSV(tsv){ const rows = String(tsv || '').replace(/\r/g, '').split('\n'); while(rows.length && !rows[rows.length - 1].trim()) rows.pop(); return rows.map(r => r.split('\t')); }
   function newTableDef(o){
     const nr = Math.max(1, o.rows | 0), nc = Math.max(1, o.cols | 0);
@@ -224,24 +332,28 @@
       ok: () => { pull(); onOk(cur); } });
     const root = d.root, tb = root.querySelector('#tbT');
     root.querySelector('#tbTh').value = +(+cur.th).toPrecision(4); root.querySelector('#tbTitle').checked = !!cur.title;
-    function pull(){ tb.querySelectorAll('td div[data-r]').forEach(div => { const r = +div.dataset.r, c = +div.dataset.c; cur.cells[r][c] = div.innerText.replace(/\n+$/, ''); }); tb.querySelectorAll('input[data-w]').forEach(i => { const v = parseFloat(String(i.value).replace(',', '.')); if(v > 0) cur.cw[+i.dataset.w] = v; }); const th = parseFloat(String(root.querySelector('#tbTh').value).replace(',', '.')); if(th > 0) cur.th = th; cur.title = root.querySelector('#tbTitle').checked; }
+    const styled = !!(cur.tss && cur.tss.cells); if(styled){ root.querySelector('#tbTh').closest('label').style.display = 'none'; root.querySelector('#tbTitle').closest('label').style.display = 'none'; if(!cur.rs) cur.rs = cur.cells.map((_, r) => A.tblRowKind(cur, r)); }
+    const csName = k => k === 'Title' ? 'Tiêu đề' : k === 'Header' ? 'Tên cột' : k === 'Data' ? 'Dữ liệu' : k;
+    const rsSel = r => styled ? ' <select data-rs="' + r + '" title="Kiểu ô của hàng" style="height:20px;font-size:11px;max-width:86px">' + Object.keys(cur.tss.cells).map(k => '<option value="' + esc(k) + '"' + (k === cur.rs[r] ? ' selected' : '') + '>' + esc(csName(k)) + '</option>').join('') + '</select>' : '';
+    function pull(){ tb.querySelectorAll('td div[data-r]').forEach(div => { const r = +div.dataset.r, c = +div.dataset.c; cur.cells[r][c] = div.innerText.replace(/\n+$/, ''); }); tb.querySelectorAll('input[data-w]').forEach(i => { const v = parseFloat(String(i.value).replace(',', '.')); if(v > 0) cur.cw[+i.dataset.w] = v; }); if(styled){ tb.querySelectorAll('select[data-rs]').forEach(sl => { cur.rs[+sl.dataset.rs] = sl.value; }); cur.title = cur.rs[0] === 'Title'; return; } const th = parseFloat(String(root.querySelector('#tbTh').value).replace(',', '.')); if(th > 0) cur.th = th; cur.title = root.querySelector('#tbTitle').checked; }
     function render(){
       let h = '<tr><th class="rh"></th>' + cur.cw.map((w, c) => '<th>' + String.fromCharCode(65 + (c % 26)) + ' <input data-w="' + c + '" value="' + (+w.toPrecision(5)) + '" style="width:56px;height:20px;font-size:11px;padding:0 3px"></th>').join('') + '</tr>';
-      for(let r = 0; r < cur.cells.length; r++){ h += '<tr class="' + (cur.title && r === 0 ? 'title' : '') + '"><th class="rh">' + (r + 1) + '</th>' + cur.cells[r].map((v, c) => '<td' + (cur.title && r === 0 && c > 0 ? ' style="opacity:.35"' : '') + '><div contenteditable="true" data-r="' + r + '" data-c="' + c + '">' + esc(v) + '</div></td>').join('') + '</tr>'; }
+      for(let r = 0; r < cur.cells.length; r++){ const mg = styled ? !!(cur.tss.cells[cur.rs[r]] || {}).merge : (cur.title && r === 0); h += '<tr class="' + (mg ? 'title' : '') + '"><th class="rh">' + (r + 1) + rsSel(r) + '</th>' + cur.cells[r].map((v, c) => '<td' + (mg && c > 0 ? ' style="opacity:.35"' : '') + '><div contenteditable="true" data-r="' + r + '" data-c="' + c + '">' + esc(v) + '</div></td>').join('') + '</tr>'; }
       tb.innerHTML = h;
     }
     render();
     root.querySelector('.tb-bar').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if(!b) return; pull(); const a = b.dataset.a;
-      if(a === 'ar'){ cur.cells.push(Array(cur.cw.length).fill('')); cur.rh.push(cur.rh[cur.rh.length - 1] || cur.th * 2.2); }
-      if(a === 'dr' && cur.cells.length > 1){ cur.cells.pop(); cur.rh.pop(); }
+      if(a === 'ar'){ cur.cells.push(Array(cur.cw.length).fill('')); cur.rh.push(cur.rh[cur.rh.length - 1] || cur.th * 2.2); if(cur.rs) cur.rs.push(cur.tss && cur.tss.cells.Data ? 'Data' : cur.rs[cur.rs.length - 1]); }
+      if(a === 'dr' && cur.cells.length > 1){ cur.cells.pop(); cur.rh.pop(); if(cur.rs) cur.rs.pop(); }
       if(a === 'ac'){ cur.cw.push(cur.cw[cur.cw.length - 1] || cur.th * 10); cur.cells.forEach(r => r.push('')); }
       if(a === 'dc' && cur.cw.length > 1){ cur.cw.pop(); cur.cells.forEach(r => r.pop()); }
       render(); });
     root.querySelector('#tbTitle').addEventListener('change', () => { pull(); render(); });
+    tb.addEventListener('change', e => { if(e.target.matches('select[data-rs]')){ pull(); render(); } });
     tb.addEventListener('keydown', e => e.stopPropagation());
     tb.addEventListener('paste', e => { const div = e.target.closest('div[data-r]'); if(!div) return; const t = (e.clipboardData || window.clipboardData).getData('text'); if(!t || (!t.includes('\t') && !t.includes('\n'))) return; e.preventDefault(); pull();
       const data = tblFromTSV(t), r0 = +div.dataset.r, c0 = +div.dataset.c;
-      while(cur.cells.length < r0 + data.length){ cur.cells.push(Array(cur.cw.length).fill('')); cur.rh.push(cur.rh[cur.rh.length - 1]); }
+      while(cur.cells.length < r0 + data.length){ cur.cells.push(Array(cur.cw.length).fill('')); cur.rh.push(cur.rh[cur.rh.length - 1]); if(cur.rs) cur.rs.push('Data'); }
       const nc = Math.max(...data.map(r => r.length)); while(cur.cw.length < c0 + nc){ cur.cw.push(cur.cw[cur.cw.length - 1]); cur.cells.forEach(r => r.push('')); }
       data.forEach((row, i) => row.forEach((v, j) => { cur.cells[r0 + i][c0 + j] = v.trim(); })); render(); });
     return d;

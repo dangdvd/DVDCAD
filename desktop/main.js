@@ -175,6 +175,56 @@ ipcMain.handle('fs:write', async (_e, p, data) => {
   if(CAD_EXT.test(p)) addRecent(p);
   return true;
 });
+// tệp ảnh đi kèm bản vẽ (IMAGE / IMAGEDEF của AutoCAD trỏ tới ".\\ten.jpg"): chỉ trong thư mục của bản vẽ đã được cấp quyền, chỉ đuôi ảnh
+const IMG_EXT = /\.(png|jpe?g|bmp|gif|tiff?|webp)$/i;
+function sidePaths(cad, rel){
+  const dir = path.dirname(norm(cad)), r = String(rel || '').replace(/\\/g, '/'), out = [];
+  if(!path.isAbsolute(r) && !/^[a-z]:/i.test(r)){ const p = path.resolve(dir, r); if(p.startsWith(dir + path.sep)) out.push(p); }   // đường dẫn tương đối nằm trong thư mục bản vẽ
+  out.push(path.join(dir, path.basename(r)));   // như AutoCAD: không thấy thì tìm cùng tên trong thư mục bản vẽ
+  return [...new Set(out)].filter(p => IMG_EXT.test(p));
+}
+ipcMain.handle('fs:readSide', async (_e, cad, rel) => {
+  if(!canRead.has(key(cad))) throw new Error('Không có quyền đọc file này.');
+  for(const p of sidePaths(cad, rel)){ try{ const buf = await fs.promises.readFile(p); return { name: path.basename(p), data: new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength) }; }catch(_){} }
+  return null;
+});
+ipcMain.handle('fs:writeSide', async (_e, cad, name, data) => {
+  if(!canWrite.has(key(cad))) throw new Error('Không có quyền ghi file này.');
+  const n = String(name || ''); if(!n || n !== path.basename(n) || n.includes('..') || !IMG_EXT.test(n)) throw new Error('Tên tệp ảnh không hợp lệ: ' + n);
+  const p = path.join(path.dirname(norm(cad)), n), tmp = p + '.dvdtmp';
+  try{ await fs.promises.writeFile(tmp, Buffer.from(data)); await fs.promises.rename(tmp, p); }catch(e){ fs.promises.unlink(tmp).catch(() => {}); throw e; }
+  return p;
+});
+// phông của hệ thống cho PDF vector (chữ nhúng phông như DWG To PDF): chỉ đọc tệp .ttf / .otf / .ttc trong thư mục phông, tìm theo tên họ phông
+const FONT_DIRS = () => process.platform === 'win32' ? [path.join(process.env.WINDIR || 'C:\\Windows', 'Fonts'), path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'Windows', 'Fonts')]
+  : process.platform === 'darwin' ? ['/System/Library/Fonts', '/Library/Fonts', path.join(app.getPath('home'), 'Library', 'Fonts')]
+  : ['/usr/share/fonts', '/usr/local/share/fonts', path.join(app.getPath('home'), '.fonts'), path.join(app.getPath('home'), '.local', 'share', 'fonts')];
+let fontIdx = null;
+async function fontNames(file){   // [{ face, fam, sub }] từ bảng name (ID 16/17 hoặc 1/2) — chỉ đọc phần đầu tệp và bảng name
+  const fh = await fs.promises.open(file, 'r'); const out = [];
+  try{ const rd = async (pos, n) => { const b = Buffer.alloc(n); const { bytesRead } = await fh.read(b, 0, n, pos); return b.subarray(0, bytesRead); };
+    const h = await rd(0, 12); let offs = [0]; if(h.toString('latin1', 0, 4) === 'ttcf'){ const n = Math.min(h.readUInt32BE(8), 32); const t = await rd(12, 4 * n); offs = []; for(let i = 0; i < n; i++) offs.push(t.readUInt32BE(4 * i)); }
+    for(let face = 0; face < offs.length; face++){ const d = await rd(offs[face], 12); if(d.length < 12) continue; const nt = d.readUInt16BE(4); const dir = await rd(offs[face] + 12, 16 * nt); let no = -1, nl = 0;
+      for(let i = 0; i < nt; i++) if(dir.toString('latin1', 16 * i, 16 * i + 4) === 'name'){ no = dir.readUInt32BE(16 * i + 8); nl = dir.readUInt32BE(16 * i + 12); }
+      if(no < 0 || nl > 4e6) continue; const t = await rd(no, nl), cnt = t.readUInt16BE(2), so = t.readUInt16BE(4), N = {};
+      for(let i = 0; i < cnt; i++){ const r = 6 + 12 * i, pid = t.readUInt16BE(r), lang = t.readUInt16BE(r + 4), id = t.readUInt16BE(r + 6), L = t.readUInt16BE(r + 8), o = so + t.readUInt16BE(r + 10);
+        if(![1, 2, 16, 17].includes(id) || o + L > t.length) continue; let v = ''; if(pid === 3 || pid === 0){ for(let k = 0; k + 1 < L; k += 2) v += String.fromCharCode(t.readUInt16BE(o + k)); } else v = t.toString('latin1', o, o + L);
+        if(!N[id] || (pid === 3 && (lang & 0x3FF) === 9)) N[id] = v; }
+      const fam = N[16] || N[1], sub = N[17] || N[2] || ''; if(fam) out.push({ face, fam: fam.toLowerCase(), alt: (N[1] || '').toLowerCase(), sub: sub.toLowerCase() }); } }
+  finally{ await fh.close(); }
+  return out;
+}
+async function buildFontIdx(){ const idx = []; const walk = async (d, depth) => { let L = []; try{ L = await fs.promises.readdir(d, { withFileTypes: true }); }catch(_){ return; }
+    for(const e of L){ const p = path.join(d, e.name); if(e.isDirectory()){ if(depth < 4) await walk(p, depth + 1); continue; } if(!/\.(ttf|otf|ttc)$/i.test(e.name)) continue;
+      try{ for(const n of await fontNames(p)) idx.push(Object.assign({ file: p }, n)); }catch(_){} } };
+  for(const d of FONT_DIRS()) await walk(d, 0); return idx; }
+ipcMain.handle('font:find', async (_e, fam, bold, italic) => {
+  if(!fontIdx) fontIdx = buildFontIdx(); const idx = await fontIdx; const f = String(fam || '').toLowerCase().trim(); if(!f) return null;
+  const C = idx.filter(x => x.fam === f || x.alt === f); if(!C.length) return null;
+  const score = x => { const b = /bold|black|heavy|semibold|demibold/.test(x.sub), i = /italic|oblique/.test(x.sub); return (b === !!bold ? 2 : 0) + (i === !!italic ? 2 : 0) + (/^(regular|normal|book|roman|bold|italic|bold italic)$/.test(x.sub) ? 1 : 0); };
+  const best = C.sort((a, b) => score(b) - score(a))[0]; const buf = await fs.promises.readFile(best.file);
+  return { data: new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength), face: best.face, file: path.basename(best.file) };
+});
 ipcMain.handle('fs:dropped', (_e, list) => { const ok = []; for(const p of [].concat(list || [])) if(p && CAD_EXT.test(p)){ grantRead(p); addRecent(p); ok.push(norm(p)); } return ok; });
 
 // stat bất đồng bộ, có hạn giờ: ổ mạng / USB đã rút không làm treo trang Bắt đầu
@@ -206,7 +256,7 @@ ipcMain.handle('dwg:odaPick', async () => {
   const pr = readJSON('prefs.json', {}); pr.odaPath = r.filePaths[0]; writeJSON('prefs.json', pr); return { path: r.filePaths[0] };
 });
 ipcMain.handle('dwg:convert', async (_e, dxf, ver) => {
-  const oda = findODA(); if(!oda) return { error: 'Chưa có ODA File Converter trên máy — cài bản miễn phí (opendesign.com) hoặc chọn trong DWGSERVER.' };
+  const oda = findODA(); if(!oda) return { error: 'Chưa có ODA File Converter trên máy (miễn phí: DWGSERVER → Tải ODA File Converter)' };
   const V = /^ACAD(2000|2004|2007|2010|2013|2018)$/.test(String(ver)) ? String(ver) : 'ACAD2018';
   const work = await fs.promises.mkdtemp(path.join(app.getPath('temp'), 'dvdcad-dwg-'));
   try{
@@ -221,6 +271,29 @@ ipcMain.handle('dwg:convert', async (_e, dxf, ver) => {
     return { data: new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength) };
   }catch(e){ return { error: 'ODA File Converter lỗi: ' + (e && e.message || e) }; }
   finally{ fs.promises.rm(work, { recursive: true, force: true }).catch(() => {}); }
+});
+
+/* ---------------- máy in Windows (danh sách Printer/plotter như AutoCAD) ---------------- */
+ipcMain.handle('print:list', async e => {
+  try{ const l = await e.sender.getPrintersAsync(); return l.map(p => ({ name: p.name, display: p.displayName || p.name, isDefault: !!p.isDefault, desc: p.description || '' })); }
+  catch(_){ return []; }
+});
+// in trang SVG vector thẳng ra máy in đã chọn (như OK trong hộp Plot của AutoCAD — không qua hộp in của Windows):
+// khổ giấy đúng mm, không lề trang (lề đã nằm trong bản vẽ), số bản. deviceName rỗng + silent = máy in mặc định.
+ipcMain.handle('print:svg', async (_e, o = {}) => {
+  const html = String(o.html || ''), W = +o.wmm || 297, H = +o.hmm || 210; if(!html) return { ok: false, error: 'trang in trống' };
+  const tmp = path.join(app.getPath('temp'), 'dvdcad-in-' + process.pid + '-' + Date.now() + '.html');
+  await fs.promises.writeFile(tmp, html, 'utf8');
+  const w = new BrowserWindow({ show: false, webPreferences: { javascript: false, sandbox: true, contextIsolation: true } });
+  try{
+    await w.loadFile(tmp);
+    const land = W > H, opt = { silent: o.silent !== false, printBackground: true, deviceName: String(o.deviceName || ''), copies: Math.max(1, Math.min(999, Math.round(+o.copies || 1))),
+      margins: { marginType: 'none' }, landscape: land, pageSize: { width: Math.round(Math.min(W, H) * 1000), height: Math.round(Math.max(W, H) * 1000) },
+      color: o.color !== false, collate: o.collate !== false, duplexMode: ['simplex', 'longEdge', 'shortEdge'].includes(o.duplex) ? o.duplex : 'simplex' };
+    if(+o.dpi > 0) opt.dpi = { horizontal: +o.dpi, vertical: +o.dpi };   // Thuộc tính… của máy in trong hộp PLOT
+    return await new Promise(res => w.webContents.print(opt, (ok, reason) => res({ ok: !!ok, error: ok ? '' : String(reason || '') })));
+  }catch(e){ return { ok: false, error: String(e && e.message || e) }; }
+  finally{ setTimeout(() => { try{ w.destroy(); }catch(_){} fs.promises.rm(tmp, { force: true }).catch(() => {}); }, 1500); }
 });
 
 ipcMain.handle('shell:external', (_e, url) => { if(/^(https?:|mailto:)/i.test(String(url))) shell.openExternal(String(url)); return true; });

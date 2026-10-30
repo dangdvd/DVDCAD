@@ -44,20 +44,19 @@
   function syncAuto(){ window.DVD_AUTOCOMPLETE = !!IS.auto; try{ localStorage.setItem('dvd:autocomp', IS.auto ? '1' : '0'); }catch(_){} }
   if(window.DVD_AUTOCOMPLETE === false && IS.auto){ IS.auto = 0; saveIS(); }   // giữ đúng lựa chọn cũ của lệnh AUTOCOMPLETE
   plain(['INPUTSEARCHOPTIONS'], 'Cài đặt tìm kiếm khi gõ lệnh: tự hoàn thành, tự sửa lỗi gõ, đồng nghĩa, biến hệ thống, nội dung bản vẽ', () => {
-    const row = (k, t, sub) => '<label style="display:flex;gap:8px;align-items:flex-start;margin:6px 0;cursor:pointer"><input type="checkbox" data-k="' + k + '"' + (IS[k] ? ' checked' : '') + ' style="margin-top:2px"><span>' + esc(t) + (sub ? '<br><small style="opacity:.7">' + esc(sub) + '</small>' : '') + '</span></label>';
+    // bố cục như hộp Input Search Options của AutoCAD 2027
+    const K = A.acw; const ck = (k, t, tip) => '<label class="acw-ck"' + (tip ? ' title="' + esc(tip) + '"' : '') + '><input type="checkbox" data-k="' + k + '"' + (IS[k] ? ' checked' : '') + '><span>' + esc(t) + '</span></label>';
     const nAC = Object.keys(DVDCmd.autocorrect || {}).length;
-    A.dialog({ title: 'Cài đặt tìm kiếm khi gõ (INPUTSEARCHOPTIONS)', okText: 'OK', html:
-      row('auto', 'Bật tự hoàn thành (AutoComplete)', 'Hiện danh sách lệnh khớp ngay khi gõ, có biểu tượng') +
-      row('append', 'Tự nối chữ khi gõ (AutoAppend)', 'Hiện mờ phần còn lại của tên lệnh — phím → hoặc Tab để nhận') +
-      row('correct', 'Tự sửa lỗi gõ (AutoCorrect)', 'Gợi ý lệnh gần đúng khi gõ sai; sửa cùng một lỗi 3 lần thì lần sau tự chạy đúng lệnh') +
-      row('syn', 'Tìm theo từ đồng nghĩa', 'vd ROUND → FILLET, SYMBOL → INSERT, XOAY → ROTATE, CHUNHAT → RECTANG') +
-      row('mid', 'Tìm giữa chuỗi', 'gõ LINE thấy cả PLINE, XLINE, MLINE…') +
-      row('sysvar', 'Tìm biến hệ thống', 'gõ OSM thấy OSMODE kèm giá trị hiện tại') +
-      row('content', 'Tìm nội dung bản vẽ', 'Lớp (đặt hiện hành), khối (chèn), mẫu hatch (tô), kiểu chữ (đặt hiện hành)') +
-      row('freq', 'Xếp gợi ý theo lệnh hay dùng', 'Lệnh dùng nhiều hiện lên đầu danh sách') +
-      '<label class="dvd-frow"><span>Chờ trước khi gợi ý (mili giây)</span><span class="v"><input data-n="delay" type="number" min="0" max="5000" step="50" value="' + (IS.delay || 0) + '" style="width:90px"></span></label>' +
-      '<label class="dvd-frow"><span>Số dòng lời nhắc phía trên (CLIPROMPTLINES)</span><span class="v"><input data-n="lines" type="number" min="0" max="50" value="' + IS.lines + '" style="width:90px"></span></label>' +
-      '<p style="margin-top:8px"><button type="button" class="btn-ghost" id="isAC"' + (nAC ? '' : ' disabled') + '>Xoá danh sách tự sửa (' + nAC + ')</button></p>',
+    const G = (t, h) => K ? K.grp(t, h) : '<fieldset><legend>' + t + '</legend>' + h + '</fieldset>';
+    A.dialog({ title: 'Tuỳ chọn tìm kiếm khi nhập', cls: 'acw-free', help: 'INPUTSEARCHOPTIONS', okText: 'OK', html: '<div class="acw" style="width:460px">' +
+      ck('auto', 'Bật tự hoàn thành (AutoComplete)', 'Hiện danh sách lệnh khớp ngay khi gõ, có biểu tượng') +
+      G('Tự hoàn thành', ck('append', 'Tự nối gợi ý khi gõ', 'Hiện mờ phần còn lại của tên lệnh — phím → hoặc Tab để nhận') + '<br>' + ck('sysvar', 'Tìm biến hệ thống', 'gõ OSM thấy OSMODE kèm giá trị hiện tại') + '<br>' + ck('mid', 'Tìm giữa chuỗi', 'gõ LINE thấy cả PLINE, XLINE, MLINE…') + '<br>' + ck('freq', 'Xếp gợi ý theo lệnh hay dùng', 'Lệnh dùng nhiều hiện lên đầu danh sách') + '<br>' +
+        ck('content', 'Tìm nội dung bản vẽ', 'Lớp (đặt hiện hành), khối (chèn), mẫu hatch (tô), kiểu chữ (đặt hiện hành)') +
+        '<div style="margin:2px 0 4px 22px;color:#b4bdca">Loại nội dung: <label class="acw-ck dis"><input type="checkbox" checked disabled><span>Lớp</span></label><label class="acw-ck dis"><input type="checkbox" checked disabled><span>Khối</span></label><label class="acw-ck dis"><input type="checkbox" checked disabled><span>Mẫu hatch</span></label><label class="acw-ck dis"><input type="checkbox" checked disabled><span>Kiểu chữ</span></label></div>' +
+        '<label class="acw-row"><span class="l">Thời gian chờ:</span><input data-n="delay" type="number" min="0" max="5000" step="50" value="' + (IS.delay || 0) + '" style="width:80px"><span>mili giây</span></label>') +
+      ck('correct', 'Bật tự sửa lỗi gõ (AutoCorrect)', 'Gợi ý lệnh gần đúng khi gõ sai') + G('Tự sửa', '<div class="acw-row"><span class="l">Nhớ chỗ sửa sau 3 lần gõ sai</span><button type="button" class="acw-btn" id="isAC"' + (nAC ? '' : ' disabled') + '>Xoá danh sách tự sửa (' + nAC + ')</button></div>') +
+      ck('syn', 'Tìm theo từ đồng nghĩa', 'vd ROUND → FILLET, SYMBOL → INSERT, XOAY → ROTATE, CHUNHAT → RECTANG') +
+      '<label class="acw-row" style="margin-top:6px"><span class="l">Số dòng lời nhắc phía trên (CLIPROMPTLINES):</span><input data-n="lines" type="number" min="0" max="50" value="' + IS.lines + '" style="width:80px"></label></div>',
       onOpen: root => { root.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => e.stopPropagation()));
         root.querySelector('#isAC').onclick = ev => { const AC = DVDCmd.autocorrect || {}; for(const k of Object.keys(AC)) delete AC[k]; try{ localStorage.setItem('dvd:autocorrect', '{}'); }catch(_){} ev.target.disabled = true; ev.target.textContent = 'Đã xoá danh sách tự sửa'; }; },
       ok: root => { root.querySelectorAll('[data-k]').forEach(i => { IS[i.dataset.k] = i.checked ? 1 : 0; });
@@ -100,10 +99,10 @@
     const L = all || A.layerNames(), out = new Set(); for(const p of pats){ if(/[*?]/.test(p)){ const re = new RegExp('^' + p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i'); for(const n of L) if(re.test(n)) out.add(n); } else out.add(L.find(n => n.toUpperCase() === p.toUpperCase()) || p); } return [...out]; };
   const pickLayers = async (prompt, allowSel) => { const r = await A.getStr(prompt + (allowSel ? ' hoặc <chọn đối tượng>' : '')); if(r.str) return namesOf(r.str);
     if(!allowSel) return []; const s = await A.getSel('Chọn đối tượng'); return [...new Set((s.sel || []).map(e => e.layer || '0'))]; };
-  cmd(['-LAYER', '-LA'], 'Lớp bằng dòng lệnh (cho script / LISP): ? · Tạo · Hiện hành · Mới · Bật · Tắt · Màu · Kiểu nét · Bề rộng nét · Đóng băng · Rã băng · Khoá · Mở khoá', async () => {
+  cmd(['-LAYER', '-LA'], 'Lớp bằng dòng lệnh (cho script / LISP): ? · Tạo · Hiện hành · Mới · Bật · Tắt · Màu · Kiểu nét · Bề rộng nét · Trong suốt · Đóng băng · Rã băng · Khoá · Mở khoá', async () => {
     for(;;){
       log('Lớp hiện hành: "' + A.LS.cur + '"');
-      const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: '?', t: '?' }, { k: 'M', t: 'Tạo' }, { k: 'S', t: 'Hiện hành' }, { k: 'N', t: 'Mới' }, { k: 'ON', t: 'Bật' }, { k: 'OFF', t: 'Tắt' }, { k: 'C', t: 'Màu' }, { k: 'L', t: 'Kiểu nét' }, { k: 'LW', t: 'Bề rộng nét' }, { k: 'F', t: 'Đóng băng' }, { k: 'T', t: 'Rã băng' }, { k: 'LO', t: 'Khoá' }, { k: 'U', t: 'Mở khoá' }] });
+      const k = await A.getKw('Nhập tuỳ chọn', { kw: [{ k: '?', t: '?' }, { k: 'M', t: 'Tạo' }, { k: 'S', t: 'Hiện hành' }, { k: 'N', t: 'Mới' }, { k: 'ON', t: 'Bật' }, { k: 'OFF', t: 'Tắt' }, { k: 'C', t: 'Màu' }, { k: 'L', t: 'Kiểu nét' }, { k: 'LW', t: 'Bề rộng nét' }, { k: 'TR', t: 'Trong suốt' }, { k: 'F', t: 'Đóng băng' }, { k: 'T', t: 'Rã băng' }, { k: 'LO', t: 'Khoá' }, { k: 'U', t: 'Mở khoá' }] });
       if(k.none || !k.kw) return;
       const LS = A.LS;
       if(k.kw === '?'){ const r = await A.getStr('Nhập tên lớp cần liệt kê', { def: '*' }); const L = namesOf(r.str || '*'); for(const n of L) log(n + '  ' + (LS.off.has(n) ? 'Tắt' : 'Bật') + (LS.frozen.has(n) ? ' · Đóng băng' : '') + (LS.locked.has(n) ? ' · Khoá' : '') + '  màu ' + A.layerHex(n) + '  ' + A.layerLT(n)); continue; }
@@ -120,6 +119,8 @@
         const L = await pickLayers('Nhập danh sách lớp nhận kiểu nét "' + lt + '"', false); for(const n of (L.length ? L : [LS.cur])) A.setLayerLT(n, lt); if(A.onLayers) A.onLayers(); continue; }
       if(k.kw === 'LW'){ const r = await A.getNum('Nhập bề rộng nét (mm)'); if(r.num == null) continue; const lw = Math.round(Math.abs(r.num) * 100);
         const L = await pickLayers('Nhập danh sách lớp nhận bề rộng ' + (lw / 100).toFixed(2) + ' mm', false); for(const n of (L.length ? L : [LS.cur])) A.setLayerLW(n, lw); if(A.onLayers) A.onLayers(); continue; }
+      if(k.kw === 'TR' && A.setLayerTP){ const r = await A.getNum('Nhập giá trị độ trong suốt (0-90)', { def: 0 }); if(r.num == null) continue; const v = Math.round(r.num); if(!(v >= 0 && v <= 90)){ log('Độ trong suốt từ 0 đến 90.'); continue; }
+        const L = await pickLayers('Nhập danh sách lớp nhận độ trong suốt ' + v, false); for(const n of (L.length ? L : [LS.cur])) A.setLayerTP(n, v); if(A.onLayers) A.onLayers(); continue; }
     }
   });
   cmd(['-INSERT', '-I'], 'Chèn khối bằng dòng lệnh (cho script / LISP): tên, điểm chèn, tỉ lệ, góc xoay', async () => {

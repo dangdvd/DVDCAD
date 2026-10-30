@@ -159,6 +159,6 @@
   plain(['ADDINAPI'], 'Hướng dẫn viết add-in (JavaScript / AutoLISP)', () => { try{ window.open('./ADDIN-API.md', '_blank'); }catch(_){} });
 
   /* ---------------- Startup Suite ---------------- */
-  window.DVDAddins = { list, add: addFile, run, sourceOf, refreshRibbon, API, loaded };
+  window.DVDAddins = { list, save, add: addFile, run, sourceOf, refreshRibbon, API, loaded };
   setTimeout(async () => { refreshRibbon(); for(const it of list()) if(it.startup) await run(it); }, 0);
 })();

@@ -21,9 +21,11 @@
     const k = await A.getKw('FILL đang ' + (FILLMODE ? 'BẬT' : 'TẮT'), { kw: [{ k: 'ON', t: 'Bật' }, { k: 'OFF', t: 'Tắt' }], def: FILLMODE ? 'Tắt' : 'Bật' });
     const on = k.kw ? k.kw === 'ON' : !FILLMODE; FILLMODE = on; store('dvd:fill', on ? '1' : '0'); redraw(); log('FILL ' + (on ? 'BẬT.' : 'TẮT — hatch chỉ hiện đường biên.'));
   });
-  cmd(['ATTDISP'], 'Hiển thị thuộc tính khối: Bình thường / Tắt', async () => {
-    const k = await A.getKw('Thuộc tính khối đang ' + (ATTDISP === 'F' ? 'TẮT' : 'hiện'), { kw: [{ k: 'N', t: 'Bình thường' }, { k: 'F', t: 'Tắt' }], def: ATTDISP === 'F' ? 'Bình thường' : 'Tắt' });
-    ATTDISP = k.kw === 'F' ? 'F' : k.kw === 'N' ? 'N' : (ATTDISP === 'F' ? 'N' : 'F'); store('dvd:attdisp', ATTDISP); redraw(); log('ATTDISP: ' + (ATTDISP === 'F' ? 'ẩn thuộc tính khối.' : 'hiện bình thường.'));
+  cmd(['ATTDISP'], 'Hiển thị thuộc tính khối: Bình thường (ẩn thuộc tính Invisible) / Bật (hiện hết) / Tắt', async () => {
+    const cur = ATTDISP === 'F' ? 'Tắt' : ATTDISP === 'O' ? 'Bật' : 'Bình thường';
+    const k = await A.getKw('Nhập chế độ hiển thị thuộc tính [Bình thường/Bật/Tắt] <' + cur + '>', { kw: [{ k: 'N', t: 'Bình thường' }, { k: 'ON', t: 'Bật' }, { k: 'OFF', t: 'Tắt' }], def: cur });
+    if(k.kw) ATTDISP = k.kw === 'OFF' ? 'F' : k.kw === 'ON' ? 'O' : 'N'; store('dvd:attdisp', ATTDISP); redraw();
+    log('ATTDISP: ' + (ATTDISP === 'F' ? 'ẩn mọi thuộc tính khối.' : ATTDISP === 'O' ? 'hiện mọi thuộc tính, cả thuộc tính ẩn (Invisible).' : 'bình thường — thuộc tính ẩn (Invisible) không hiện.'));
   });
 
   /* ---------- 2) RECOVER — mở file hỏng rồi kiểm tra / sửa (AUDIT) ---------- */
@@ -85,7 +87,8 @@
   const paperIdx = () => dwgLayouts.findIndex(L => !L.isModel && L.paper && (L.paper.viewports.length || L.paper.paperPrims.length));
   function vpMax(L, v){
     const mi = modelIdx(); if(mi < 0) return false; vpRet = { layout: currentLayout, view: { scale: view.scale, offsetX: view.offsetX, offsetY: view.offsetY, rot: view.rot } };
-    switchLayout(mi); const mw = v.vh * (v.w / v.h); zoomToWorldRect(v.dcx - mw / 2, v.dcy - v.vh / 2, v.dcx + mw / 2, v.dcy + v.vh / 2); draw();
+    switchLayout(mi); if(v.tw || view.rot){ view.rot = ((-(v.tw || 0)) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI); try{ updateCompass(); }catch(_){} }   // xoay nhìn của khung nhìn (VIEWTWIST)
+    const mw = v.vh * (v.w / v.h); zoomToWorldRect(v.dcx - mw / 2, v.dcy - v.vh / 2, v.dcx + mw / 2, v.dcy + v.vh / 2); draw();
     log('VPMAX: đang xem phóng to khung nhìn của "' + L.name + '" — sửa trực tiếp ở Model. VPMIN để quay lại layout.'); return true;
   }
   cmd(['VPMAX'], 'Phóng to khung nhìn của layout ra cả màn hình để xem / sửa (VPMIN để quay lại)', async () => {

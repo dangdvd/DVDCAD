@@ -1,48 +1,55 @@
-## DVDCAD 5.10.0 — hộp thoại như AutoCAD 2027, tự lưu DWG, dòng lệnh như AutoCAD 2027
+## DVDCAD 5.23.0 — Độ trong suốt theo lớp, ETRANSMIT gói DWG, REVCLOUD Sửa, POLYSOLID Cung
 
 Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Windows. Tên lệnh, lệnh tắt và cách dùng giống AutoCAD để người dùng chuyển sang không bỡ ngỡ.
 
 ### Tải về
-- **DVDCAD-Setup-5.10.0.exe** — bộ cài.
+- **DVDCAD-Setup-5.23.0.exe** — bộ cài.
   - Cài cho tài khoản Windows đang dùng, không cần quyền quản trị.
   - Có lối tắt Desktop và Start Menu.
   - Nhấp đúp file .dwg / .dxf là mở bằng DVDCAD.
-- **DVDCAD-5.10.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
+- **DVDCAD-5.23.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
 
 Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More info → Run anyway**.
 
 ### Có gì mới
-- **Hộp thoại lệnh bố cục như AutoCAD 2027.**
-  - Khung chung: thanh tiêu đề kéo được, nút ? và ×, OK · Cancel · Help ở góc dưới phải.
-  - Dimension Style Manager có đủ 7 tab và ô xem trước; sửa kiểu thì kích thước trong bản vẽ đổi theo.
-  - Layer Properties Manager và bảng Blocks là bảng nổi, vẫn vẽ được khi đang mở.
-  - Block Definition, Attribute Definition, Text Style, Drafting Settings, Drawing Units, Options, Plot, Insert Table, Quick Select, Linetype Manager, Lineweight Settings, Point Style.
-  - HATCH hiện tab ngữ cảnh **Hatch Creation** trên ribbon; `HATCHSET` mở Hatch and Gradient.
-- **Ribbon không còn thanh cuộn ngang che tên bảng.**
-  - Bảng tự thu gọn theo bề ngang màn hình (kể cả khi Windows đặt tỉ lệ 125–150%).
-  - Bấm bảng đã thu gọn để mở đủ nút.
-- **Tự lưu DWG, không cần ODA File Converter.**
-  - `SAVEDWG` ghi thẳng file **DWG 2000 (AC1015)** — định dạng AutoCAD từ bản 2000 trở đi đều mở được.
-  - `SAVEAS` / **Ctrl+Shift+S** chọn được *Bản vẽ AutoCAD (\*.dwg)*; **Ctrl+S** sau đó ghi đè đúng file DWG đó.
-  - Giữ lớp, kiểu nét (cả kiểu nét có chữ / hình), kiểu chữ, khối + thuộc tính, kích thước, hatch đặc và hatch mẫu, đa tuyến có cung / độ rộng, MTEXT, vùng che, layout, ảnh xem trước.
-  - Mở lại trong DVDCAD còn nguyên khối 3D tham số, vùng, thứ tự vẽ, ràng buộc, khối động.
-  - Cần DWG 2004 → 2018 thì vẫn chọn được trong `DWGSERVER` (qua ODA File Converter); không có ODA thì DVDCAD tự ghi DWG 2000.
-- **Dòng lệnh như AutoCAD 2027.**
-  - Lời nhắc có tuỳ chọn bấm được, nhập động (x,y tương đối, `#` tuyệt đối, Tab khoá ô), khoá góc `<45`, bộ lọc điểm `.X`, `FROM`, `M2P`, `TT`.
-  - Lệnh trong suốt (`'ZOOM`, `'CAL`…), chuột phải bấm nhanh = Enter / giữ = menu, gợi ý khi gõ (AutoComplete, sửa lỗi gõ, đồng nghĩa, biến hệ thống, nội dung bản vẽ).
-  - Bản dòng lệnh cho script / LISP: `-LAYER`, `-INSERT`, `-BLOCK`, `-OSNAP`; `UNDO` BE/E/M/B; F1 mở trang cách dùng của lệnh đang chạy.
-- **Mở DWG:** thuộc tính khối (ATTRIB) không còn bị đọc trùng hai lần.
-- **Ký số bản dựng:** GitHub Actions tự ký bằng chứng thư .pfx hoặc Azure Trusted Signing khi repo có cấu hình (xem hướng dẫn).
+Bản này xử lý các hạn chế còn ghi trong mục "Khác với AutoCAD" của hướng dẫn.
+
+- **Độ trong suốt theo lớp** (như cột Transparency trong bảng Lớp của AutoCAD):
+  - Bảng Lớp có cột **Độ trong suốt** (bấm để nhập 0–90). `-LAYER` có tuỳ chọn **Trong suốt**.
+  - Đối tượng có độ trong suốt "ByLayer" lấy theo lớp.
+  - **Đọc và ghi được trong DXF và DWG 2004 → 2018** theo đúng cách AutoCAD lưu, nên mở bản vẽ của AutoCAD cũng thấy được độ trong suốt của lớp.
+  - Trạng thái lớp (`LAYERSTATE`) lưu cả độ trong suốt.
+- **ETRANSMIT / ARCHIVE**:
+  - Chọn định dạng bản vẽ trong gói: **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** hoặc DXF. Trước đây gói luôn dùng DXF.
+  - Gói `.zip` được **nén**: bản vẽ mẫu từ 3 MB giảm còn khoảng 0,7 MB.
+- **REVCLOUD › Sửa**: vẽ lại một đoạn mây như AutoCAD. Chọn mây, bấm điểm đầu trên mây, các điểm mới, rồi điểm cuối trên mây, sau đó chọn phía cần bỏ.
+- **POLYSOLID** có tuỳ chọn **Cung** khi vẽ tường theo điểm:
+  - Cung tiếp tuyến với đoạn trước, hoặc cung qua **Điểm thứ hai**.
+  - **Đường thẳng** để quay lại vẽ đoạn thẳng.
+- **EXTEND** kéo dài được đa tuyến có **đoạn đầu hoặc đoạn cuối là cung**: cung được kéo dài theo đúng đường tròn của nó tới ranh giới.
+- Hướng dẫn: cập nhật các mục đã lỗi thời. Ví dụ, mục PLOT trước ghi chỉ có khổ A4 → A0, và DWG 2007 trước ghi là cần ODA.
 
 ### Kiểm thử
-- 36 file DWG mẫu của LibreDWG (2000 → 2018) và một bản vẽ 10 nghìn đối tượng: mở → lưu DWG → mở lại, giống hệt từng đối tượng.
 - GitHub Actions trên Windows:
-  1. Kiểm thử nhanh: mở DWG / DXF, hộp thoại Mở / Lưu, trang Start, lệnh tắt, dòng lệnh, lưu DWG gốc và mở lại.
-  2. ODA File Converter đọc + audit lại các file DWG vừa ghi.
-  3. Cài lặng bộ cài, chạy kiểm thử trên chính `DVDCAD.exe` đã cài, gỡ cài.
+  1. Kiểm thử nhanh như 5.22.0, thêm hai phần mới:
+     - Độ trong suốt lớp 40% ghi vào DXF, rồi ghi DWG 2018 và đọc lại vẫn đúng 40%.
+     - ETRANSMIT tạo gói .zip đã nén, có bản vẽ DWG bên trong.
+  2. **ODA File Converter** và **ACadSharp** đọc lại các file DWG do DVDCAD ghi.
+  3. Bộ đọc XPS của Windows mở tệp DWFx.
+  4. Cài lặng bộ cài, chạy kiểm thử trên chính `DVDCAD.exe` đã cài, rồi gỡ cài.
+- Kiểm thử giao diện tự động:
+  - Độ trong suốt lớp đọc lại đúng qua DXF và DWG 2018 / 2013 / 2010 / 2007 / 2004.
+  - ETRANSMIT ra DWG 2018 (nén), DWG 2007 (không nén) và DXF; DWG trong gói mở lại đủ 9996 / 9996 đối tượng.
+  - REVCLOUD Sửa thay đúng phía trên của mây; U trả lại mây cũ.
+  - POLYSOLID có đoạn cung một phần tư đường tròn.
+  - EXTEND cung đầu / cuối đa tuyến tới đúng giao điểm (71,414; −70).
 
 ### Giới hạn
-- Khối động lưu ra thành khối thường ở trạng thái đang hiện (AutoCAD chưa đổi được tham số khối động do DVDCAD tạo).
-- DVDCAD không phải sản phẩm của Autodesk và không dùng logo, biểu tượng hay mã của Autodesk. AutoCAD là thương hiệu của Autodesk, Inc.
+- **Chưa có DWF6 ePlot** (`.dwf`): không lấy được đặc tả WHIP / W2D, và không có bộ đọc chuẩn để kiểm chứng tệp ghi ra. Dùng DWFx thay.
+- DWFx chưa thử bằng sản phẩm Autodesk (Design Review, Autodesk Viewer). Phần XPS đã kiểm bằng bộ đọc của Windows.
+- Hình chiếu (VIEWBASE…) lưu cùng bản vẽ dạng nét thường: AutoCAD thấy đủ nét nhưng không coi là hình chiếu liên kết với mô hình. Định dạng liên kết này Autodesk không công bố.
+- Phông nét đơn thay thế giống kiểu phông AutoCAD nhưng bề rộng chữ có thể khác đôi chút. Muốn y hệt thì nạp phông `.shx` gốc (DVDCAD không kèm phông của Autodesk vì bản quyền).
+- DVDCAD không phải sản phẩm của Autodesk và không dùng logo, biểu tượng hay mã của Autodesk. AutoCAD là thương hiệu của Autodesk, Inc. ODA File Converter là sản phẩm của Open Design Alliance.
+- Phông kèm theo: LibreCAD fonts (GPL v2+ / public domain), Liberation Fonts (SIL OFL 1.1). Giấy phép trong `vendor/lff/README.txt`, `vendor/fonts/OFL.txt`.
 
 Hướng dẫn: [HUONG-DAN-WINDOWS.md](https://github.com/dangdvd/DVDCAD/blob/main/HUONG-DAN-WINDOWS.md) · Danh sách lệnh: [HUONG-DAN-LENH.md](https://github.com/dangdvd/DVDCAD/blob/main/HUONG-DAN-LENH.md)

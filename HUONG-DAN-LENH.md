@@ -1,4 +1,4 @@
-# DVDCAD v5l — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v6d — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,430 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v6d)
+- **Độ trong suốt theo lớp** (Layer Transparency):
+  - Cột **Độ trong suốt** trong bảng Lớp (bấm để nhập 0–90). `-LAYER` có tuỳ chọn **Trong suốt** (TR).
+  - Đối tượng có độ trong suốt "ByLayer" lấy theo lớp. Bật **TPY** ở thanh trạng thái để thấy.
+  - Đọc / ghi DXF và DWG 2004 → 2018 như AutoCAD: XDATA `AcCmTransparency` (mã 1071) trên lớp. Mở tệp DWG / DXF của AutoCAD cũng đọc được.
+  - Trạng thái lớp (`LAYERSTATE`, `LAYERP`) lưu cả độ trong suốt.
+- **ETRANSMIT / ARCHIVE**: hộp thoại chọn **định dạng bản vẽ trong gói**: DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000 hoặc DXF; **nén .zip** (deflate). `-ETRANSMIT`: không hỏi, DWG 2018, nén.
+- **REVCLOUD › Sửa** (Modify): chọn mây → điểm đầu trên mây → các điểm mới → điểm cuối trên mây → Enter → chọn phía cần bỏ. Mây hở: bỏ đoạn giữa hai điểm.
+- **POLYSOLID**: tuỳ chọn **Cung** khi vẽ theo điểm — cung tiếp tuyến đoạn trước, hoặc **Điểm thứ hai** (cung 3 điểm); **Đường thẳng** để quay lại. **Đóng** khi đang ở chế độ Cung thì khép bằng cung.
+- **EXTEND** đa tuyến có đoạn **đầu hoặc cuối là cung**: kéo dài cung theo đúng đường tròn của nó tới ranh giới gần nhất, giữ chiều cung.
+
+## Bổ sung như AutoCAD 2027 (v6c)
+- **DWFx ePlot (XPS Compatible).pc3** trong danh sách máy in của `PLOT`:
+  - Ghi tệp `.dwfx` vector: đường nét, tô, gradient, ảnh, chữ **nhúng phông TrueType** (chọn / tìm được chữ, đủ dấu tiếng Việt).
+  - Gói gồm phần XPS (mở bằng trình xem XPS của Windows) và phần DWF (manifest, trang ePlot với khổ giấy mm) như tệp DWFx của AutoCAD.
+  - `PUBLISH`: mục **Xuất ra: DWFx** — mỗi layout một trang trong cùng một tệp `.dwfx`.
+- **Thuộc tính… của máy in Windows** (chọn máy in đã cài trong `PLOT` rồi bấm **Thuộc tính…**): ngoài độ sâu màu có thêm
+  **In màu / Đen trắng**, **In hai mặt** (lật cạnh dài / cạnh ngắn), **Độ phân giải** (300 / 600 / 1200 dpi), **Xếp bộ** khi in nhiều bản. Các tuỳ chọn này gửi kèm lệnh in thẳng.
+- **Chưa có**: DWF6 ePlot (`.dwf`, luồng W2D) — chưa có bộ đọc chuẩn để kiểm chứng tệp ghi ra; dùng DWFx thay.
+
+## Bổ sung như AutoCAD 2027 (v6b)
+- **Plot Preview** (nút **Xem trước…** trong hộp PLOT, bấm vào hình xem trước nhỏ, hoặc lệnh `PREVIEW` / `PRE`):
+  - Trang in vẽ bằng **nét vector** — phóng to bao nhiêu chữ và đường nét vẫn sắc nét, bề dày nét đúng như khi in.
+  - **Lăn chuột**: phóng to / thu nhỏ quanh con trỏ. **Kéo chuột trái** (chế độ Pan) hoặc **chuột giữa**: dời hình. Bấm đúp: phóng to ×2.
+  - Thanh công cụ và **menu chuột phải** như AutoCAD: **In** (= OK), **Pan**, **Zoom** (kéo lên / xuống), **Zoom Window** (kéo khung), **Zoom Original** (vừa trang), **Thoát**.
+  - Phím: **Esc / Enter** thoát, `+` / `-` phóng to / thu nhỏ, `Home` vừa trang. Màn hình cảm ứng: chụm hai ngón để zoom.
+- **Máy in / máy vẽ** như danh sách của AutoCAD:
+  - `DWG To PDF.pc3`, `AutoCAD PDF (General Documentation / High Quality Print / Smallest File / Web and Mobile).pc3`, `Default Windows System Printer.pc3`, `PublishToWeb PNG / JPG.pc3`, HPGL/2.
+  - **Bản Windows**: thêm **mọi máy in đã cài trong Windows** (theo tên, như AutoCAD). Chọn máy in rồi OK là in thẳng nét vector ra máy đó, không qua hộp in của Windows. Ô **Số bản** dùng được.
+  - **Máy in Windows (hộp in hệ thống)**: vẫn mở hộp in của Windows để chọn máy và tuỳ chọn.
+- **Khổ giấy đầy đủ như DWG To PDF.pc3** (89 khổ, chia nhóm):
+  - ISO A (4A0, 2A0, A0 → A6), ISO B (B0 → B5), ISO C (C0 → C6); **ISO full bleed** (không lề); **ISO expand** (A0 → A4).
+  - ANSI A → F, ARCH A → E3, mỗi loại có bản **full bleed** và **expand**; JIS B4 / B5, Legal; khổ tự chọn.
+  - Chọn khổ thì ô **Lề** tự đặt theo khổ: full bleed 0 mm, expand 3 mm, ISO 5 mm, ANSI / ARCH 6,35 mm (sửa lại được).
+  - Tên khổ ghi vào DWG / DXF đúng tên chuẩn của AutoCAD (vd `ISO_A3_(420.00_x_297.00_MM)`, `ISO_full_bleed_A1_(...)`); `PSETUPIN` đọc lại đúng khổ.
+- **Mọi cách xuất PDF đều là PDF vector** (đường nét + chữ nhúng phông, phóng to vẫn sắc nét):
+  - PLOT với các máy in PDF, nút **Xuất → PDF** (chọn khổ A4 → A0 / khít nội dung), **Xuất mọi layout ra PDF**, `PUBLISH`.
+  - Trước đây nút Xuất → PDF và PUBLISH bản cũ ghi ảnh JPEG 300 dpi (phóng to bị mờ).
+
+## Bổ sung như AutoCAD 2027 (v6a)
+- **Lưu DWG 2007 gốc (AC1021), không cần ODA File Converter**:
+  - `SAVEDWG` / `DWGSERVER` có dòng **DWG 2007 — bộ ghi sẵn có**. `DWGCONVERT` đổi hàng loạt sang DWG 2007.
+  - Chọn dòng "chuyển qua ODA" mà máy không có ODA thì DVDCAD tự ghi DWG 2007 gốc (trước đây ghi DWG 2004).
+  - Kiểm tra: ODA File Converter, ACadSharp và LibreDWG đều đọc được bản vẽ DWG 2007 do DVDCAD ghi.
+- **Mở DWG 2007**: các trang dữ liệu không nén được (ảnh, dữ liệu nhị phân lớn) nay đọc đúng — bản vẽ lớn không còn mất đối tượng.
+- **Máy in đặt giảm màu** (256 màu / đen trắng trong **Thuộc tính…** của máy in Windows) nay cũng in **nét vector**:
+  - Màu theo bảng màu của máy in; màu không có trong bảng mà kiểu in bật dither thì giả bằng mẫu chấm vector, tắt dither thì lấy màu gần nhất (nét đặc).
+  - Ảnh trong bản vẽ giảm màu từng điểm ảnh (Floyd–Steinberg). Không còn độ trong suốt (như máy vẽ).
+- **Chưa có**:
+  - Hình chiếu lưu cùng bản vẽ dạng nét thường: AutoCAD không coi là hình chiếu liên kết (định dạng không công bố).
+  - Phông nét đơn thay thế giống phông AutoCAD về kiểu dáng, nhưng bề rộng chữ có thể khác đôi chút. Muốn y hệt thì nạp phông `.shx` gốc.
+
+## Bổ sung như AutoCAD 2027 (v5z)
+- **Phông thay thế khi thiếu phông SHX (`FONTALT`)**, như AutoCAD:
+  - DVDCAD kèm các phông nét đơn mã nguồn mở của LibreCAD (GPL v2+). Bản vẽ dùng phông `.shx` chưa nạp thì vẽ bằng phông nét đơn tương ứng thay cho phông TrueType: `txt` → standard, `simplex`, `romans`, `romand`, `isocp…` → iso, `italic` → italicc. Phông khác dùng phông đặt trong `FONTALT` (mặc định `simplex.shx`).
+  - Dấu tiếng Việt (sắc, huyền, hỏi, ngã, nặng, mũ, trăng, móc, đ) được ghép bằng nét đơn.
+  - In, PDF, EPS / WMF / HPGL, `TXTEXP` đều theo nét của phông thay thế.
+  - `FONTALT` = `.` thì không thay thế (vẽ bằng phông TrueType như trước). Nạp phông `.shx` gốc bằng `SHXFONTS` thì dùng đúng phông gốc.
+- **In thẳng ra máy in bằng nét vector**:
+  - `PLOT` → máy in Windows gửi bản in dạng vector (đường nét, chữ là chữ) thay cho ảnh 300 dpi. Bản in sắc nét hơn, tệp in nhỏ hơn.
+  - Nếu đã đặt máy in giảm màu (256 màu / đen trắng có dither trong **Thuộc tính…**) thì vẫn in ảnh như trước.
+- **PDF trên trình duyệt có chữ thật**: kèm phông Liberation Sans / Serif (SIL OFL, cùng số đo với Arial / Times New Roman). Máy không cung cấp phông thì PDF nhúng các phông này, chữ tiếng Việt vẫn chọn / tìm / sao chép được.
+- **Chưa có**:
+  - Hình chiếu lưu cùng bản vẽ dạng nét thường: AutoCAD không coi là hình chiếu liên kết (định dạng không công bố).
+  - DWG 2007 gốc (AC1021) vẫn cần ODA File Converter.
+  - Phông nét đơn thay thế giống phông AutoCAD về kiểu dáng, nhưng bề rộng chữ có thể khác đôi chút. Muốn y hệt thì nạp phông `.shx` gốc.
+
+## Bổ sung như AutoCAD 2027 (v5y)
+- **PDF vector khi in** (`PLOT` → **DWG To PDF.pc3**, và `PUBLISH`):
+  - Bản vẽ ghi thành đường nét PDF thật (đường, cung, hatch, vùng tô, gradient, nét đứt, bề rộng nét), không còn là ảnh chụp. Phóng to bao nhiêu cũng sắc nét, tệp nhỏ hơn.
+  - Chữ là chữ thật: nhúng phông TrueType / OpenType của Windows (chỉ các ký tự dùng tới), đủ dấu tiếng Việt; chọn, tìm, sao chép được trong trình đọc PDF.
+  - Chữ phông SHX in bằng nét đơn của phông. Chữ rất nhỏ vẫn in thành chữ, không thay bằng vạch như bản in ảnh.
+  - Ảnh (IMAGE, bản đồ nền) nhúng đúng chỗ. Layout in đúng khung nhìn (cả khung nhìn xoay, đa giác cắt). Dấu in, in lộn ngược như bản in ảnh.
+- **Hộp `PLOT` đủ như AutoCAD**:
+  - Máy in / máy vẽ: DWG To PDF.pc3, AutoCAD PDF (High Quality Print).pc3, AutoCAD PDF (Smallest File).pc3 (ảnh nén nhỏ), máy in Windows, PublishToWeb PNG.pc3, PublishToWeb JPG.pc3, HP DesignJet (HPGL/2).pc3.
+  - Khổ giấy: ISO A0–A5, ANSI A–E, ARCH A–E1, **Khổ tự chọn…** (nhập rộng × cao, mm).
+  - **In ra file**: với máy in Windows thì ghi ra tệp PDF thay vì gửi máy in. Các thiết bị khác luôn ra tệp như AutoCAD.
+  - **In độ trong suốt**, **In theo kiểu in** (tắt = in đúng màu bản vẽ), **Co giãn bề rộng nét** (bề rộng nét theo tỉ lệ in) đều dùng được.
+  - **Áp cho layout**: lưu thiết lập in cho Model / layout hiện hành, mở `PLOT` lần sau tự dùng lại.
+  - Thiết lập trang có tên ghi vào DXF / DWG đúng tên khổ của AutoCAD (vd `ANSI_full_bleed_D_(34.00_x_22.00_Inches)`, `User_(500.00_x_350.00_MM)`) và đúng máy in .pc3.
+- Các hạn chế của v5y đã được xử lý ở v5z (xem mục trên).
+
+## Bổ sung như AutoCAD 2027 (v5x)
+- **Xoay nhìn khung nhìn (VIEWTWIST)** trong layout:
+  - Đọc và ghi góc xoay khung nhìn của tệp DXF (mã 51) và DWG 2000 / 2004 / 2018 như AutoCAD. Mô hình hiện nghiêng đúng góc trên giấy.
+  - `VPEDIT` có cột **Xoay nhìn (°)**, đo ngược chiều kim đồng hồ.
+  - `ALIGNSPACE` với hai cặp điểm lệch hướng: khung nhìn **xoay theo**, rồi đổi tỉ lệ và vị trí để cả hai cặp điểm trùng nhau.
+  - Khi xoay nhìn, `VPSYNC`, `CHSPACE` và `VPMAX` đều tính cả góc xoay. `VPMAX` xoay khung Model theo khung nhìn.
+- **MTEXT nhiều phông, phông SHX trong chữ có định dạng**:
+  - Mỗi đoạn chữ có thể dùng phông riêng: bôi đen đoạn chữ rồi chọn phông trong tab **Soạn chữ**. Hộp phông có cả phông `.shx` đã nạp.
+  - Đoạn dùng phông SHX vẽ bằng nét phông. Bề rộng, xuống dòng và cột tính theo phông thật.
+  - Đọc mã `\F` (phông SHX) và `\f` (phông TrueType) trong MTEXT của AutoCAD. Lưu DXF / DWG ghi lại đúng mã đó.
+  - Nếu mọi đoạn đều dùng phông SHX thì in, xuất EPS / WMF / HPGL và `TXTEXP` theo nét đơn của phông.
+- **Thiết lập trang có tên ghi vào DXF / DWG** (PLOTSETTINGS trong từ điển ACAD_PLOTSETTINGS):
+  - Thiết lập lưu bằng PLOT / PAGESETUP / `PSETUPIN` có trong Page Setup Manager của AutoCAD: khổ ISO, hướng, vùng in, tỉ lệ, giữa trang, bảng kiểu in, máy in (.pc3).
+  - `PSETUPIN` đọc thiết lập trang có tên trong DWG của AutoCAD. Đã đối chiếu với tệp DWG 2013 thật do AutoCAD lưu.
+  - Đã sửa: vùng in **Display** (màn hình) trước đây bị đọc thành Extents. Tỉ lệ chuẩn "vừa khổ giấy" đọc đúng như AutoCAD.
+- **`SYSWINDOWS` thành cửa sổ con thật**:
+  - **Lát dọc / Lát ngang / Xếp chồng**: bản vẽ hiện hành vẽ và sửa ngay trong ô của nó (lệnh, chọn, bắt điểm như thường). Các ô khác hiện ảnh bản vẽ.
+  - Bấm một ô khác: bản vẽ đó thành hiện hành ngay trong ô của nó. Phần sửa ở bản vẽ trước vẫn giữ.
+  - Nút **□** trên thanh tên, hoặc gõ `SYSWINDOWS` lần nữa: trở về một cửa sổ. **Thu nhỏ**: các thanh tên ở đáy, bấm để mở.
+- **Chưa có**:
+  - Hình chiếu lưu cùng bản vẽ dạng nét thường: AutoCAD thấy đủ nét nhưng không coi là hình chiếu liên kết với mô hình.
+  - Mỗi lúc chỉ một bản vẽ hiện hành (như AutoCAD). Ô của bản vẽ khác hiện ảnh lúc rời bản vẽ đó.
+
+## Bổ sung như AutoCAD 2027 (v5w)
+- **`WMFIN`**: nhập Windows Metafile (`.wmf`) thành khối `WMF0`, `WMF1`… như AutoCAD.
+  - Hỏi điểm chèn (góc trên trái), tỉ lệ, góc xoay.
+  - Đọc được nét, đa giác, chữ nhật, elip, cung, hình quạt, chữ (cả bảng mã tiếng Việt 1258), vùng tô đặc và tô gạch.
+  - `WMFOPTS`: **Khung dây** (bỏ vùng tô), **Nét rộng** (giữ bề rộng bút).
+- **`VIEWSECTION` → Kiểu (T)**: đủ 4 loại mặt cắt như AutoCAD:
+  - **Toàn phần**: 2 điểm.
+  - **Nửa**: điểm đầu → điểm giữa → điểm cuối. Nửa có đoạn cắt được gạch, nửa còn lại vẽ hình nhìn ngoài.
+  - **Bậc** (offset): đường cắt gấp khúc, các đoạn song song / vuông góc. Mỗi đoạn cắt qua chỗ của nó, không vẽ đường ghép giữa các dải.
+  - **Cắt xoay** (aligned): đoạn xiên được xoay trải phẳng về cùng mặt phẳng với đoạn đầu.
+  - Đường cắt gãy có nét đậm ở mỗi chỗ gãy, mũi tên vuông góc từng đầu. `VIEWUPDATE` và lưu / mở lại giữ đúng kiểu mặt cắt.
+- **Phông SHX cho chữ** (`SHXFONTS`, hoặc STYLE → **Phông SHX…**, hoặc `LOAD` tệp phông):
+  - Nạp phông `.shx` có sẵn trên máy: phông thường (txt, simplex, romans…), **unifont** và **bigfont** (chữ Trung / Nhật / Hàn).
+  - Kiểu chữ dùng phông `.shx` thì chữ vẽ bằng nét của phông như AutoCAD (cỡ chữ = chiều cao chữ hoa). Áp cho cả chữ trong tệp DXF / DWG của AutoCAD.
+  - Ký tự phông không có → lấy từ big font → không có nữa thì vẽ bằng phông TrueType.
+  - Hộp STYLE: chọn phông `.shx`, **Dùng Big Font**, xem trước bằng nét phông.
+  - Lưu DXF / DWG ghi tên phông và bigfont vào bảng STYLE. In, xuất PDF / EPS / WMF / HPGL, `TXTEXP` đều theo nét phông.
+  - Phông đã nạp được nhớ lại cho lần sau. Mở bản vẽ dùng phông chưa nạp thì dòng lệnh báo tên phông còn thiếu.
+- **`GCSMOOTH`**: ràng buộc trơn (G2).
+  - Chọn spline (gần đầu cần nối), rồi đường thứ hai (đường thẳng, cung, đa tuyến hoặc spline khác).
+  - Đầu spline nối liền, cùng tiếp tuyến và cùng độ cong. Sửa đường kia thì spline tự chỉnh theo.
+  - `GEOMCONSTRAINT` có thêm tuỳ chọn **Trơn** và **Đối xứng**.
+- **`ALIGNSPACE`** (Express Tools, tab Bố cục):
+  - Bấm 1–2 điểm của mô hình trong khung nhìn, rồi 1–2 điểm tương ứng trên giấy.
+  - Khung nhìn đổi tỉ lệ và vị trí nhìn cho các điểm trùng nhau.
+- **`SYSWINDOWS`**: xếp các bản vẽ đang mở **Lát dọc / Lát ngang / Xếp chồng / Thu nhỏ** (tab Hiển thị → Xếp bản vẽ).
+  - Mỗi ô là ảnh bản vẽ ở góc nhìn đang dùng; bấm ô để làm bản vẽ hiện hành, Esc để trở lại.
+- **`PSETUPIN` đọc DWG của AutoCAD**:
+  - Liệt kê thiết lập trang có tên và thiết lập riêng của từng layout (`*Layout1*`… như Page Setup Manager). Khổ giấy, hướng, vùng in, tỉ lệ, máy in, bảng kiểu in.
+  - Kết quả giống như khi đọc bản DXF của cùng bản vẽ.
+- Các hạn chế còn lại của v5w đã được xử lý ở v5x (xem mục trên).
+
+## Bổ sung như AutoCAD 2027 (v5v)
+- Ribbon có thêm tab **Bố cục** (*Layout*): **Hình chiếu**, **Layout**, **Thiết lập trang**. Các lệnh mới khác nằm trong tab Chèn, Tham số, Hiển thị, Quản lý, Xuất và tab Trang chủ của không gian 3D.
+- **Smart Blocks**:
+  - `BCONVERT` (`SMARTBLOCKSCONVERT`): chọn một bản chèn khối làm mẫu, hoặc **Đối tượng** để tạo khối mới từ các nét rời. DVDCAD tìm các nhóm nét rời có cùng hình (kể cả đã xoay, khác tỉ lệ nếu bật) rồi hiện danh sách để chọn. **Đổi** thay các nhóm đó bằng bản chèn khối.
+  - `SMARTBLOCKSDETECT`: chỉ tìm và chọn các vị trí giống khối.
+  - **Cài đặt tìm**: có xoay, có khác tỉ lệ, dung sai.
+- **Đếm**: `COUNTNEXT` / `COUNTPREV` phóng tới bản chèn kế tiếp / trước của khối đang đếm. `COUNTREFRESH` đếm lại thanh đếm, bảng Count, trường và bảng đếm.
+- **Hình chiếu từ mô hình 3D** (*Model Documentation*, tab Bố cục):
+  - `VIEWBASE`: hình chiếu cơ sở từ khối 3D. Tuỳ chọn: hướng (Trên / Dưới / Trái / Phải / Trước / Sau / ISO), nét khuất, tỉ lệ, kiểu chiếu. Đặt xong là đặt tiếp các **hình chiếu phụ**: sang phải / trái / trên / dưới, kéo chéo là hình ISO.
+  - `VIEWPROJ`: thêm hình chiếu phụ từ một hình chiếu có sẵn.
+  - `VIEWSECTION`: mặt cắt toàn phần qua 2 điểm. Có đường cắt, mũi tên, chữ A, B…, mặt cắt gạch ANSI31 và nhãn **MẶT CẮT A-A**.
+  - `VIEWDETAIL`: hình trích. Khoanh vùng tròn / chữ nhật, phóng theo hệ số; nhãn **HÌNH TRÍCH B** và **TỈ LỆ 2 : 1**.
+  - `VIEWEDIT` sửa tỉ lệ / nét khuất / ký hiệu. `VIEWUPDATE` dựng lại sau khi sửa mô hình 3D; vị trí đã dời được giữ, hình chiếu con đi theo hình chiếu cha.
+  - `VIEWSTD`: góc chiếu thứ nhất (TCVN / ISO, mặc định) hoặc thứ ba (ANSI). `VIEWSECTIONSTYLE`, `VIEWDETAILSTYLE`: kiểu mặt cắt / hình trích.
+  - Nét nằm trên các lớp `MD_Visible`, `MD_Hidden` (nét HIDDEN), `MD_Annotation`, `MD_Hatch`. Liên kết hình chiếu – mô hình lưu cùng bản vẽ (DXF / DWG của DVDCAD).
+- **Ràng buộc**:
+  - `GCSYMMETRIC`: hai đối tượng (hoặc hai điểm, tuỳ chọn **Điểm**) đối xứng qua một đường thẳng.
+  - `DCCONVERT`: đổi kích thước thường (thẳng, ngang, dọc, bán kính, đường kính, góc) thành ràng buộc kích thước.
+  - `DCDISPLAY`: hiện / ẩn ràng buộc kích thước.
+  - `DCFORM`: dạng **Động** (chỉ trên màn hình) hoặc **Chú thích** (vẽ như kích thước, in ra được).
+  - `CONSTRAINTSETTINGS`: 3 thẻ **Hình học** / **Kích thước** / **Tự ràng buộc**. `AUTOCONSTRAIN` dùng các loại và dung sai chọn ở thẻ Tự ràng buộc (có cả song song, vuông góc).
+- **Điểm đánh dấu vị trí** (*Position Marker*, cần vị trí địa lý `GEOGRAPHICLOCATION`):
+  - Tạo: `GEOMARKPOINT` / `GEOMARKPOSITION` (điểm trên bản vẽ), `GEOMARKLATLONG` (nhập vĩ / kinh độ, nhận cả dạng 21°01'42"N), `GEOMARKME` (vị trí hiện tại của máy).
+  - `GEOLOCATEME`: chấm xanh theo dõi vị trí hiện tại.
+  - `GEOREORIENTMARKER`: đổi điểm mốc và hướng bắc mà giữ nguyên vĩ / kinh độ; điểm đánh dấu dời theo.
+  - Mở DXF có POSITIONMARKER của AutoCAD: hiện điểm và ghi chú.
+- **3D**:
+  - `3DPOLY` (`3P`): đa tuyến 3D, mỗi đỉnh một cao độ. Lưu DXF / DWG là POLYLINE 3D thật, AutoCAD mở đúng.
+  - `PFACE`: lưới đa diện. `3DMESH`: lưới M × N.
+  - `EDGE`: ẩn / hiện cạnh của mặt 3D. Cạnh ẩn ghi vào mã 70 của 3DFACE.
+- **Shape**:
+  - `LOAD` nạp tệp hình `.shx` (hoặc `.shp`). `COMPILE` dịch `.shp` → `.shx` thật (*AutoCAD-86 shapes 1.0*) và tải về.
+  - `SHAPE` chèn hình: tên, điểm, cỡ, góc.
+  - Mở DXF có SHAPE: hình hiện ra khi đã `LOAD` tệp hình đó. Tệp đã nạp được nhớ lại cho lần sau.
+- **Xuất file**:
+  - `PSOUT` (`EXPORTEPS`): PostScript đóng gói `.eps`, theo thiết lập PLOT.
+  - `WMFOUT`: Windows Metafile `.wmf` của các đối tượng chọn.
+  - `PUBLISHTOWEB`: chọn layout, kiểu ảnh, độ phân giải → `.zip` gồm `index.html` + ảnh.
+  - `DWGCONVERT`: đổi hàng loạt DWG / DXF sang DWG 2018 / 2013 / 2010 / 2004 / 2000 hoặc DXF. Bản vẽ đang mở không bị ảnh hưởng; nhiều tệp thì tải về một `.zip`.
+- **Khối động**: `BVSTATE` (hộp *Trạng thái hiển thị*: mới, đổi tên, xoá, lên / xuống, mặc định, đặt hiện hành), `BVSHOW` / `BVHIDE` (hiện / ẩn nét chọn ở trạng thái hiện hành hoặc mọi trạng thái).
+- **Lệnh nhỏ**:
+  - `REFSET`: thêm / bớt đối tượng khi đang `REFEDIT`.
+  - `ATTREDEF`: định nghĩa lại khối có thuộc tính, giữ giá trị theo thẻ.
+  - `CLOSEALLOTHER`: đóng mọi bản vẽ khác.
+  - `PSETUPIN`: nhập thiết lập trang có tên từ bản vẽ khác.
+  - Thiết lập trang có tên trong hộp `PLOT`: nút **Thêm…** / **Nhập…**; lưu cùng bản vẽ.
+  - `PARTIALOPEN` / `PARTIALOAD`: mở một phần bản vẽ theo lớp, nạp thêm lớp sau.
+  - `SYSVARMONITOR`: theo dõi biến hệ thống, báo khi khác giá trị mong muốn, **Đặt lại tất cả**.
+  - `QUICKPROPERTIES` (`QP`, biến `QPMODE`): bảng thuộc tính nhanh cạnh đối tượng chọn.
+  - `MVSETUP`: khung bản vẽ + khung tên 180 × 56 theo khổ A0–A4 và tỉ lệ.
+  - `PLOTTERMANAGER`: danh sách máy in / máy vẽ và thuộc tính.
+  - `UPDATETHUMBSNOW`: cập nhật ảnh thu nhỏ của bản vẽ.
+- Các hạn chế còn lại của bản này đã được xử lý ở v5w (mục trên).
+
+## Bổ sung như AutoCAD 2027 (v5u)
+- **Khối động: lật và kéo giãn là tham số thật của AutoCAD** (DXF / DWG 2018):
+  - Lật (`BPARAMETER` → F) ghi thành 2 **tham số lật** (*Flip state1* lật ngang, *Flip state2* lật dọc) + grip mũi tên + hành động FLIP; kéo giãn (L) ghi thành **tham số tuyến tính** (grip ở điểm cuối) + hành động STRETCH với khung kéo giãn như DVDCAD (nửa phía điểm cuối).
+  - Trong AutoCAD bấm vào bản chèn là có grip lật / kéo; bảng Properties hiện *Flip state1*, *Flip state2*, độ dài.
+  - Bản chèn đang lật: INSERT ghi không lật, hình đã lật nằm trong khối `*U` như AutoCAD. Mở lại trong DVDCAD vẫn bỏ lật / lật lại đúng chỗ.
+- **Mở DWG của AutoCAD có khối động**: bản chèn hiện tên khối gốc (thay cho `*U…`), đổi được trạng thái hiển thị (bảng Thuộc tính / `BDYN`), cả khối lồng trong từng trạng thái.
+- **Ảnh lưu thành IMAGE thật** (DXF / DWG 2000 → 2018): AutoCAD mở ra **thấy ảnh** (trước chỉ thấy khung).
+  - Mỗi ảnh có IMAGEDEF trỏ tới tệp `.\tên_xxxxxx.jpg` (ảnh PNG giữ PNG) **cạnh bản vẽ**; giữ góc xoay, độ đậm (→ *Fade*), khung cắt `IMAGECLIP`.
+  - **Bản Windows**: lưu bản vẽ (SAVE / SAVEAS / SAVEDWG) là ghi luôn tệp ảnh vào cùng thư mục. Bản web: dùng `ETRANSMIT` — gói .zip có bản vẽ và tệp ảnh cùng tên, giải nén ra là AutoCAD thấy ảnh.
+  - **Mở DXF / DWG của AutoCAD có ảnh**: IMAGE thành ảnh thật của DVDCAD (giữ khung cắt); bản Windows tự đọc tệp ảnh trong thư mục bản vẽ (như AutoCAD tìm ảnh).
+- **In**:
+  - **Máy in Windows** cũng có nút **Thuộc tính…** → *Độ sâu màu* (24-bit / 256 màu / đen trắng) + dither theo bảng .ctb như PNG / PDF.
+  - **Bản đồ nền đang hiện (GEOMAP)** được in luôn khi PLOT ra PDF / PNG / máy in (tải ô bản đồ cho đúng vùng in, ~200 dpi); xuất ảnh / in theo màn hình cũng có bản đồ. Không cần chụp bằng GEOMAPIMAGE trước.
+- **DWG 2007**: không có ODA File Converter thì ghi **DWG 2004** bằng bộ ghi sẵn có (AutoCAD 2007, 2008, 2009 mở thẳng) — trước đây ghi DWG 2018 nên AutoCAD 2007 không mở được.
+  - Bản Windows (5.14.1): `DWGSERVER` có nút **Tải ODA File Converter** (mở trang tải chính thức của ODA) và **Tìm lại**. Cài xong quay lại DVDCAD là tự tìm thấy — không cần chọn đường dẫn.
+
+## Bổ sung như AutoCAD 2027 (v5t)
+- **Lưu DWG gốc 2018 / 2013 / 2010 / 2004 / 2000** — không cần ODA File Converter.
+  - `SAVEDWG`, `SAVEAS` *.dwg* mặc định ghi **DWG 2018 (AC1032)**. Chọn phiên bản khác trong `DWGSERVER`; DWG 2007 vẫn qua ODA (không có ODA: v5t ghi DWG 2018, từ v5u ghi DWG 2004).
+  - Bộ chứa R2004+ như AutoCAD: trang nén LZ77, checksum, bản đồ section / trang, header mã hoá; chữ Unicode (2007+); dữ liệu theo đúng từng phiên bản.
+  - Kiểm tra: mở lại trong DVDCAD giống hệt; LibreDWG, ODA File Converter (audit) và ACadSharp đọc không lỗi.
+- **Vị trí địa lý lưu thành đối tượng GEODATA** (DXF / DWG 2010 trở lên) trong từ điển `ACAD_GEOGRAPHICDATA` của Model: điểm thiết kế, điểm tham chiếu, cao độ, hướng bắc, đơn vị. AutoCAD mở ra thấy đúng vị trí; DVDCAD mở lại lấy đủ cả múi giờ, hệ toạ độ.
+- **GEOMAPIMAGE** — chụp bản đồ nền thành ảnh nằm trong bản vẽ, **in được**:
+  - Chỉ định 2 góc, hoặc Enter / `V` (*Khung nhìn*) lấy cả khung nhìn; độ phân giải `C` Thô / `O` Tối ưu / `F` Mịn / `V` Rất mịn (1024 → 4096 điểm ảnh).
+  - Ảnh nằm dưới cùng (DRAWORDER), lưu kèm DXF / DWG (DVDCAD mở lại còn nguyên ảnh). **GEOMAPIMAGEUPDATE** chụp lại ảnh đã chọn theo bản đồ hiện tại.
+- **In PNG / PDF: độ sâu màu + dither** — hộp PLOT → nút **Thuộc tính…** cạnh máy in (*PublishToWeb PNG.pc3*, *DWG To PDF.pc3*):
+  - *24-bit (True color)* (mặc định), *256 màu (8-bit, bảng màu AutoCAD)*, *Đen trắng (1-bit)*.
+  - Khi giảm màu, mục **Bật dither** của từng màu trong bảng kiểu in .ctb có tác dụng: bật — giả màu bằng chấm (Floyd–Steinberg); tắt — lấy màu gần nhất, nét / mảng đặc.
+  - Nét mảnh không đứt chấm (làm tròn độ phủ ở mép nét như máy vẽ). PNG ghi đúng ảnh bảng màu 8-bit / 1-bit.
+  - SOLID 2D in đặc (trên màn hình vẫn tô mờ như trước).
+- **Khối động lưu như AutoCAD** (DXF và DWG):
+  - Khối gốc chứa mọi nét ở trạng thái mặc định (nét thuộc trạng thái khác có cờ ẩn); mỗi bản chèn là khối ẩn danh `*U…` theo trạng thái của nó, liên kết về khối gốc.
+  - Bản 2018: tham số hiển thị (`BPARAMETER` → V) ghi thành **tham số Visibility của AutoCAD** — AutoCAD mở ra là khối động, có grip đổi trạng thái.
+  - Kéo giãn (L) và lật (F): AutoCAD thấy đúng hình đang kéo / lật; đổi tham số tiếp trong DVDCAD.
+  - Mở lại trong DVDCAD còn đủ nét của mọi trạng thái (trước đây nét đang ẩn bị bỏ khi lưu, khối động lưu DXF bị tách rời).
+- **Mở khối động của AutoCAD**:
+  - Bản chèn hiện **tên khối gốc** thay cho `*U12`.
+  - DXF: đọc tham số hiển thị và trạng thái từng bản chèn → đổi trạng thái được bằng bảng **Thuộc tính** hoặc `BDYN`.
+  - Nét ẩn (cờ invisible) không còn vẽ chồng lên nhau — cả DXF và DWG.
+
+## Bổ sung như AutoCAD 2027 (v5s)
+- **Sửa lỗi:** STYLE → *New…* (và mọi hộp hỏi tên / nhập chữ mở từ một hộp thoại) giờ hiện trên cùng, không bị hộp thoại đang mở che.
+- **VPLAYER / VPCLIP lưu vào tệp**: lớp đóng băng riêng từng khung nhìn và đường cắt đa giác ghi vào DXF (VIEWPORT 331 / 340) và DWG 2000; mở tệp của AutoCAD cũng đọc được hai thông tin này. Layout của tệp hiện khung của từng khung nhìn.
+- **TXTEXP** (Express Tools → Chữ → *Nổ chữ*): nổ chữ thành đa tuyến đường bao (đủ dấu tiếng Việt, chữ xoay, hệ số rộng, phông TrueType).
+  - **EXPORTLAYOUT**: chữ cắt ngang khung nhìn được cắt đúng theo khung (đường bao chữ, tô đặc); chữ nằm trọn trong khung giữ nguyên là chữ.
+  - **MSLIDE**: cạnh chữ ghi thành vector theo đường bao (sắc nét khi phóng to slide).
+- **Thanh menu cổ điển** (biến **MENUBAR** = 1, hoặc menu Xem → Thanh menu): Tệp, Sửa, Xem, Chèn, Định dạng, Công cụ, Vẽ, Kích thước, Hiệu chỉnh, Tham số, Cửa sổ, Trợ giúp như AutoCAD.
+- **CUIIMPORT / CUILOAD (.cuix / .cui)** lấy thêm:
+  - **Menu** (PopMenu POP1…, có menu con) → thêm vào thanh menu cổ điển.
+  - **Ribbon** (RibbonRoot.cui: tab → bảng → nút lớn / nhỏ) → tab ribbon riêng.
+  - **Hình nút** trong gói (.png / .bmp / .ico) → biểu tượng của lệnh tự tạo trên ribbon, thanh truy cập nhanh.
+- **Vị trí địa lý:**
+  - Mở DXF của AutoCAD có **GEODATA**: lấy điểm thiết kế, điểm tham chiếu, cao độ, hướng bắc; hệ toạ độ địa lý (LL84 / WGS84) hoặc **UTM** (vd UTM84-48N, VN-2000 UTM 48N) tự đổi ra vĩ độ / kinh độ.
+  - **GEOMAP** (tab Hiển thị → Ánh sáng): bản đồ nền dưới bản vẽ trong Model — *Đường* (OpenStreetMap, cần mạng), *Ảnh vệ tinh* (dịch vụ ô bản đồ riêng: biến **GEOMAPURL** `…/{z}/{x}/{y}.png`), *Tắt*; biến **GEOMAPMODE**. Bản đồ không in.
+- **Máy vẽ HPGL/2**: hộp PLOT → *HP DesignJet (HPGL/2).pc3* in ra tệp **.plt**.
+  - Bút theo bảng kiểu in: **bút vật lý** (physical pen), không có thì **bút ảo** (virtual pen), không có nữa thì số màu ACI; màu bút (PC), bề rộng nét (PW).
+  - Nét, cung (theo dây cung 0,3 mm), kiểu nét (của bảng kiểu in hoặc của đối tượng), hatch mẫu, vùng tô / chữ thành đa giác tô (FP), cắt theo vùng in (IW), khung nhìn layout cắt theo khung.
+
+## Bổ sung như AutoCAD 2027 (v5r)
+- **Layout đọc từ tệp DWG / DXF sửa được** như layout tự tạo.
+  - Vẽ / sửa trên layout của tệp (hoặc chạy MVIEW, VPEDIT, CHSPACE, bảng Thuộc tính): layout tự chuyển thành layout sửa được, giữ nguyên chỗ tab, đối tượng giấy và khung nhìn của tệp.
+  - Chuột phải vào tab layout của tệp: **Chuyển thành layout sửa được**, In, **Xoá layout**. Layout đã chuyển có thêm **Khôi phục layout gốc của tệp**.
+  - Mở DXF giờ có đủ các tab layout (layout đang mở, khối `*Paper_SpaceN`, khung nhìn, khổ giấy của thiết lập in). Đối tượng giấy không còn lẫn vào Model (cả DXF lẫn DWG).
+  - Layout của tệp hiện tờ giấy theo khổ giấy. Hộp Khổ giấy & khung tên có thêm **Khung viền** và khổ giấy riêng của tệp.
+- **Lưu DXF / DWG ghi layout giấy thật**: mỗi layout có LAYOUT (khổ giấy, giới hạn), khối giấy, khung nhìn **VIEWPORT** và mọi đối tượng giấy (khung, khung tên, ghi chú…).
+  - AutoCAD mở ra thấy đúng các tab layout và khung nhìn theo tỉ lệ.
+  - DVDCAD mở lại còn nguyên layout sửa được (khung tên, tham số khung nhìn, đối tượng giấy), kể cả trên máy khác.
+  - DWG 2000 có thực thể VIEWPORT thật (LibreDWG đọc lại đúng).
+- **DIESEL** như AutoCAD: `$(hàm,đối,…)` lồng nhau, đủ hàm `+ - * / = < > != <= >= and or xor eq if index nth strlen substr upper fix rtos angtos edtime eval getenv getvar linelen`.
+  - **MODEMACRO**: chuỗi DIESEL hiện trên thanh trạng thái, tự cập nhật (vd `MODEMACRO` → `Lớp: $(getvar,clayer) | $(edtime,0,DD/MO/YYYY)`; `.` để xoá).
+  - Macro bắt đầu bằng **`$M=`** được tính DIESEL trước khi chạy (dùng trong lệnh tự tạo của CUI, Action Recorder…). Lệnh **DIESEL** để thử biểu thức.
+- **Nhập tệp CUI của AutoCAD**: **CUIIMPORT** / **CUILOAD** đọc **.cuix** (gói zip) và **.cui** (XML), ngoài .dvdcui.
+  - Macro chỉ gọi một lệnh có sẵn → dùng thẳng lệnh đó; macro khác → lệnh tự tạo (giữ `^C^C`, `;`, `\`, `$M=`).
+  - Phím tắt (Accelerators), thao tác nhấp đúp theo loại đối tượng, thanh công cụ → tab ribbon riêng (mỗi thanh một bảng).
+- **In theo bảng kiểu in (.ctb)**:
+  - **Kiểu nét thích ứng** (adaptive): mẫu nét co giãn cho vừa số nguyên lần trên mỗi đối tượng (đường, đa tuyến, cung, đường tròn), tắt được theo từng kiểu.
+  - **Đầu nét / nối nét hình thoi** vẽ đúng mũi thoi ở hai đầu và ở mỗi đỉnh nối (trước đây dùng tạm vuông / vát).
+- **EXPORTLAYOUT** cắt thêm **ảnh** (giữ ảnh + đường cắt theo khung nhìn; DXF ghi khung ảnh đã cắt) và **khối 3D** (đổi thành hình chiếu bằng như khi xem trong khung nhìn — cạnh lưới, biên dạng đùn, đường tròn trụ / nón — rồi cắt theo khung).
+
+## Bổ sung như AutoCAD 2027 (v5q)
+- **Không gian giấy (paper space)** trong layout do bạn tạo (lệnh LAYOUT): mọi lệnh vẽ / sửa đều ghi lên giấy (ghi chú, khung, ký hiệu…), có hoàn tác / làm lại, lưu cùng layout.
+  - Khung nhìn sửa như đối tượng: **dời / kéo giãn** (giữ tỉ lệ và vùng nhìn), **xoá**, **sao chép** khung nhìn.
+  - Bảng Thuộc tính sửa được đối tượng trên giấy. **PSOBJ** chọn mọi đối tượng giấy của layout.
+- **CHSPACE** (Change Space): chuyển đối tượng **giấy → Model** (qua khung nhìn chứa nó) hoặc **Model → giấy** (tuỳ chọn M: chọn khung nhìn, chọn đối tượng trong Model), đổi cỡ đúng theo tỉ lệ khung nhìn, một bước hoàn tác.
+- **STANDARDS / LAYTRANS** đọc được tệp chuẩn **DWS / DWG / DWT nhị phân** (qua LibreDWG), ngoài DXF.
+- **Kiểu in (.ctb)** đủ thuộc tính trong Trình sửa bảng kiểu in (Dạng bảng và Dạng biểu mẫu):
+  - Có tác dụng khi in: màu, chuyển xám, độ đậm, **kiểu nét** (31 kiểu nét in cố định như AutoCAD), **kiểu đầu nét**, **kiểu nối nét**, **kiểu tô** (ô cờ, lưới ô vuông, hình thoi, sọc ngang / dọc, xiên trái / phải, chấm vuông), bề rộng nét, hệ số tỉ lệ chung cho kiểu nét không theo ISO.
+  - Lưu và ghi vào .ctb cho AutoCAD: dither, số bút, bút ảo, thích ứng, mô tả.
+  - **Sửa bề rộng nét…**: sửa bảng bề rộng nét tuỳ chỉnh (mm / inch, sắp xếp); kiểu đang dùng giá trị cũ đổi theo.
+- **EXPORTLAYOUT** cắt mọi đối tượng theo khung nhìn (chữ nhật, đa giác VPCLIP, XCLIP): đường, đa tuyến cong, cung, đường tròn, elip, spline (thành từng đoạn), hatch, vùng đặc; chữ / điểm giữ khi điểm đặt nằm trong khung.
+- **Visual Styles Manager**: kiểu riêng có thuộc tính sửa được — kiểu gốc, kiểu mặt (không tô), hiện cạnh (không / cạnh mặt / đường đẳng tham số), màu cạnh, độ mờ (%), bóng đổ (tắt / trên nền / đầy đủ), màu nền; áp dụng ngay vào khung nhìn 3D và giữ khi mở lại 3D.
+- **GEOGRAPHICLOCATION** (hộp Vị trí địa lý): vĩ độ / kinh độ (độ thập phân hoặc độ-phút-giây, Bắc / Nam, Đông / Tây), chọn nhanh thành phố, cao độ, hệ toạ độ, **điểm thiết kế** (Chọn điểm <), hướng bắc (la bàn xem trước), múi giờ.
+  - Lưu theo bản vẽ, dùng cho mặt trời / bóng đổ 3D, ghi $LATITUDE / $LONGITUDE / $NORTHDIRECTION / $TIMEZONE vào DXF và đọc lại khi mở.
+  - Điểm mốc đỏ trên bản vẽ (**GEOMARKERVISIBILITY**). **GEOREMOVE** xoá vị trí. Biến LATITUDE, LONGITUDE, NORTHDIRECTION, TIMEZONE.
+- **MSLIDE / VSLIDE**: tạo tệp slide **.sld** đúng định dạng AutoCAD (vector theo điểm ảnh, màu ACI; chữ và vùng tô quét thành nét), xem .sld (cả định dạng cũ) và slide trong thư viện **.slb**; REDRAW / Esc để trở lại. **SLIDELIB** gộp nhiều .sld thành .slb.
+- **CUI** (Customize User Interface) — cũng mở bằng CUSTOMIZE, TOOLBAR, MENU:
+  - **Lệnh tự tạo** bằng macro kiểu AutoCAD (`^C^C`, `;` / dấu cách = Enter, `\` chờ người dùng nhập, `_`, `'`), mô tả, biểu tượng, Chạy thử.
+  - **Thanh truy cập nhanh**: thêm / bỏ / sắp xếp lệnh. **QUICKCUI** mở thẳng phần này.
+  - **Tab ribbon riêng**: tên tab, tên bảng, nút lớn / nhỏ, nhãn nút, hiện trong mọi không gian làm việc.
+  - **Phím tắt**: gán tổ hợp Ctrl / Alt / F1–F12 cho lệnh (kèm danh sách phím tắt có sẵn).
+  - **Thao tác nhấp đúp** theo loại đối tượng (đường, đa tuyến, chữ, hatch, khối, kích thước, bảng…).
+  - Tab **Chuyển (Transfer)**: xuất / nhập tệp **.dvdcui**, đặt lại mặc định, tệp tuỳ biến bổ sung. Lệnh **CUIEXPORT**, **CUIIMPORT**, **CUILOAD**, **CUIUNLOAD**, **CUIAPPLY**.
+
+## Lệnh mới và hộp thoại như AutoCAD 2027 (v5p)
+- **HATCH / HATCHEDIT** (hộp Hatch and Gradient) đủ các mục trước đây còn mờ:
+  - Loại **Định sẵn / Tự định nghĩa (_USER)**: khoảng cách nét và **Hai chiều** (lưới ô vuông) cho mẫu tự định nghĩa.
+  - **Gốc mẫu**: Dùng gốc hiện hành, hoặc Chỉ định gốc mới (bấm điểm, hay Mặc định theo phạm vi biên: dưới trái / dưới phải / trên phải / trên trái / tâm), Lưu làm gốc mặc định.
+  - Tuỳ chọn: **Chú thích theo tỉ lệ**, **Liên kết** với biên, **Tạo hatch riêng** cho từng vùng, **Thứ tự vẽ** (Không gán / Dưới cùng / Trên cùng / Sau biên / Trước biên).
+  - Khi sửa hatch: thêm biên (bấm điểm / chọn đối tượng), **Bỏ biên** (đảo), **Dựng lại biên** (tạo đa tuyến biên, hỏi có liên kết không).
+  - **HATCHSETORIGIN** (HSO) đặt lại gốc mẫu cho hatch đã chọn. Biến mới: HPORIGIN, HPNAME, HPSCALE, HPANG, HPSPACE, HPDOUBLE, HPASSOC, HPANNOTATIVE, HPSEPARATE, HPDRAWORDER.
+- **Bảng**: kiểu ô có **viền đôi** (Double line + Spacing trong tab Đường viền của TABLESTYLE).
+  - **TINSERT** chèn khối vào ô bảng: tên khối, xem trước, tỉ lệ hoặc **Tự khớp**, góc, căn lề trong ô; khối đi theo bảng khi sửa / dời bảng; "Bỏ khối khỏi ô".
+- **PLOTSTAMP** (hộp Plot Stamp): trường dấu in (tên bản vẽ, layout, ngày giờ, tên đăng nhập, thiết bị, khổ giấy, tỉ lệ in), 2 **trường người dùng** (Thêm / Sửa), tệp tham số **.pss** (Nạp / Lưu thành), xem trước vị trí.
+  - **Nâng cao…**: vị trí (4 góc), hướng ngang / dọc, dấu in lộn ngược, dời X / Y theo vùng in được hoặc mép giấy, phông, cao chữ, một dòng, đơn vị (mm / inch / pixel), tệp nhật ký in (tải / xoá).
+  - Hộp **PLOT**: bật **Bật dấu in** (nút ⚙ mở PLOTSTAMP) và **In lộn ngược** (xoay bản in 180°). Biến **LOGINNAME**.
+- **STANDARDS** (Configure Standards): gắn tệp chuẩn **DXF** (hoặc .dws lưu dạng DXF) với bản vẽ, + Thêm / − Bỏ / ↑ ↓ (tệp trên được ưu tiên khi trùng tên), mô tả tệp; tab **Trình cắm**: Kiểu kích thước, Lớp, Kiểu nét, Kiểu chữ.
+  - **Cài đặt…**: tắt thông báo / hiện cảnh báo khi có vi phạm / biểu tượng ⚖ trên thanh trạng thái; tự động sửa thuộc tính không chuẩn; hiện lỗi đã bỏ qua; tệp chuẩn ưu tiên để thay thế.
+  - **CHECKSTANDARDS** (CHK): từng **Vấn đề**, danh sách **Thay bằng** (✓ = gợi ý), **Xem trước thay đổi** (thuộc tính / giá trị hiện tại / giá trị chuẩn), **Sửa lỗi**, **Lỗi tiếp theo**, **Đánh dấu bỏ qua**, bảng kết quả khi xong.
+  - Sửa được: thuộc tính lớp (màu, kiểu nét, bề rộng nét), lớp không chuẩn (chuyển đối tượng sang lớp chuẩn rồi xoá lớp cũ), kiểu nét (thay / định nghĩa lại), kiểu chữ (thay / sửa phông, hệ số rộng), kiểu kích thước (thay / sửa và dựng lại kích thước).
+- **STYLESMANAGER** (Kiểu in): các bảng .ctb dạng biểu tượng + **Trình thêm bảng kiểu in** (bắt đầu từ đầu / dùng bảng có sẵn / mẫu / nhập .ctb của AutoCAD), Sửa, Nhập / Xuất .ctb, Đổi tên, Xoá.
+  - **Trình sửa bảng kiểu in** (Plot Style Table Editor): tab Tổng quát (mô tả, thông tin tệp), **Dạng bảng** (mỗi cột một kiểu, bấm ô để sửa), **Dạng biểu mẫu** (chọn nhiều kiểu bằng Ctrl / Shift; màu, **chuyển xám**, độ đậm, bề rộng nét, mô tả; Lưu thành… .ctb). Chuyển xám áp dụng khi in và ghi vào tệp .ctb.
+- **VISUALSTYLES** (Visual Styles Manager, bảng nổi): ảnh mẫu 2D khung dây / Khung dây / Khuất nét / Thực tế / Tô bóng / Tô bóng + cạnh / Xuyên thấu, thuộc tính, Áp dụng cho khung nhìn hiện hành, Tạo kiểu mới, Xoá kiểu.
+  - **VSCURRENT** (VS, SHADEMODE) hỏi theo dòng lệnh như AutoCAD; **VSSAVE** lưu kiểu hiện hành thành kiểu có tên.
+- **CENTERMARK / CENTERLINE** giờ là đối tượng **liên kết**: dời, đổi bán kính đường tròn / sửa đường thẳng gốc thì dấu tâm, đường tâm bám theo; dời / xoay / co giãn cùng nhau vẫn giữ liên kết.
+  - **CENTERDISASSOCIATE**, **CENTERREASSOCIATE**, **CENTERRESET**; biến **CENTEREXE**, **CENTERLTYPE**, **CENTERLAYER**.
+- Hộp thoại làm lại theo bố cục AutoCAD: **PTYPE** (Point Style), **ATTACH** (chọn tệp DWG / DXF / ảnh / PDF rồi mở lệnh gắn tương ứng), **REINIT** (Re-initialization: nạp lại acad.pgp), **TEXTSCR / HISTORY** (Cửa sổ văn bản: sao chép, dán vào dòng lệnh, tìm), **DBLIST** (liệt kê mọi đối tượng vào cửa sổ văn bản), **DWGSERVER**, **ABOUT**, **SPELLBROWSER**.
+- Lệnh nhỏ: **BSAVEAS** (lưu khối đang sửa thành khối mới, có thể lưu ra .dxf), **EXPORTLAYOUT** (xuất layout ra không gian mô hình của bản vẽ mới, nét trong khung nhìn cắt theo khung), **TREESTAT**, **COMPARECLOSE**.
+
+## Lệnh mới và hộp thoại như AutoCAD 2027 (v5o)
+- **TABLESTYLE** (hộp Table Style): danh sách kiểu, xem trước, Đặt hiện hành / Mới… / Sửa… / Xoá (không xoá được kiểu đang dùng).
+  - Hộp New / Modify Table Style: bảng bắt đầu (lấy định dạng từ bảng có sẵn), hướng bảng Xuống / Lên, xem trước.
+  - Kiểu ô **Tiêu đề / Tên cột / Dữ liệu** và kiểu ô riêng (Tạo kiểu ô mới, Quản lý kiểu ô). Mỗi kiểu ô có 3 tab:
+    - Chung: màu nền, căn lề (9 vị trí), định dạng (Chung, Số thập phân, Phần trăm, Tiền tệ, Số nguyên, Văn bản), loại, lề ngang / dọc, gộp ô.
+    - Chữ: kiểu chữ, cao chữ, màu chữ, góc chữ.
+    - Đường viền: bề rộng nét, kiểu nét, màu và 8 nút Mọi / Ngoài / Trong / Dưới / Trái / Trên / Phải / Không.
+  - Sửa kiểu thì mọi bảng dùng kiểu đó cập nhật theo. SCALE bảng thì chữ và lề đổi cỡ theo.
+- **TABLE** (hộp Insert Table): chọn kiểu bảng (nút … mở TABLESTYLE), bảng rỗng / dán từ Excel / liên kết dữ liệu / Data Extraction, xem trước, chèn theo điểm hoặc theo khung, cột × rộng cột, hàng dữ liệu × cao hàng (số dòng), kiểu ô hàng 1 / hàng 2 / các hàng còn lại. Hộp sửa bảng chọn được kiểu ô cho từng hàng. **MATCHCELL** chép kiểu ô sang ô khác.
+- **COUNT**: chọn một khối → thanh đếm trên bản vẽ (số bản chèn, ◀ ▶ duyệt từng bản chèn, Chèn trường, Tạo bảng, ✕). Tuỳ chọn Vùng / Model / Danh sách / Bảng.
+  - **COUNTLIST** mở bảng Count (ảnh khối, tên, số lượng; bấm để đếm, kích đúp để phóng tới). **COUNTFIELD** chèn trường đếm tự cập nhật khi thêm / xoá khối. **COUNTCLOSE** đóng.
+- **BREPLACE** (Express Tools): thay mọi bản chèn khối A bằng khối B, giữ điểm chèn, tỉ lệ, góc, lớp; có xem trước và tuỳ chọn dọn định nghĩa khối cũ.
+- **ADDSELECTED**: chọn một đối tượng → vẽ đối tượng mới cùng loại và cùng lớp, màu, kiểu nét, bề rộng nét, kiểu chữ, mẫu hatch, kiểu bảng (khối thì chèn đúng khối đó).
+- **SYSVDLG** (System Variables): nhóm biến, tìm, sửa giá trị tại chỗ, mô tả, khôi phục giá trị đầu phiên. **SETVAR** hỏi theo dòng lệnh như AutoCAD (`?` = mở SYSVDLG).
+- **SCALELISTEDIT** (Edit Drawing Scales): thêm / sửa / lên / xuống / xoá / đặt lại danh sách tỉ lệ; ô ▲ tỉ lệ chú thích trên thanh trạng thái dùng danh sách này.
+  - **OBJECTSCALE**: thêm / xoá tỉ lệ hỗ trợ cho đối tượng chú thích. **ANNOALLVISIBLE** = 0 chỉ hiện đối tượng hỗ trợ tỉ lệ hiện hành. **ANNORESET**, **ANNOUPDATE**.
+- **UCSMAN** (hộp UCS): UCS đặt tên (Đặt hiện hành, Lưu UCS hiện hành, Đổi tên, Xoá, Chi tiết), UCS trực giao (Trên / Dưới / Trước / Sau / Trái / Phải, độ sâu), Cài đặt.
+- **HYPERLINK** (Insert / Edit Hyperlink): liên kết tới tệp hoặc trang web (tệp gần đây, trang đã duyệt, liên kết đã chèn), góc nhìn của bản vẽ, e-mail; chữ hiển thị; đích trong bản vẽ; Bỏ liên kết.
+  - Rê chuột lên đối tượng có liên kết hiện gợi ý; **Ctrl + bấm** để mở. **ATTACHURL** (đối tượng / vùng), **DETACHURL**, **PASTEASHYPERLINK**, **HYPERLINKOPTIONS**, **-HYPERLINK**, **OPENLINK** / **GOTOURL**.
+- **Action Recorder** (ribbon Manage → Ghi thao tác): **ACTRECORD** ghi lệnh và điểm / số / chữ / từ khoá đã nhập; khi ghi có thanh nổi (Thông báo, Yêu cầu nhập, Điểm gốc, Dừng).
+  - **ACTSTOP** lưu macro (tên lệnh, mô tả, khôi phục góc nhìn, danh sách bước, đánh dấu bước "Hỏi" người dùng). Gõ tên macro để chạy lại.
+  - **ACTMANAGER**: Chạy, Sao chép, Đổi tên, Sửa, Xoá, Xuất / Nhập .actm. **ACTUSERMESSAGE**, **ACTUSERINPUT**, **ACTBASEPOINT**.
+- Script: **RSCRIPT** lặp lại script, **Esc / Backspace** ngắt script, **RESUME** chạy tiếp, **SCRIPTCALL** chạy script lồng.
+- Lệnh nhỏ: **GOTOSTART**, **FILETAB / FILETABCLOSE**, **QVDRAWING / QVLAYOUT** (+ CLOSE), **BROWSER**, **VIEWGO**, **VIEWPLAY**, **GRAPHICSCONFIG**, **WSSAVE / WSSETTINGS / WORKSPACE** (Đặt hiện hành / Lưu thành / Đổi tên / Xoá / Cài đặt), **CLASSICXREF**, **CLASSICIMAGE**, **CLASSICGROUP** (hộp Object Grouping: tạo nhóm tên / không tên, chọn được, thêm / bớt, đổi tên, mô tả, rã nhóm), **RESETBLOCK**, **BSAVE**, **ADJUST**, **EXTERNALREFERENCESCLOSE**, **VISUALSTYLESCLOSE**, **PARAMETERSCLOSE**, **ADCCLOSE**, **DRAWINGRECOVERYHIDE**.
+- Hộp thoại làm lại theo bố cục AutoCAD:
+  - **FILTER** (Object Selection Filters): danh sách điều kiện, chọn điều kiện + toán tử (= != < <= > >= *), X / Y cho điểm, nhóm `** Begin/End AND / OR / XOR / NOT`, Thêm đối tượng đã chọn, bộ lọc đặt tên. Apply rồi chọn vùng cần lọc.
+  - **ALIASEDIT** (acad.pgp – Alias Editor): mọi lệnh tắt acad.pgp + lệnh tắt riêng, Thêm / Xoá / Sửa, nhập / xuất acad.pgp.
+  - **SPELL** (Check Spelling): nơi kiểm tra, từ không có trong từ điển, gợi ý, ngữ cảnh (phóng tới chữ), Bỏ qua / Bỏ qua tất cả / Thay / Thay tất cả / Thêm vào từ điển, Hoàn tác, Cài đặt, Từ điển riêng.
+  - **APPLOAD** (Load / Unload Applications): nạp tệp, Ứng dụng đã nạp / Lịch sử, Gỡ nạp, Startup Suite.
+  - **LAYTRANS** (Layer Translator): Chuyển từ / Chuyển sang, Ánh xạ / Ánh xạ cùng tên, nạp lớp chuẩn từ DXF, lớp mới, bảng ánh xạ, Cài đặt (đổi màu / kiểu nét về BYLAYER).
+  - **LAYWALK** (LayerWalk): bảng nổi, chọn lớp (Ctrl / Shift) chỉ hiện lớp đó, kích đúp để giữ lớp (*), lọc, Chọn đối tượng, Dọn lớp, chuột phải (Giữ / Bỏ giữ / Chọn tất cả / Đảo chọn / Lớp không dùng / Lưu trạng thái lớp), Khôi phục khi thoát.
+  - **PUBLISH**: danh sách trang (thêm / bỏ / lên / xuống, lưu / nạp danh sách), xem trước, dấu in, mở PDF khi xong.
+  - **DDVPOINT** (Viewpoint Presets): 2 vòng chọn góc (từ trục X, so với mặt XY), Đặt về mặt bằng.
+  - **VPORTS** (Viewports): khung nhìn chuẩn có xem trước, lưu / gọi khung nhìn đặt tên (bản dòng lệnh: **-VPORTS**).
+  - **PARAMETERS** (Parameters Manager): bảng nổi gồm tham số ràng buộc kích thước và **tham số người dùng** (dùng được trong biểu thức), sửa tên / biểu thức tại chỗ, đổi tên thì biểu thức đổi theo.
+  - **INPUTSEARCHOPTIONS** (Input Search Options), **Load or Reload Linetypes** (đọc thêm tệp **.lin** riêng).
+  - **Hatch và Gradient**: tab Gradient đủ 9 kiểu chuyển màu (Linear, Cylinder, Spherical, Hemispherical, Curved và kiểu ngược), một màu (Đậm — Nhạt) / hai màu, căn giữa, góc. **GRADIENT** tô chuyển màu như HATCH; **HATCHEDIT** mở chính hộp này để sửa hatch đã chọn.
+
+## Chữ định dạng, trường, cột, MLSTYLE và BATTMAN như AutoCAD 2027 (v5n)
+- **MTEXT có định dạng như AutoCAD:** bôi đen rồi bấm **B / I / U / Ō** (hoặc **Ctrl+B / Ctrl+I / Ctrl+U**) để đậm, nghiêng, gạch chân, gạch trên đúng phần chữ đã chọn.
+  - Chưa bôi đen thì áp cho chữ gõ tiếp.
+  - Nút trên tab Text Editor sáng theo định dạng ở con trỏ.
+  - Ô soạn có hoàn tác riêng (Ctrl+Z / Ctrl+Y).
+  - Lưu DXF / DWG thành mã MTEXT chuẩn (`{\fArial|b1|i0;…}`, `\L…\l`, `\O…\o`) nên AutoCAD hiện đúng. Mở file MTEXT có định dạng của AutoCAD cũng giữ được đậm / nghiêng / gạch chân / gạch trên.
+- **Trường (Field)** — tab Text Editor → Field, chuột phải → Chèn trường…, hoặc lệnh **FIELD**:
+  - Hộp thoại Field gồm nhóm trường, tên trường, định dạng, giá trị xem trước và biểu thức trường (`%<\AcVar Title>%`).
+  - Các trường có:
+    - ngày hiện tại / ngày tạo / ngày lưu (định dạng `dd/MM/yyyy`, `d MMMM yyyy`, `HH:mm`…);
+    - tiêu đề, chủ đề, tác giả, từ khoá, ghi chú, người kiểm, đường dẫn gốc siêu liên kết, tên file, thuộc tính tuỳ chỉnh (DWGPROPS);
+    - diện tích / chiều dài đối tượng (bấm "Chọn đối tượng"; đơn vị bản vẽ, m², cm²; số lẻ);
+    - số đối tượng.
+  - Trường nằm ngay trong chữ (nền xám, không in) và tự cập nhật khi mở bản vẽ, khi đổi DWGPROPS và khi chạy UPDATEFIELD.
+- **Cột (Columns)** — tab Text Editor → Columns:
+  - Không chia cột, Cột động, 2–6 cột tĩnh, Chèn ngắt cột (**Alt+Enter**), Cài đặt cột… (kiểu cột, số cột, chiều cao, bề rộng cột, khoảng cách, tổng).
+  - Chữ tự chảy sang cột sau khi đầy chiều cao.
+  - Khi lưu DXF / DWG, mỗi cột là một MTEXT nên AutoCAD hiện đúng. DVDCAD mở lại vẫn là một chữ có cột.
+- **Chữ lộn ngược và góc nghiêng:** Text Style (Lộn ngược, Góc nghiêng), Enhanced Attribute Editor và BATTMAN. Đọc / ghi DXF và DWG (mã 51, 71). "Viết dọc" chỉ có với phông SHX, như AutoCAD.
+- **MLSTYLE** đủ các mục như AutoCAD:
+  - Mỗi thành phần có khoảng lệch, màu, kiểu nét.
+  - Nắp đầu / cuối gồm đoạn thẳng, cung ngoài, cung trong, góc nắp.
+  - Có màu tô (Fill) và hiện mối nối (Display joints).
+  - **Tải… / Lưu…** file **.mln** đúng định dạng AutoCAD (đọc được acad.mln).
+- **BATTMAN (Block Attribute Manager)**:
+  - Chọn khối (bấm trên bản vẽ hoặc chọn trong danh sách); bảng Nhãn / Lời nhắc / Mặc định / Chế độ; Đồng bộ, Lên, Xuống, Sửa…, Xoá; Có trong bản vẽ: N.
+  - Sửa… mở hộp **Edit Attribute**:
+    - Thuộc tính khối: chế độ Ẩn / Hằng số / Xác nhận / Đặt sẵn / Khoá vị trí / Nhiều dòng; Nhãn, Lời nhắc, Mặc định.
+    - Tuỳ chọn chữ: kiểu, canh lề, cao, góc, chú thích, viết ngược, lộn ngược, hệ số rộng, góc nghiêng, bề rộng khung.
+    - Thuộc tính đối tượng: lớp, kiểu nét, màu, bề rộng nét.
+    - Có **Xem trước thay đổi** ngay trên bản vẽ; Cancel thì trả lại như cũ.
+  - Cài đặt…: chọn cột hiện trong danh sách, tô đỏ nhãn trùng, áp thay đổi cho các bản chèn đã có.
+  - Thuộc tính **Ẩn** không hiện trên bản vẽ (ATTDISP Bình thường). **ATTDISP Bật** hiện cả thuộc tính ẩn.
+  - Thuộc tính **Hằng số** không sửa được trong EATTEDIT. Thuộc tính **Đặt sẵn** không hỏi khi chèn khối.
+- **Enhanced Attribute Editor (EATTEDIT):** bật thêm góc nghiêng, chú thích, viết ngược, lộn ngược, kiểu nét, bề rộng nét. Giá trị nhiều dòng dùng được với thuộc tính Nhiều dòng.
+  - Ô "Kiểu in" (Plot style) vẫn tắt khi bản vẽ dùng bảng in theo màu (.ctb), như AutoCAD.
+- **PURGE / RENAME** gọi tên nhóm theo AutoCAD: Blocks, Dimension Styles, Layers, Linetypes, Multileader Styles, Multiline Styles, Text Styles.
+
+## Soạn chữ, mảng và các hộp thoại còn lại như AutoCAD 2027 (v5m)
+- **MTEXT / TEXT / DDEDIT soạn ngay trên bản vẽ** (máy tính), như AutoCAD:
+  - Ô soạn nằm đúng chỗ chữ, đúng cỡ, góc xoay và canh lề. MTEXT có khung (ngắt dòng theo bề rộng khung) và thước phía trên.
+  - MTEXT: **Enter** = xuống dòng, **Ctrl+Enter** hoặc bấm ra ngoài = lưu, **Esc** = bỏ.
+  - TEXT (DTEXT): **Enter** = dòng mới (mỗi dòng là một chữ riêng, cách 1,5 lần cao chữ), **Enter ở dòng trống** = xong, **Esc** = giữ phần đã gõ.
+  - DDEDIT / bấm đúp chữ: sửa tại chỗ; MTEXT mở lại đúng nội dung gốc trước khi ngắt dòng.
+  - Tab ribbon **Text Editor** hiện khi đang soạn:
+    - Style: kiểu chữ, cao chữ.
+    - Formatting: phông, màu, CHỮ HOA / chữ thường.
+    - Paragraph: canh lề 9 kiểu, đánh số / đầu dòng.
+    - Insert: ký hiệu (°, ±, Ø, ≈, ∠, Δ, ², ³, ≠, Ω, µ…), nhập chữ từ file .txt.
+    - Tools: Tìm và thay thế. Options: thước, hoàn tác / làm lại. Close Text Editor.
+  - Chuột phải trong ô soạn: hoàn tác, cắt / chép / dán, ký hiệu, chữ hoa / thường, tìm và thay thế.
+  - Script và LISP vẫn dùng được: `TEXT 10,10 2.5 0 Dòng 1` rồi dòng trống; `(command "TEXT" "0,0" "3" "0" "Chữ" "")`.
+- **ARRAYRECT / ARRAYPOLAR** có tab ribbon **Array Creation**: sửa số cột / hàng / khoảng / tổng, số phần tử / góc lấp đầy, liên kết, xoay phần tử ngay trên ribbon, bản xem trước cập nhật tức thì. Dòng lệnh vẫn có đủ tuỳ chọn (`COU`, `S`, `COL`, `R`, `I`, `A`, `F`, `ROT`…).
+- **COLOR** mở hộp **Select Color** (Index Color · True Color · Color Books). `-COLOR` là bản dòng lệnh cho script / LISP. Ô "Chọn màu…" ở các hộp thoại và bảng Thuộc tính cũng mở hộp này.
+- Hộp thoại mới theo bố cục AutoCAD:
+  - **PURGE**: hai chế độ *Mục dọn được* / *Tìm mục không dọn được* (kèm lý do), cây mục có tên (khối, kiểu kích thước, lớp, kiểu nét, kiểu ghi chú dẫn, kiểu đường đôi, kiểu chữ, khối động), dọn hình độ dài 0 và chữ rỗng, dọn cả mục lồng nhau. `-PURGE` cho script: `-PURGE A * N`.
+  - **RENAME**: Named Objects · Items · Old Name · Rename To — khối, kiểu kích thước, lớp, trạng thái lớp, kiểu ghi chú dẫn, kiểu đường đôi, kiểu chữ, góc nhìn.
+  - **LAYERSTATE** (Layer States Manager): Mới / Lưu / Đổi tên / Xoá / Nhập / Xuất (.las.json), chọn thuộc tính cần gọi lại (bật tắt, đóng băng, khoá, màu, kiểu nét, bề rộng nét, lớp hiện hành), tắt lớp không có trong trạng thái.
+  - **VIEW** (View Manager): cây Hiện tại / Góc nhìn mô hình / Góc nhìn mẫu, bảng thuộc tính sửa được (tên, nhóm, tâm, chiều cao, góc xoay), New (hiển thị hiện tại hoặc chọn cửa sổ, lưu ảnh chụp lớp), Update Layers, Delete, Set Current.
+  - **FIND** (Find and Replace): danh sách kết quả, phóng tới chữ tìm thấy, Replace / Replace All / Find Next, tìm trong vùng chọn; thêm tuỳ chọn: hoa thường, nguyên từ, ký tự đại diện `* ?`, **không phân biệt dấu** (tìm `thep` ra `thép`), loại chữ (thuộc tính, kích thước, chữ, bảng).
+  - **EATTEDIT** (Enhanced Attribute Editor, cũng mở khi bấm đúp khối có thuộc tính): tab Attribute / Text Options / Properties — sửa giá trị, kiểu chữ, canh lề, cao chữ, góc, hệ số rộng, lớp, màu; Apply; Select block.
+  - **TOLERANCE** (Geometric Tolerance): 2 hàng Sym · Tolerance 1/2 (Ø, điều kiện vật liệu Ⓜ Ⓛ Ⓢ) · Datum 1/2/3, Height + Projected Tolerance Zone Ⓟ, Datum Identifier.
+  - **DWGPROPS** (Drawing Properties): tab General / Summary / Statistics / Custom (thuộc tính tuỳ chỉnh Thêm / Xoá).
+  - **MLEADERSTYLE** (Multileader Style Manager): nhiều kiểu có tên, xem trước, Set Current / New / Modify / Delete; Modify có tab Leader Format / Leader Structure / Content.
+  - **MLSTYLE** (Multiline Style): nhiều kiểu có tên, xem trước; New / Modify với nắp đầu / cuối riêng và danh sách thành phần (khoảng lệch) Thêm / Xoá.
+  - **XREF** (External References): bảng nổi File References + Details; chuột phải: Mở, Gắn, Gỡ nạp, Nạp lại, Gỡ, Gộp; bật / tắt làm mờ.
 
 ## Hộp thoại và ribbon như AutoCAD 2027 (v5l)
 - **Mọi hộp thoại** có khung như AutoCAD:
@@ -96,10 +520,10 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Mã `$INSUNITS` sửa đúng theo AutoCAD: 7 = km, 15 = decameter (trước đây 15 bị hiểu nhầm là km).
 
 ## Lưu DWG gốc (v5k)
-- `SAVEDWG` ghi thẳng file **DWG 2000 (AC1015)** bằng bộ ghi có sẵn của DVDCAD — không cần ODA File Converter, chạy cả trên trình duyệt và điện thoại.
+- `SAVEDWG` ghi thẳng file DWG bằng bộ ghi có sẵn của DVDCAD — không cần ODA File Converter, chạy cả trên trình duyệt và điện thoại. Từ v5t mặc định **DWG 2018**, chọn được 2013 / 2010 / 2004 / 2000 (v5k: DWG 2000).
 - `SAVEAS` / **Ctrl+Shift+S** chọn được *Bản vẽ AutoCAD (\*.dwg)*; **Ctrl+S** sau đó ghi đè đúng định dạng đó.
 - Mở DWG: thuộc tính khối (ATTRIB) không còn bị đọc trùng hai lần.
-- Chi tiết, phiên bản DWG 2004 → 2018 qua ODA: mục **Lưu DWG** trong phần khối động bên dưới.
+- Chi tiết các phiên bản: mục **Lưu DWG** trong phần khối động bên dưới.
 
 ## Dòng lệnh (v5j) — như AutoCAD 2027
 - **Gợi ý khi gõ** (AutoComplete) có biểu tượng, gồm:
@@ -866,27 +1290,29 @@ Bố cục tab, bảng và biểu tượng theo AutoCAD để người dùng Aut
 - Định nghĩa khối động lưu trên máy theo tên khối nên dùng được cho mọi bản vẽ chèn khối đó.
 
 **Lưu DWG:**
-- `SAVEDWG` (`DWGOUT`) — lưu ra file **DWG 2000** (AC1015) bằng bộ ghi có sẵn trong DVDCAD: chạy cả trên trình duyệt, điện thoại và bản Windows, không cần mạng hay cài thêm.
+- `SAVEDWG` (`DWGOUT`) — lưu ra file **DWG 2018** (AC1032, mặc định), 2013, 2010, 2004 hoặc 2000 bằng bộ ghi có sẵn trong DVDCAD: chạy cả trên trình duyệt, điện thoại và bản Windows, không cần mạng hay cài thêm.
   - Giữ: lớp (màu, bật/tắt, đóng băng, khoá, bề rộng nét, kiểu nét), kiểu nét có chữ / hình, kiểu chữ, khối + thuộc tính, kích thước (thẳng, chéo, góc, bán kính, đường kính), hatch đặc và hatch mẫu, đa tuyến có cung / độ rộng, MTEXT, elip, XLINE / RAY, vùng che (WIPEOUT), layout Model / Layout1, ảnh xem trước trong hộp thoại Mở.
-  - Dữ liệu riêng của DVDCAD (khối 3D tham số, vùng, thứ tự vẽ, chú thích theo tỉ lệ, ràng buộc, khối động) ghi kèm trong file: mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này.
+  - Khối động ghi như AutoCAD (khối gốc + `*U`, bản 2018 có tham số hiển thị của AutoCAD); vị trí địa lý ghi thành GEODATA (2010+).
+  - Dữ liệu riêng của DVDCAD (khối 3D tham số, vùng, thứ tự vẽ, chú thích theo tỉ lệ, ràng buộc, kéo giãn / lật của khối động) ghi kèm trong file: mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này.
 - `SAVEAS` / **Ctrl+Shift+S**: chọn *Bản vẽ AutoCAD (\*.dwg)* hoặc *DXF* trong hộp thoại lưu. Bản vẽ mở từ DWG thì hộp thoại gợi ý DWG trước. **Ctrl+S** sau đó ghi đè đúng định dạng đã chọn.
-- `DWGSERVER` — chọn phiên bản: **DWG 2000 (bộ ghi sẵn có, mặc định)**, hoặc DWG 2004 → 2018 qua **ODA File Converter** (miễn phí).
-  - Bản Windows: cài ODA File Converter là chuyển được ngay trên máy. Bản web: qua máy chủ chuyển đổi của bạn: cài ODA File Converter và **Node.js**, chạy `node server-dwg.js` (đặt biến `ODA` trỏ tới ODAFileConverter); điện thoại cùng mạng nhập `http://<IP máy tính>:8787/convert`.
-  - Không có ODA / máy chủ thì DVDCAD tự ghi DWG 2000.
+- `DWGSERVER` — chọn phiên bản: **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000 (bộ ghi sẵn có, mặc định 2018)**, hoặc qua **ODA File Converter** (không bắt buộc).
+  - Bản Windows: nút **Tải ODA File Converter** mở trang tải của ODA; cài xong quay lại DVDCAD là tự tìm thấy (hoặc bấm **Tìm lại**, **Chọn…** nếu cài chỗ khác). Chuyển ngay trên máy, không cần mạng. Bản web: qua máy chủ chuyển đổi của bạn: cài ODA File Converter và **Node.js**, chạy `node server-dwg.js` (đặt biến `ODA` trỏ tới ODAFileConverter); điện thoại cùng mạng nhập `http://<IP máy tính>:8787/convert`.
+  - Không có ODA / máy chủ thì DVDCAD tự ghi bằng bộ ghi sẵn có, cùng phiên bản (từ v6a có cả DWG 2007).
 
 ## In bản vẽ (PLOT, Ctrl+P)
 Hộp thoại giống AutoCAD:
-- **Khổ giấy:** A4 đến A0, chọn ngang hoặc dọc.
-- **Vùng in:**
-  - Toàn bản vẽ (Extents).
-  - Đang hiện trên màn hình (Display).
-  - Khung chọn (Window): bấm "Chọn khung trên bản vẽ" rồi chỉ 2 góc.
+- **Máy in / máy vẽ:**
+  - `DWG To PDF.pc3` và các bản `AutoCAD PDF`.
+  - `DWFx ePlot`.
+  - `PublishToWeb PNG / JPG`, HPGL/2.
+  - `Default Windows System Printer` và mọi máy in đã cài trong Windows (bản Windows). Nút **Thuộc tính…** chỉnh độ sâu màu, màu / đen trắng, in hai mặt, dpi.
+- **Khổ giấy:** 89 khổ như DWG To PDF.pc3 (ISO A / B / C, full bleed, expand, ANSI, ARCH, JIS) hoặc khổ tự chọn; ngang hoặc dọc.
+- **Vùng in:** Phạm vi (Extents), Màn hình (Display), Khung (Window).
 - **Tỉ lệ:** khít khổ giấy, hoặc in **đúng tỉ lệ 1:N** (1:50, 1:100…). Bản vẽ đơn vị mm thì 1:100 nghĩa là 1 m thật = 10 mm trên giấy. Nếu hình lớn hơn khổ giấy, hộp thoại báo trước.
-- **Kiểu in:** đen trắng (monochrome), màu, hoặc thang xám. Tuỳ chọn **in bề rộng nét** theo mm thật trên giấy (mặc định 0.25 mm).
-- **Xem trước** ngay trong hộp thoại.
-- **Xuất:** PDF đúng khổ giấy, gửi máy in, hoặc ảnh PNG.
-
-Trên điện thoại vẫn dùng nút Xuất như cũ.
+- **Bảng kiểu in:** monochrome.ctb, grayscale.ctb, bảng .ctb tự tạo (STYLESMANAGER), hoặc in theo màu bản vẽ; in bề rộng nét, độ trong suốt, dấu in, lộn ngược.
+- **Xem trước…** (`PREVIEW`): trang vector, lăn chuột phóng to / thu nhỏ, kéo để dời, Zoom Window, menu chuột phải như AutoCAD.
+- **Xuất:** PDF vector, DWFx, máy in (nét vector), ảnh PNG / JPG, tệp HPGL/2.
+Trên điện thoại vẫn dùng nút Xuất như cũ (PDF xuất ra cũng là PDF vector).
 
 ## Lưu & mở
 - Mọi thay đổi **tự lưu trên máy**, gắn với đúng file đó.
@@ -901,33 +1327,33 @@ Trên điện thoại vẫn dùng nút Xuất như cũ.
 - **Bản vẽ mới** (`NEW`, Ctrl+N) dùng đơn vị mm và được lưu trong mục "Gần đây".
 
 ## Khác với AutoCAD
-- Lưu **DWG 2000** và DXF ngay trong app (`SAVEDWG`, `SAVEAS`). DWG 2004 → 2018 cần ODA File Converter hoặc máy chủ chuyển đổi (`DWGSERVER`).
+- Lưu **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** và DXF ngay trong app (`SAVEDWG`, `SAVEAS`), không cần ODA File Converter.
 - Khối lưu ra DXF thành BLOCK + INSERT (kèm thuộc tính ATTDEF/ATTRIB); kích thước thẳng, bán kính, đường kính lưu thành DIMENSION. Kích thước góc lưu thành DIMENSION 3 điểm; bản khối bị sửa riêng lưu thành khối biến thể (TÊN$1…). Kích thước tự cập nhật khi dùng STRETCH, ô nắm, MOVE hoặc SCALE lên chính kích thước, và bám theo đường hình khi gốc đường gióng nằm đúng điểm đặc trưng (v5b). Kích thước góc chưa bám theo đường hình. AutoCAD đọc lại thấy kích thước thường (không liên kết).
 - Kích thước thẳng/chéo có sẵn trong file DWG/DXF cũng kéo ô nắm và STRETCH được. Khi sửa, kích thước được vẽ lại theo kiểu của DVDCAD: giữ cao chữ, số lẻ, mũi tên/gạch chéo. Kích thước góc và bán kính của file gốc chỉ chọn theo cụm.
 - DXF lưu mặc định **2018 (AC1032)**, chữ UTF-8, màu RGB. `DXFVERSION` chọn 2013 / 2010 / 2007 / 2004 / 2000, Tự động (2000/2004) hoặc R12 (phần mềm rất cũ). AutoCAD 2017 trở về trước không mở được file 2018 — chọn phiên bản thấp hơn.
 - Hatch dò biên trong màn hình trước, không thấy biên kín thì tự mở rộng phạm vi dò (tới 40 lần màn hình).
-- Đa tuyến có cung giữ đúng cung khi di chuyển, xoay, lật, tỉ lệ, OFFSET, sửa bằng ô nắm và lưu DXF. TRIM, BREAK, EXTEND, JOIN, FILLET / CHAMFER đa tuyến, REVERSE cũng giữ cung. Cung ở đầu đa tuyến chưa EXTEND được (kéo ô nắm hoặc LENGTHEN).
+- Đa tuyến có cung giữ đúng cung khi di chuyển, xoay, lật, tỉ lệ, OFFSET, sửa bằng ô nắm và lưu DXF. TRIM, BREAK, EXTEND, JOIN, FILLET / CHAMFER đa tuyến, REVERSE cũng giữ cung. EXTEND đa tuyến có đoạn đầu / cuối là cung thì kéo dài cung theo đường tròn của nó (như AutoCAD).
 - Vùng (REGION) lưu ra DXF dạng đa tuyến kín kèm dữ liệu DVDCAD (mở lại trong DVDCAD vẫn là vùng; AutoCAD thấy đa tuyến). Spline / elip trong phép toán vùng được chia thành đoạn thẳng nhỏ.
 - DATALINK tự đọc lại file Excel trên Chrome / Edge máy tính. Trên iPhone / iPad / Safari: dùng `DATALINKURL` (Google Sheets / link CSV) để tự cập nhật, hoặc chọn lại file khi chạy DATALINKUPDATE.
-- Ràng buộc tham số và định nghĩa khối động ghi kèm trong DXF (R2000+, mục DVDCAD_DATA) — mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này. Khối động lưu ra (DXF và DWG) thành khối thường ở trạng thái hiện tại; định dạng khối động riêng của AutoCAD chưa ghi được. Khối động trong file AutoCAD hiện đúng trạng thái đang lưu nhưng chưa đổi được tham số gốc của AutoCAD.
+- Ràng buộc tham số và định nghĩa khối động ghi kèm trong DXF (R2000+, mục DVDCAD_DATA) — mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này. Khối động lưu ra (DXF và DWG) như AutoCAD: khối gốc + khối ẩn danh `*U` cho từng bản chèn; bản 2018 ghi tham số hiển thị của AutoCAD (AutoCAD đổi trạng thái được). Kéo giãn / lật chỉ ghi thành hình đang hiện (AutoCAD chưa có grip kéo giãn / lật). Khối động của AutoCAD: DXF đọc được tham số hiển thị (đổi trạng thái trong DVDCAD); DWG hiện đúng trạng thái đang lưu, tên khối là `*U…`; tham số khác (kéo giãn, lật, xoay, bảng tra…) chưa đổi được.
 - Vùng che ghi thành WIPEOUT, thứ tự vẽ ghi theo thứ tự trong file (AutoCAD hiện đúng trên/dưới). Chú thích theo tỉ lệ ghi thành chữ thường cho AutoCAD (DVDCAD mở lại vẫn theo tỉ lệ). Màu RGB ghi đúng, cả màu RGB của lớp khi mở lại. Màu sách màu (color book) đọc theo màu RGB tương ứng.
 - 3D chưa có: bo cạnh tuỳ ý trên khối sau cộng/trừ (chỉ bo được hộp, khối đùn, trụ), render dò tia chất lượng ảnh chụp.
 - Khối sau UNION/SUBTRACT là lưới tam giác: mặt cong hiện dạng nhiều mặt phẳng nhỏ.
 - Khối ACIS (3DSOLID) của AutoCAD trong DXF đọc được: mặt phẳng, mặt trụ, nón, cầu, xuyến. Mặt cong tự do (spline, bo cạnh của AutoCAD) hiện gần đúng theo đường biên. Khối đọc vào thành khối lưới, lưu lại là 3DFACE. Đọc 3DSOLID từ file **DWG** được (đã thử file DWG 2007); khối mặt cong tự do hiện gần đúng.
 - UCS ở DVDCAD chỉ dùng cho lệnh tạo khối 3D. Nét 2D luôn vẽ trên mặt bằng XY.
-- Layout chỉ chứa khung tên và khung nhìn. Muốn ghi chú thêm thì vẽ ở Model.
-- Ảnh nền và file tham chiếu lưu trong trình duyệt của từng máy, không đi kèm khi chia sẻ qua Drive.
+- Layout chứa khung nhìn, khung tên và đối tượng giấy (vẽ thẳng trên layout, hoặc chuyển giữa Model và giấy bằng `CHSPACE`).
+- Ảnh (IMAGE) lưu thành tệp ảnh cạnh bản vẽ như AutoCAD (bản Windows); trên trình duyệt, ảnh nền và tệp tham chiếu lưu trong trình duyệt của từng máy. `ETRANSMIT` đóng gói bản vẽ cùng ảnh và tham chiếu để gửi đi.
 - Kiểu nét phức: chữ và hình trong nét hiện đúng (hình của ltypeshp.shx vẽ gần đúng: tròn, vuông, gạch, zigzag, batting; hình SHX khác hiện dạng vòng tròn nhỏ).. Lưu DXF R2000 ghi đủ chữ trong nét; hình trong nét ghi đúng số hình chuẩn của ltypeshp.shx (130 TRACK1, 131 ZIG, 132 BOX, 133 CIRC1, 134 BAT, 135 AMZIGZAG) và vẽ đúng hình theo định nghĩa SHP.
 - MLEDIT dùng cho đường đôi vẽ bằng `MLINE` của DVDCAD và MLINE trong file AutoCAD (DXF đã thử; DWG đọc theo dữ liệu LibreDWG). Đường đôi khép kín chưa sửa được. Chưa có kiểu nối Chữ T liền, Cắt bỏ / Nối lại đoạn, thêm / bớt đỉnh. Nắp đầu theo kiểu MLINESTYLE của file AutoCAD chưa vẽ.
 - Đa tuyến có độ rộng: độ rộng mỗi đoạn giữ khi sửa. Thêm / xoá đỉnh trên đoạn có độ rộng thay đổi (thon) thì đỉnh mới lấy độ rộng của đỉnh gần nhất. Đa tuyến rộng trong khối bị kéo giãn không đều chỉ tô gần đúng.
-- REVCLOUD: chưa có tuỳ chọn Sửa kiểu AutoCAD (vẽ lại một đoạn mây). Dùng `REVCLOUDPROPERTIES` để đổi cung, hoặc vẽ mây mới. Sửa đỉnh mây bằng ô nắm thì mây không còn dựng lại được từ đường dẫn gốc.
+- REVCLOUD › **Sửa** vẽ lại một đoạn mây như AutoCAD (điểm đầu trên mây, các điểm mới, điểm cuối trên mây, chọn phía bỏ đi). `REVCLOUDPROPERTIES` đổi độ dài cung / kiểu. Sửa đỉnh mây bằng ô nắm thì mây không còn dựng lại được từ đường dẫn gốc.
 - File rất lớn trên iPhone / iPad chỉ hiện 400 nghìn đối tượng đầu (sau khi nổ khối) để tránh Safari bị tắt vì hết bộ nhớ. Muốn xem đủ, mở trên máy tính hoặc tách bản vẽ. File DWG lớn vẫn tốn bộ nhớ hơn DXF (bộ giải mã LibreDWG).
 - Vẽ lại đầy đủ bản vẽ hàng trăm nghìn nét vẫn mất khoảng 1–2 giây (máy thử không có GPU, máy thật thường nhanh hơn). Phóng / dời thì dùng ảnh tạm nên mượt.
 - Xem 3D theo dõi thay đổi lớp / ẩn hiện đối tượng mỗi 0,3 giây rồi dựng lại toàn cảnh. Với bản vẽ rất nhiều khối, sau mỗi lần bật / tắt lớp có thể phải chờ một chút mới thấy kết quả.
 - Mặt lưới RULESURF / TABSURF / REVSURF / EDGESURF / PLANESURF là khối lưới tam giác: lưu DXF thành 3DFACE và UNION / SUBTRACT không dùng cho mặt hở. Đường 2D của DVDCAD luôn nằm trên mặt bằng XY (cao độ theo ELEV), nên RULESURF / EDGESURF giữa các đường 2D ra mặt phẳng.
-- POLYSOLID chưa có tuỳ chọn Cung khi vẽ theo điểm. Muốn có đoạn cong, vẽ đa tuyến có cung rồi dùng POLYSOLID › Đối tượng.
+- POLYSOLID vẽ theo điểm có tuỳ chọn **Cung** (cung tiếp tuyến đoạn trước, hoặc qua Điểm thứ hai) và **Đường thẳng** để quay lại đoạn thẳng, như AutoCAD.
 - Giao diện English dịch từ chuỗi tiếng Việt gốc khi hiển thị. Một vài câu ghép có thể đọc chưa trơn như AutoCAD bản tiếng Anh. Chữ do lệnh ghi vào bản vẽ (trường ngày tháng, nhãn ký hiệu, khung tên mẫu) vẫn là tiếng Việt.
 - AutoLISP của DVDCAD chạy mã nguồn `.lsp`. Chưa có: hàm `vla-` / `vlax-` (ActiveX), hộp thoại DCL, `grread`, `entmake` cho khối / hatch, reactor. Add-in lưu trên từng máy (trong trình duyệt), không đi kèm bản vẽ hay Google Drive.
-- Độ trong suốt đặt cho từng đối tượng. Độ trong suốt theo lớp (trong bảng Lớp của AutoCAD) chưa đọc / ghi. THICKEN chỉ làm dày được mặt phẳng; mặt cong (REVSURF…) chưa làm dày được. 3DFACE nằm ở cao độ ELEV (chưa nhập Z riêng từng đỉnh).
-- Lớp đóng băng riêng khung nhìn (VPLAYER, LAYVPI) và đường cắt khung nhìn (VPCLIP) lưu trên máy theo bản vẽ, chưa ghi vào file DXF / DWG. VPSYNC trên layout đọc từ file DWG chỉ giữ đến khi mở lại file. ETRANSMIT đóng gói bản vẽ dạng DXF (không phải DWG), không nén. MKLTYPE chỉ tạo kiểu nét đơn giản (nét, khoảng hở, chấm), chưa có chữ / hình trong nét.
+- Độ trong suốt đặt cho từng đối tượng. Độ trong suốt theo lớp: cột Độ trong suốt trong bảng Lớp, `-LAYER` › Trong suốt; đọc / ghi DXF và DWG như AutoCAD (XDATA AcCmTransparency). THICKEN chỉ làm dày được mặt phẳng; mặt cong (REVSURF…) chưa làm dày được. 3DFACE nằm ở cao độ ELEV (chưa nhập Z riêng từng đỉnh).
+- Lớp đóng băng riêng khung nhìn (VPLAYER, LAYVPI) và đường cắt khung nhìn (VPCLIP) ghi vào DXF / DWG. ETRANSMIT / ARCHIVE đóng gói bản vẽ DWG (chọn phiên bản 2018 → 2000) hoặc DXF, nén .zip. MKLTYPE chỉ tạo kiểu nét đơn giản (nét, khoảng hở, chấm), chưa có chữ / hình trong nét.
 - XCLIP: khối có đường cắt đảo ngược khi lưu DXF được ghi thành các đối tượng rời (phần nhìn thấy), không còn là khối có đường cắt, vì AutoCAD không nhận đường cắt đảo ngược do phần mềm khác tạo. Lưu DXF R12 chỉ ghi phần nhìn thấy. Trên iPhone / iPad (không giữ nhóm khối để tiết kiệm bộ nhớ), phần ngoài đường cắt bị bỏ hẳn khi mở file. Chưa có Clipdepth (cắt theo chiều sâu 3D).

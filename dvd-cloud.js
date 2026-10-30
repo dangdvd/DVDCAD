@@ -606,7 +606,7 @@
       if(!h){
         // như AutoCAD: chọn DWG hoặc DXF trong hộp thoại; bản vẽ mở từ DWG thì gợi ý DWG trước
         const dwgFirst = canDwg && /\.dwg$/i.test(currentName || '');
-        const tD = { description: 'Bản vẽ AutoCAD (*.dwg)', accept: { 'application/acad': ['.dwg'] } }, tX = { description: 'DXF (AutoCAD)', accept: { 'application/dxf': ['.dxf'] } };
+        const dv = A && A.dwgSaveVersion ? A.dwgSaveVersion() : null, tD = { description: 'Bản vẽ AutoCAD' + (dv ? ' ' + dv.year : '') + ' (*.dwg)', accept: { 'application/acad': ['.dwg'] } }, tX = { description: 'DXF (AutoCAD)', accept: { 'application/dxf': ['.dxf'] } };
         h = await window.showSaveFilePicker({ suggestedName: baseName(currentName) + '_DVDCAD.' + (dwgFirst ? 'dwg' : 'dxf'), types: canDwg ? (dwgFirst ? [tD, tX] : [tX, tD]) : [tX] }); S.saveHandle = h;
       }
       const asDwg = canDwg && /\.dwg$/i.test(h.name || '');

@@ -340,6 +340,9 @@
     BURST: '<rect x="4" y="4" width="10" height="10" stroke-dasharray="2 1.5"/><path class="a" d="M6 9h6"/>' + AR(12, 12, 20, 20, 'y') + AR(12, 12, 20, 4, 'y'),
     NCOPY: '<rect class="fa3" x="2" y="2" width="12" height="12"/><path class="a" d="M2 2h12v12H2z"/><circle cx="8" cy="8" r="2.5"/><circle class="a" cx="17.5" cy="17.5" r="3"/>' + AR(9.5, 9.5, 14.5, 14.5, 'y'),
     TCOUNT: '<path d="M3 6h3M3 12h3M3 18h3"/><path class="a" d="M9 6h12M9 12h12M9 18h12"/><path class="y" d="M3.8 4.5L5 3.8V8"/>',
+    GEOMAP: '<rect class="fd" x="3" y="4" width="18" height="16"/><path d="M3 14l5-4 4 3 4-5 5 4"/><path class="a" d="M15 7a2 2 0 1 1 0 .1zM15 9v3"/>',
+    GEOGRAPHICLOCATION: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c3 3 3 14 0 17M12 3.5c-3 3-3 14 0 17"/><path class="a" d="M17 3a2.6 2.6 0 0 1 2.6 2.6c0 2-2.6 4.4-2.6 4.4s-2.6-2.4-2.6-4.4A2.6 2.6 0 0 1 17 3z"/>',
+    TXTEXP: '<path d="M3 18l4.5-12h1L13 18M4.6 14h6.8" stroke-dasharray="2 1.4"/><path class="a" d="M15 6h6M18 6v12M15.5 12l2.5 2 2.5-2"/>',
     TEXTMASK: '<rect class="fbg" x="3" y="6" width="18" height="12"/><path class="a" d="M2 4h20M2 20h20" opacity=".6"/><rect x="3" y="6" width="18" height="12" stroke-dasharray="2 1.5"/>' + '<path d="M8 15l3-7h1l3 7M9 13h5"/>',
     TEXTUNMASK: '<path class="a" d="M2 4h20M2 20h20M2 12h20" opacity=".6"/><path d="M8 15l3-7h1l3 7M9 13h5"/><path class="r" d="M3 21L21 3"/>',
     ARCTEXT: '<path class="a" d="M3 20a9 9 0 0 1 18 0" stroke-dasharray="2 2"/><path d="M5 13l1.5-4 1 1.5M9.5 8.5l1-4h1.5l1 4M15 9.5l2.5-2 1 4"/>',
@@ -552,5 +555,71 @@
   I.TPDISPLAY = I.TRANSPARENCY; I.TRANSPARENCYDISPLAY = I.TRANSPARENCY; I.LOGFILEOFF = I.LOGFILEON; I.RIBBONCLOSE = I.RIBBON; I.COMMANDLINE = I.RIBBON; I.MPEDIT = I.PEDIT || I.MPEDIT; I.XDLIST = I.LIST || I.XDLIST; I.XDATA = I.XDLIST; I.DIMLAYER = I.DIMSTYLE || I.DIMLAYER; I.CLASSICLAYER = I.LAYER || I.CLASSICLAYER; I.EATTEXT = I.ATTEXPORT || I.EATTEXT; I.GOTOURL = I.HYPERLINK || I.GOTOURL; I.NEWVIEW = I.VIEW || I.NEWVIEW; I.SAVEALL = I.SAVE || I.SAVEALL; I.PREVIEW = I.PLOT || I.PREVIEW; I.DCLINEAR = I.DCHORIZONTAL || I.DCLINEAR; ['3DFORBIT', '3DCORBIT', '3DPAN', '3DZOOM', '3DSWIVEL', '3DDISTANCE'].forEach(k => { I[k] = I['3DORBIT'] || I[k]; }); I['3DFLY'] = I['3DWALK'] || I['3DFLY']; I['3DCLIP'] = I.SECTIONPLANE || I['3DCLIP']; I.WORKSPACE = I.SETTINGS || I.WORKSPACE; I.AP = I.APPLOAD; I.ADDINS = I.APPLOAD; I.NAPADDIN = I.APPLOAD; I.VLIDE = I.VLISP; I.LISPCONSOLE = I.VLISP; I.SURFTAB1 = I.SURFTAB; I.SURFTAB2 = I.SURFTAB; I.PSOLID = I.POLYSOLID; I.DDA = I.DIMDISASSOCIATE; I.DRE = I.DIMREASSOCIATE; I.DIMREASSOC = I.DIMREASSOCIATE; I.DIMROT = I.DIMROTATED; I['-VPOINT'] = I.VPOINT; I.VP = I.DDVPOINT; I.HI = I.HIDE; I.EXOFFSET = I.OFFSET || I.EXOFFSET; I.SAVEIMG = I.PNGOUT || I.SAVEIMG; I.MTEDIT = I.DDEDIT || I.TEXTEDIT || I.MTEDIT; I.EXCHPROP = I.CHPROP || I.EXCHPROP; I.TEXTSCR = I.HISTORY; I.COMMANDHISTORY = I.HISTORY; I.BATTORDER = I.BATTMAN; I.TEXTSTYLE = I.STYLE; I.VIEWS3 = I.VIEWBASE; I.HINHCHIEU = I.VIEWBASE; I.PAGESETUP = I.PLOT; I.FILLMODE = I.FILL; I.MS = I.MSPACE; I.PS = I.PSPACE; I.DJL = I.DIMJOGLINE; I.RCP = I.REVCLOUDPROPERTIES; I.XPLODE = I.EXPLODE; I.ARRAYCLASSIC = I.ARRAYRECT || I.ARRAY; I.HGB = I.HATCHGENERATEBOUNDARY; I.DIMSMART = I.DIM; I.MLE = I.MLEADEREDIT; I.DWGCOMPARE = I.COMPARE; I.VSCURRENT = I.VISUALSTYLES; I.PNGOUT = I.JPGOUT; I.ORTHO = I.TORTHO || I.ORTHOMODE || ''; I.GRIDCMD = I.GRID; I.CTB = I.PLOTSTYLE = I.STYLESMANAGER; I.TABLEIMPORT = I.DATALINK; I.DATALINKURL = I.DATALINK; I.DXFVERSION = I.DXFOUT; I.CLEANSCREENOFF = I.CLEANSCREENON; I.SNAPBASE = I.BASE;
   I.TIFFOUT = I.TIFOUT; I.IMP = I.IMPORT; I.SOLIDSEPARATE = I.SEPARATE; I.LIGHTLISTCLOSE = I.LIGHTLIST; I.RECOVERALL = I.RECOVER || I.RECOVERALL; I['3DPRINT'] = I.EXPORTSTL || I['3DPRINT']; I.EXPORTTOAUTOCAD = I.SAVEAS || I.EXPORTTOAUTOCAD; I.XBIND = I.XREF || I.XBIND; I.DVIEW = I['3DORBIT'] || I.DVIEW; I.SOLPROF = I.FLATSHOT || I.SOLPROF; I.SOLVIEW = I.VIEWBASE || I.SOLVIEW; I.PASTESPEC = I.PASTECLIP || I.PASTESPEC; I.COPYLINK = I.COPYCLIP || I.COPYLINK; I.TPNAVIGATE = I.TOOLPALETTES || I.TPNAVIGATE; I.MATBROWSEROPEN = I.MATERIALS || I.MATBROWSEROPEN; I.SHEETSET = I.PUBLISH || I.SHEETSET; I.SSM = I.SHEETSET; I['3DALIGN'] = I.ALIGN || I['3DALIGN'];
   I.XCLIPFRAME = I.XCLIPFRAME || '<rect x="3" y="3" width="18" height="18" stroke-dasharray="2 1.5"/><rect class="fa3" x="6" y="6" width="12" height="12"/><rect class="a" x="6" y="6" width="12" height="12" stroke-width="2"/>';
+  // v5o: lệnh mới như AutoCAD 2027
+  { const G = I.SETTINGS || I.OPTIONS || '', has = k => I[k] || '';
+    I.TABLESTYLE = has('TABLE') + BGEAR; I.SYSVDLG = I.SYSVDLG || has('SETVAR'); I.COUNTLIST = has('COUNT'); I.COUNTCLOSE = has('COUNT') + BX; I.COUNTFIELD = (I.FIELD || has('COUNT')) + BSTAR;
+    I.UCSMAN = has('UCS') + BGEAR; I.DDUCSP = I.UCSMAN; I.CLASSICGROUP = has('GROUP') + BGEAR; I.CLASSICXREF = has('XREF'); I.CLASSICIMAGE = has('IMAGEATTACH') || has('XREF');
+    I.BREPLACE = has('INSERT') + '<path class="y" d="M14 19.5h7M18.5 17l2.5 2.5-2.5 2.5"/>'; I.RESETBLOCK = has('INSERT') + BOK; I.MATCHCELL = (I.MATCHPROP || has('TABLE')) + BSTAR; I.ADDSELECTED = (I.COPY || has('LINE')) + BSTAR;
+    I.SCALELISTEDIT = (I.CANNOSCALE || has('SCALE')) + BGEAR; I.OBJECTSCALE = (I.ANNOTATIVE || I.CANNOSCALE || has('SCALE')) + BSTAR; I.ANNORESET = I.CANNOSCALE || has('SCALE'); I.ANNOUPDATE = I.ANNORESET + BOK;
+    I.ATTACHURL = has('HYPERLINK'); I.DETACHURL = has('HYPERLINK') + BX; I.PASTEASHYPERLINK = (I.PASTECLIP || has('HYPERLINK')) + BLINK; I.HYPERLINKOPTIONS = has('HYPERLINK') + BGEAR; I.OPENLINK = I.OPENLINK || has('HYPERLINK');
+    I.ACTRECORD = '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5" fill="#e5484d" stroke="#e5484d"/>';
+    I.ACTSTOP = '<circle cx="12" cy="12" r="8.5"/><rect x="8.5" y="8.5" width="7" height="7" fill="#cfd6e0"/>';
+    I.ACTMANAGER = '<path d="M4 6h10M4 11h10M4 16h6"/><path class="g" d="M15 13l6 4-6 4z" fill="#3fb950"/>';
+    I.ACTUSERMESSAGE = '<path class="a" d="M4 5h16v10H10l-4 4v-4H4z"/><path d="M8 9h8M8 12h5"/>';
+    I.ACTUSERINPUT = '<rect x="3" y="5" width="18" height="12" rx="1.5"/><path class="a" d="M7 11h6"/><path class="y" d="M16 9v4M18.5 9v4" stroke-width="1.8"/>';
+    I.ACTBASEPOINT = '<path d="M12 3v18M3 12h18"/><circle class="a" cx="12" cy="12" r="4"/>' + O(12, 12, 'pd');
+    I.RSCRIPT = (I.SCRIPT || '') + '<path class="y" d="M16 20a4 4 0 1 0-4-4"/>'; I.RESUME = (I.SCRIPT || '') + '<path class="g" d="M15 14l6 3.5-6 3.5z" fill="#3fb950"/>'; I.SCRIPTCALL = (I.SCRIPT || '') + BSTAR;
+    I.QVDRAWING = '<rect x="2.5" y="7" width="6" height="5"/><rect x="9" y="7" width="6" height="5"/><rect x="15.5" y="7" width="6" height="5"/><path class="a" d="M2.5 15h19" />'; I.QVLAYOUT = I.QVDRAWING + '<path class="y" d="M5 18h4M11 18h4"/>'; I.QVDRAWINGCLOSE = I.QVDRAWING + BX; I.QVLAYOUTCLOSE = I.QVLAYOUT + BX;
+    I.GRAPHICSCONFIG = '<rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 17v3"/>' + BGEAR; I.WSSAVE = (G || I.SETVAR || '') + BOK; I.WSSETTINGS = (G || I.SETVAR || '') + BGEAR;
+    I.BROWSER = '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c-3 3-3 14 0 17M12 3.5c3 3 3 14 0 17"/>'; I.VIEWGO = I.VIEW || ''; I.VIEWPLAY = (I.VIEW || '') + '<path class="g" d="M15 14l6 3.5-6 3.5z" fill="#3fb950"/>';
+    I.GOTOSTART = '<path d="M4 11l8-7 8 7v9H4z"/><path class="a" d="M10 20v-5h4v5"/>'; I.FILETAB = '<rect x="3" y="7" width="18" height="13"/><path class="a" d="M3 7l2-3h6l2 3"/>'; I.FILETABCLOSE = I.FILETAB + BX;
+    I.EXTERNALREFERENCESCLOSE = (I.XREF || '') + BX; I.VISUALSTYLESCLOSE = (I.VISUALSTYLES || '') + BX; I.PARAMETERSCLOSE = (I.PARAMETERS || '') + BX; I.ADCCLOSE = (I.ADCENTER || '') + BX; I.DRAWINGRECOVERYHIDE = (I.RECOVER || '') + BX;
+    I.ACTSTOP = I.ACTSTOP; I.ADJUST = I.IMAGEADJUST || ''; I.PDFADJUST = I.ADJUST; I.BSAVE = (I.BEDIT || I.REFEDIT || '') + BOK; }
+  // v5v: Smart Blocks, hình chiếu, ràng buộc, GEOMARK, 3D poly, SHP, xuất file
+  { const has = k => I[k] || '', NX = '<path class="y" d="M14 19.5h7M18.5 17l2.5 2.5-2.5 2.5"/>', PV = '<path class="y" d="M20 19.5h-7M15.5 17L13 19.5l2.5 2.5"/>';
+    I.BCONVERT = '<path stroke-dasharray="2 1.4" d="M3 3h8v8H3z"/>' + AR(8, 13, 13, 18, 'y') + '<rect class="fa" x="12" y="12" width="9" height="9"/><rect class="a" x="12" y="12" width="9" height="9"/>';
+    I.SMARTBLOCKSDETECT = has('BLOCK') + BSTAR; I.SMARTBLOCKSCONVERT = I.BCONVERT;
+    I.COUNTNEXT = has('COUNT') + NX; I.COUNTPREV = has('COUNT') + PV; I.COUNTREFRESH = has('COUNT') + BOK;
+    const VW = '<rect class="fd" x="2.5" y="11" width="9" height="9"/><rect x="2.5" y="11" width="9" height="9"/>';
+    I.VIEWBASE = I.VIEWBASE || VW;
+    I.VIEWPROJ = VW + '<rect class="a" x="13.5" y="11" width="8" height="9"/><rect class="a" x="2.5" y="2.5" width="9" height="7"/>';
+    I.VIEWSECTION = VW + '<path class="r" d="M7 4v18" stroke-dasharray="3 1.5"/><path class="a" d="M14 11h7v9h-7zM14 14l3-3M14 18l7-7M17 20l4-4"/>';
+    I.VIEWDETAIL = VW + '<circle class="r" cx="9" cy="13.5" r="3"/><circle class="a" cx="17.5" cy="7" r="4.5"/><path class="y" d="M11.5 11.8l2.6-2.4"/>';
+    I.VIEWEDIT = I.VIEWBASE + BSTAR; I.VIEWUPDATE = I.VIEWBASE + BOK; I.VIEWSTD = I.VIEWBASE + BGEAR;
+    I.VIEWSECTIONSTYLE = I.VIEWSECTION + BGEAR; I.VIEWDETAILSTYLE = I.VIEWDETAIL + BGEAR;
+    I.GCSYMMETRIC = '<path class="y" d="M12 2v20" stroke-dasharray="2.5 1.5"/><path class="a" d="M4 7l5 5-5 5M20 7l-5 5 5 5"/>';
+    I.DCDISPLAY = has('DCHORIZONTAL') + '<circle class="y" cx="18" cy="18" r="2.2"/>'; I.DCFORM = has('DCHORIZONTAL') + BSTAR;
+    I.DCCONVERT = has('DIMLINEAR') + AR(14, 20, 21, 20, 'y'); I.CONSTRAINTSETTINGS = (I.GCPARALLEL || has('PARAMETERS')) + BGEAR;
+    const PIN = '<path class="fa" d="M12 21s-6-6.2-6-11a6 6 0 0 1 12 0c0 4.8-6 11-6 11z"/><path class="a" d="M12 21s-6-6.2-6-11a6 6 0 0 1 12 0c0 4.8-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/>';
+    I.GEOMARKPOINT = PIN; I.GEOMARK = PIN; I.GEOMARKPOSITION = PIN + BSTAR; I.GEOMARKLATLONG = PIN + '<path class="y" d="M14 17h8M14 20h8"/>';
+    I.GEOMARKME = PIN + '<circle cx="18" cy="18" r="3" fill="#3b82f6" stroke="#fff"/>'; I.GEOLOCATEME = '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="#3b82f6" stroke="#fff"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/>';
+    I.GEOREORIENTMARKER = PIN + '<path class="y" d="M15 20a4 4 0 1 0 4-4"/>';
+    I['3DPOLY'] = '<path class="a" d="M3 19l6-4 3 4 5-10 4 2"/>' + P(3, 19) + P(9, 15) + P(12, 19) + P(17, 9) + P(21, 11) + '<path class="y" d="M17 9v-6" stroke-dasharray="1.5 1.2"/>';
+    I['3P'] = I['3DPOLY']; I.PFACE = (I['3DFACE'] || has('MESH')) + BSTAR; I['3DMESH'] = has('MESH');
+    I.EDGE = '<path class="fd" d="M4 18l4-12h12l-4 12z"/><path d="M4 18l4-12h12"/><path class="r" d="M20 6l-4 12H4" stroke-dasharray="2 1.5"/>';
+    const SHP = '<path class="a" d="M5 19V6l7 7 7-7v13"/>';
+    I.SHAPE = SHP + O(5, 19); I.LOAD = DOC + '<path class="a" d="M8 18V11l4 4 4-4v7"/>'; I.COMPILE = DOC + '<path class="a" d="M8 11l-2 3 2 3M16 11l2 3-2 3"/>' + BGEAR;
+    const EXPF = t => DOC + '<text x="12" y="17" font-size="5.5" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">' + t + '</text>';
+    I.PSOUT = EXPF('EPS'); I.EXPORTEPS = I.PSOUT; I.WMFOUT = EXPF('WMF');
+    I.PUBLISHTOWEB = '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c-3 3-3 14 0 17M12 3.5c3 3 3 14 0 17"/>' + AR(15, 21, 21, 15, 'y');
+    I.DWGCONVERT = EXPF('DWG') + '<path class="y" d="M19 13a4 4 0 0 1-4 4"/>';
+    I.REFSET = has('REFEDIT') + BSTAR; I.BVSTATE = has('BPARAMETER') + BGEAR; I.BVSHOW = has('BPARAMETER') + BOK; I.BVHIDE = has('BPARAMETER') + BX;
+    I.CLOSEALLOTHER = has('CLOSEALL') || has('CLOSE'); I.ATTREDEF = has('ATTDEF') + BOK;
+    I.PSETUPIN = (I.LAYOUTS || has('PLOT')) + AR(14, 20, 21, 20, 'y'); I.PARTIALOPEN = (I.OPEN || DOC) + '<path class="y" d="M14 15h7v6h-7z" stroke-dasharray="2 1.2"/>'; I.PARTIALOAD = I.PARTIALOPEN + BSTAR;
+    I.SYSVARMONITOR = has('SYSVAR') + '<circle class="y" cx="18" cy="18" r="3.2"/><path class="y" d="M18 16v2l1.4 1"/>';
+    I.QUICKPROPERTIES = has('PROPERTIES') + BSTAR; I.QP = I.QUICKPROPERTIES;
+    I.MVSETUP = '<rect x="2.5" y="4" width="19" height="16"/><path class="a" d="M12 15h9.5M12 15v5M16 15v5"/><rect class="fa" x="5" y="6.5" width="5" height="5"/>';
+    I.GEOREMOVE = I.GEOREMOVE || has('GEOGRAPHICLOCATION') + BX; I.PLOTTERMANAGER = has('PLOT') + BGEAR; I.UPDATETHUMBSNOW = '<rect x="2.5" y="5" width="8" height="6"/><rect x="13.5" y="5" width="8" height="6"/><rect x="2.5" y="13" width="8" height="6"/>' + REGENAR; }
+  // v5w: WMFIN, phông SHX, GCSMOOTH, ALIGNSPACE, SYSWINDOWS
+  { const has = k => I[k] || '';
+    I.WMFIN = DOC + '<text x="12" y="17" font-size="5.5" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">WMF</text>' + '<path class="y" d="M14 21h7M18.5 18.5L21 21l-2.5 2.5"/>';
+    I.WMFOPTS = I.WMFIN + BGEAR;
+    I.SHXFONTS = '<path class="a" d="M4 19L9 5l5 14M6 14h6" stroke-linejoin="miter"/><path d="M15 8h6M15 12h6M15 16h4"/>' + BSTAR;
+    I.FONTSHX = I.SHXFONTS;
+    I.GCSMOOTH = '<path class="a" d="M3 18h7"/><path class="y" d="M10 18c4 0 5-2 6.5-6S19 6 21 6"/>' + P(10, 18);
+    I.ALIGNSPACE = '<rect x="2.5" y="4" width="19" height="16"/><rect class="a" x="6" y="8" width="11" height="8"/>' + AR(5, 19, 9, 15, 'y') + AR(19, 5, 15, 9, 'y');
+    I.SYSWINDOWS = '<rect class="fd" x="2.5" y="4" width="9" height="16"/><rect x="2.5" y="4" width="9" height="16"/><rect class="fd" x="12.5" y="4" width="9" height="16"/><rect class="a" x="12.5" y="4" width="9" height="16"/><path d="M2.5 7h9M12.5 7h9"/>';
+    I.SYSWINDOWS_V = I.SYSWINDOWS; I.SYSWINDOWS_H = '<rect x="3" y="3" width="18" height="8"/><rect class="a" x="3" y="13" width="18" height="8"/><path d="M3 5.5h18M3 15.5h18"/>';
+    I.SYSWINDOWS_C = '<rect x="3" y="3" width="13" height="10"/><rect class="fd" x="6" y="6" width="13" height="10"/><rect x="6" y="6" width="13" height="10"/><rect class="fd" x="9" y="9" width="13" height="11"/><rect class="a" x="9" y="9" width="13" height="11"/>'; void has; }
   window.DVDIcons = I;
 })();

@@ -357,7 +357,7 @@
   });
 
   async function textCmd(multi){
-    let ha = 'left', va = 'alphabetic', p, mRot = null;
+    let ha = 'left', va = 'alphabetic', p, mRot = null, boxW = 0, boxH = 0;
     if(multi){   // MTEXT như AutoCAD: góc thứ nhất, rồi góc đối diện hoặc [Cao chữ/Canh lề/Xoay/Kiểu chữ/Chiều rộng]; không hỏi lại cao chữ
       log('Kiểu chữ hiện hành: "' + (A.TS ? A.TS.cur : 'Standard') + '"  Cao chữ: ' + fmt(MEM.th || defaultTextH()));
       const a = await A.getPoint('Chỉ định góc thứ nhất'); if(!a.pt) return;
@@ -372,7 +372,7 @@
         break;
       }
       if(!b.pt) return;
-      const x0 = Math.min(a.pt.x, b.pt.x), x1 = Math.max(a.pt.x, b.pt.x), y0 = Math.min(a.pt.y, b.pt.y), y1 = Math.max(a.pt.y, b.pt.y);
+      const x0 = Math.min(a.pt.x, b.pt.x), x1 = Math.max(a.pt.x, b.pt.x), y0 = Math.min(a.pt.y, b.pt.y), y1 = Math.max(a.pt.y, b.pt.y); boxW = x1 - x0; boxH = y1 - y0;
       ha = jk[1] === 'C' ? 'center' : jk[1] === 'R' ? 'right' : 'left'; va = jk[0] === 'M' ? 'middle' : jk[0] === 'B' ? 'bottom' : 'top';
       p = { x: ha === 'center' ? (x0 + x1) / 2 : ha === 'right' ? x1 : x0, y: va === 'middle' ? (y0 + y1) / 2 : va === 'bottom' ? y0 : y1 };
     } else {
@@ -401,6 +401,15 @@
     let rot = multi && mRot != null ? mRot : 0;
     if(!multi){ const ra = await A.getAngle('Chỉ định góc xoay chữ', { base: p, def: MEM.trot || 0 }); rot = ra.num != null ? ra.num : (MEM.trot || 0); MEM.trot = rot; }
     remember();
+    // máy tính: soạn chữ ngay trên bản vẽ + tab "Text Editor" (như AutoCAD); điện thoại: hộp nhập chữ
+    if(A.inplaceText && A.deskUI && A.deskUI()){
+      const R = await A.inplaceText({ x: p.x, y: p.y, h, rot, ha, va, w: multi ? boxW : 0, boxH: multi ? boxH : 0, multi, value: '' }); if(!R || !R.text.trim()) return;
+      const make = (q, text) => { const w = mk('TEXT', { x: q.x, y: q.y, text, h: R.h, rot, ha: R.ha, va: R.va }); A.textFinish && A.textFinish(w, R); return w; };
+      if(multi){ A.commit({ add: [make(p, R.text)] }); return; }
+      // TEXT (DTEXT): mỗi dòng là 1 đối tượng chữ riêng, dòng sau cách dòng trước 1.5 lần cao chữ (như AutoCAD)
+      const r0 = rot * D2R, dn = { x: Math.sin(r0) * R.h * 1.5, y: -Math.cos(r0) * R.h * 1.5 }; const add = [];
+      R.text.split('\n').forEach((t, i) => { if(t.trim()) add.push(make({ x: p.x + dn.x * i, y: p.y + dn.y * i }, t)); }); if(add.length) A.commit({ add }); return;
+    }
     const s = await askText({ title: multi ? 'Nội dung chữ nhiều dòng' : 'Nội dung chữ', value: '' });
     if(s == null || !s.trim()) return;
     A.commit({ add: [mk('TEXT', { x: p.x, y: p.y, text: s.replace(/\r/g, ''), h, rot, ha, va })] });
@@ -410,7 +419,14 @@
   cmd(['DDEDIT', 'ED', 'TEXTEDIT'], 'Sửa nội dung chữ', async () => {
     for(;;){
       const r = await A.getEnt('Chọn chữ cần sửa', { filter: e => e.type === 'TEXT' }); if(!r.ent) return;
-      const e = r.ent; const s = await askText({ title: 'Sửa chữ', value: String(e.text || '') }); if(s == null || !s.trim()) continue;
+      const e = r.ent;
+      if(A.inplaceText && A.deskUI && A.deskUI()){   // sửa ngay trên bản vẽ như AutoCAD
+        const multi = !!(e.mt || String(e.text || '').includes('\n') || e.mtp || e.rt || e.cols); const R = await A.inplaceText({ x: e.x, y: e.y, h: e.h || 2.5, rot: e.rot || 0, ha: e.ha || 'left', va: e.va || 'alphabetic', w: e.cols ? e.cols.n * e.cols.w + (e.cols.n - 1) * (e.cols.g || 0) : e.mtwk ? e.mtwk * (e.h || 1) : 0, cols: e.cols, runs: A.rtOf ? A.rtOf(e) : null, multi, single: !multi, value: A.textSrc ? A.textSrc(e) : String(e.text || ''), style: e.style, font: e.ff, col: e.bl ? '' : e.col, dim: !!e.dimd });
+        if(!R || !R.text.trim()) continue;
+        const w = copyOf(e); w.text = R.text; if(!w.dimd){ w.h = R.h; w.ha = R.ha; w.va = R.va; if(A.textFinish) A.textFinish(w, R); }
+        if(w.dimd) w.dimd.ov = (w.dimv != null && R.text === dimFmtOf(w)) ? null : R.text; A.commit({ rep: [[e, w]] }); continue;
+      }
+      const s = await askText({ title: 'Sửa chữ', value: String(e.text || '') }); if(s == null || !s.trim()) continue;
       const w = copyOf(e); w.text = s; if(w.dimd) w.dimd.ov = (w.dimv != null && s === dimFmtOf(w)) ? null : s; A.commit({ rep: [[e, w]] });
     }
   });
@@ -571,27 +587,56 @@
   cmd(['ARRAY', 'AR'], 'Nhân bản dạng mảng (chữ nhật / tròn)', async () => arrayCmd(null));
   cmd(['ARRAYRECT'], 'Mảng chữ nhật', async () => arrayCmd('R'));
   cmd(['ARRAYPOLAR'], 'Mảng tròn quanh tâm', async () => arrayCmd('PO'));
+  // ARRAYRECT / ARRAYPOLAR như AutoCAD 2027: chọn đối tượng → xem trước mảng mặc định (4 × 3 / 6 phần tử) + tab "Array Creation";
+  // sửa ở dòng lệnh (COUnt, Spacing, COLumns, Rows…) hoặc trên ribbon, Enter = xong, Esc = huỷ
+  function arrayItems(st, sel){
+    const out = [];
+    if(st.k === 'R'){ for(let i = 0; i < st.C; i++) for(let j = 0; j < st.R; j++){ if(!i && !j) continue; out.push(...remapGroups(sel.map(e => { const w = copyOf(e); translateEnt(w, st.dx * i, st.dy * j); return w; }))); } return out; }
+    const F = st.F * (st.cw ? -1 : 1), step = Math.abs(Math.abs(F) - 360) < 1e-9 ? F / st.N : F / (st.N - 1);
+    for(let i = 1; i < st.N; i++){ const a = step * i; out.push(...remapGroups(sel.map(e => { const w = copyOf(e); if(st.rot) rotateEnt(w, a, st.c); else { const ce = entCenter(w), q = _rotPt(ce, st.c, a * D2R); translateEnt(w, q.x - ce.x, q.y - ce.y); } return w; }))); }
+    return out;
+  }
   async function arrayCmd(type){
     const s = await A.getSel('Chọn đối tượng'); const sel = s.sel || []; if(!sel.length) return;
-    if(!type){ const t = await A.getKw('Chọn kiểu mảng', { kw: [{ k: 'R', t: 'Chữ nhật' }, { k: 'PO', t: 'Tròn' }], def: 'Chữ nhật' }); type = t.kw || 'R'; }
+    if(!type){ const t = await A.getKw('Nhập kiểu mảng', { kw: [{ k: 'R', t: 'Chữ nhật' }, { k: 'PA', t: 'Theo đường' }, { k: 'PO', t: 'Tròn' }], def: 'Chữ nhật' }); type = t.kw || 'R'; if(type === 'PA'){ DVDCmd.run('ARRAYPATH'); return; } }
     const bb = bboxOf(sel) || { x0: 0, y0: 0, x1: 1, y1: 1 }; const w0 = (bb.x1 - bb.x0) || 1, h0 = (bb.y1 - bb.y0) || 1;
-    if(type === 'R'){
-      const v = await askNum({ title: 'Mảng chữ nhật', hint: 'Khoảng cách tính từ gốc đối tượng này tới đối tượng kế tiếp', fields: [{ label: 'Số cột', value: String(MEM.ac || 4) }, { label: 'Số hàng', value: String(MEM.ar || 1) }, { label: 'Khoảng cột', value: String(MEM.acs || +(w0 * 1.5).toPrecision(3)) }, { label: 'Khoảng hàng', value: String(MEM.ars || +(h0 * 1.5).toPrecision(3)) }] });
-      if(!v) return; const C = Math.max(1, Math.min(500, Math.round(v[0] || 1))), R = Math.max(1, Math.min(500, Math.round(v[1] || 1))), dx = v[2] || 0, dy = v[3] || 0;
-      if(C * R * sel.length > 60000){ say('Mảng quá lớn.'); return; }
-      Object.assign(MEM, { ac: C, ar: R, acs: dx, ars: dy }); remember();
-      const add = []; for(let i = 0; i < C; i++) for(let j = 0; j < R; j++){ if(!i && !j) continue; add.push(...remapGroups(sel.map(e => { const w = copyOf(e); translateEnt(w, dx * i, dy * j); return w; }))); }
-      if(A.arrCommit && A.arrCommit(sel, add, { k: 'R', C, R, dx, dy }, 'Đã tạo mảng ' + C + '×' + R)) return;
-      A.commit({ add }, 'Đã tạo mảng ' + C + '×' + R); return;
-    }
-    const c = await A.getPoint('Chỉ định tâm mảng'); if(!c.pt) return;
-    const v = await askNum({ title: 'Mảng tròn', fields: [{ label: 'Số phần tử (kể cả gốc)', value: String(MEM.apn || 6) }, { label: 'Góc lấp đầy (độ)', value: String(MEM.apa || 360) }, { label: 'Xoay theo (1 = có)', value: '1' }] });
-    if(!v) return; const N = Math.max(2, Math.min(1000, Math.round(v[0] || 6))), F = isFinite(v[1]) ? v[1] : 360, rotItems = v[2] !== 0;
-    Object.assign(MEM, { apn: N, apa: F }); remember();
-    const step = Math.abs(Math.abs(F) - 360) < 1e-9 ? F / N : F / (N - 1); const add = [];
-    for(let i = 1; i < N; i++){ const a = step * i; add.push(...remapGroups(sel.map(e => { const w = copyOf(e); if(rotItems) rotateEnt(w, a, c.pt); else { const ce = entCenter(w), q = _rotPt(ce, c.pt, a * D2R); translateEnt(w, q.x - ce.x, q.y - ce.y); } return w; }))); }
-    if(A.arrCommit && A.arrCommit(sel, add, { k: 'P', N, F, rot: rotItems, c: { x: c.pt.x, y: c.pt.y } }, 'Đã tạo mảng tròn ' + N + ' phần tử')) return;
-    A.commit({ add }, 'Đã tạo mảng tròn ' + N + ' phần tử');
+    let st;
+    if(type === 'R') st = { k: 'R', C: 4, R: 3, dx: +(w0 * 1.5).toPrecision(4), dy: +(h0 * 1.5).toPrecision(4), assoc: A.MEM.arrAssoc !== false };
+    else { const c = await A.getPoint('Chỉ định tâm mảng hoặc', { kw: [{ k: 'B', t: 'Điểm gốc' }, { k: 'A', t: 'Trục xoay' }] }); if(!c.pt) return; st = { k: 'P', c: c.pt, N: 6, F: 360, rot: true, cw: false, assoc: A.MEM.arrAssoc !== false }; }
+    const big = () => (st.k === 'R' ? st.C * st.R : st.N) * sel.length > 60000;
+    A._arr = st; A._arrUpd = () => { try{ A.paint(); }catch(_){} };
+    try{ if(A.ribbonCtx) A.ribbonCtx(st.k === 'R' ? 'arrayctx' : 'arrayctxp'); }catch(_){}
+    const refreshRib = () => { try{ if(A.ribbon) A.ribbon.render(); }catch(_){} };
+    try{
+      for(;;){
+        const kw = st.k === 'R' ? [{ k: 'AS', t: 'Liên kết' }, { k: 'B', t: 'Điểm gốc' }, { k: 'COU', t: 'Số lượng' }, { k: 'S', t: 'Khoảng cách' }, { k: 'COL', t: 'Cột' }, { k: 'R', t: 'Hàng' }, { k: 'L', t: 'Tầng' }, { k: 'X', t: 'Thoát' }]
+          : [{ k: 'AS', t: 'Liên kết' }, { k: 'B', t: 'Điểm gốc' }, { k: 'I', t: 'Số phần tử' }, { k: 'A', t: 'Góc giữa' }, { k: 'F', t: 'Góc lấp đầy' }, { k: 'ROW', t: 'Hàng' }, { k: 'L', t: 'Tầng' }, { k: 'ROT', t: 'Xoay phần tử' }, { k: 'X', t: 'Thoát' }];
+        const r = await A.getPoint('Chọn ô nắm để sửa mảng hoặc', { kw, def: 'Thoát', rubber: false, noSnap: true, previewAlways: true, preview: g => { if(!big()) g.ents(arrayItems(st, sel)); } });
+        if(r.none || r.kw === 'X' || r.pt) break;   // Enter / Thoát / bấm vào bản vẽ = xong
+        if(r.kw === 'AS'){ const k = await A.getKw('Tạo mảng liên kết', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: st.assoc ? 'Có' : 'Không' }); if(k.kw) st.assoc = k.kw === 'Y'; }
+        else if(r.kw === 'B' || r.kw === 'L' || r.kw === 'ROW'){ log(r.kw === 'L' ? 'Mảng nhiều tầng (3D) chưa hỗ trợ.' : r.kw === 'ROW' ? 'Mảng tròn nhiều hàng chưa hỗ trợ.' : 'Đổi điểm gốc mảng chưa hỗ trợ.'); }
+        else if(r.kw === 'COU'){ const a = await A.getNum('Nhập số cột', { def: st.C }); if(a.num >= 1) st.C = Math.min(500, Math.round(a.num)); const b = await A.getNum('Nhập số hàng', { def: st.R }); if(b.num >= 1) st.R = Math.min(500, Math.round(b.num)); }
+        else if(r.kw === 'S'){ const a = await A.getDist('Chỉ định khoảng cách giữa các cột', { def: st.dx }); if(a.num != null) st.dx = a.num; const b = await A.getDist('Chỉ định khoảng cách giữa các hàng', { def: st.dy }); if(b.num != null) st.dy = b.num; }
+        else if(r.kw === 'COL'){ const a = await A.getNum('Nhập số cột', { def: st.C }); if(a.num >= 1) st.C = Math.min(500, Math.round(a.num)); const b = await A.getDist('Chỉ định khoảng cách giữa các cột', { def: st.dx }); if(b.num != null) st.dx = b.num; }
+        else if(r.kw === 'R'){ const a = await A.getNum('Nhập số hàng', { def: st.R }); if(a.num >= 1) st.R = Math.min(500, Math.round(a.num)); const b = await A.getDist('Chỉ định khoảng cách giữa các hàng', { def: st.dy }); if(b.num != null) st.dy = b.num; }
+        else if(r.kw === 'I'){ const a = await A.getNum('Nhập số phần tử trong mảng', { def: st.N }); if(a.num >= 2) st.N = Math.min(1000, Math.round(a.num)); }
+        else if(r.kw === 'A'){ const a = await A.getNum('Chỉ định góc giữa các phần tử', { def: +(st.F / (Math.abs(st.F - 360) < 1e-9 ? st.N : st.N - 1)).toPrecision(6) }); if(a.num) st.F = Math.min(360, Math.abs(a.num) * (Math.abs(st.F - 360) < 1e-9 ? st.N : st.N - 1)); }
+        else if(r.kw === 'F'){ const a = await A.getNum('Chỉ định góc lấp đầy (+ = ngược chiều kim đồng hồ, − = cùng chiều)', { def: st.cw ? -st.F : st.F }); if(a.num){ st.cw = a.num < 0; st.F = Math.min(360, Math.abs(a.num)); } }
+        else if(r.kw === 'ROT'){ const k = await A.getKw('Xoay các phần tử khi tạo mảng', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: st.rot ? 'Có' : 'Không' }); if(k.kw) st.rot = k.kw === 'Y'; }
+        refreshRib();
+      }
+    } finally { try{ if(A.ribbonCtx) A.ribbonCtx(null); }catch(_){} A._arr = null; A._arrUpd = null; }
+    if(big()){ say('Mảng quá lớn.'); return; }
+    const add = arrayItems(st, sel); if(!add.length){ log('Mảng chỉ có 1 phần tử.'); return; }
+    const svA = A.MEM.arrAssoc; A.MEM.arrAssoc = st.assoc;
+    try{
+      if(st.k === 'R'){ Object.assign(MEM, { ac: st.C, ar: st.R, acs: st.dx, ars: st.dy }); remember();
+        if(A.arrCommit && A.arrCommit(sel, add, { k: 'R', C: st.C, R: st.R, dx: st.dx, dy: st.dy }, 'Đã tạo mảng ' + st.C + '×' + st.R)) return;
+        A.commit({ add }, 'Đã tạo mảng ' + st.C + '×' + st.R); return; }
+      Object.assign(MEM, { apn: st.N, apa: st.F }); remember(); const F = st.F * (st.cw ? -1 : 1);
+      if(A.arrCommit && A.arrCommit(sel, add, { k: 'P', N: st.N, F, rot: st.rot, c: { x: st.c.x, y: st.c.y } }, 'Đã tạo mảng tròn ' + st.N + ' phần tử')) return;
+      A.commit({ add }, 'Đã tạo mảng tròn ' + st.N + ' phần tử');
+    } finally { A.MEM.arrAssoc = svA; }
   }
 
   // STRETCH
@@ -665,6 +710,20 @@
     const rep = [[e, parts[0]]]; const add = parts.slice(1);
     A.commit({ rep, add }); return '';
   }
+  // đa tuyến có đoạn đầu / cuối là cung: kéo dài cung đó theo đúng đường tròn của nó tới ranh giới gần nhất (như AutoCAD), giữ chiều cung
+  function extendPolyArc(e, BV, atStart, cands){
+    const i = atStart ? 0 : BV.length - 2, P = BV[i], Q = BV[i + 1], b = P.bulge, th = 4 * Math.atan(b), sg = th > 0 ? 1 : -1;
+    const dx = Q.x - P.x, dy = Q.y - P.y, c = Math.hypot(dx, dy); if(c < 1e-12) return 'Đoạn quá ngắn.';
+    const d = c * (1 - b * b) / (4 * b), C = { x: (P.x + Q.x) / 2 - dy / c * d, y: (P.y + Q.y) / 2 + dx / c * d }, r = Math.hypot(P.x - C.x, P.y - C.y);
+    const aP = Math.atan2(P.y - C.y, P.x - C.x), aQ = Math.atan2(Q.y - C.y, Q.x - C.x), gap = TAU - Math.abs(th);
+    const full = { t: 'a', cx: C.x, cy: C.y, r, a0: 0, sw: TAU, u0: 0 }; let best = null;
+    for(const o of cands([C.x - r, C.y - r, C.x + r, C.y + r])){ const co = G.curveOf(o); if(!co) continue; for(const pc of co.pieces) for(const q of G.xPieces(full, pc)){ const ang = Math.atan2(q.y - C.y, q.x - C.x);
+      const off = atStart ? (sg > 0 ? G.norm(aP - ang) : G.norm(ang - aP)) : (sg > 0 ? G.norm(ang - aQ) : G.norm(aQ - ang)); if(off > 1e-9 && off < gap - 1e-9 && (best == null || off < best)) best = off; } }
+    if(best == null) return 'Không gặp ranh giới nào theo hướng kéo dài.';
+    const nb = BV.map(q => Object.assign({}, q)), th2 = th + sg * best, at = a => ({ x: C.x + r * Math.cos(a), y: C.y + r * Math.sin(a) });
+    if(atStart){ Object.assign(nb[0], at(aP - sg * best)); nb[0].bulge = Math.tan(th2 / 4); } else { Object.assign(nb[nb.length - 1], at(aQ + sg * best)); nb[nb.length - 2].bulge = Math.tan(th2 / 4); }
+    const w = copyOf(e); A.setBV(w, nb); A.commit({ rep: [[e, w]] }); return '';
+  }
   function doExtend(e, pick, edges){
     const big = (() => { const b = bounds || { minX: 0, minY: 0, maxX: 1, maxY: 1 }; return Math.max(b.maxX - b.minX, b.maxY - b.minY, 1) * 4; })();
     const cands = (box) => (edges ? edges.filter(x => x !== e && cutter(x)) : A.queryBox(box[0], box[1], box[2], box[3], 30000).filter(x => x !== e && cutter(x)));
@@ -673,7 +732,7 @@
       let a, b, atStart;
       if(e.type === 'LINE'){ atStart = Math.hypot(pick.x - e.x1, pick.y - e.y1) < Math.hypot(pick.x - e.x2, pick.y - e.y2); a = atStart ? { x: e.x2, y: e.y2 } : { x: e.x1, y: e.y1 }; b = atStart ? { x: e.x1, y: e.y1 } : { x: e.x2, y: e.y2 }; }
       else { const BV = A.bvOf(e); const V = BV || e.vertices; atStart = Math.hypot(pick.x - V[0].x, pick.y - V[0].y) < Math.hypot(pick.x - V[V.length - 1].x, pick.y - V[V.length - 1].y); if(atStart){ b = V[0]; a = V[1]; } else { b = V[V.length - 1]; a = V[V.length - 2]; }
-        if(BV && (atStart ? BV[0].bulge : BV[BV.length - 2].bulge)) return 'Đầu đa tuyến là cung — dùng LENGTHEN hoặc kéo ô nắm.'; }
+        if(BV && (atStart ? BV[0].bulge : BV[BV.length - 2].bulge)) return extendPolyArc(e, BV, atStart, cands); }
       const L = dist(a, b); if(L < 1e-12) return 'Đoạn quá ngắn.';
       const ux = (b.x - a.x) / L, uy = (b.y - a.y) / L;
       const seg = { t: 's', ax: b.x, ay: b.y, bx: b.x + ux * big, by: b.y + uy * big, u0: 0, u1: 1 };
@@ -1567,15 +1626,22 @@
     BRICK: { name: 'BRICK (gạch xây)', brick: { h: 6.35, w: 12.7 } },
     DOTS: { name: 'DOTS (chấm)', dots: 3.175 },
     'AR-CONC': { name: 'AR-CONC (bê tông)', conc: 6 },
-    EARTH: { name: 'EARTH (đất)', earth: 6.35 }
+    EARTH: { name: 'EARTH (đất)', earth: 6.35 },
+    _USER: { name: 'Tự định nghĩa (_USER)', user: true }
   };
   const HS = A.HS = Object.assign({ pat: 'ANSI31', scale: 0, ang: 0, col: '' }, (() => { try{ return JSON.parse(localStorage.getItem('dvd:hatch') || '{}'); }catch(_){ return {}; } })());
   const hsSave = () => { try{ localStorage.setItem('dvd:hatch', JSON.stringify(HS)); }catch(_){} };
-  A.setHatchPattern = p => { if(!PATS[p]) return false; HS.pat = p; hsSave(); return true; };
+  A.setHatchPattern = p => { if(!PATS[p]) return false; HS.pat = p; HS.gmode = 0; hsSave(); return true; };
   function hash01(i, j, k){ let h = (i * 374761393 + j * 668265263 + k * 1274126177) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
   // đoạn thẳng mẫu (toạ độ thế giới) trong hộp bb — dùng cả để vẽ lẫn xuất DXF
+  // tỉ lệ mẫu thực: hatch chú thích (e.hanno) nhân theo tỉ lệ chú thích hiện hành
+  const hatchSc = e => (e.psc || 1) * (e.hanno && A.ANNO && A.ANNO.N > 0 ? A.ANNO.N : 1);
+  A.hatchSc = hatchSc;
   function patternSegs(e, bb, maxN){
-    const P = PATS[e.pat] || PATS.ANSI31; const sc = e.psc || 1, rot = (e.pang || 0) * D2R; const segs = [], dots = [];
+    if(e.porg && (e.porg.x || e.porg.y)){ const o = e.porg, r = patternSegs(Object.assign({}, e, { porg: null }), { x0: bb.x0 - o.x, y0: bb.y0 - o.y, x1: bb.x1 - o.x, y1: bb.y1 - o.y }, maxN); if(!r) return r;   // gốc mẫu (HATCHSETORIGIN)
+      return { segs: r.segs.map(s => [s[0] + o.x, s[1] + o.y, s[2] + o.x, s[3] + o.y]), dots: r.dots.map(d => [d[0] + o.x, d[1] + o.y]) }; }
+    if(e.pat === '_USER'){ const sp = (e.usp > 0 ? e.usp : 1) * (e.hanno && A.ANNO && A.ANNO.N > 0 ? A.ANNO.N : 1); e = Object.assign({}, e, { pat: '_UFAM', psc: 1, hanno: 0, _fam: [{ a: 0, sp }].concat(e.udbl ? [{ a: 90, sp }] : []) }); }
+    const P = e._fam ? { fam: e._fam } : (PATS[e.pat] || PATS.ANSI31); const sc = e._fam ? 1 : hatchSc(e), rot = (e.pang || 0) * D2R; const segs = [], dots = [];
     const diag = Math.hypot(bb.x1 - bb.x0, bb.y1 - bb.y0), cx = (bb.x0 + bb.x1) / 2, cy = (bb.y0 + bb.y1) / 2;
     const family = (aDeg, sp, off) => { const a = aDeg * D2R + rot, ux = Math.cos(a), uy = Math.sin(a), nx = -uy, ny = ux; const S = sp * sc; if(!(S > 0)) return true;
       const c0 = cx * nx + cy * ny; const k0 = Math.floor((c0 - diag / 2 - (off || 0) * sc) / S), k1 = Math.ceil((c0 + diag / 2 - (off || 0) * sc) / S);
@@ -1625,7 +1691,7 @@
     const vb = viewWorldAABB(), hb = entBBox(e); if(!hb){ ctx.restore(); return; }
     const bb = { x0: Math.max(vb.minX, hb.x0), y0: Math.max(vb.minY, hb.y0), x1: Math.min(vb.maxX, hb.x1), y1: Math.min(vb.maxY, hb.y1) };
     if(bb.x1 <= bb.x0 || bb.y1 <= bb.y0){ ctx.restore(); return; }
-    const P = PATS[e.pat] || PATS.ANSI31; const base = (P.fam ? Math.min(...P.fam.map(f => f.sp)) : P.brick ? P.brick.h : (P.dots || P.conc || P.earth)) * (e.psc || 1);
+    const P = PATS[e.pat] || PATS.ANSI31; const base = e.pat === '_USER' ? (e.usp > 0 ? e.usp : 1) * (e.hanno && A.ANNO ? A.ANNO.N : 1) : (P.fam ? Math.min(...P.fam.map(f => f.sp)) : P.brick ? P.brick.h : (P.dots || P.conc || P.earth)) * hatchSc(e);
     if(base * view.scale < 2.2){ ctx.fillStyle = hexA(col, 0.35); ctx.fill('evenodd'); ctx.restore(); return; }   // quá dày -> tô mờ
     const r = patternSegs(e, bb, 3000);
     if(!r){ ctx.fillStyle = hexA(col, 0.35); ctx.fill('evenodd'); ctx.restore(); return; }
@@ -1735,11 +1801,17 @@
     return [1, 2, 2.5, 5, 10].map(m => m * pw).find(v => v >= raw) || 10 * pw;
   }
   function makeHatch(loops){
-    const sc = niceScale(loops); if(!(HS.scale > 0)){ HS.scale = sc; hsSave(); log('Tỉ lệ mẫu tự chọn = ' + sc + ' (đổi bằng tuỳ chọn Tỉ lệ)'); }
+    const sc = niceScale(loops); if(!(HS.scale > 0) && HS.pat !== '_USER'){ HS.scale = sc; hsSave(); log('Tỉ lệ mẫu tự chọn = ' + sc + ' (đổi bằng tuỳ chọn Tỉ lệ)'); }
     const e = A.newProps({ type: 'HATCH', loops: loops.map(l => l.map(p => ({ x: p.x, y: p.y }))), solid: HS.pat === 'SOLID', pat: HS.pat, psc: HS.scale, pang: HS.ang || 0 });
     if(HS.col){ e.col = HS.col; delete e.bl; }
+    if(HS.pat === '_USER'){ e.usp = HS.usp > 0 ? HS.usp : 1; if(HS.udbl) e.udbl = 1; e.psc = 1; }
+    if(HS.anno) e.hanno = 1; if(HS.noassoc) e.nassoc = 1;
+    { const o = A.hatchOrigin ? A.hatchOrigin(loops) : null; if(o) e.porg = o; }
+    if(A.hatchDrawOrder) A.hatchDrawOrder(e);
+    if(HS.gmode && HS.grad){ e.solid = true; e.grad = Object.assign({}, HS.grad); e.col = HS.grad.c1; delete e.bl; }   // Gradient (GRADIENT / tab Gradient)
     return e;
   }
+  A.hatchClosedLoop = e => hatchClosedLoop(e);
   function hatchClosedLoop(e){
     const c = G.curveOf(e); if(!c) return null;
     if(c.pieces[0] && c.pieces[0].t === 'a'){ const p = c.pieces[0], k = 96, o = []; for(let i = 0; i < k; i++){ const t = p.a0 + p.sw * i / k; o.push({ x: p.cx + p.r * Math.cos(t), y: p.cy + p.r * Math.sin(t) }); } return o; }
@@ -1762,6 +1834,7 @@
       if(r.kw === 'S'){
         const s = await A.getSel('Chọn đường kín (đa tuyến kín, tròn, elip)', { pre: false, filter: e => { const c = G.curveOf(e); return !!(c && c.closed && e.type !== 'HATCH'); } });
         const loops = (s.sel || []).map(hatchClosedLoop).filter(Boolean); if(!loops.length){ log('Không có đường kín.'); continue; }
+        if(HS.sep && loops.length > 1){ A.commit({ add: loops.map(l => makeHatch([l])) }, 'Đã tô ' + loops.length + ' hatch riêng'); continue; }   // Tạo hatch riêng từng vùng
         A.commit({ add: [makeHatch(loops)] }, 'Đã tô ' + loops.length + ' vùng'); continue;
       }
       if(!r.pt) return;
@@ -1773,7 +1846,7 @@
   }
   function openHatchDialog(){
     return new Promise(res => {
-      const keys = Object.keys(PATS);
+      const keys = Object.keys(PATS).filter(k => !PATS[k].user);
       A.dialog({ title: 'Cài đặt Hatch', wide: true, html:
         '<div class="dvd-pats">' + keys.map(k => '<button type="button" class="dvd-pat' + (k === HS.pat ? ' on' : '') + '" data-p="' + k + '"><canvas width="64" height="44"></canvas><span>' + escapeHtml(PATS[k].name) + '</span></button>').join('') + '</div>' +
         '<div class="dvd-form">' + row('Tỉ lệ mẫu (0 = tự động)', '<input id="hsScale" type="number" step="any" value="' + (HS.scale || 0) + '">') + row('Góc (độ)', '<input id="hsAng" type="number" step="any" value="' + (HS.ang || 0) + '">') +
@@ -1785,7 +1858,7 @@
             g.restore();
             b.addEventListener('click', () => { root.querySelectorAll('.dvd-pat').forEach(x => x.classList.toggle('on', x === b)); }); });
         },
-        ok: root => { const on = root.querySelector('.dvd-pat.on'); if(on) HS.pat = on.dataset.p; const sc = parseFloat(root.querySelector('#hsScale').value); HS.scale = sc > 0 ? sc : 0; const an = parseFloat(root.querySelector('#hsAng').value); HS.ang = isFinite(an) ? an : 0; HS.col = root.querySelector('#hsCol').value; hsSave(); res(true); },
+        ok: root => { const on = root.querySelector('.dvd-pat.on'); if(on){ HS.pat = on.dataset.p; HS.gmode = 0; } const sc = parseFloat(root.querySelector('#hsScale').value); HS.scale = sc > 0 ? sc : 0; const an = parseFloat(root.querySelector('#hsAng').value); HS.ang = isFinite(an) ? an : 0; HS.col = root.querySelector('#hsCol').value; hsSave(); res(true); },
         cancel: () => res(false) });
     });
   }
@@ -1842,7 +1915,9 @@
     const s = Math.min((cnv.width - 2 * pad) / Math.max(bb.x1 - bb.x0, 1e-9), (cnv.height - 2 * pad) / Math.max(bb.y1 - bb.y0, 1e-9));
     const sv = { scale: view.scale, offsetX: view.offsetX, offsetY: view.offsetY, rot: view.rot }; const svW = _RTW, svH = _RTH;
     view.scale = s; view.rot = 0; view.offsetX = cnv.width / 2 - (bb.x0 + bb.x1) / 2 * s; view.offsetY = cnv.height / 2 + (bb.y0 + bb.y1) / 2 * s; _RTW = cnv.width; _RTH = cnv.height;
-    try{ let n = 0; for(const e of ents){ if(n++ > (o.max || 3000)) break; const c = e._c && e._c !== 'BYLAYER' ? e._c : (e.col || o.col || '#cfd8e6'); A.drawEntOn(g, e, c, e.lw >= 30 ? 2 : 1, []); } }
+    try{ let n = 0; for(const e of ents){ if(n++ > (o.max || 3000)) break; const c = e._c && e._c !== 'BYLAYER' ? e._c : (e.col || o.col || '#cfd8e6');
+        if(e.type === 'HATCH' && e.solid){ g.save(); g.fillStyle = c; g.globalAlpha = 0.5; g.beginPath(); for(const lp of e.loops || []) lp.forEach((q, k) => { const P = toScreen(q.x, q.y); if(k) g.lineTo(P.x, P.y); else g.moveTo(P.x, P.y); }); g.fill('evenodd'); g.restore(); continue; }   // tô đặc (ô xem trước MLSTYLE…)
+        A.drawEntOn(g, e, c, e.lw >= 30 ? 2 : 1, []); } }
     finally { Object.assign(view, sv); _RTW = svW; _RTH = svH; }
   };
   // hình mẫu cho ô xem trước của Dimension Style Manager (như AutoCAD): kích thước ngang, dọc, bán kính, góc theo kiểu sn
@@ -2029,7 +2104,7 @@
   A.aciNear = aciNear;
   function dxfStr(s){ return String(s).replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }
   window.entitiesToDXF = function(ents){
-    if(A.dxfR2000 && A.dxfVer !== 'R12') return A.dxfR2000(ents);   // mặc định: DXF 2018 (dvd-acad-dxf.js)
+    if(A.dxfR2000 && A.dxfVer !== 'R12') return A.dxfR2000(ents, arguments[1]);   // mặc định: DXF 2018 (dvd-acad-dxf.js)
     ents = ents.filter(e => e && !e.xh);   // R12: không có SPATIAL_FILTER → chỉ ghi phần nhìn thấy của khối bị XCLIP
     ents = ents.filter(e => e && !e.xr);   // tham chiếu ngoài (XREF) không ghi vào file
     const L = []; const P = (c, v) => { L.push(String(c)); let s; if(typeof v === 'number') s = (c >= 10 && c < 60) ? _fmtReal(v) : String(v | 0); else s = String(v); L.push(s); };
@@ -2048,7 +2123,7 @@
     A.lsSync();
     for(const ly of layers){ const aci = aciNear(A.layerHex(ly)); let fl = 0; if(A.LS.frozen.has(ly)) fl |= 1; if(A.LS.locked.has(ly)) fl |= 4; P(0, 'LAYER'); P(2, dxfStr(ly)); P(70, fl); P(62, A.LS.off.has(ly) ? -aci : aci); const llt = A.layerLT(ly); P(6, ltOk.has(llt) ? dxfStr(llt) : 'CONTINUOUS'); }
     P(0, 'ENDTAB');
-    const stUsed = new Map(); for(const e of ents){ if(e.type === 'TEXT' && e.style && e.ff && A.FONT_FILE && A.FONT_FILE[e.ff] && !stUsed.has(e.style)) stUsed.set(e.style, A.FONT_FILE[e.ff]); }
+    const stUsed = new Map(); for(const e of ents){ if(e.type === 'TEXT' && e.style && e.ff && !stUsed.has(e.style)){ const f = /\.shx$/i.test(e.ff) ? String(e.ff).toLowerCase() : (A.FONT_FILE && A.FONT_FILE[e.ff]); if(f) stUsed.set(e.style, f); } }
     stUsed.delete('STANDARD');
     P(0, 'TABLE'); P(2, 'STYLE'); P(70, 1 + stUsed.size); P(0, 'STYLE'); P(2, 'STANDARD'); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'arial.ttf'); P(4, '');
     for(const [n, f] of stUsed){ P(0, 'STYLE'); P(2, dxfStr(n)); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, f); P(4, ''); }

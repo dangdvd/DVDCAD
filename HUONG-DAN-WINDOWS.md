@@ -1,7 +1,7 @@
 # DVDCAD cho Windows — cài đặt và dùng offline
 
 DVDCAD bản Windows là một phần mềm cài trên máy, chạy **hoàn toàn offline**: không cần mạng, không cần trình duyệt, không cần máy chủ.
-Giao diện và cách dùng như bản web kiểu AutoCAD: ribbon, dòng lệnh, Quick Access Toolbar, tab bản vẽ, thanh trạng thái, bảng Properties / Layer, và hơn 500 lệnh (hơn 900 tên lệnh kể cả lệnh tắt) như `L`, `PL`, `C`, `TR`, `O`, `H`, `DLI`.
+Giao diện và cách dùng như bản web kiểu AutoCAD: ribbon, dòng lệnh, Quick Access Toolbar, tab bản vẽ, thanh trạng thái, bảng Properties / Layer, và hơn 700 lệnh (hơn 1100 tên lệnh kể cả lệnh tắt) như `L`, `PL`, `C`, `TR`, `O`, `H`, `DLI`.
 
 ## Tải và cài đặt
 
@@ -25,10 +25,19 @@ Gỡ cài đặt: **Settings → Apps → DVDCAD → Uninstall**.
 | Mở bản vẽ | `OPEN` / **Ctrl+O** mở hộp thoại *Select File* của Windows. Chọn được nhiều file, mỗi file một tab |
 | Mở từ Explorer | Nhấp đúp file .dwg / .dxf, hoặc kéo thả file vào cửa sổ. Khi DVDCAD đang chạy, file mở thêm thành tab mới trong cùng cửa sổ |
 | Lưu | `QSAVE` / **Ctrl+S**: lần đầu hỏi chỗ lưu, các lần sau ghi đè đúng file đó. `SAVEAS` / **Ctrl+Shift+S**: chọn *Bản vẽ AutoCAD (\*.dwg)* hoặc *DXF* trong hộp thoại |
-| Lưu DWG | `SAVEDWG` (`DWGOUT`): ghi thẳng **DWG 2000** bằng bộ ghi có sẵn, không cần cài thêm gì |
+| Lưu DWG | `SAVEDWG` (`DWGOUT`): ghi thẳng **DWG 2018** (hoặc 2013 / 2010 / 2004 / 2000, chọn trong `DWGSERVER`) bằng bộ ghi có sẵn, không cần cài thêm gì |
 | Nhiều bản vẽ | Tab file phía trên khung vẽ, **Ctrl+Tab** chuyển tab, **Ctrl+F4** đóng tab |
 | Phím chức năng | F1 trợ giúp, F2 lịch sử lệnh, F3 OSNAP, F7 GRID, F8 ORTHO, F9 SNAP, F10 POLAR, F11 OTRACK, F12 DYN |
-| In | `PLOT` / **Ctrl+P**: xuất PDF đúng khổ giấy và tỉ lệ, hoặc in ra máy in |
+| In | `PLOT` / **Ctrl+P**: chọn máy in như AutoCAD (**DWG To PDF.pc3**, các bản AutoCAD PDF, Default Windows System Printer, PNG / JPG, HPGL/2) **và mọi máy in đã cài trong Windows** — chọn máy in rồi OK là in thẳng nét vector, có ô Số bản. 89 khổ giấy như DWG To PDF.pc3 (ISO A / B / C, full bleed, expand, ANSI, ARCH, JIS) hoặc khổ tự chọn. PDF xuất ra (cả nút Xuất → PDF, PUBLISH) là **PDF vector**: đường nét và chữ (nhúng phông của Windows) sắc nét khi phóng to, chọn / tìm / sao chép chữ được |
+| DWFx | Trong `PLOT` chọn **DWFx ePlot (XPS Compatible).pc3** (hoặc `PUBLISH` → Xuất ra DWFx): tệp `.dwfx` vector, chữ nhúng phông, mở bằng trình xem XPS của Windows hoặc trình xem DWF |
+| Gửi bản vẽ | `ETRANSMIT` / `ARCHIVE`: chọn lưu bản vẽ trong gói dạng DWG 2018 → 2000 hoặc DXF, kèm ảnh và tham chiếu, nén thành .zip |
+| Thuộc tính máy in | Chọn máy in Windows đã cài trong `PLOT` → **Thuộc tính…**: in màu / đen trắng, in hai mặt, độ phân giải, xếp bộ |
+| Xem trước bản in | **Xem trước…** trong PLOT hoặc lệnh `PREVIEW`: trang in bằng nét vector, **lăn chuột để phóng to / thu nhỏ**, kéo để dời, chuột phải có menu Pan / Zoom / Zoom Window / Zoom Original / In / Thoát như AutoCAD |
+| Đổi phiên bản DWG hàng loạt | `DWGCONVERT`: thêm nhiều file DWG / DXF, chọn DWG 2018 / 2013 / 2010 / 2004 / 2000 hoặc DXF → tải về một file .zip. Bản vẽ đang mở không bị ảnh hưởng |
+| Phông SHX của bản vẽ | Chưa nạp phông `.shx` thì DVDCAD vẽ bằng phông nét đơn kèm theo (txt → standard, simplex, romans…; biến `FONTALT`). Muốn đúng phông gốc: `SHXFONTS` → **Nạp phông…**, chọn các tệp `.shx` có trên máy (ví dụ thư mục `Fonts` của AutoCAD đã cài); phông được nhớ cho lần sau |
+| Nhiều bản vẽ cạnh nhau | `SYSWINDOWS` (tab Hiển thị → Xếp bản vẽ): **Lát dọc / Lát ngang / Xếp chồng**. Bản vẽ hiện hành vẽ, sửa ngay trong ô của nó; bấm ô khác để chuyển; nút □ trở về một cửa sổ |
+| Thiết lập trang có tên | Lưu trong hộp PLOT (**Thêm…**) hoặc nhập bằng `PSETUPIN`. Khi lưu DWG / DXF, AutoCAD thấy các thiết lập này trong Page Setup Manager |
+| Hình chiếu từ mô hình 3D | Tab **Bố cục**: `VIEWBASE` (hình chiếu cơ sở + hình chiếu phụ), `VIEWSECTION` (mặt cắt), `VIEWDETAIL` (hình trích), `VIEWUPDATE` sau khi sửa mô hình |
 
 **Lệnh tắt như AutoCAD:** bảng lệnh tắt mặc định giống `acad.pgp`, ví dụ `L`, `C`, `CO`/`CP`, `TR`, `EX`, `O`, `F`, `H`, `DLI`, `T` = MTEXT, `DT` = TEXT, `DO` = DONUT, `PA` = PASTESPEC, `RE` / `REA`.
 File `acad.pgp` riêng của bạn nhập được bằng lệnh `ALIASEDIT`. Khi gõ lệnh, danh sách gợi ý hiện kèm biểu tượng như AutoComplete của AutoCAD.
@@ -44,11 +53,15 @@ Danh sách lệnh đầy đủ: [HUONG-DAN-LENH.md](HUONG-DAN-LENH.md), hoặc b
 
 ## Giới hạn
 
-- **Lưu DWG**: DVDCAD tự ghi file **.dwg định dạng AutoCAD 2000** (AC1015) — định dạng mà AutoCAD từ bản 2000 trở đi đều mở được — không cần ODA File Converter hay mạng.
-  Mở lại trong DVDCAD còn nguyên lớp, kiểu nét, kiểu chữ, khối + thuộc tính, kích thước, hatch, khối 3D, vùng che.
-  - Cần DWG 2004 → 2018: cài **ODA File Converter** (miễn phí, opendesign.com), rồi chọn phiên bản trong lệnh `DWGSERVER`.
-    DVDCAD tự tìm ODA trong `C:\Program Files\ODA`; cài chỗ khác thì chọn đường dẫn trong `DWGSERVER`. Không có ODA thì DVDCAD tự ghi DWG 2000.
-  - Khối động: AutoCAD nhận như khối thường ở trạng thái đang hiện. Thông số khối động, ràng buộc tham số và khối 3D tham số vẫn còn đủ khi mở lại trong DVDCAD.
+- **Lưu DWG**: DVDCAD tự ghi file **.dwg AutoCAD 2018** (AC1032, mặc định), 2013, 2010, 2007, 2004 hoặc 2000 — không cần ODA File Converter hay mạng.
+  Mở lại trong DVDCAD còn nguyên lớp, kiểu nét, kiểu chữ, khối + thuộc tính, kích thước, hatch, khối 3D, vùng che, khối động, vị trí địa lý.
+  - AutoCAD 2017 trở về trước không mở được DWG 2018 — chọn DWG 2013 (AutoCAD 2013 → 2017) hoặc thấp hơn trong `DWGSERVER`.
+  - DWG 2007 (AutoCAD 2007 / 2008 / 2009): từ 5.20.0 DVDCAD ghi thẳng định dạng 2007 thật (AC1021). Muốn chuyển qua **ODA File Converter** (miễn phí, cài riêng — không đóng gói kèm DVDCAD) thì chọn dòng "chuyển qua ODA":
+    1. `DWGSERVER` → **Tải ODA File Converter**: mở trang tải chính thức của ODA trong trình duyệt. Chọn bản Windows, cài như bình thường.
+    2. Quay lại cửa sổ DVDCAD: hộp `DWGSERVER` tự dò lại và hiện **✓ Đã tìm thấy** (hoặc bấm **Tìm lại**). DVDCAD tìm trong `C:\Program Files\ODA`; cài chỗ khác thì bấm **Chọn…** trỏ tới `ODAFileConverter.exe`.
+  - Khối động (bản 2018): tham số hiển thị, **lật** và **kéo giãn** là tham số thật của AutoCAD, có grip trong AutoCAD. Ràng buộc tham số và khối 3D tham số vẫn còn đủ khi mở lại trong DVDCAD.
+  - **Ảnh** (IMAGEATTACH, GEOMAPIMAGE…): lưu bản vẽ là DVDCAD ghi luôn tệp ảnh (`tên_xxxxxx.jpg` / `.png`) vào cùng thư mục — AutoCAD mở bản vẽ thấy ảnh. Gửi bản vẽ cho người khác thì gửi kèm các tệp ảnh đó, hoặc dùng `ETRANSMIT` để đóng gói .zip.
+  - Mở bản vẽ AutoCAD có ảnh: DVDCAD đọc tệp ảnh nằm trong thư mục của bản vẽ (đường dẫn tương đối hoặc cùng tên).
 - Đây là phần mềm mã nguồn mở có **tên lệnh và cách dùng giống AutoCAD**, **không phải** sản phẩm của Autodesk.
   Biểu tượng là hình DVDCAD tự vẽ theo quy ước quen thuộc của phần mềm CAD; DVDCAD không dùng logo, biểu tượng hay mã nguồn của Autodesk.
 
@@ -65,8 +78,8 @@ Mã bản Windows nằm trong thư mục `desktop/` (Electron). Phần giao di�
   Trên trình duyệt file này không làm gì.
 - `dvd-acad-start.js` — trang Start kiểu AutoCAD (dùng cho cả bản web).
 
-- `dvd-dwg.js` — bộ ghi DWG 2000 (AC1015) bằng JavaScript, viết theo tài liệu mở của Open Design Alliance và mã nguồn LibreDWG.
-  Đầu vào là DXF 2000 do DVDCAD tạo; đầu ra kiểm tra bằng LibreDWG (đọc lại trong app) và ODA File Converter (trên GitHub Actions).
+- `dvd-dwg.js` — bộ ghi DWG 2018 / 2013 / 2010 / 2004 / 2000 bằng JavaScript, viết theo tài liệu mở của Open Design Alliance, mã nguồn LibreDWG và ACadSharp.
+  Đầu vào là DXF cùng phiên bản do DVDCAD tạo; đầu ra kiểm tra bằng LibreDWG (đọc lại trong app), ODA File Converter (audit) và ACadSharp (trên GitHub Actions).
 
 Chạy thử và đóng gói:
 

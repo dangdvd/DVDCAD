@@ -1,5 +1,5 @@
 /* DVDCAD v4z — bổ sung lệnh: TJUST · TORIENT · TSCALE · TEXTFIT · TCIRCLE (công cụ chữ Express) · MULTIPLE · HISTORY / TEXTSCR
-   ATTIPEDIT · XLIST · DIMEX / DIMIM · VIEWBASE (3 hình chiếu từ khối 3D) · MSTRETCH · CHURLS · DELAY · BATTORDER · TEXTSTYLE */
+   ATTIPEDIT · XLIST · DIMEX / DIMIM · VIEWBASE (3 hình chiếu từ khối 3D; từ v5v dvd-acad-x19.js đăng ký lại VIEWBASE / VIEWS3 / HINHCHIEU) · MSTRETCH · CHURLS · DELAY · BATTORDER · TEXTSTYLE */
 (function(){
   'use strict';
   const A = window.DVDAcad; if(!A || A._x13 || !window.DVDCmd) return; A._x13 = true;

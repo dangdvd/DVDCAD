@@ -389,20 +389,31 @@
   const FLD = { date: 'Ngày hiện tại', file: 'Tên bản vẽ', author: 'Người vẽ (DWGPROPS)', title: 'Tiêu đề (DWGPROPS)', area: 'Diện tích đối tượng', len: 'Chiều dài / chu vi đối tượng', count: 'Số đối tượng trong bản vẽ' };
   const propsKey = () => 'dvd:props::' + docName();
   const getProps = () => { try{ return JSON.parse(localStorage.getItem(propsKey()) || '{}'); }catch(_){ return {}; } };
+  // định dạng ngày kiểu AutoCAD / .NET: dd/MM/yyyy, d MMMM yyyy, HH:mm, h:mm tt, 'chữ cố định'…
+  function fmtDate(d, f){
+    if(!f || f === 'short') f = 'dd/MM/yyyy'; if(f === 'long') f = "'ngày' d 'tháng' M 'năm' yyyy";
+    const loc = window.DVDI18N && DVDI18N.lang === 'en' ? 'en-US' : 'vi-VN', p2 = n => String(n).padStart(2, '0'), H = d.getHours();
+    const T = { yyyy: d.getFullYear(), yy: p2(d.getFullYear() % 100), MMMM: d.toLocaleString(loc, { month: 'long' }), MMM: d.toLocaleString(loc, { month: 'short' }), MM: p2(d.getMonth() + 1), M: d.getMonth() + 1,
+      dddd: d.toLocaleString(loc, { weekday: 'long' }), ddd: d.toLocaleString(loc, { weekday: 'short' }), dd: p2(d.getDate()), d: d.getDate(), HH: p2(H), H, hh: p2(H % 12 || 12), h: H % 12 || 12, mm: p2(d.getMinutes()), m: d.getMinutes(), ss: p2(d.getSeconds()), s: d.getSeconds(), tt: H < 12 ? 'AM' : 'PM' };
+    return String(f).replace(/'([^']*)'|yyyy|yy|MMMM|MMM|MM|M|dddd|ddd|dd|d|HH|H|hh|h|mm|m|ss|s|tt/g, (m, q) => q != null ? q : String(T[m]));
+  }
+  const caseOf = (v, c) => { v = String(v == null ? '' : v); if(c === 'up') return v.toUpperCase(); if(c === 'lo') return v.toLowerCase(); if(c === 'fc') return v.charAt(0).toUpperCase() + v.slice(1); if(c === 'tc') return v.replace(/(^|\s)(\S)/g, (m, a, b) => a + b.toUpperCase()); return v; };
   function fieldValue(f){
-    const P = getProps();
-    if(f.k === 'date'){ const d = new Date(); const p2 = n => String(n).padStart(2, '0'); return f.fmt === 'long' ? 'ngày ' + d.getDate() + ' tháng ' + (d.getMonth() + 1) + ' năm ' + d.getFullYear() : p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
-    if(f.k === 'file') return String(docName()).replace(/\.[^.]+$/, '');
-    if(f.k === 'author') return P.author || '';
-    if(f.k === 'title') return P.title || '';
-    if(f.k === 'count') return String(modelEntities.length);
-    if(f.k === 'area' || f.k === 'len'){ const o = modelEntities.find(e => e.cid === f.ref); if(!o) return '####'; let v = f.k === 'area' ? areaOf(o) : lenOf(o); const div = f.fmt === 'm2' ? 1e6 : f.fmt === 'm' ? 1e3 : 1; v /= div; const d = f.dec != null ? f.dec : 2; return v.toFixed(d) + (f.fmt === 'm2' ? ' m²' : f.fmt === 'm' ? ' m' : ''); }
-    return '';
+    const P = getProps(); let v = '';
+    if(f.k === 'date' || f.k === 'cdate' || f.k === 'sdate'){ let ms = Date.now(); if(f.k !== 'date'){ const t = getTime() || {}; ms = f.k === 'cdate' ? t.created : (t.edited || t.created); } if(!ms) return '----'; v = fmtDate(new Date(ms), f.fmt); }
+    else if(f.k === 'file'){ const n = String(docName()); v = f.fx === 'ext' ? n : n.replace(/\.[^.]+$/, ''); }
+    else if(/^(author|title|subject|keywords|comments|checker|hyperlink)$/.test(f.k)) v = P[f.k] || '';
+    else if(f.k === 'custom') v = (P.custom || {})[f.name] || '';
+    else if(f.k === 'count'){ if(f.blk){ const g = new Set(); for(const e of modelEntities) if(e.grp && e.blk === f.blk) g.add(e.grp); v = String(g.size); } else v = String(modelEntities.length); }   // COUNTFIELD: số bản chèn của khối
+    else if(f.k === 'area' || f.k === 'len'){ const o = f.ref && modelEntities.find(e => e.cid === f.ref); if(!o) return '####'; let x = f.k === 'area' ? areaOf(o) : lenOf(o); const div = f.fmt === 'm2' ? 1e6 : f.fmt === 'm' ? 1e3 : f.fmt === 'cm2' ? 100 : f.fmt === 'cm' ? 10 : 1; x /= div; const dd = f.dec != null ? f.dec : 2; v = x.toFixed(dd) + (f.fmt === 'm2' ? ' m²' : f.fmt === 'm' ? ' m' : f.fmt === 'cm2' ? ' cm²' : f.fmt === 'cm' ? ' cm' : ''); }
+    return caseOf(v, f.cs);
   }
   const fieldText = f => (f.pre || '') + fieldValue(f) + (f.suf || '');
-  A.fieldValue = fieldValue;
+  A.fieldValue = fieldValue; A.fmtDate = fmtDate; A.areaOf = o => areaOf(o); A.lenOf = o => lenOf(o);
   function updateFields(silent){
-    const rep = []; for(const e of modelEntities){ if(!e.fld || A.isLocked(e)) continue; const t = fieldText(e.fld); if(t !== e.text){ const w = copy(e); w.text = t; rep.push([e, w]); } }
+    const rep = []; for(const e of modelEntities){ if(A.isLocked(e)) continue;
+      if(e.rt && A.rtFieldsRefresh){ const w = A.rtFieldsRefresh(e); if(w) rep.push([e, w]); continue; }   // trường nằm trong chữ có định dạng
+      if(!e.fld) continue; const t = fieldText(e.fld); if(t !== e.text){ const w = copy(e); w.text = t; rep.push([e, w]); } }
     if(rep.length) A.commit({ rep }, 'Cập nhật ' + rep.length + ' trường'); else if(!silent) log('Các trường đã cập nhật.');
     return rep.length;
   }
@@ -447,7 +458,7 @@
   }
   A.evalTable = evalTable;
   const hasF = T => T && T.cells && T.cells.some(r => r.some(c => typeof c === 'string' && c.trim().startsWith('=')));
-  if(A.tblRegenFrom){ const _tr = A.tblRegenFrom; A.tblRegenFrom = function(w){ const T = w.tbld; if(!hasF(T)) return _tr.call(this, w); const w2 = Object.assign({}, w, { tbld: Object.assign({}, T, { cells: evalTable(T.cells) }) }); const out = _tr.call(this, w2); if(out && out[0]) out[0].tbld = JSON.parse(JSON.stringify(T)); return out; }; }
+  if(A.tblRegenFrom){ const _tr = A.tblRegenFrom; A.tblRegenFrom = function(w){ const T = w.tbld; if(!hasF(T)) return _tr.call(this, w); const w2 = Object.assign({}, w, { tbld: Object.assign({}, T, { cells: evalTable(T.cells) }) }); const out = _tr.call(this, w2); const hd = out && (out.find(e => e.tbld) || out[0]); if(hd) hd.tbld = JSON.parse(JSON.stringify(T)); return out; }; }
   // bảng mới có công thức → dựng lại để hiện kết quả
   const _c0 = A.commit;
   A.commit = function(ch, msg){
@@ -548,7 +559,7 @@
   });
   // ---- trạng thái lớp: LAYERP / LAYERSTATE ----
   const LS = A.LS;
-  const snap = () => ({ cur: LS.cur, off: [...LS.off], fz: [...LS.frozen], lk: [...LS.locked], hex: Object.assign({}, LS.hex), layLT: Object.assign({}, LS.layLT), layLW: Object.assign({}, LS.layLW) });
+  const snap = () => ({ cur: LS.cur, off: [...LS.off], fz: [...LS.frozen], lk: [...LS.locked], hex: Object.assign({}, LS.hex), layLT: Object.assign({}, LS.layLT), layLW: Object.assign({}, LS.layLW), layTP: Object.assign({}, LS.layTP || {}) });
   const sameSnap = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   let restoring = false, lastSnap = null; const PREV = [];
   function restoreSnap(S){
@@ -559,6 +570,7 @@
       hiddenUserLayers.clear(); for(const n of LS.off) hiddenUserLayers.add(n); for(const n of LS.frozen) hiddenUserLayers.add(n);
       for(const [n, v] of Object.entries(S.layLT || {})) if((LS.layLT[n] || 'CONTINUOUS') !== v) A.setLayerLT(n, v);
       for(const [n, v] of Object.entries(S.layLW || {})) if((LS.layLW[n] || 0) !== v) A.setLayerLW(n, v);
+      if(A.setLayerTP) for(const [n, v] of Object.entries(S.layTP || {})) if(A.layerTP(n) !== v) A.setLayerTP(n, v);
       if(S.cur && A.layerNames().includes(S.cur)) LS.cur = S.cur;
       A.lsSave(); try{ invalidateSnap(); forceRedraw(); }catch(_){ try{ draw(); }catch(__){} }
     } finally { restoring = false; lastSnap = snap(); }
@@ -572,7 +584,14 @@
   });
   const lasKey = () => 'dvd:las::' + docName();
   const getLAS = () => { try{ return JSON.parse(localStorage.getItem(lasKey()) || '{}'); }catch(_){ return {}; } };
-  A.layerState = { save: (n) => { const o = getLAS(); o[n] = snap(); localStorage.setItem(lasKey(), JSON.stringify(o)); }, restore: (n) => { const o = getLAS(); if(o[n]){ restoreSnap(o[n]); return true; } return false; }, list: () => Object.keys(getLAS()) };
+  const setLAS = o => { try{ localStorage.setItem(lasKey(), JSON.stringify(o)); }catch(_){} };
+  // mask: chỉ gọi lại các thuộc tính chọn (như "Layer properties to restore" của AutoCAD): on, frz, lock, col, lt, lw, cur
+  const mergeSnap = (S, m) => { if(!m) return S; const C = snap(), O = Object.assign({}, C);
+    if(m.on) O.off = S.off || []; if(m.frz) O.fz = S.fz || []; if(m.lock) O.lk = S.lk || []; if(m.col) O.hex = Object.assign({}, C.hex, S.hex); if(m.lt) O.layLT = Object.assign({}, C.layLT, S.layLT); if(m.lw) O.layLW = Object.assign({}, C.layLW, S.layLW); if(m.cur && S.cur) O.cur = S.cur; return O; };
+  A.layerState = { save: (n, desc) => { const o = getLAS(); const S = snap(); S.desc = desc != null ? desc : ((o[n] && o[n].desc) || ''); S.t = Date.now(); S.layers = A.layerNames(); o[n] = S; setLAS(o); },
+    restore: (n, mask) => { const o = getLAS(); if(o[n]){ restoreSnap(mergeSnap(o[n], mask)); return true; } return false; }, list: () => Object.keys(getLAS()), all: () => getLAS(), snap: () => snap(),
+    del: n => { const o = getLAS(); delete o[n]; setLAS(o); }, rename: (a, b) => { const o = getLAS(); if(!o[a]) return 'Không thấy trạng thái lớp.'; if(o[b]) return 'Tên đã có.'; o[b] = o[a]; delete o[a]; setLAS(o); return ''; },
+    apply: S => restoreSnap(S), setDesc: (n, d) => { const o = getLAS(); if(o[n]){ o[n].desc = d; setLAS(o); } }, put: (n, S) => { const o = getLAS(); o[n] = S; setLAS(o); }, same: n => { const o = getLAS(); if(!o[n]) return false; const a = Object.assign({}, o[n]), b = snap(); delete a.desc; delete a.t; delete a.layers; return sameSnap(a, b); } };
   plain(['LAYERSTATE', 'LAS', 'LMAN'], 'Quản lý trạng thái lớp: lưu / gọi lại tình trạng bật, tắt, khoá, màu của các lớp', () => {
     const render = root => { const o = getLAS(); const n = Object.keys(o); root.querySelector('#lsL').innerHTML = n.length ? n.map(k => '<tr><td>' + esc(k) + '</td><td>' + (o[k].off.length + o[k].fz.length) + ' tắt/đóng băng · ' + o[k].lk.length + ' khoá</td><td><button data-r="' + esc(k) + '">Gọi lại</button> <button data-d="' + esc(k) + '">✕</button></td></tr>').join('') : '<tr><td colspan="3" style="opacity:.7">Chưa lưu trạng thái nào.</td></tr>'; };
     A.dialog({ title: 'Trạng thái lớp (Layer States)', wide: true, noOk: true, cancelText: 'Đóng', html: '<div class="lm-bar"><input id="lsN" placeholder="Tên trạng thái mới (vd In kết cấu)"><button id="lsS">Lưu trạng thái hiện tại</button></div><div class="lm-tbl"><table><thead><tr><th>Tên</th><th>Nội dung</th><th></th></tr></thead><tbody id="lsL"></tbody></table></div>',
@@ -621,8 +640,8 @@
     const rep = []; for(const e of modelEntities) if((e.layer || '0') === o) rep.push([e, Object.assign(copy(e), { layer: n })]);
     try{ for(const L of layerList) if(L.name === o) L.name = n; }catch(_){}
     const mv = (set) => { if(set.has(o)){ set.delete(o); set.add(n); } }; mv(LS.off); mv(LS.frozen); mv(LS.locked); mv(LS.extra); LS.extra.add(n);
-    for(const m of [LS.hex, LS.orig, LS.layLT, LS.layLW]) if(o in m){ m[n] = m[o]; delete m[o]; }
-    try{ if(LAYER_LT[o] != null){ LAYER_LT[n] = LAYER_LT[o]; delete LAYER_LT[o]; } if(LAYER_LW[o] != null){ LAYER_LW[n] = LAYER_LW[o]; delete LAYER_LW[o]; } }catch(_){}
+    for(const m of [LS.hex, LS.orig, LS.layLT, LS.layLW, LS.layTP || {}]) if(o in m){ m[n] = m[o]; delete m[o]; }
+    try{ if(LAYER_LT[o] != null){ LAYER_LT[n] = LAYER_LT[o]; delete LAYER_LT[o]; } if(LAYER_LW[o] != null){ LAYER_LW[n] = LAYER_LW[o]; delete LAYER_LW[o]; } if(LAYER_TP[o] != null){ LAYER_TP[n] = LAYER_TP[o]; delete LAYER_TP[o]; } }catch(_){}
     if(LS.cur === o) LS.cur = n; hiddenUserLayers.clear(); for(const x of LS.off) hiddenUserLayers.add(x); for(const x of LS.frozen) hiddenUserLayers.add(x);
     if(rep.length) A.commit({ rep }, 'Đổi tên lớp ' + o + ' → ' + n); A.lsSave(); log('Đã đổi tên lớp "' + o + '" thành "' + n + '" (' + rep.length + ' đối tượng).'); return true;
   }
@@ -659,19 +678,32 @@
   });
   setTimeout(applyAll, 0); setTimeout(applyAll, 1500);
   // ---- SCRIPT (.scr) ----
+  const SCR_CL = new Set(['COLOR', 'COL', 'INSERT', 'I', 'BLOCK', 'B', 'PURGE', 'PU', 'VPORTS', 'HYPERLINK']);
   async function runScript(text, label){
     const lines = String(text).replace(/\r/g, '').split('\n'); const toks = [];
     for(const ln of lines){ if(/^\s*;/.test(ln)) continue; const parts = ln.split(' '); for(const p of parts) toks.push(p); }
     while(toks.length && toks[toks.length - 1] === '') toks.pop();
-    const wait = ms => new Promise(r => setTimeout(r, ms)); let n = 0;
-    for(const t of toks){
-      if(!A.busy()){ if(t === '') continue; DVDCmd.run(t); n++; }
-      else A.input(t);
-      await wait(25);
-    }
-    if(A.busy()) A.input(''); log('SCRIPT' + (label ? ' ' + label : '') + ': đã chạy ' + n + ' lệnh.');
+    return runToks(toks, label, text);
+  }
+  // chạy chuỗi token script — Esc / Backspace ngắt (RESUME chạy tiếp), RSCRIPT lặp lại script
+  async function runToks(toks, label, text, from){
+    const wait = ms => new Promise(r => setTimeout(r, ms)); let n = 0, stop = false;
+    const S = { toks, label, text, i: from || 0 }; A._script = S; A.lastScript = { text, label };
+    const kd = e => { if(e.key === 'Escape' || e.key === 'Backspace'){ stop = true; } }; window.addEventListener('keydown', kd, true);
+    try{
+      for(let i = from || 0; i < toks.length; i++){ const t = toks[i]; S.i = i;
+        if(stop){ A._scriptPaused = S; log('SCRIPT: đã ngắt — gõ RESUME để chạy tiếp.'); return n; }
+        const u = t.toUpperCase().replace(/^[_.]+/, '');
+        if(!A.busy() && u === 'RSCRIPT'){ S.i = toks.length; if(A.busy()) A.input(''); log('RSCRIPT: lặp lại script (Esc để dừng).'); await wait(30); return n + await runToks(toks, label, text, 0); }
+        if(!A.busy()){ if(t === '') continue; DVDCmd.run(SCR_CL.has(u) ? '-' + u : t); n++; }   // lệnh nay mở hộp thoại: script chạy bản dòng lệnh như trước
+        else A.input(t);
+        await wait(25);
+      }
+    } finally { window.removeEventListener('keydown', kd, true); if(A._script === S) A._script = null; }
+    A._scriptPaused = null; if(A.busy()) A.input(''); log('SCRIPT' + (label ? ' ' + label : '') + ': đã chạy ' + n + ' lệnh.');
     return n;
   }
+  A.runScriptToks = runToks;
   A.runScript = runScript;
   plain(['SCRIPT', 'SCR'], 'Chạy file script AutoCAD (.scr): chuỗi lệnh tự động', () => {
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.scr,.txt';

@@ -104,7 +104,8 @@
   plain(['SPELLBROWSER', 'SPELL2'], 'Kiểm tra chính tả bằng bộ kiểm tra của trình duyệt (sửa trực tiếp từng chữ)', () => {
     const texts = (selEnts.size ? [...selEnts] : modelEntities).filter(e => e.type === 'TEXT' && !e.dimd && !e.tbld && !A.isLocked(e) && String(e.text || '').trim());
     const uniq = new Map(); for(const e of texts){ const t = String(e.text); if(!uniq.has(t)) uniq.set(t, []); uniq.get(t).push(e); } const keys = [...uniq.keys()].slice(0, 600);
-    A.dialog({ title: 'Chính tả (trình duyệt)', wide: true, okText: 'Áp dụng', html: '<div style="max-height:56vh;overflow:auto">' + keys.map((t, i) => '<textarea data-i="' + i + '" spellcheck="true" lang="vi" rows="1" style="width:100%;margin-bottom:4px;background:var(--bg-canvas);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:4px 6px;font:13px system-ui">' + esc(t) + '</textarea>').join('') + '</div>',
+    if(!keys.length){ say('Không có chữ nào để kiểm tra.'); return; }
+    A.dialog({ title: 'Kiểm tra chính tả (trình duyệt)', cls: 'acw-free', help: 'SPELLBROWSER', okText: 'Áp dụng', html: '<div class="acw" style="width:620px"><div class="acw-lab">Chữ trong bản vẽ (' + keys.length + ') — từ gạch đỏ là lỗi chính tả; bấm chuột phải để chọn từ gợi ý:</div><div class="acw-list" style="height:52vh;padding:4px">' + keys.map((t, i) => '<textarea data-i="' + i + '" spellcheck="true" lang="vi" rows="1" style="width:100%;box-sizing:border-box;margin-bottom:3px;font:12.5px system-ui;height:auto">' + esc(t) + '</textarea>').join('') + '</div></div>',
       onOpen: root => root.addEventListener('keydown', e => e.stopPropagation(), true),
       ok: root => { const rep = []; root.querySelectorAll('textarea[data-i]').forEach(ta => { const o = keys[+ta.dataset.i]; if(ta.value !== o) for(const e of uniq.get(o)){ const w = copy(e); w.text = ta.value; rep.push([e, w]); } }); if(rep.length) A.commit({ rep }, 'Chính tả: đã sửa ' + rep.length + ' chữ'); } });
   });
@@ -157,7 +158,7 @@
       const repOf = o => ch.rep.find(([x]) => x === o);
       const ensureCid = (m) => { if(m.cid) return m.cid; if((ch.add || []).includes(m)){ m.cid = newCid(); return m.cid; } const pr = repOf(m); if(pr){ if(!pr[1].cid) pr[1].cid = newCid(); return pr[1].cid; } const w = copy(m); w.cid = newCid(); ch.rep.push([m, w]); pend.rep.set(m, w); return w.cid; };
       // (a) hatch mới: liên kết 1 đối tượng kín hoặc nhiều nét ghép
-      for(const h of (ch.add || []).filter(e => e && e.type === 'HATCH' && !e.hassoc && e.loops && e.loops.length && !e.grp)){
+      for(const h of (ch.add || []).filter(e => e && e.type === 'HATCH' && !e.hassoc && !e.nassoc && e.loops && e.loops.length && !e.grp)){
         const b = entBBox(h); if(!b) continue; const pad = Math.max(b.x1 - b.x0, b.y1 - b.y0) * 0.02; const pool = A.queryBox(b.x0 - pad, b.y0 - pad, b.x1 + pad, b.y1 + pad, 3000).filter(e => e.type !== 'HATCH' && e.type !== 'TEXT').concat((ch.add || []).filter(e => e !== h && e.type !== 'HATCH'));
         const ids = h.loops.map(lp => { if(!lp || lp.length < 3) return null; const s = singleMatch(lp, pool); if(s) return ensureCid(s); const m = multiMatch(lp, pool); if(!m) return null; const p = interiorPt(lp); return p ? { m: m.map(ensureCid), p } : null; });
         if(ids.some(Boolean)) h.hassoc = ids;
@@ -294,7 +295,7 @@
     tp.querySelector('.tp-b').onclick = e => { const b = e.target.closest('button'); if(!b) return; if(A.busy()) A.cancel(true);
       if(b.dataset.c) DVDCmd.run(b.dataset.c);
       else if(b.dataset.s) A.run('SYMBOL', () => placeSymbol(SYMS[+b.dataset.s]));
-      else if(b.dataset.h){ if(b.dataset.h === '__grad') DVDCmd.run('GRADIENT'); else { if(A.HS){ A.HS.pat = b.dataset.h; try{ localStorage.setItem('dvd:hatch', JSON.stringify(A.HS)); }catch(_){} } DVDCmd.run('HATCH'); log('Mẫu hatch: ' + b.dataset.h); } }
+      else if(b.dataset.h){ if(b.dataset.h === '__grad') DVDCmd.run('GRADIENT'); else { if(A.HS){ A.HS.pat = b.dataset.h; A.HS.gmode = 0; try{ localStorage.setItem('dvd:hatch', JSON.stringify(A.HS)); }catch(_){} } DVDCmd.run('HATCH'); log('Mẫu hatch: ' + b.dataset.h); } }
       else if(b.dataset.b){ const nm = b.dataset.b; A.run('INSERT', async () => { const r = await A.getPoint('Điểm chèn khối "' + nm + '"', { rubber: false, preview: (g, p) => g.ents(A.instBlock(nm, 'lib', p, 1, 0).slice(0, 1500), '#cfe3ff') }); if(!r.pt) return; const ents = A.instBlock(nm, 'lib', r.pt, 1, 0); if(ents.length) A.commit({ add: ents }, 'Đã chèn khối ' + nm); }); } };
     // kéo để dời bảng
     const h = tp.querySelector('.tp-h'); let drag = null; h.addEventListener('pointerdown', e => { if(e.target.closest('button')) return; drag = { x: e.clientX - tp.offsetLeft, y: e.clientY - tp.offsetTop }; h.setPointerCapture(e.pointerId); });

@@ -27,7 +27,9 @@
           async seek(){}, async truncate(){}, async abort(){ parts.length = 0; },
           async close(){
             const buf = new Uint8Array(await new Blob(parts).arrayBuffer()); await D.writeFile(p, buf);
-            if(CAD.test(p)) try{ DVDAcad.captureThumb(p); }catch(_){}   // ảnh thu nhỏ cho file vừa lưu (trang Bắt đầu)
+            if(CAD.test(p)){ try{ DVDAcad.captureThumb(p); }catch(_){}   // ảnh thu nhỏ cho file vừa lưu (trang Bắt đầu)
+              // ảnh trong bản vẽ (IMAGE → IMAGEDEF ".\tên"): ghi tệp ảnh cạnh bản vẽ để AutoCAD thấy ảnh
+              for(const f of (window.DVDAcad && DVDAcad.lastImgFiles) || []){ try{ const r = await fetch(f.url); await D.writeSide(p, f.name, new Uint8Array(await r.arrayBuffer())); }catch(e){ say('Không ghi được ảnh ' + f.name + ': ' + (e && e.message || e)); } } }
           }
         };
       },

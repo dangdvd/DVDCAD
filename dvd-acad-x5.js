@@ -66,6 +66,11 @@
       rep.push([e, w]); }
     return rep;
   }
+  // bản sao các nét ở một trạng thái (không ghi lịch sử) — 'default' = trạng thái hiển thị mặc định, độ dài gốc, không lật (khối gốc khi lưu DXF / DWG)
+  A.dynStateCopy = (list, target) => { const d = defOf(nameOf(list[0])); if(!d) return list.map(copy);
+    const T = target === 'default' ? { st: (d.vis && d.vis.def) || null, L: Object.fromEntries((d.lin || []).map(p => [p.name, p.L0])), fx: 0, fy: 0 } : target;
+    return applyState(list, T).map(r => r[1]); };
+  A.dynIsDyn = isDyn;
   A.dynSetState = (gid, target, msg) => { const list = members(gid); const rep = applyState(list, target); if(rep.length) A.commit({ rep }, msg || 'Đã đổi trạng thái khối động'); return rep.length > 0; };
 
   /* ---------------- BPARAMETER ---------------- */
@@ -106,6 +111,55 @@
     }
     saveDefs(); A.commit({ rep }, 'Đã thêm trạng thái "' + st + '" (' + idx.size + ' nét) cho khối "' + name + '"');
   });
+
+  /* ---------------- v5v: BVSTATE · BVSHOW · BVHIDE — trạng thái hiển thị như Block Editor của AutoCAD ---------------- */
+  // đổi danh sách trạng thái / nét hiện ở từng trạng thái cho mọi bản chèn (nét tương ứng theo thứ tự trong khối)
+  function visUpdate(name, mut, msg){ const d = DYN[name]; if(!d || !d.vis) return false; const rep = [];
+    for(const [, L] of instances(name)){ const cur = stateOf(L, d); L.forEach((e, i) => { const w = copy(e); const r = mut(w, i, L); if(r === false) return; let tgt = cur.st && d.vis.states.includes(cur.st) ? cur.st : d.vis.def;
+        if(r && r.st) tgt = r.st; w.dyn = Object.assign({}, cur, { st: tgt }); if(Array.isArray(w.dvs) && !w.dvs.includes(tgt)) w.vh = 1; else delete w.vh; rep.push([e, w]); }); }
+    saveDefs(); if(rep.length) A.commit({ rep }, msg); A.paint(); return true; }
+  const pickDyn = async pr => { const r = await pickBlock(pr); if(!r.ent) return null; const name = nameOf(r.ent); const d = DYN[name] || (DYN[name] = {}); return { ent: r.ent, gid: r.ent.grp, name, d }; };
+  cmd(['BVSTATE'], 'Trạng thái hiển thị (Visibility States) của khối động: tạo, đổi tên, xoá, sắp xếp, đặt mặc định, đặt hiện hành', async () => {
+    const B = await pickDyn('Chọn khối động'); if(!B) return; const { name, d, gid } = B; d.vis = d.vis || { states: [], def: null }; const V = d.vis;
+    const K = A.acw; let sel = (stateOf(members(gid), d).st) || V.def || V.states[0] || null;
+    const html = '<div class="acw" style="width:420px"><div class="acw-note" translate="no" style="margin-bottom:4px">' + esc(name) + '</div><div class="acw-cols"><div class="c1"><div class="acw-list" id="bvL" style="height:200px"></div></div>' +
+      '<div class="c2 acw-btncol">' + K.btn('bvCur', 'Đặt hiện hành') + K.btn('bvNew', 'Mới…') + K.btn('bvRen', 'Đổi tên…') + K.btn('bvDel', 'Xoá') + K.btn('bvUp', 'Lên') + K.btn('bvDn', 'Xuống') + K.btn('bvDef', 'Mặc định') + '</div></div>' +
+      '<div class="acw-note" style="white-space:normal">Trạng thái mới lấy các nét đang hiện của bản chèn này; dùng BVSHOW / BVHIDE để chọn nét hiện / ẩn ở trạng thái hiện hành.</div></div>';
+    const dlg = A.dialog({ title: 'Trạng thái hiển thị', cls: 'acw-free', help: 'BVSTATE', html, noOk: true, cancelText: 'Đóng' });
+    const root = dlg.root, $ = id => root.querySelector('#' + id);
+    const render = () => { $('bvL').innerHTML = V.states.map(x => '<div class="it' + (x === sel ? ' on' : '') + '" data-v="' + esc(x) + '">' + (x === V.def ? '★ ' : '<span style="visibility:hidden">★ </span>') + esc(x) + '</div>').join('') || '<div style="color:#9aa6ba;padding:6px">Chưa có trạng thái — bấm Mới…</div>'; ['bvCur', 'bvRen', 'bvDel', 'bvUp', 'bvDn', 'bvDef'].forEach(id => { $(id).disabled = !sel; }); };
+    $('bvL').addEventListener('click', e => { const it = e.target.closest('.it[data-v]'); if(it){ sel = it.dataset.v; render(); } });
+    $('bvL').addEventListener('dblclick', e => { const it = e.target.closest('.it[data-v]'); if(it){ sel = it.dataset.v; $('bvCur').click(); } });
+    const ask = (title, v) => new Promise(res => A.dialog({ title, html: '<div class="acw" style="width:300px">' + K.row('Tên:', K.txt('bvN', v || '')) + '</div>', ok: r => res(r.querySelector('#bvN').value.trim()), cancel: () => res(null) }));
+    $('bvCur').onclick = () => { if(!sel) return; A.dynSetState(gid, { st: sel }, 'Trạng thái hiện hành: ' + sel); };
+    $('bvNew').onclick = async () => { let n = 1; while(V.states.includes('Trạng thái ' + n)) n++; const nm = await ask('Trạng thái mới', 'Trạng thái ' + n); if(!nm) return; if(V.states.includes(nm)){ say('Đã có trạng thái "' + nm + '".'); return; }
+      const L0 = members(gid), on = new Set(L0.map((e, i) => (!e.vh ? i : -1)).filter(i => i >= 0)); V.states.push(nm); if(!V.def) V.def = nm;
+      visUpdate(name, (w, i) => { const all = Array.isArray(w.dvs) ? w.dvs : null; if(on.has(i)){ if(all) w.dvs = all.concat([nm]); } else { w.dvs = (all || V.states.filter(x => x !== nm)).filter(x => x !== nm); } }, 'BVSTATE: thêm trạng thái "' + nm + '"');
+      sel = nm; A.dynSetState(gid, { st: nm }); render(); };
+    $('bvRen').onclick = async () => { if(!sel) return; const nm = await ask('Đổi tên trạng thái', sel); if(!nm || nm === sel) return; if(V.states.includes(nm)){ say('Đã có trạng thái "' + nm + '".'); return; } const old = sel;
+      V.states = V.states.map(x => x === old ? nm : x); if(V.def === old) V.def = nm; visUpdate(name, w => { if(Array.isArray(w.dvs)) w.dvs = w.dvs.map(x => x === old ? nm : x); if(w.dyn && w.dyn.st === old) w.dyn.st = nm; return { st: (w.dyn && w.dyn.st === old) ? nm : null }; }, 'BVSTATE: đổi tên "' + old + '" → "' + nm + '"');
+      for(const [, L] of instances(name)) for(const e of L) if(e.dyn && e.dyn.st === old) e.dyn.st = nm; sel = nm; render(); };
+    $('bvDel').onclick = () => { if(!sel) return; if(V.states.length <= 1){ say('Khối cần ít nhất một trạng thái.'); return; } const old = sel; V.states = V.states.filter(x => x !== old); if(V.def === old) V.def = V.states[0];
+      visUpdate(name, w => { if(Array.isArray(w.dvs)){ w.dvs = w.dvs.filter(x => x !== old); if(!w.dvs.length) w.dvs = []; } }, 'BVSTATE: xoá trạng thái "' + old + '"'); sel = V.def; render(); };
+    const mv = k => { const i = V.states.indexOf(sel), j = i + k; if(i < 0 || j < 0 || j >= V.states.length) return; [V.states[i], V.states[j]] = [V.states[j], V.states[i]]; saveDefs(); render(); };
+    $('bvUp').onclick = () => mv(-1); $('bvDn').onclick = () => mv(1);
+    $('bvDef').onclick = () => { if(!sel) return; V.def = sel; saveDefs(); render(); log('Trạng thái mặc định của "' + name + '": ' + sel); };
+    render();
+  });
+  async function bvShowHide(show){
+    const B = await pickDyn('Chọn khối động'); if(!B) return; const { name, d, gid } = B; if(!d.vis || !d.vis.states || !d.vis.states.length){ log('Khối chưa có trạng thái hiển thị — dùng BVSTATE hoặc BPARAMETER → Hiển thị.'); return; }
+    const L0 = members(gid), cur = stateOf(L0, d).st || d.vis.def;
+    const pg = A.SET.pickGroup; A.SET.pickGroup = false; let sel;
+    try{ const s = await A.getSel('Chọn các nét của khối cần ' + (show ? 'hiện' : 'ẩn') + ' (trạng thái "' + cur + '")', { filter: e => e.grp === gid, pre: false }); sel = (s.sel || []).filter(e => e.grp === gid); } finally { A.SET.pickGroup = pg; }
+    if(!sel.length) return;
+    const k = await A.getKw('Áp cho', { kw: [{ k: 'C', t: 'Trạng thái hiện hành' }, { k: 'A', t: 'Mọi trạng thái' }], def: 'Trạng thái hiện hành' }); const all = k.kw === 'A';
+    const idx = new Set(sel.map(e => L0.indexOf(e)).filter(i => i >= 0));
+    visUpdate(name, (w, i) => { if(!idx.has(i)) return; const S = d.vis.states; let dvs = Array.isArray(w.dvs) ? w.dvs.slice() : S.slice();
+      if(show){ if(all) dvs = S.slice(); else if(!dvs.includes(cur)) dvs.push(cur); } else { dvs = all ? [] : dvs.filter(x => x !== cur); }
+      if(dvs.length === S.length) delete w.dvs; else w.dvs = dvs; }, (show ? 'BVSHOW' : 'BVHIDE') + ': ' + idx.size + ' nét — ' + (all ? 'mọi trạng thái' : 'trạng thái "' + cur + '"'));
+  }
+  cmd(['BVSHOW'], 'Hiện các nét chọn của khối động ở trạng thái hiển thị hiện hành (hoặc mọi trạng thái)', () => bvShowHide(true));
+  cmd(['BVHIDE'], 'Ẩn các nét chọn của khối động ở trạng thái hiển thị hiện hành (hoặc mọi trạng thái)', () => bvShowHide(false));
 
   /* ---------------- đổi trạng thái: BDYN + bảng Thuộc tính ---------------- */
   function formHTML(name, s, ro){
@@ -159,5 +213,7 @@
 
   /* ---------------- mở bản vẽ: dựng lại cờ ẩn (vh) theo trạng thái ---------------- */
   A.onLoad = (prev => function(){ if(prev) prev.apply(this, arguments);
+    try{ const F = window._dxfDynVis; window._dxfDynVis = null;   // trạng thái hiển thị của khối động AutoCAD (BLOCKVISIBILITYPARAMETER) đọc từ tệp
+      if(F){ let n = 0; for(const [nm, v] of Object.entries(F)) if(!DYN[nm] && v && v.states && v.states.length){ DYN[nm] = { vis: { states: v.states.slice(), def: v.def || v.states[0] }, acad: 1 }; n++; } if(n) saveDefs(); } }catch(_){}
     try{ for(const e of modelEntities){ if(!e.dvs || !e.dyn) continue; const v = e.dvs.includes(e.dyn.st); if(v) delete e.vh; else e.vh = 1; } }catch(_){} })(A.onLoad);
 })();

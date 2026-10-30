@@ -21,12 +21,20 @@ contextBridge.exposeInMainWorld('dvdDesktop', {
   saveDialog: o => call('dlg:save', o || {}),
   readFile: p => call('fs:read', p),
   writeFile: (p, data) => call('fs:write', p, data instanceof ArrayBuffer ? new Uint8Array(data) : data),
+  // tệp ảnh cạnh bản vẽ (IMAGE như AutoCAD): đọc theo đường dẫn trong IMAGEDEF, ghi kèm khi lưu
+  readSide: (cad, rel) => call('fs:readSide', cad, rel),
+  writeSide: (cad, name, data) => call('fs:writeSide', cad, name, data instanceof ArrayBuffer ? new Uint8Array(data) : data),
   droppedPaths: files => call('fs:dropped', Array.from(files || []).map(f => { try{ return webUtils.getPathForFile(f); }catch(_){ return ''; } })),
   recentList: () => call('recent:list'),
   recentRemove: p => call('recent:remove', p),
   dwgConvert: (dxf, ver) => call('dwg:convert', dxf, ver),
   odaInfo: () => call('dwg:oda'),
+  // phông hệ thống (theo tên họ phông) để nhúng vào PDF vector khi in
+  font: (fam, bold, italic) => call('font:find', fam, !!bold, !!italic),
   odaPick: () => call('dwg:odaPick'),
+  // máy in Windows đã cài; in SVG vector thẳng ra máy in theo tên (deviceName), khổ mm, số bản
+  printers: () => call('print:list'),
+  printSVG: o => call('print:svg', o || {}),
   openExternal: url => call('shell:external', url),
   reveal: p => call('shell:reveal', p)
 });

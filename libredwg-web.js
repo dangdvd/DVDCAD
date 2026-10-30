@@ -5925,7 +5925,8 @@ class LibreEntityConverter {
       "num_clip_verts"
     ).data;
     const clip_verts = libredwg.dwg_dynapi_entity_value(entity, "clip_verts").data;
-    const clippingBoundaryPath = libredwg.dwg_ptr_to_point3d_array(
+    // DVDCAD: đỉnh khung cắt của IMAGE là 2RD (như WIPEOUT) — bản gốc đọc nhầm thành điểm 3D
+    const clippingBoundaryPath = libredwg.dwg_ptr_to_point2d_array(
       clip_verts,
       countBoundaryPoints
     );
@@ -6436,7 +6437,18 @@ class LibreEntityConverter {
       entity,
       "extrusion"
     ).data;
-    const vertices = libredwg.dwg_entity_polyline_3d_get_vertices(object);
+    const vertices = libredwg.dwg_entity_polyline_3d_get_vertices(object) || [];
+    // DVDCAD: R13–R2000 — libredwg đếm đỉnh từ first_vertex tới trước last_vertex (thiếu đỉnh cuối); lấy thêm đỉnh cuối qua last_vertex
+    try {
+      const lref = libredwg.dwg_dynapi_entity_value(entity, "last_vertex").data;
+      if (lref) {
+        const lobj = libredwg.dwg_ref_get_object(lref);
+        const ltio = lobj ? libredwg.dwg_object_to_entity_tio(lobj) : 0;
+        const lp = ltio ? libredwg.dwg_dynapi_entity_value(ltio, "point").data : null;
+        const q = vertices.length ? vertices[vertices.length - 1].point : null;
+        if (lp && isFinite(lp.x) && (!q || Math.hypot(q.x - lp.x, q.y - lp.y, (q.z || 0) - (lp.z || 0)) > 1e-12 || vertices.length === 1)) vertices.push({ point: lp, flag: libredwg.dwg_dynapi_entity_value(ltio, "flag").data });
+      }
+    } catch (_) {}
     return {
       type: "POLYLINE3D",
       ...commonAttrs,
@@ -6889,6 +6901,23 @@ class LibreEntityConverter {
     const visualStyleId = libredwg.dwg_ref_get_absref(visualstyle_ref);
     const sun_ref = libredwg.dwg_dynapi_entity_value(entity, "sun").data;
     const sunId = libredwg.dwg_ref_get_absref(sun_ref);
+    // DVDCAD: lớp đóng băng riêng khung nhìn (VPLAYER) và đường cắt (VPCLIP)
+    let frozenLayerIds = [];
+    try {
+      const nfl = libredwg.dwg_dynapi_entity_value(entity, "num_frozen_layers").data;
+      const fl = libredwg.dwg_dynapi_entity_value(entity, "frozen_layers").data;
+      if (nfl > 0 && fl) frozenLayerIds = libredwg.dwg_ptr_to_object_ref_array(fl, nfl).map((r) => idToString(r.absolute_ref));
+    } catch (_e) {
+    }
+    let clipBoundaryId = void 0;
+    try {
+      const cb = libredwg.dwg_dynapi_entity_value(entity, "clip_boundary").data;
+      if (cb) {
+        const h = libredwg.dwg_ref_get_absref(cb);
+        if (h) clipBoundaryId = idToString(h);
+      }
+    } catch (_e) {
+    }
     return {
       type: "VIEWPORT",
       ...commonAttrs,
@@ -6897,6 +6926,8 @@ class LibreEntityConverter {
       height,
       status,
       viewportId: 0,
+      frozenLayerIds,
+      clipBoundaryId,
       // Will be set later in LibreDwgConverter.convert
       displayCenter,
       snapBase,
@@ -7214,6 +7245,14 @@ class LibreDwgConverter {
               break;
             case Dwg_Object_Type.DWG_TYPE_LAYOUT:
               db.objects.LAYOUT.push(this.convertLayout(tio, obj));
+              break;
+            case Dwg_Object_Type.DWG_TYPE_PLOTSETTINGS:
+              { // DVDCAD: thiết lập trang có tên (ACAD_PLOTSETTINGS) — PSETUPIN
+                // Dwg_Object_PLOTSETTINGS = phần AcDbPlotSettings của LAYOUT (ở LAYOUT + 8) → cùng độ lệch trường khi base = tio − 8
+                // (đối chiếu tệp AutoCAD 2013 gh109_1.dwg của bộ thử libredwg với DXF cùng bản vẽ); thiết lập không tên = của đối tượng khác, không phải page setup
+                const ps = this.readPlotSettingsAt(tio - 8);
+                (db.objects.PLOTSETTINGS || (db.objects.PLOTSETTINGS = [])).push(ps || { unreadable: true });
+              }
               break;
             case Dwg_Object_Type.DWG_TYPE_SPATIAL_FILTER:
               db.objects.SPATIAL_FILTER.push(
@@ -7800,6 +7839,20 @@ class LibreDwgConverter {
       resolutionUnits
     };
   }
+  // DVDCAD: đọc struct PLOTSETTINGS (thiết lập in) từ bộ nhớ wasm. base = địa chỉ Dwg_Object_LAYOUT (struct con bắt đầu ở +8);
+  // đối tượng PLOTSETTINGS đứng riêng (thiết lập trang có tên) thì base = tio - 8. Trả null nếu giá trị không hợp lệ.
+  readPlotSettingsAt(base) {
+    try {
+      const M = this.libredwg.wasmInstance, U8 = M && M.HEAPU8; if (!U8 || !(base > 0) || base + 200 >= U8.length) return null;
+      const D = new DataView(U8.buffer);
+      const str = (p) => { if (!p) return ""; if (p < 0 || p + 2 > U8.length) return null; if (U8[p] && !U8[p + 1]) { let w = ""; for (let k = 0; k < 256; k++) { const c = D.getUint16(p + 2 * k, true); if (!c) break; w += String.fromCharCode(c); } return w; } let a = ""; for (let k = 0; k < 256; k++) { const c = U8[p + k]; if (!c) break; a += String.fromCharCode(c); } return a; };
+      const ps = { name: str(D.getUint32(base + 12, true)), printer: str(D.getUint32(base + 16, true)), media: str(D.getUint32(base + 20, true)), flags: D.getUint16(base + 24, true),
+        pw: D.getFloat64(base + 72, true), ph: D.getFloat64(base + 80, true), unit: D.getUint16(base + 136, true), rot: D.getUint16(base + 138, true), type: D.getUint16(base + 140, true),
+        pu: D.getFloat64(base + 144, true), du: D.getFloat64(base + 152, true), style: str(D.getUint32(base + 160, true)), stdType: D.getUint16(base + 164, true), stdFactor: D.getFloat64(base + 168, true) };
+      const ok = ps.printer != null && ps.media != null && ps.name != null && ps.style != null && ps.unit <= 2 && ps.rot <= 3 && ps.type <= 5 && ps.stdType <= 32 && ps.pw > 0 && ps.pw < 1e5 && ps.ph > 0 && ps.ph < 1e5 && isFinite(ps.pu) && isFinite(ps.du) && /^[\x20-\uffff]*$/.test(ps.printer + ps.media + ps.name + ps.style);
+      return ok ? ps : null;
+    } catch (_) { return null; }
+  }
   convertLayout(item, obj) {
     const libredwg = this.libredwg;
     const commonAttrs = this.getCommonObjectAttrs(obj);
@@ -7835,6 +7888,9 @@ class LibreDwgConverter {
     );
     const named_ucs_ref = libredwg.dwg_dynapi_entity_value(item, "named_ucs").data;
     const namedUcsId = !!named_ucs_ref ? idToString(libredwg.dwg_ref_get_absref(named_ucs_ref)) : void 0;
+    // DVDCAD: thiết lập in của layout (AcDbPlotSettings, struct plotsettings ngay đầu Dwg_Object_LAYOUT) — cho PSETUPIN đọc DWG của AutoCAD.
+    // dynapi của bản wasm không trả struct con nên đọc thẳng bộ nhớ theo bố cục của bản build này (đã đối chiếu DWG 2000 / 2004 / 2018 của AutoCAD với DXF cùng bản vẽ).
+    const plotSettings = this.readPlotSettingsAt(item);
     return {
       ...commonAttrs,
       layoutName,
@@ -7853,6 +7909,7 @@ class LibreDwgConverter {
       paperSpaceTableId,
       viewportId,
       namedUcsId,
+      plotSettings,
       // orthographicUcsId?: string;
       shadePlotId: ""
       // TODO: Set the correct value

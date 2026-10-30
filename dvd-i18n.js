@@ -63,7 +63,7 @@
     const t = T(d); origText.set(n, d); if(t !== d){ setText.set(n, t); n.data = t; } else setText.set(n, d);
   }
   function doAttrs(el){
-    if(!el.getAttribute || skipEl(el)) return;
+    if(!el.getAttribute || (el.tagName === 'TEXTAREA' ? (el.parentElement && skipEl(el.parentElement)) : skipEl(el))) return;   // ô nhập nhiều dòng: chỉ dịch placeholder / title
     for(const a of ATTRS){ const v = el.getAttribute(a); if(!v || !need(v)) continue; const t = T(v); if(t === v) continue; let o = origAttr.get(el); if(!o){ o = {}; origAttr.set(el, o); } o[a] = v; el.setAttribute(a, t); }
     if(el.tagName === 'INPUT' && /^(button|submit|reset)$/i.test(el.type) && VI.test(el.value)){ let o = origAttr.get(el); if(!o){ o = {}; origAttr.set(el, o); } o.value = el.value; el.value = T(el.value); }
   }
