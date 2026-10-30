@@ -161,7 +161,7 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       A.newDrawing(); await w(600); try{ A.hideStart && A.hideStart(); }catch(_){}
       A.commit({ add: [A.newProps({ type: 'LINE', x1: 0, y1: 0, x2: 200, y2: 100 }), A.newProps({ type: 'TEXT', x: 10, y: 50, h: 5, text: 'Xem trước' })] });
       Object.assign(A.PS, { paper: 'A3', land: true, fit: true, dev: 'pdf', area: 'extents' }); await A.plotPreview(); await w(300);
-      const P = A._pv; out.pv = !!P && !P.svg.querySelector('image') && /Xem trước/.test(P.svg.innerHTML);   // chữ bản vẽ không bị bộ dịch giao diện đổi out.pvd = P ? [P.svg.querySelectorAll('*').length, P.fitS, P.svg.innerHTML.length] : 'không mở'; if(P){ P.zoomAt(100, 100, 40); await w(100); out.zoom = P.cam.s / P.fitS > 30; P.close(); }
+      const P = A._pv; out.pv = !!P && !P.svg.querySelector('image') && /Xem trước/.test(P.svg.innerHTML); out.pvd = P ? [P.svg.querySelectorAll('*').length, P.fitS, P.svg.innerHTML.length] : 'không mở'; if(P){ P.zoomAt(100, 100, 40); await w(100); out.zoom = P.cam.s / P.fitS > 30; P.close(); }   // chữ bản vẽ không bị bộ dịch giao diện đổi; đóng xem trước để các bước sau bấm được
       const pg = renderForPDF('a3l', null, true); out.exp = !!pg.pdf; return out; });
     check(v6b.list, 'máy in Windows đã cài: ' + v6b.n + ' máy (getPrintersAsync)');
     check(v6b.bad, 'in thẳng tới máy in không có → báo lỗi, không treo');

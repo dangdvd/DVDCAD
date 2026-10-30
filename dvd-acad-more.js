@@ -453,6 +453,7 @@
      lăn chuột: phóng to / thu nhỏ quanh con trỏ · kéo chuột trái (Dời) hoặc chuột giữa: dời · Zoom: kéo lên / xuống · Zoom Window: kéo khung
      Zoom Original: vừa trang · chuột phải: menu Thoát / In / Dời / Zoom / Zoom Window / Zoom Original · Esc / Enter: thoát · chạm hai ngón: zoom */
   async function plotPreview(onPlot){
+    if(A._pv) A._pv.close();   // chỉ một cửa sổ xem trước
     if(!hasDoc()){ say('Mở bản vẽ trước.'); return; }
     if(!A.SvgCtx){ say('Không dựng được bản xem trước.'); return; }
     if(PS.area === 'window' && !PS.win && !LYT()){ say('Chưa chọn khung in.'); return; }
