@@ -1,4 +1,4 @@
-# DVDCAD v5y — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v5z — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -27,6 +27,21 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v5z)
+- **Phông thay thế khi thiếu phông SHX (`FONTALT`)**, như AutoCAD:
+  - DVDCAD kèm các phông nét đơn mã nguồn mở của LibreCAD (GPL v2+). Bản vẽ dùng phông `.shx` chưa nạp thì vẽ bằng phông nét đơn tương ứng thay cho phông TrueType: `txt` → standard, `simplex`, `romans`, `romand`, `isocp…` → iso, `italic` → italicc. Phông khác dùng phông đặt trong `FONTALT` (mặc định `simplex.shx`).
+  - Dấu tiếng Việt (sắc, huyền, hỏi, ngã, nặng, mũ, trăng, móc, đ) được ghép bằng nét đơn.
+  - In, PDF, EPS / WMF / HPGL, `TXTEXP` đều theo nét của phông thay thế.
+  - `FONTALT` = `.` thì không thay thế (vẽ bằng phông TrueType như trước). Nạp phông `.shx` gốc bằng `SHXFONTS` thì dùng đúng phông gốc.
+- **In thẳng ra máy in bằng nét vector**:
+  - `PLOT` → máy in Windows gửi bản in dạng vector (đường nét, chữ là chữ) thay cho ảnh 300 dpi. Bản in sắc nét hơn, tệp in nhỏ hơn.
+  - Nếu đã đặt máy in giảm màu (256 màu / đen trắng có dither trong **Thuộc tính…**) thì vẫn in ảnh như trước.
+- **PDF trên trình duyệt có chữ thật**: kèm phông Liberation Sans / Serif (SIL OFL, cùng số đo với Arial / Times New Roman). Máy không cung cấp phông thì PDF nhúng các phông này, chữ tiếng Việt vẫn chọn / tìm / sao chép được.
+- **Chưa có**:
+  - Hình chiếu lưu cùng bản vẽ dạng nét thường: AutoCAD không coi là hình chiếu liên kết (định dạng không công bố).
+  - DWG 2007 gốc (AC1021) vẫn cần ODA File Converter.
+  - Phông nét đơn thay thế giống phông AutoCAD về kiểu dáng, nhưng bề rộng chữ có thể khác đôi chút. Muốn y hệt thì nạp phông `.shx` gốc.
+
 ## Bổ sung như AutoCAD 2027 (v5y)
 - **PDF vector khi in** (`PLOT` → **DWG To PDF.pc3**, và `PUBLISH`):
   - Bản vẽ ghi thành đường nét PDF thật (đường, cung, hatch, vùng tô, gradient, nét đứt, bề rộng nét), không còn là ảnh chụp. Phóng to bao nhiêu cũng sắc nét, tệp nhỏ hơn.
@@ -40,9 +55,7 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   - **In độ trong suốt**, **In theo kiểu in** (tắt = in đúng màu bản vẽ), **Co giãn bề rộng nét** (bề rộng nét theo tỉ lệ in) đều dùng được.
   - **Áp cho layout**: lưu thiết lập in cho Model / layout hiện hành, mở `PLOT` lần sau tự dùng lại.
   - Thiết lập trang có tên ghi vào DXF / DWG đúng tên khổ của AutoCAD (vd `ANSI_full_bleed_D_(34.00_x_22.00_Inches)`, `User_(500.00_x_350.00_MM)`) và đúng máy in .pc3.
-- **Chưa có**:
-  - Bản chạy trên trình duyệt (không phải bản Windows) không đọc được phông của máy: chữ trong PDF vẽ thành ảnh nét mịn, phần còn lại vẫn là vector.
-  - Máy in Windows (in thẳng ra giấy) vẫn gửi ảnh 300 dpi. Muốn bản vector thì chọn **In ra file** hoặc DWG To PDF rồi in tệp PDF.
+- Các hạn chế của v5y đã được xử lý ở v5z (xem mục trên).
 
 ## Bổ sung như AutoCAD 2027 (v5x)
 - **Xoay nhìn khung nhìn (VIEWTWIST)** trong layout:

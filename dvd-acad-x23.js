@@ -207,6 +207,7 @@
     if(SPECIAL[ch]) return SPECIAL[ch]; if(u < 128) return [u]; const c = rev1().get(ch); return c != null ? [c] : []; }
   // một ký tự → { lines (đơn vị chiều cao chữ = 1), adv } hoặc null
   function glyphOf(main, big, ch){
+    if(main.lff) return lffGlyph(main, ch);   // phông nét đơn thay thế (FONTALT)
     const key = ch; let G = main.cache || (main.cache = new Map()); if(G.has(key + '|' + (big ? big.file : ''))) return G.get(key + '|' + (big ? big.file : ''));
     let r = null;
     for(const c of codesFor(main, ch)){ const b = main.glyph.get(c); if(b){ const R = runGlyph(main, b, 0, true), k = 1 / main.above; r = { lines: R.lines.map(L => L.map(p => [p[0] * k, p[1] * k])), adv: R.end[0] * k }; break; } }
@@ -215,8 +216,67 @@
     G.set(key + '|' + (big ? big.file : ''), r); return r;
   }
   const fontKey = f => String(f || '').replace(/^.*[\\/]/, '').toUpperCase().replace(/(\.SHX)?$/, '.SHX');
+  /* ---------- phông nét đơn LibreCAD (.lff, GPL v2+) thay phông .shx chưa nạp — như FONTALT của AutoCAD ----------
+     chữ hoa cao 9 đơn vị; nét: "x,y;x,y,A<bulge>" (cung từ đỉnh trước tới đỉnh này), "C<mã>" = ghép glyph khác; dấu tiếng Việt ghép từ chữ gốc + dấu */
+  const LFF = new Map(), LFFLOAD = new Map();
+  const LFF_OF = { TXT: 'standard', MONOTXT: 'standard', SIMPLEX: 'simplex', ROMANS: 'romans', ROMAND: 'romand', ROMANC: 'romand', ROMANT: 'romand', COMPLEX: 'romand', ITALIC: 'italicc', ITALICC: 'italicc', ITALICT: 'italicc', SCRIPTS: 'italicc', SCRIPTC: 'italicc' };
+  const lffName = key => { const b = key.replace(/\.SHX$/, ''); if(LFF_OF[b]) return LFF_OF[b]; if(/^ISO/.test(b)) return 'iso'; return null; };
+  const fontAlt = () => { try{ const v = localStorage.getItem('dvd:fontalt'); return v == null ? 'simplex.shx' : v; }catch(_){ return 'simplex.shx'; } };
+  function parseLFF(text, name){
+    const G = new Map(); let ls = 3, ws = 6.75, cur = null;
+    for(const raw of String(text).split(/\r?\n/)){ const line = raw.trim();
+      if(line[0] === '#'){ const m = /^#\s*(LetterSpacing|WordSpacing):\s*([\d.]+)/i.exec(line); if(m){ if(/letter/i.test(m[1])) ls = +m[2]; else ws = +m[2]; } continue; }
+      const h = /^\[([0-9a-fA-F]+)\]/.exec(line); if(h){ cur = { lines: [], refs: [] }; G.set(parseInt(h[1], 16), cur); continue; }
+      if(!cur || !line) continue;
+      if(/^C[0-9a-fA-F]+$/.test(line)){ cur.refs.push(parseInt(line.slice(1), 16)); continue; }
+      const P = []; for(const v of line.split(';')){ const q = v.split(','); const x = +q[0], y = +q[1]; if(!isFinite(x) || !isFinite(y)) continue; const bg = q[2] && /^A/i.test(q[2]) ? +q[2].slice(1) : 0;
+        if(bg && P.length){ const a = P[P.length - 1], th = 4 * Math.atan(bg), dx = x - a[0], dy = y - a[1], c = Math.hypot(dx, dy); if(c > 1e-9){ const r = c / 2 / Math.sin(th / 2), mx = (a[0] + x) / 2, my = (a[1] + y) / 2, d = r * Math.cos(th / 2), nx = -dy / c, ny = dx / c;
+            const cx = mx + nx * d, cy = my + ny * d, a0 = Math.atan2(a[1] - cy, a[0] - cx), n = Math.max(2, Math.ceil(Math.abs(th) / (Math.PI / 12))), R = Math.abs(r);
+            for(let k = 1; k < n; k++){ const t = a0 + th * k / n; P.push([cx + R * Math.cos(t), cy + R * Math.sin(t)]); } } }
+        P.push([x, y]); }
+      if(P.length > 1) cur.lines.push(P); }
+    const res = (g, d) => { if(!g || g.done || d > 6) return g; for(const r of g.refs){ const o = res(G.get(r), d + 1); if(o) for(const L of o.lines) g.lines.push(L.map(p => p.slice())); } g.done = true; return g; };
+    for(const g of G.values()) res(g, 0);
+    return { file: name.toUpperCase() + '.LFF', type: 'lff', lff: true, G, ls, ws, above: 9, below: 3, cache: null, glyph: G };
+  }
+  function lffLoad(name){ if(LFF.has(name) || LFFLOAD.has(name)) return; const p = fetch('./vendor/lff/' + name + '.lff').then(r => r.ok ? r.text() : Promise.reject(new Error(r.status))).then(t => { LFF.set(name, parseLFF(t, name)); redraw(); }).catch(err => { console.warn('lff', name, err); }); LFFLOAD.set(name, p); }
+  A.lffReady = name => { lffLoad(name); return LFFLOAD.get(name); };
+  // phông thay cho tệp .shx chưa nạp: phông nét đơn tương ứng (txt → standard, simplex, romans, romand, iso…), không có thì theo FONTALT
+  function altFont(ff){ const key = fontKey(ff); const alt = fontAlt(); if(!alt || alt === '.') return null; let n = lffName(key);
+    if(!n){ const ak = fontKey(alt); if(FONTS.has(ak)) return FONTS.get(ak); n = lffName(ak) || 'simplex'; }
+    const F = LFF.get(n); if(!F){ lffLoad(n); return null; } return F; }
+  A.shxAltOf = ff => { const F = altFont(ff); return F ? F.file.toLowerCase() : null; };
+  // glyph LFF (đơn vị = chiều cao chữ hoa) + dấu tiếng Việt ghép (NFD: chữ gốc + dấu)
+  const MARK = {
+    0x300: (c, t) => [[[c - 0.9, t + 2.3], [c + 0.6, t + 0.8]]],                                   // huyền
+    0x301: (c, t) => [[[c - 0.6, t + 0.8], [c + 0.9, t + 2.3]]],                                   // sắc
+    0x302: (c, t) => [[[c - 1.6, t + 0.6], [c, t + 2.1], [c + 1.6, t + 0.6]]],                     // mũ
+    0x306: (c, t) => [[[c - 1.6, t + 2.1], [c - 1.1, t + 1.1], [c, t + 0.7], [c + 1.1, t + 1.1], [c + 1.6, t + 2.1]]],   // trăng
+    0x303: (c, t) => [[[c - 1.9, t + 0.9], [c - 1.2, t + 1.7], [c - 0.4, t + 1.6], [c + 0.4, t + 1.0], [c + 1.2, t + 0.9], [c + 1.9, t + 1.7]]],   // ngã
+    0x309: (c, t) => [[[c - 0.9, t + 1.9], [c - 0.3, t + 2.4], [c + 0.6, t + 2.2], [c + 0.8, t + 1.6], [c + 0.1, t + 1.2], [c + 0.1, t + 0.6]]],   // hỏi
+    0x323: (c, t, b) => { const y = b - 1.6, r = 0.4, L = []; for(let k = 0; k <= 8; k++){ const a = k * Math.PI / 4; L.push([c + r * Math.cos(a), y + r * Math.sin(a)]); } return [L]; },   // nặng
+  };
+  function lffGlyph(F, ch){
+    const G = F.cache || (F.cache = new Map()); if(G.has(ch)) return G.get(ch);
+    const base = g => { if(!g || !g.lines.length) return null; let mx = -Infinity; for(const L of g.lines) for(const p of L) if(p[0] > mx) mx = p[0]; return { lines: g.lines.map(L => L.map(p => [p[0], p[1]])), w: mx }; };
+    let r = null, cp = ch.codePointAt(0);
+    if(ch === ' ') r = { lines: [], w: F.ws - 1.2 };
+    else { let g = base(F.G.get(cp));
+      if(!g){ const d = ch.normalize('NFD'), b0 = d.codePointAt(0), marks = [...d].slice(1).map(m => m.codePointAt(0)); let horn = false, bar = false;
+        if(cp === 0x111 || cp === 0x110){ g = base(F.G.get(cp === 0x111 ? 0x64 : 0x44)); bar = true; }
+        else { const bs = String.fromCodePoint(b0); let src = bs; for(const m of marks.slice()){ const cand = (bs + String.fromCodePoint(m)).normalize('NFC'); if([...cand].length === 1 && F.G.get(cand.codePointAt(0)) && src === bs){ src = cand; marks.splice(marks.indexOf(m), 1); } }   // dùng chữ có sẵn dấu (â, ê, ô, ă) nếu phông có
+          g = base(F.G.get(src.codePointAt(0))); const hi = marks.indexOf(0x31B); if(hi >= 0){ horn = true; marks.splice(hi, 1); } }
+        if(g){ let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for(const L of g.lines) for(const p of L){ x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+          const cx = (x0 + x1) / 2; let top = y1;
+          if(horn){ g.lines.push([[x1 - 0.3, y1 - 0.9], [x1 + 0.7, y1 - 0.1], [x1 + 0.9, y1 + 0.9]]); g.w = Math.max(g.w, x1 + 0.9); }
+          if(bar){ if(cp === 0x111) g.lines.push([[x1 - 2.4, 7.2], [x1 + 0.6, 7.2]]); else g.lines.push([[x0 - 1, 4.5], [x0 + 2.6, 4.5]]); }
+          for(const m of marks){ const f = MARK[m]; if(!f) continue; const L = f(cx, top, y0); if(m !== 0x323){ for(const l of L) g.lines.push(l); top += 1.9; } else for(const l of L) g.lines.push(l); } }
+      }
+      if(g) r = { lines: g.lines, w: g.w + 1.2 }; }
+    const k = 1 / F.above, out = r ? { lines: r.lines.map(L => L.map(p => [p[0] * k, p[1] * k])), adv: Math.max(0, r.w) * k } : null; G.set(ch, out); return out;
+  }
   const isShx = f => /\.shx$/i.test(String(f || ''));
-  function fontsOf(e){ if(!e || !isShx(e.ff)) return null; const m = FONTS.get(fontKey(e.ff)); if(!m || m.type === 'bigfont'){ const b = e.ffb ? FONTS.get(fontKey(e.ffb)) : null; return m ? { main: m, big: b } : null; } return { main: m, big: e.ffb ? FONTS.get(fontKey(e.ffb)) || null : null }; }
+  function fontsOf(e){ if(!e || !isShx(e.ff)) return null; const m = FONTS.get(fontKey(e.ff)) || altFont(e.ff); if(!m || m.type === 'bigfont'){ const b = e.ffb ? FONTS.get(fontKey(e.ffb)) : null; return m ? { main: m, big: b } : null; } return { main: m, big: e.ffb ? FONTS.get(fontKey(e.ffb)) || null : null }; }
   // bố cục 1 dòng: các nét (đơn vị = cỡ chữ) + ký tự thiếu (vẽ bằng phông thay thế) + bề rộng
   let measCtx = null; const measure = (ch, ff) => { if(!measCtx) measCtx = document.createElement('canvas').getContext('2d'); measCtx.font = '100px ' + (ff || 'Arial'); return measCtx.measureText(ch).width / 72; };
   function layoutLine(fs, s){ const lines = [], miss = []; let x = 0;
@@ -256,10 +316,13 @@
   // lưu phông trong IndexedDB (phông bigfont có thể vài MB)
   let fdb = null; const fdbOpen = () => fdb || (fdb = new Promise((res, rej) => { const r = indexedDB.open('dvdcad-pro', 1); r.onupgradeneeded = () => { r.result.createObjectStore('files'); }; r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
   const fdbTx = async (mode, fn) => { const d = await fdbOpen(); return new Promise((res, rej) => { const t = d.transaction('files', mode), st = t.objectStore('files'); const q = fn(st); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); };
-  const redraw = () => { lineCache.clear(); A.shxVer++; for(const F of FONTS.values()) F.cache = null; try{ if(typeof requestDraw === 'function') requestDraw(); else if(typeof draw === 'function') draw(); }catch(_){} };
+  const redraw = () => { lineCache.clear(); A.shxVer++; for(const F of FONTS.values()) F.cache = null; try{ bbDirty = true; snapDirty = true; }catch(_){} try{ if(typeof requestDraw === 'function') requestDraw(); else if(typeof draw === 'function') draw(); }catch(_){} };
   async function addFont(u8, file, keep){ const F = parseFont(u8, file); FONTS.set(F.file, F); if(keep !== false){ try{ await fdbTx('readwrite', st => st.put(u8, 'shxf:' + F.file)); const L = new Set((await fdbTx('readonly', st => st.get('shxf:list'))) || []); L.add(F.file); await fdbTx('readwrite', st => st.put([...L], 'shxf:list')); }catch(_){} } redraw(); return F; }
   A.shxFontAdd = addFont;
   A.shxFontRemove = async file => { const k = fontKey(file); FONTS.delete(k); try{ await fdbTx('readwrite', st => st.delete('shxf:' + k)); const L = new Set((await fdbTx('readonly', st => st.get('shxf:list'))) || []); L.delete(k); await fdbTx('readwrite', st => st.put([...L], 'shxf:list')); }catch(_){} redraw(); };
+  // FONTALT: phông thay cho phông .shx không có (như AutoCAD); '.' = không thay (vẽ bằng phông TrueType)
+  if(A.sysvar && A.sysvar.def) A.sysvar.def('FONTALT', { d: 'Phông thay thế khi bản vẽ dùng phông .shx chưa nạp (DVDCAD kèm phông nét đơn tương ứng: txt → standard, simplex, romans, romand, iso, italicc); "." = không thay', s: 1,
+    get: fontAlt, set: v => { const t = String(v == null ? '' : v).trim(); try{ localStorage.setItem('dvd:fontalt', t || '.'); }catch(_){} redraw(); } });
   A.shxFontsReady = (async () => { try{ const L = (await fdbTx('readonly', st => st.get('shxf:list'))) || []; for(const f of L){ const u = await fdbTx('readonly', st => st.get('shxf:' + f)); if(u) try{ const F = parseFont(u instanceof Uint8Array ? u : new Uint8Array(u), f); FONTS.set(F.file, F); }catch(_){} } if(L.length) redraw(); }catch(_){} })();
   // phông .shx bản vẽ cần mà chưa nạp
   A.shxMissing = () => { const S = new Set(); for(const e of (typeof modelEntities !== 'undefined' ? modelEntities : [])) if(e.type === 'TEXT'){ if(isShx(e.ff) && !FONTS.has(fontKey(e.ff))) S.add(String(e.ff).toLowerCase()); if(isShx(e.ffb) && !FONTS.has(fontKey(e.ffb))) S.add(String(e.ffb).toLowerCase()); } return [...S].sort(); };
@@ -268,10 +331,11 @@
     if(ok.length) log('Đã nạp phông SHX: ' + ok.join(', ') + '.'); for(const b of bad) log(b); return ok.length; }
   A.shxPickFonts = pickFonts;
   // mở bản vẽ có kiểu chữ dùng phông .shx chưa nạp: nhắc một lần (như AutoCAD báo thiếu phông)
-  A.onLoad = (function(prev){ return function(){ if(prev) prev.apply(this, arguments); setTimeout(async () => { try{ await A.shxFontsReady; const m = A.shxMissing(); if(m.length) log('Bản vẽ dùng phông SHX chưa nạp: ' + m.join(', ') + ' — đang vẽ bằng phông thay thế; nạp phông bằng SHXFONTS (hoặc STYLE → Phông SHX…).'); }catch(_){} }, 50); }; })(A.onLoad);
+  A.onLoad = (function(prev){ return function(){ if(prev) prev.apply(this, arguments); setTimeout(async () => { try{ await A.shxFontsReady; const m = A.shxMissing(); if(m.length) log('Bản vẽ dùng phông SHX chưa nạp: ' + m.join(', ') + ' — đang vẽ bằng phông nét đơn thay thế (' + m.map(f => f + ' → ' + (A.shxAltOf(f) || lffAlias(f))).join(', ') + ', FONTALT); muốn đúng phông gốc thì nạp bằng SHXFONTS (hoặc STYLE → Phông SHX…).'); }catch(_){} }, 50); }; })(A.onLoad);
+  const lffAlias = f => (lffName(fontKey(f)) || lffName(fontKey(fontAlt())) || 'simplex') + '.lff';
   plain(['SHXFONTS', 'FONTSHX'], 'Phông SHX cho chữ: nạp tệp .shx (txt, simplex, romans, isocp…, unifont, bigfont), xem / bỏ phông đã nạp, phông bản vẽ còn thiếu', () => {
     const rows = () => { const L = A.shxFontList(); return L.length ? L.map(F => '<tr data-f="' + F.file + '"><td translate="no">' + F.file.toLowerCase() + '</td><td>' + F.type + '</td><td>' + F.n + '</td></tr>').join('') : '<tr><td colspan="3" style="opacity:.7">Chưa nạp phông SHX nào.</td></tr>'; };
-    const miss = () => { const m = A.shxMissing(); return m.length ? 'Bản vẽ dùng phông chưa nạp: <b translate="no">' + m.join(', ') + '</b> (đang vẽ bằng phông thay thế).' : 'Bản vẽ không thiếu phông SHX nào.'; };
+    const miss = () => { const m = A.shxMissing(); return m.length ? 'Bản vẽ dùng phông chưa nạp: <b translate="no">' + m.join(', ') + '</b> (đang vẽ bằng phông nét đơn thay thế theo FONTALT = ' + String(fontAlt()).replace(/[&<]/g, '') + ').' : 'Bản vẽ không thiếu phông SHX nào.'; };
     const html = '<div class="acw" style="width:480px"><div class="lm-grid" style="height:200px"><table><thead><tr><th>Phông</th><th style="width:90px">Loại</th><th style="width:70px">Ký tự</th></tr></thead><tbody id="sfB">' + rows() + '</tbody></table></div>' +
       '<div style="display:flex;gap:6px;margin:8px 0">' + K.btn('sfAdd', 'Nạp phông…') + K.btn('sfRm', 'Bỏ phông') + '</div><div class="acw-note" id="sfM" style="white-space:normal">' + miss() + '</div>' +
       '<div class="acw-note" style="white-space:normal">Phông SHX của AutoCAD (thư mục Fonts) dùng theo giấy phép của Autodesk — DVDCAD không kèm phông, bạn nạp phông có sẵn trên máy. Kiểu chữ dùng phông .shx (bảng STYLE hoặc tệp DXF / DWG) sẽ vẽ bằng nét của phông.</div></div>';

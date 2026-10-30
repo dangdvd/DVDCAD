@@ -8397,5 +8397,10 @@
 "tự chọn": "custom",
 "Đã in PDF vector: khổ": "Plotted vector PDF: paper",
 "Đã áp thiết lập in cho": "Plot settings applied to",
-"đoạn chữ thiếu phông vẽ thành ảnh)": "text items without a font drawn as images)"
+"đoạn chữ thiếu phông vẽ thành ảnh)": "text items without a font drawn as images)",
+"(đang vẽ bằng phông nét đơn thay thế theo FONTALT =": "(drawn with a substitute single-stroke font, FONTALT =",
+", FONTALT); muốn đúng phông gốc thì nạp bằng SHXFONTS (hoặc STYLE → Phông SHX…).": ", FONTALT); load the original fonts with SHXFONTS (or STYLE → SHX Fonts…) for an exact match.",
+"Phông thay thế khi bản vẽ dùng phông .shx chưa nạp (DVDCAD kèm phông nét đơn tương ứng: txt → standard, simplex, romans, romand, iso, italicc); \".\" = không thay": "Substitute font when a drawing uses an .shx font that is not loaded (DVDCAD ships matching single-stroke fonts: txt → standard, simplex, romans, romand, iso, italicc); \".\" = no substitution",
+"Đã gửi bản in vector ra máy in: khổ": "Sent vector plot to the printer: paper",
+"— đang vẽ bằng phông nét đơn thay thế (": "— drawn with substitute single-stroke fonts ("
 }

@@ -30,7 +30,7 @@ Gỡ cài đặt: **Settings → Apps → DVDCAD → Uninstall**.
 | Phím chức năng | F1 trợ giúp, F2 lịch sử lệnh, F3 OSNAP, F7 GRID, F8 ORTHO, F9 SNAP, F10 POLAR, F11 OTRACK, F12 DYN |
 | In | `PLOT` / **Ctrl+P**: chọn máy in như AutoCAD (**DWG To PDF.pc3**, AutoCAD PDF, máy in Windows, PNG / JPG, HPGL/2), khổ ISO / ANSI / ARCH hoặc khổ tự chọn. PDF xuất ra là **PDF vector**: đường nét và chữ (nhúng phông của Windows) sắc nét khi phóng to, chọn / tìm / sao chép chữ được |
 | Đổi phiên bản DWG hàng loạt | `DWGCONVERT`: thêm nhiều file DWG / DXF, chọn DWG 2018 / 2013 / 2010 / 2004 / 2000 hoặc DXF → tải về một file .zip. Bản vẽ đang mở không bị ảnh hưởng |
-| Phông SHX của bản vẽ | `SHXFONTS` → **Nạp phông…**: chọn các tệp `.shx` có trên máy (ví dụ thư mục `Fonts` của AutoCAD đã cài). Chữ của kiểu chữ dùng phông đó vẽ bằng nét SHX như AutoCAD; phông được nhớ cho lần sau |
+| Phông SHX của bản vẽ | Chưa nạp phông `.shx` thì DVDCAD vẽ bằng phông nét đơn kèm theo (txt → standard, simplex, romans…; biến `FONTALT`). Muốn đúng phông gốc: `SHXFONTS` → **Nạp phông…**, chọn các tệp `.shx` có trên máy (ví dụ thư mục `Fonts` của AutoCAD đã cài); phông được nhớ cho lần sau |
 | Nhiều bản vẽ cạnh nhau | `SYSWINDOWS` (tab Hiển thị → Xếp bản vẽ): **Lát dọc / Lát ngang / Xếp chồng**. Bản vẽ hiện hành vẽ, sửa ngay trong ô của nó; bấm ô khác để chuyển; nút □ trở về một cửa sổ |
 | Thiết lập trang có tên | Lưu trong hộp PLOT (**Thêm…**) hoặc nhập bằng `PSETUPIN`. Khi lưu DWG / DXF, AutoCAD thấy các thiết lập này trong Page Setup Manager |
 | Hình chiếu từ mô hình 3D | Tab **Bố cục**: `VIEWBASE` (hình chiếu cơ sở + hình chiếu phụ), `VIEWSECTION` (mặt cắt), `VIEWDETAIL` (hình trích), `VIEWUPDATE` sau khi sửa mô hình |

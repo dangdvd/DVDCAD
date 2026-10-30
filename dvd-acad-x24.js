@@ -82,8 +82,13 @@
       try{ const F = parseFont(u8, r.face | 0); return F.glyf || F.cff ? F : null; }catch(_){ return null; } })();
     FONT_CACHE.set(key, p); return p;
   }
+  // phông kèm theo (Liberation Sans / Serif, SIL OFL — cùng số đo với Arial / Times New Roman): dùng khi máy không cung cấp phông (bản trình duyệt)
+  const BUNDLED = new Map();
+  function bundled(serif, bold){ const n = 'Liberation' + (serif ? 'Serif' : 'Sans') + '-' + (bold ? 'Bold' : 'Regular'); if(!BUNDLED.has(n)) BUNDLED.set(n, fetch('./vendor/fonts/' + n + '.ttf').then(r => r.ok ? r.arrayBuffer() : null).then(b => { try{ return b ? parseFont(new Uint8Array(b), 0) : null; }catch(_){ return null; } }).catch(() => null)); return BUNDLED.get(n); }
+  const SERIF = /times|serif|roman|georgia|garamond|cambria|book|minion|palatino|vntime|tinos/i;
   async function fontChain(spec){ const out = []; const seen = new Set();
     for(const f of spec.fams.filter(x => !GENERIC.test(x) && !/\.shx$/i.test(x) && !LEGACY_VN.test(x)).concat(FALLBACK)){ const k = f.toLowerCase(); if(seen.has(k)) continue; seen.add(k); const F = await fetchFont(f, spec.bold, spec.italic) || (spec.bold || spec.italic ? await fetchFont(f, false, false) : null); if(F && !out.includes(F)) out.push(F); if(out.length >= 3) break; }
+    const B = await bundled(SERIF.test(spec.fams.find(x => !GENERIC.test(x)) || ''), spec.bold); if(B && !out.includes(B)) out.push(B);   // luôn có phông có đủ dấu tiếng Việt ở cuối chuỗi
     return out; }
 
   /* ==================================================================
@@ -270,6 +275,46 @@
     const al = c.align === 'center' ? -w / 2 : c.align === 'right' || c.align === 'end' ? -w : 0, X0 = c.x + al - pad, Y0 = c.y - size * 1.15, W = cv.width / k, H = cv.height / k;
     const id = 'Im' + (ctx.images.length + 1); const d = x.getImageData(0, 0, cv.width, cv.height); ctx.images.push({ id, px: { W: cv.width, H: cv.height, data: d.data } });
     return 'q\n' + mstr(mmul(c.M, [W, 0, 0, -H, X0, Y0 + H])) + ' cm\n/' + id + ' Do\nQ\n'; }
+
+  /* ==================================================================
+     SvgCtx — cùng giao diện PdfCtx, ghi ra SVG: in thẳng ra máy in bằng nét vector (trình duyệt / Windows in SVG thành nét, chữ là chữ)
+     ================================================================== */
+  const xe = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const rgb = c => 'rgb(' + Math.round(c.r * 255) + ',' + Math.round(c.g * 255) + ',' + Math.round(c.b * 255) + ')';
+  class SvgCtx extends PdfCtx {
+    constructor(w, h, opt){ super(w, h, 1, opt); this.base = opt && opt.flip ? [-1, 0, 0, -1, w, h] : [1, 0, 0, 1, 0, 0]; this.out = []; this.defs = []; this.grp = [0]; this.nid = 0; }
+    unflip(){ this.base = [1, 0, 0, 1, 0, 0]; this.beginPath(); }
+    _o(){}   // không dùng toán tử PDF
+    _d(){ return this.path.map(t => { const q = t.split(' '), op = q.pop(); return op === 'm' ? 'M' + q.join(' ') : op === 'l' ? 'L' + q.join(' ') : op === 'c' ? 'C' + q.join(' ') : 'Z'; }).join(''); }
+    save(){ this.stk.push({ M: this.M.slice(), st: Object.assign({}, this.st, { dash: this.st.dash.slice() }), raw: Object.assign({}, this.raw) }); this.grp.push(0); }
+    restore(){ const s = this.stk.pop(); if(!s) return; this.M = s.M; this.st = s.st; this.raw = s.raw; const n = this.grp.pop() || 0; for(let i = 0; i < n; i++) this.out.push('</g>'); }
+    _op(a){ a = Math.max(0, Math.min(1, a)); return a < 0.999 ? a : null; }
+    stroke(){ if(!this.path.length) return; const S = this.st, c = S.strokeStyle._pdfGrad ? (S.strokeStyle.stops[0] || [0, color('#000')])[1] : S.strokeStyle; if(c.a === 0 || S.globalAlpha === 0) return; const k = this._sc(), o = this._op(c.a * S.globalAlpha);
+      this.out.push('<path d="' + this._d() + '" fill="none" stroke="' + rgb(c) + '" stroke-width="' + num(S.lineWidth * k) + '"' + (o != null ? ' stroke-opacity="' + num(o) + '"' : '') + (S.lineCap !== 'butt' ? ' stroke-linecap="' + S.lineCap + '"' : '') + (S.lineJoin !== 'miter' ? ' stroke-linejoin="' + S.lineJoin + '"' : ' stroke-miterlimit="' + num(S.miterLimit) + '"') +
+        (S.dash.length ? ' stroke-dasharray="' + S.dash.map(v => num(v * k)).join(' ') + '"' + (S.lineDashOffset ? ' stroke-dashoffset="' + num(S.lineDashOffset * k) + '"' : '') : '') + '/>'); }
+    fill(rule){ if(!this.path.length) return; const F = this.st.fillStyle, ev = rule === 'evenodd';
+      if(F._pdfGrad){ this._shade(F, ev); return; } if(F.a === 0 || this.st.globalAlpha === 0) return; const o = this._op(F.a * this.st.globalAlpha);
+      this.out.push('<path d="' + this._d() + '" fill="' + rgb(F) + '"' + (o != null ? ' fill-opacity="' + num(o) + '"' : '') + (ev ? ' fill-rule="evenodd"' : '') + '/>'); }
+    clip(rule){ if(!this.path.length) return; const id = 'c' + (++this.nid); this.defs.push('<clipPath id="' + id + '"><path d="' + this._d() + '"' + (rule === 'evenodd' ? ' clip-rule="evenodd"' : '') + '/></clipPath>'); this.out.push('<g clip-path="url(#' + id + ')">'); this.grp[this.grp.length - 1]++; }
+    _shade(G, ev){ if(!G.stops.length) return; const id = 'g' + (++this.nid), m = mmul(this.base, this.M), c = G.c, st = G.stops.map(([t, k]) => '<stop offset="' + num(t) + '" stop-color="' + rgb(k) + '"' + (k.a < 1 ? ' stop-opacity="' + num(k.a) + '"' : '') + '/>').join('');
+      this.defs.push(G.kind === 'L' ? '<linearGradient id="' + id + '" gradientUnits="userSpaceOnUse" x1="' + num(c[0]) + '" y1="' + num(c[1]) + '" x2="' + num(c[2]) + '" y2="' + num(c[3]) + '" gradientTransform="matrix(' + mstr(m) + ')">' + st + '</linearGradient>'
+        : '<radialGradient id="' + id + '" gradientUnits="userSpaceOnUse" fx="' + num(c[0]) + '" fy="' + num(c[1]) + '" cx="' + num(c[3]) + '" cy="' + num(c[4]) + '" r="' + num(c[5]) + '" gradientTransform="matrix(' + mstr(m) + ')">' + st + '</radialGradient>');
+      const o = this._op(this.st.globalAlpha); this.out.push('<path d="' + this._d() + '" fill="url(#' + id + ')"' + (o != null ? ' fill-opacity="' + num(o) + '"' : '') + (ev ? ' fill-rule="evenodd"' : '') + '/>'); }
+    fillText(text, x, y){ text = String(text == null ? '' : text); if(!text.trim() || this.st.fillStyle.a === 0) return;
+      const g = sc(); g.font = this.st.font; g.textBaseline = this.st.textBaseline; const mt = g.measureText(text); let dy = 0; if(mt.alphabeticBaseline != null && this.st.textBaseline !== 'alphabetic') dy = -mt.alphabeticBaseline;
+      const F = this.st.fillStyle._pdfGrad ? (this.st.fillStyle.stops[0] || [0, color('#000')])[1] : this.st.fillStyle, s = famOf(this.st.font), o = this._op(F.a * this.st.globalAlpha), al = this.st.textAlign, m = mmul(this.base, this.M);
+      const fam = s.fams.map(f => GENERIC.test(f) ? (/mono/i.test(f) ? 'monospace' : /^serif$/i.test(f) ? 'serif' : 'sans-serif') : "'" + f.replace(/'/g, '') + "'").filter((v, i, a) => a.indexOf(v) === i).join(',');
+      this.out.push('<text xml:space="preserve" transform="matrix(' + mstr(m) + ')" x="' + num(x) + '" y="' + num(y + dy) + '" font-family="' + xe(fam) + '" font-size="' + num(s.px) + '"' + (s.bold ? ' font-weight="bold"' : '') + (s.italic ? ' font-style="italic"' : '') +
+        (al === 'center' ? ' text-anchor="middle"' : al === 'right' || al === 'end' ? ' text-anchor="end"' : '') + ' fill="' + rgb(F) + '"' + (o != null ? ' fill-opacity="' + num(o) + '"' : '') + '>' + xe(text.normalize('NFC')) + '</text>'); this.texts++; }
+    drawImage(img, a, b, c, d, e, f, g, h){ let sx = 0, sy = 0, sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height, dx, dy, dw, dh;
+      if(arguments.length <= 3){ dx = a; dy = b; dw = sw; dh = sh; } else if(arguments.length <= 5){ dx = a; dy = b; dw = c; dh = d; } else { sx = a; sy = b; sw = c; sh = d; dx = e; dy = f; dw = g; dh = h; }
+      if(!(sw > 0 && sh > 0 && dw && dh)) return; let url = null; try{ const k = Math.min(1, Math.sqrt(this.imgMax / (sw * sh))), cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(sw * k)); cv.height = Math.max(1, Math.round(sh * k)); cv.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, cv.width, cv.height); url = cv.toDataURL('image/png'); }catch(_){ return; }
+      const o = this._op(this.st.globalAlpha); this.out.push('<image transform="matrix(' + mstr(mmul(this.base, this.M)) + ')" x="' + num(dx) + '" y="' + num(dy) + '" width="' + num(dw) + '" height="' + num(dh) + '" preserveAspectRatio="none" href="' + url + '"' + (o != null ? ' opacity="' + num(o) + '"' : '') + '/>'); }
+    // SVG hoàn chỉnh, kích thước theo mm của khổ giấy
+    toSVG(Wmm, Hmm){ let close = ''; for(const n of this.grp) close += '</g>'.repeat(n);
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="' + num(Wmm) + 'mm" height="' + num(Hmm) + 'mm" viewBox="0 0 ' + num(this.W) + ' ' + num(this.H) + '"><defs>' + this.defs.join('') + '</defs>' + this.out.join('') + close + '</svg>'; }
+  }
+  A.SvgCtx = SvgCtx;
 
   A.PdfCtx = PdfCtx; A.pdfBuild = buildPDF; A.pdfParseFont = parseFont; A.pdfSubset = (F, used) => subsetTTF(F, used);
 })();

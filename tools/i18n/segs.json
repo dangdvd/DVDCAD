@@ -544,7 +544,7 @@
 "(đang dùng)": [
 "dvd-acad-dlg2.js"
 ],
-"(đang vẽ bằng phông thay thế).": [
+"(đang vẽ bằng phông nét đơn thay thế theo FONTALT =": [
 "dvd-acad-x23.js"
 ],
 "(đo trực tiếp)": [
@@ -699,6 +699,9 @@
 ],
 ", Bán kính =": [
 "dvd-acad-cmds.js"
+],
+", FONTALT); muốn đúng phông gốc thì nạp bằng SHXFONTS (hoặc STYLE → Phông SHX…).": [
+"dvd-acad-x23.js"
 ],
 ", Góc =": [
 "dvd-acad-cmds.js"
@@ -14609,6 +14612,9 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg.js:attr"
 ],
+"Phông thay thế khi bản vẽ dùng phông .shx chưa nạp (DVDCAD kèm phông nét đơn tương ứng: txt → standard, simplex, romans, romand, iso, italicc); \".\" = không thay": [
+"dvd-acad-x23.js"
+],
 "Phông thiếu bảng": [
 "dvd-acad-x24.js"
 ],
@@ -22623,6 +22629,9 @@
 "Đã gỡ tham chiếu": [
 "dvd-acad-pro.js"
 ],
+"Đã gửi bản in vector ra máy in: khổ": [
+"dvd-acad-more.js"
+],
 "Đã gửi lời mời tới": [
 "dvd-cloud.js"
 ],
@@ -25858,7 +25867,7 @@
 "— đang dựng lại hình.": [
 "dvd-acad-more.js"
 ],
-"— đang vẽ bằng phông thay thế; nạp phông bằng SHXFONTS (hoặc STYLE → Phông SHX…).": [
+"— đang vẽ bằng phông nét đơn thay thế (": [
 "dvd-acad-x23.js"
 ],
 "— đã đổi cỡ": [

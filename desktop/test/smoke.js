@@ -129,6 +129,18 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
     check(v5w.shx, 'phông SHX: nạp phông shapes 1.0, bề rộng chữ theo bước tiến của phông');
   }
   {
+    // v5z: phông nét đơn thay SHX thiếu (FONTALT, vendor/lff), phông Liberation kèm theo, in thẳng máy in bằng SVG vector
+    const v5z = await win.evaluate(async () => { const A = DVDAcad, out = {};
+      await A.lffReady('standard'); await A.lffReady('simplex'); out.alt = [A.shxAltOf('txt.shx'), A.shxAltOf('romans_khong_co.shx')];
+      const e = A.newProps({ type: 'TEXT', x: 0, y: 0, h: 5, text: 'Mặt bằng', ff: 'txt.shx' }); out.st = (A.shxStrokes(e) || []).length;
+      const r = await fetch('./vendor/fonts/LiberationSans-Regular.ttf'); out.lib = r.ok && (await r.arrayBuffer()).byteLength > 100000;
+      A.newDrawing(); await new Promise(q => setTimeout(q, 500)); A.commit({ add: [A.newProps({ type: 'LINE', x1: 0, y1: 0, x2: 100, y2: 50 }), A.newProps({ type: 'TEXT', x: 5, y: 20, h: 5, text: 'Ghi chú tiếng Việt' })] });
+      Object.assign(A.PS, { paper: 'A4', land: true, fit: true, dev: 'print' }); const rs = A.plotRender(0, false, 'svg'); out.svg = /^<svg/.test(rs.svg) && /Ghi chú tiếng Việt/.test(rs.svg) && !/<image/.test(rs.svg); return out; });
+    check(v5z.alt[0] === 'standard.lff' && v5z.alt[1] === 'simplex.lff' && v5z.st > 10, 'phông .shx chưa nạp → phông nét đơn kèm theo (txt → standard.lff, khác → FONTALT simplex), chữ tiếng Việt ghép dấu (' + v5z.st + ' nét)');
+    check(v5z.lib, 'phông Liberation kèm theo (cho PDF khi máy không có phông) có trong bản cài');
+    check(v5z.svg, 'in thẳng máy in: bản in vector SVG (chữ là chữ, không có ảnh)');
+  }
+  {
     // v5y: PLOT → PDF vector, chữ nhúng phông TrueType của hệ thống (lấy qua cầu nối dvdDesktop.font)
     const v5y = await win.evaluate(async fam => { const A = DVDAcad, w = ms => new Promise(r => setTimeout(r, ms)), out = {};
       const f = await window.dvdDesktop.font(fam, false, false); out.font = !!(f && f.data && f.data.length > 10000);

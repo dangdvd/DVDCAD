@@ -250,11 +250,11 @@
   function plotRender(dpi, forPreview, vec){
     const [Wmm, Hmm] = paperMM(); const mg = LYT() ? 0 : Math.max(0, +PS.margin || 0); const pw = Wmm - 2 * mg, ph = Hmm - 2 * mg;
     const area = plotArea(); const k = plotK(area, pw, ph);
-    vec = !!(vec && A.PdfCtx); const CSS_PER_MM = 96 / 25.4;
+    const kind = vec === 'svg' && A.SvgCtx ? 'svg' : vec && A.PdfCtx ? 'pdf' : null; vec = !!kind; const CSS_PER_MM = 96 / 25.4;
     const pxPerMM = vec ? CSS_PER_MM : dpi / 25.4; let pxW = Math.round(Wmm * pxPerMM), pxH = Math.round(Hmm * pxPerMM);
     const MAX = forPreview ? 400000 : 30000000; let sc = 1; if(!vec && pxW * pxH > MAX){ sc = Math.sqrt(MAX / (pxW * pxH)); pxW = Math.round(pxW * sc); pxH = Math.round(pxH * sc); }
     const realPxPerMM = vec ? CSS_PER_MM : pxW / Wmm, dpr = vec ? 1 : realPxPerMM / CSS_PER_MM;
-    const out = vec ? new A.PdfCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, 72 / 25.4 / CSS_PER_MM, { flip: !!PS.ud, imgMax: PS.dev === 'pdfsm' ? 1.5e6 : 16e6 }).canvas : document.createElement('canvas'); if(!vec){ out.width = pxW; out.height = pxH; }
+    const out = kind === 'svg' ? new A.SvgCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, { flip: !!PS.ud, imgMax: 4e6 }).canvas : kind ? new A.PdfCtx(Wmm * CSS_PER_MM, Hmm * CSS_PER_MM, 72 / 25.4 / CSS_PER_MM, { flip: !!PS.ud, imgMax: PS.dev === 'pdfsm' ? 1.5e6 : 16e6 }).canvas : document.createElement('canvas'); if(!vec){ out.width = pxW; out.height = pxH; }
     const octx = out.getContext('2d'); let mask = null;
     const aw = area.x1 - area.x0, ah = area.y1 - area.y0;
     // vị trí vùng in trên giấy (mm, gốc trên-trái)
@@ -283,9 +283,10 @@
       view.scale = sv.v.scale; view.offsetX = sv.v.offsetX; view.offsetY = sv.v.offsetY; view.rot = sv.v.rot; window.drawGrid = sv.grid; window.drawScaleBar = sv.sb;
       Object.defineProperty(window, 'devicePixelRatio', { value: sv.dpr, configurable: true }); bbDirty = true;
     }
-    const R = { canvas: out, pagePt: [Wmm * 72 / 25.4, Hmm * 72 / 25.4], k, area, Wmm, Hmm, ox, oy }; if(vec) R.pdf = octx;
+    const R = { canvas: out, pagePt: [Wmm * 72 / 25.4, Hmm * 72 / 25.4], k, area, Wmm, Hmm, ox, oy }; if(kind === 'pdf') R.pdf = octx;
     const ud = PS.ud; if(vec){ PS.ud = false; if(ud) octx.unflip(); }   // PDF: lộn ngược đã đặt trong ma trận trang (dấu in vẽ sau thì đứng thẳng)
-    try{ if(A.plotPost) A.plotPost(R, forPreview); }catch(err){ console.warn('plotPost', err); } finally { PS.ud = ud; }   // dấu in (PLOTSTAMP), in lộn ngược
+    try{ if(A.plotPost) A.plotPost(R, forPreview); }catch(err){ console.warn('plotPost', err); } finally { PS.ud = ud; }
+    if(kind === 'svg') R.svg = octx.toSVG(Wmm, Hmm);   // sau dấu in   // dấu in (PLOTSTAMP), in lộn ngược
     try{ if(!vec && A.plotQuantize) A.plotQuantize(R, mask); }catch(err){ console.warn('plotQuantize', err); }   // độ sâu màu của máy vẽ + dither theo kiểu in
     return R;
   }
@@ -304,6 +305,12 @@
     const fire = () => { try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(_){ say('Trình duyệt không cho in trực tiếp — hãy xuất PDF.'); } setTimeout(() => { try{ fr.remove(); }catch(_){} }, 2000); };
     const im = d.querySelector('img'); if(im.complete) setTimeout(fire, 150); else im.onload = () => setTimeout(fire, 120);
   }
+  function printSVG(svg, Wmm, Hmm){
+    const fr = document.createElement('iframe'); fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden'; document.body.appendChild(fr);
+    const d = fr.contentWindow.document; d.open(); d.write('<!doctype html><html><head><meta charset="utf-8"><style>@page{size:' + Wmm + 'mm ' + Hmm + 'mm;margin:0}html,body{margin:0;padding:0}svg{display:block;width:' + Wmm + 'mm;height:' + Hmm + 'mm}</style></head><body>' + svg + '</body></html>'); d.close();
+    A._lastPrintSVG = svg;
+    setTimeout(() => { try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(_){ say('Trình duyệt không cho in trực tiếp — hãy xuất PDF.'); } setTimeout(() => { try{ fr.remove(); }catch(_){} }, 2000); }, 200);
+  }
   // bản đồ nền đang hiện (GEOMAP, Model): tải ô bản đồ cho vùng in trước khi vẽ (độ phân giải ~200 dpi trên giấy, tối đa 4096 điểm ảnh)
   async function mapPrep(){ if(LYT() || !A.geomapPlotPrep) return false; try{ const G = A.plotGeom(), mm = Math.max(G.area.x1 - G.area.x0, G.area.y1 - G.area.y0) * G.k; return await A.geomapPlotPrep(G.area, Math.round(mm / 25.4 * 200)); }catch(_){ return false; } }
   A.plotMapPrep = mapPrep;
@@ -317,6 +324,8 @@
       if(fmt === 'pdf' && A.pdfBuild && !PS.pdfRaster){   // DWG To PDF: PDF vector (đường nét + chữ nhúng phông), phóng to vẫn sắc nét
         const blob = await A.plotPDF(); await shareOrDownload(blob, name, 'application/pdf'); const I = blob.dvdInfo || {};
         log('Đã in PDF vector: khổ ' + PS.paper + (PS.land ? ' ngang' : ' dọc') + ', tỉ lệ ' + (PS.fit ? 'khít giấy' : '1:' + PS.scale) + (I.fonts && I.fonts.length ? ', phông nhúng: ' + [...new Set(I.fonts)].join(', ') : '') + (I.rasterText ? ' (' + I.rasterText + ' đoạn chữ thiếu phông vẽ thành ảnh)' : '') + '.'); return; }
+      // máy in Windows: in nét vector (SVG — đường nét và chữ sắc nét, tệp in nhỏ); giảm màu / dither của máy in thì in ảnh như trước
+      if(fmt === 'print' && A.SvgCtx && !(A.plotDepth && A.plotDepth(PS.dev) !== 'tc')){ const rs = plotRender(0, false, 'svg'); printSVG(rs.svg, rs.Wmm, rs.Hmm); log('Đã gửi bản in vector ra máy in: khổ ' + paperName() + (PS.land ? ' ngang' : ' dọc') + ', tỉ lệ ' + (PS.fit ? 'khít giấy' : '1:' + PS.scale) + '.'); return; }
       const r = plotRender(fmt === 'png' || fmt === 'jpg' ? 200 : 300, false);
       if(fmt === 'pdf'){ const blob = await canvasToPDFPaper(r.canvas, r.pagePt); await shareOrDownload(blob, name, 'application/pdf'); }
       else if(fmt === 'jpg'){ const blob = await new Promise(res => r.canvas.toBlob(res, 'image/jpeg', 0.92)); await shareOrDownload(blob, name.replace(/\.pdf$/i, '.jpg'), 'image/jpeg'); }

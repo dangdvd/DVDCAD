@@ -6,6 +6,19 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v5z: phông nét đơn thay SHX thiếu (FONTALT), in thẳng máy in bằng SVG vector, phông Liberation kèm theo
+- **`vendor/lff/*.lff`** (LibreCAD, GPL v2+). `x23`: `parseLFF()` đọc tệp:
+  - Nét `x,y` và cung `x,y,A<bulge>`, bulge áp cho đoạn từ đỉnh trước tới đỉnh này.
+  - Glyph ghép `C<mã>`. Chữ hoa cao 9 đơn vị. Khoảng chữ 1.2 đơn vị, khoảng trắng = WordSpacing.
+- **Thay phông thiếu:**
+  - `altFont()` được gọi trong `fontsOf()` khi tệp `.shx` chưa nạp: txt → standard, simplex, romans, romand, iso*, italic → italicc, còn lại theo `FONTALT` (localStorage `dvd:fontalt`).
+  - `lffGlyph()` ghép dấu tiếng Việt từ NFD: chữ gốc (dùng â / ê / ô / ă của phông nếu có) + dấu nét đơn; dấu móc của ơ / ư; gạch ngang của đ / Đ.
+- **`vendor/fonts/Liberation*.ttf`** (SIL OFL 1.1). `x24` `bundled()` luôn thêm một phông này vào cuối chuỗi phông của PDF (Serif nếu họ phông giống Times).
+- **`A.SvgCtx(w, h, { flip, imgMax })`**: kế thừa PdfCtx (trạng thái, ma trận, dựng đường), ghi phần tử SVG:
+  - `path` (stroke / fill / clip-path lồng theo save / restore), `text` (matrix + text-anchor + độ lệch chân chữ), `image`, linear / radialGradient.
+  - `toSVG(Wmm, Hmm)` trả SVG theo mm.
+  - `plotRender(…, 'svg')` → `R.svg`. `printSVG()` in qua iframe với `@page` đúng khổ.
+
 ## v5y: PDF vector khi in (DWG To PDF), hộp PLOT đủ máy in / khổ giấy / tuỳ chọn
 - Tệp mới `dvd-acad-x24.js` (nạp sau x23, có trong cache của `sw.js`).
 - **`A.PdfCtx(w, h, f, { flip, imgMax })`**: ngữ cảnh vẽ giả lập `CanvasRenderingContext2D`. `draw()` vẽ vào đây như vào canvas:
