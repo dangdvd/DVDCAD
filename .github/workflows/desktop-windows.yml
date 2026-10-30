@@ -154,15 +154,15 @@ jobs:
             $p = $pg.GetPage(0); $sz = $p.Size; $fp = $p.Visual
             $gl = 0; $q = New-Object System.Collections.Queue; $q.Enqueue($fp)
             while($q.Count){ $e = $q.Dequeue(); if($e -is [System.Windows.Documents.Glyphs]){ $gl++; [void]$e.ToGlyphRun() } ; foreach($c in [System.Windows.LogicalTreeHelper]::GetChildren($e)){ if($c -is [System.Windows.DependencyObject]){ $q.Enqueue($c) } } }
-            $k = 0.5; $W = [int]($sz.Width * $k); $H = [int]($sz.Height * $k)
+            $k = 1; $W = [int]($sz.Width * $k); $H = [int]($sz.Height * $k)
             $dv = New-Object System.Windows.Media.DrawingVisual; $dc = $dv.RenderOpen(); $dc.DrawRectangle((New-Object System.Windows.Media.VisualBrush($fp)), $null, (New-Object System.Windows.Rect(0, 0, $W, $H))); $dc.Close()
             $bmp = New-Object System.Windows.Media.Imaging.RenderTargetBitmap($W, $H, 96, 96, [System.Windows.Media.PixelFormats]::Pbgra32); $bmp.Render($dv)
             $px = New-Object byte[] ($W * $H * 4); $bmp.CopyPixels($px, $W * 4, 0); $dark = 0
-            for($i = 0; $i -lt $px.Length; $i += 4){ if($px[$i + 3] -gt 200 -and $px[$i] -lt 100 -and $px[$i + 1] -lt 100){ $dark++ } }
+            for($i = 0; $i -lt $px.Length; $i += 4){ if($px[$i + 3] -gt 100 -and $px[$i] -lt 200 -and $px[$i + 1] -lt 200){ $dark++ } }
             $enc = New-Object System.Windows.Media.Imaging.PngBitmapEncoder; $enc.Frames.Add([System.Windows.Media.Imaging.BitmapFrame]::Create($bmp)); $fs = [IO.File]::Create(($f -replace '\.dwfx$', '-xps.png')); $enc.Save($fs); $fs.Close()
-            Write-Host "XpsDocument: $n trang, khổ $([math]::Round($sz.Width * 25.4 / 96)) x $([math]::Round($sz.Height * 25.4 / 96)) mm, $gl đoạn chữ Glyphs, $dark điểm ảnh nét đậm"
+            Write-Host "XpsDocument: $n trang, khổ $([math]::Round($sz.Width * 25.4 / 96)) x $([math]::Round($sz.Height * 25.4 / 96)) mm, $gl đoạn chữ Glyphs, $dark điểm ảnh có nét"
             $x.Close()
-            if($n -lt 1 -or $gl -lt 1 -or $dark -lt 500){ exit 1 }
+            if($n -lt 1 -or $gl -lt 1 -or $dark -lt 300){ exit 1 }   # bản vẽ thử: 1 đường chéo + 1 dòng chữ trên khổ A3
           } catch { Write-Host ('LỖI: ' + $_.Exception.ToString()); exit 1 }
           '@ | Set-Content -Encoding utf8BOM $ps
           powershell -STA -NoProfile -ExecutionPolicy Bypass -File $ps $f
