@@ -49,10 +49,10 @@ Danh sách lệnh đầy đủ: [HUONG-DAN-LENH.md](HUONG-DAN-LENH.md), hoặc b
 
 ## Giới hạn
 
-- **Lưu DWG**: DVDCAD tự ghi file **.dwg AutoCAD 2018** (AC1032, mặc định), 2013, 2010, 2004 hoặc 2000 — không cần ODA File Converter hay mạng.
+- **Lưu DWG**: DVDCAD tự ghi file **.dwg AutoCAD 2018** (AC1032, mặc định), 2013, 2010, 2007, 2004 hoặc 2000 — không cần ODA File Converter hay mạng.
   Mở lại trong DVDCAD còn nguyên lớp, kiểu nét, kiểu chữ, khối + thuộc tính, kích thước, hatch, khối 3D, vùng che, khối động, vị trí địa lý.
   - AutoCAD 2017 trở về trước không mở được DWG 2018 — chọn DWG 2013 (AutoCAD 2013 → 2017) hoặc thấp hơn trong `DWGSERVER`.
-  - DWG 2007: định dạng 2007 thật cần **ODA File Converter** (miễn phí, cài riêng — không đóng gói kèm DVDCAD). Không có ODA thì DVDCAD ghi **DWG 2004** — AutoCAD 2007, 2008, 2009 mở thẳng.
+  - DWG 2007 (AutoCAD 2007 / 2008 / 2009): từ 5.20.0 DVDCAD ghi thẳng định dạng 2007 thật (AC1021). Muốn chuyển qua **ODA File Converter** (miễn phí, cài riêng — không đóng gói kèm DVDCAD) thì chọn dòng "chuyển qua ODA":
     1. `DWGSERVER` → **Tải ODA File Converter**: mở trang tải chính thức của ODA trong trình duyệt. Chọn bản Windows, cài như bình thường.
     2. Quay lại cửa sổ DVDCAD: hộp `DWGSERVER` tự dò lại và hiện **✓ Đã tìm thấy** (hoặc bấm **Tìm lại**). DVDCAD tìm trong `C:\Program Files\ODA`; cài chỗ khác thì bấm **Chọn…** trỏ tới `ODAFileConverter.exe`.
   - Khối động (bản 2018): tham số hiển thị, **lật** và **kéo giãn** là tham số thật của AutoCAD, có grip trong AutoCAD. Ràng buộc tham số và khối 3D tham số vẫn còn đủ khi mở lại trong DVDCAD.

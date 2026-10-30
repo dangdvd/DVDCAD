@@ -1,4 +1,4 @@
-# DVDCAD v5z — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v6a — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,19 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v6a)
+- **Lưu DWG 2007 gốc (AC1021), không cần ODA File Converter**:
+  - `SAVEDWG` / `DWGSERVER` có dòng **DWG 2007 — bộ ghi sẵn có**. `DWGCONVERT` đổi hàng loạt sang DWG 2007.
+  - Chọn dòng "chuyển qua ODA" mà máy không có ODA thì DVDCAD tự ghi DWG 2007 gốc (trước đây ghi DWG 2004).
+  - Kiểm tra: ODA File Converter, ACadSharp và LibreDWG đều đọc được bản vẽ DWG 2007 do DVDCAD ghi.
+- **Mở DWG 2007**: các trang dữ liệu không nén được (ảnh, dữ liệu nhị phân lớn) nay đọc đúng — bản vẽ lớn không còn mất đối tượng.
+- **Máy in đặt giảm màu** (256 màu / đen trắng trong **Thuộc tính…** của máy in Windows) nay cũng in **nét vector**:
+  - Màu theo bảng màu của máy in; màu không có trong bảng mà kiểu in bật dither thì giả bằng mẫu chấm vector, tắt dither thì lấy màu gần nhất (nét đặc).
+  - Ảnh trong bản vẽ giảm màu từng điểm ảnh (Floyd–Steinberg). Không còn độ trong suốt (như máy vẽ).
+- **Chưa có**:
+  - Hình chiếu lưu cùng bản vẽ dạng nét thường: AutoCAD không coi là hình chiếu liên kết (định dạng không công bố).
+  - Phông nét đơn thay thế giống phông AutoCAD về kiểu dáng, nhưng bề rộng chữ có thể khác đôi chút. Muốn y hệt thì nạp phông `.shx` gốc.
 
 ## Bổ sung như AutoCAD 2027 (v5z)
 - **Phông thay thế khi thiếu phông SHX (`FONTALT`)**, như AutoCAD:
@@ -1243,9 +1256,9 @@ Bố cục tab, bảng và biểu tượng theo AutoCAD để người dùng Aut
   - Khối động ghi như AutoCAD (khối gốc + `*U`, bản 2018 có tham số hiển thị của AutoCAD); vị trí địa lý ghi thành GEODATA (2010+).
   - Dữ liệu riêng của DVDCAD (khối 3D tham số, vùng, thứ tự vẽ, chú thích theo tỉ lệ, ràng buộc, kéo giãn / lật của khối động) ghi kèm trong file: mở lại bằng DVDCAD còn nguyên; AutoCAD bỏ qua phần này.
 - `SAVEAS` / **Ctrl+Shift+S**: chọn *Bản vẽ AutoCAD (\*.dwg)* hoặc *DXF* trong hộp thoại lưu. Bản vẽ mở từ DWG thì hộp thoại gợi ý DWG trước. **Ctrl+S** sau đó ghi đè đúng định dạng đã chọn.
-- `DWGSERVER` — chọn phiên bản: **DWG 2018 / 2013 / 2010 / 2004 / 2000 (bộ ghi sẵn có, mặc định 2018)**, hoặc qua **ODA File Converter** (miễn phí; cần cho DWG 2007).
+- `DWGSERVER` — chọn phiên bản: **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000 (bộ ghi sẵn có, mặc định 2018)**, hoặc qua **ODA File Converter** (không bắt buộc).
   - Bản Windows: nút **Tải ODA File Converter** mở trang tải của ODA; cài xong quay lại DVDCAD là tự tìm thấy (hoặc bấm **Tìm lại**, **Chọn…** nếu cài chỗ khác). Chuyển ngay trên máy, không cần mạng. Bản web: qua máy chủ chuyển đổi của bạn: cài ODA File Converter và **Node.js**, chạy `node server-dwg.js` (đặt biến `ODA` trỏ tới ODAFileConverter); điện thoại cùng mạng nhập `http://<IP máy tính>:8787/convert`.
-  - Không có ODA / máy chủ thì DVDCAD tự ghi bằng bộ ghi sẵn có: cùng năm nếu có, không thì bản mới nhất mà AutoCAD năm đó mở được (DWG 2007 → DWG 2004).
+  - Không có ODA / máy chủ thì DVDCAD tự ghi bằng bộ ghi sẵn có, cùng phiên bản (từ v6a có cả DWG 2007).
 
 ## In bản vẽ (PLOT, Ctrl+P)
 Hộp thoại giống AutoCAD:

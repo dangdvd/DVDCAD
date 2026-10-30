@@ -3,8 +3,23 @@
 > **Bản Windows** (cài như phần mềm, chạy offline, giao diện kiểu AutoCAD): xem **[HUONG-DAN-WINDOWS.md](HUONG-DAN-WINDOWS.md)**.
 
 Ứng dụng web một trang: **xem** bản vẽ, **đo khoảng cách** (có bắt điểm), **thêm ghi chú**.
-Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2004 / 2000** ngay trong app.
+Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
+
+## v6a: DWG 2007 gốc (AC1021), in vector cho máy in giảm màu
+- **`dvd-dwg.js` `pack2007(secs, o)`** — vỏ tệp AC1021 (kiểm từng byte với tệp AutoCAD trong bộ thử LibreDWG):
+  - 0x80 byte đầu như 2004; 0x80: khối 0x400 byte = header 0x110 byte (34 số 64 bit, nén LZ 2007) + CRC, mã RS(255,239) ×3 xen kẽ (trường 0x169, nghiệm α¹…α¹⁶); cuối file chép lại khối này.
+  - 0x480: bản đồ trang (2 bản) → trang dữ liệu → bản đồ section (2 bản). Trang hệ thống: nén, lặp `rep` lần, RS(255,239) xen kẽ.
+  - Trang dữ liệu mã 4: nén (nếu có lợi) → RS(255,251) xen kẽ (trường 0x11D, nghiệm α¹…α⁴). SummaryInfo / Preview / AppInfo: mã 1 (dữ liệu liền, để địa chỉ ở đầu file trỏ thẳng vào).
+  - CRC-64: header 0x110 byte và dữ liệu header nén = ECMA (MSB trước, hạt giống `seed2(len)`, đảo bit cuối); trang dữ liệu + bản đồ = Jones 0xAD93D23594C935A9 phản xạ, hạt giống `seed1(len)`.
+    Dữ liệu đọc theo khối 8 byte 6,7,4,5,2,3,0,1; phần dư 4…7 byte: 2,3,0,1 rồi tiếp theo thứ tự. Checksum trang = Adler biến thể cùng thứ tự.
+  - Đầu khối header: cặp "CRC + khoá" (ODA kiểm cặp này, không phụ thuộc nội dung) — ghi một cặp hợp lệ của AutoCAD.
+- **Nén LZ 2007 `r21Comp`**: đoạn chữ nguyên đầu ≥ 8 byte; lệnh chép 2 byte (dài 3…14, cách ≤ 0x200), 3 byte (≤ 18, ≤ 0x2000), 4 byte (≤ 255, ≤ 0xFFFF); ≤ 7 byte chữ sau lệnh chép nằm trong 3 bit thấp. `r21Decomp` giải nén.
+- Đối tượng R2007: BS kiểu + RL bitsize (tới đầu luồng handle) + dữ liệu + luồng chuỗi (RS cỡ + bit có chuỗi) + handle.
+- **`fix2007(buf)`** (bọc `dwg_read_data` của libredwg-web): giải xen kẽ sẵn các trang mã 4 không nén (cỡ trang = cỡ mã RS) vì bản libredwg-web kèm theo chép thẳng các trang đó.
+- Công cụ CI: `desktop/test/dwg2007-info.js` (kiểm CRC / checksum từng trang), `desktop/test/dwg2007-repack.js` (đóng gói lại tệp 2007 của ODA bằng `pack2007`, có các biến thể để tách lỗi).
+- **In vector giảm màu**: `A.plotVecQuant(ô)` (dlg4) → `SvgCtx` `opt.q`: màu (trộn giấy trắng nếu trong suốt) → màu gần nhất của bảng ACI / đen trắng;
+  màu kiểu in bật dither, không có trong bảng → `<pattern>` Bayer 4×4 trộn 2 màu gần nhất (ô 0,254 mm); `plotColor` ghi lại màu nào thuộc kiểu in tắt dither; ảnh → Floyd–Steinberg.
 
 ## v5z: phông nét đơn thay SHX thiếu (FONTALT), in thẳng máy in bằng SVG vector, phông Liberation kèm theo
 - **`vendor/lff/*.lff`** (LibreCAD, GPL v2+). `x23`: `parseLFF()` đọc tệp:
