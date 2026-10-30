@@ -406,9 +406,6 @@
 "(không bám)": [
 "dvd-acad-x14.js"
 ],
-"(không có ODA: ghi DWG 2004)": [
-"dvd-acad-x3.js"
-],
 "(không có gợi ý)": [
 "dvd-acad-dlg2.js"
 ],
@@ -3656,9 +3653,6 @@
 "Chỉ có với phông SHX (như AutoCAD)": [
 "dvd-acad-dlg.js"
 ],
-"Chỉ cần cho DWG 2007. ODA File Converter miễn phí, cài riêng (trên trang tải chọn bản Windows). Cài xong quay lại DVDCAD là tự tìm thấy. Chuyển đổi chạy trên máy, không cần mạng.": [
-"dvd-acad-x3.js"
-],
 "Chỉ dùng với phông SHX (như AutoCAD)": [
 "dvd-acad-dlg.js"
 ],
@@ -6638,7 +6632,7 @@
 "DWG / DXF làm tham chiếu ngoài": [
 "dvd-acad-x16.js"
 ],
-"DWG 2018, 2013, 2010, 2004 và 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (DWG 2018 = định dạng của AutoCAD 2018 → 2027). DWG 2007 cần ODA File Converter (hoặc máy chủ) — nếu không có, DVDCAD ghi DWG 2004 bằng bộ ghi sẵn có (AutoCAD 2007, 2008, 2009 mở thẳng được).": [
+"DWG 2018, 2013, 2010, 2007, 2004 và 2000 ghi thẳng bằng bộ ghi của DVDCAD, không cần cài thêm gì (DWG 2018 = định dạng của AutoCAD 2018 → 2027). Muốn dùng ODA File Converter (hoặc máy chủ) thì chọn dòng \"chuyển qua ODA\" — không có ODA, DVDCAD tự ghi cùng phiên bản bằng bộ ghi sẵn có.": [
 "dvd-acad-x3.js"
 ],
 "DWG đọc được nhưng chưa có đối tượng 2D nào được hỗ trợ.": [
@@ -9635,6 +9629,9 @@
 "Không bật được cộng tác:": [
 "dvd-cloud.js"
 ],
+"Không bắt buộc: chỉ dùng khi chọn dòng \"chuyển qua ODA\". ODA File Converter miễn phí, cài riêng (trên trang tải chọn bản Windows). Cài xong quay lại DVDCAD là tự tìm thấy. Chuyển đổi chạy trên máy, không cần mạng.": [
+"dvd-acad-x3.js"
+],
 "Không bắt điểm": [
 "dvd-acad-cmdline.js"
 ],
@@ -11929,7 +11926,7 @@
 "Lưu làm gốc mặc định": [
 "dvd-acad-dlg.js"
 ],
-"Lưu ra file DWG: DWG 2018 / 2013 / 2010 / 2004 / 2000 bằng bộ ghi sẵn có (không cần ODA); DWG 2007 qua ODA File Converter": [
+"Lưu ra file DWG: DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000 bằng bộ ghi sẵn có (không cần ODA File Converter)": [
 "dvd-acad-x3.js"
 ],
 "Lưu thay đổi cho mọi khối \"": [
@@ -24634,7 +24631,7 @@
 "dvd-acad-ui.js",
 "dvd-acad-x21.js"
 ],
-"Đổi phiên bản DWG hàng loạt (DWG Convert): danh sách tệp DWG / DXF → DWG 2018 / 2013 / 2010 / 2004 / 2000 hoặc DXF, đóng gói .zip": [
+"Đổi phiên bản DWG hàng loạt (DWG Convert): danh sách tệp DWG / DXF → DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000 hoặc DXF, đóng gói .zip": [
 "dvd-acad-x21.js"
 ],
 "Đổi ra m (bản vẽ mm)": [

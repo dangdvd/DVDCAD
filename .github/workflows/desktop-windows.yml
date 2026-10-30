@@ -100,7 +100,7 @@ jobs:
           if($l7.Count){ node test/dwg2007-info.js @l7 }
           # tách lỗi vỏ tệp / nội dung: tệp 2007 của ODA đóng gói lại bằng vỏ tệp DVDCAD (pack2007) → ODA đọc lại
           $rp = Join-Path $env:RUNNER_TEMP 'dwg-rp'; $rpo = Join-Path $env:RUNNER_TEMP 'dwg-rp-dxf'; New-Item -ItemType Directory -Force $rp, $rpo | Out-Null
-          foreach($f in Get-ChildItem $o7 -Filter *.dwg){ node test/dwg2007-repack.js $f.FullName (Join-Path $rp ('oda-dong-goi-lai-' + $f.Name)) }
+          foreach($f in Get-ChildItem $o7 -Filter *.dwg){ node test/dwg2007-repack.js $f.FullName (Join-Path $rp ('oda-dong-goi-lai-' + $f.Name)) --bien-the }
           Start-Process $exe.FullName -ArgumentList "`"$rp`"", "`"$rpo`"", 'ACAD2018', 'DXF', '0', '1', '*.DWG' -Wait -NoNewWindow
           foreach($f in Get-ChildItem $rp -Filter *.dwg){ $dxf = Join-Path $rpo ($f.BaseName + '.dxf'); $err = Join-Path $rpo ($f.BaseName + '.err')
             if(Test-Path $err){ Write-Host "::warning::ODA audit $($f.Name): $((Get-Content $err -Raw).Trim())" }

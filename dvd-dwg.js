@@ -191,6 +191,9 @@
     return ~c & M64; }
   // Jones 0xAD93D23594C935A9 (phản xạ, không đảo bit cuối): CRC từng trang dữ liệu (dữ liệu nén) và bản đồ trang / section
   const CRCJT = (() => { const t = [], R = 0x95ac9329ac4bc9b5n; for(let i = 0n; i < 256n; i++){ let w = i; for(let b = 0; b < 8; b++) w = (w & 1n) ? (w >> 1n) ^ R : w >> 1n; t.push(w); } return t; })();
+  // hạt giống CRC dạng mã hoá (10 bit rải trong số 64 bit)
+  const seedDec = e => { e = BigInt.asUintN(64, BigInt(e)); const hi = Number(e >> 32n) >>> 0, lo = Number(e & 0xffffffffn) >>> 0; let r = 0;
+    [[hi, 0x08000000], [hi, 0x00200000], [hi, 0x00008000], [hi, 0x200], [hi, 8], [lo, 0x20000000], [lo, 0x00800000], [lo, 0x00020000], [lo, 0x800], [lo, 0x20]].forEach(([w, m], b) => { if(w & m) r |= 1 << b; }); return r; };
   function crcJ(u, n, seed){ let s = BigInt.asUintN(64, (BigInt(seed || 0) + BigInt(n)) * 0x343fdn + 0x269ec3n); s = BigInt.asUintN(64, s | BigInt.asUintN(64, s * (0x343fdn << 32n) + (0x269ec3n << 32n)));
     let c = ~s & M64; for(const i of ORD64(n)) c = CRCJT[Number((c ^ BigInt(u[i])) & 0xffn)] ^ (c >> 8n); return c; }
   // checksum trang dữ liệu 2007: tổng Adler (mod 0xFFF1) từng cặp byte theo thứ tự 6,4,2,0 trong mỗi 8 byte, hạt giống từ độ dài
@@ -1059,21 +1062,22 @@
         for(const v of [d.size, d.max, 0, d.hash, nl, 0, d.enc, d.pages.length]){ L64(sm, q, v); q += 8; }
         for(let i = 0; i < d.name.length; i++){ sm[q] = d.name.charCodeAt(i); q += 2; } if(nl) q += 2;
         for(const pg of d.pages){ for(const v of [pg.off, d.pages.length > 1 ? pg.uncomp : d.max, pg.id, pg.uncomp, pg.comp, pg.sum, pg.crc]){ L64(sm, q, v); q += 8; } } }
-      const smRep = 4, smP = sysPage(sm, smRep), smId1 = newId(), smId2 = newId(); pages.push({ id: smId1, bytes: smP.bytes }, { id: smId2, bytes: smP.bytes.slice() });
+      const smRep = o.smRep || 4, smP = sysPage(sm, smRep), smId1 = newId(), smId2 = newId(); pages.push({ id: smId1, bytes: smP.bytes }, { id: smId2, bytes: smP.bytes.slice() });
       // bản đồ trang: (cỡ, id) mỗi trang theo thứ tự trong file
       const pm = new Uint8Array(pages.length * 16); pages.forEach((p, i) => { L64(pm, i * 16, p.bytes ? p.bytes.length : pmSize); L64(pm, i * 16 + 8, p.id); });
-      const pmRep = 3, pmP = sysPage(pm, pmRep);
+      const pmRep = o.pmRep || 3, pmP = sysPage(pm, pmRep);
       if(pmP.bytes.length > pmSize){ pmSize = a32(pmP.bytes.length + 0x100); continue; }
       const pmB = new Uint8Array(pmSize); pmB.set(pmP.bytes); pages[0].bytes = pmB; pages[1].bytes = pmB.slice();
       let body = 0; for(const p of pages) body += p.bytes.length;
-      // header 0x110 byte (34 số 64 bit); hạt giống CRC = 0 (dạng mã hoá 0)
+      // header 0x110 byte (34 số 64 bit); hạt giống CRC = 0 (dạng mã hoá 0); o.fields: ghi đè trường (chẩn đoán)
       const hd = new Uint8Array(0x110), rnd = () => BigInt(Math.floor(Math.random() * 0x7fffffff)) * 0x100000000n + BigInt(Math.floor(Math.random() * 0xffffffff));
-      [0x70, 0x480 + body + 0x400, crcJ(pmP.comp, pmP.comp.length), pmRep, 0, pmSize, pmId2, 0, pmId1, body, pmP.comp.length, pm.length, pages.length, nextId - 1, 0x20, 0x40, crcJ(pm, pm.length), 0xf800, 4, 1,
-        recs.length, crcJ(sm, sm.length), smP.comp.length, smId2, smId1, sm.length, crcJ(smP.comp, smP.comp.length), smRep, 0, 0x60100, 0, 0, rnd(), 0].forEach((v, i) => L64(hd, i * 8, v));
+      const F = o.fields || {}, sd = i => F[i] != null ? seedDec(F[i]) : 0, s1 = sd(4), s2 = sd(28);
+      [0x70, 0x480 + body + 0x400, crcJ(pmP.comp, pmP.comp.length, s1), pmRep, 0, pmSize, pmId2, 0, pmId1, body, pmP.comp.length, pm.length, pages.length, nextId - 1, 0x20, 0x40, crcJ(pm, pm.length, s1), 0xf800, 4, 1,
+        recs.length, crcJ(sm, sm.length, s2), smP.comp.length, smId2, smId1, sm.length, crcJ(smP.comp, smP.comp.length, s2), smRep, 0, 0x60100, 0, 0, rnd(), 0].forEach((v, i) => L64(hd, i * 8, F[i] != null && [4, 28, 31, 32].includes(i) ? F[i] : v));
       L64(hd, 0x108, crc64(hd, 0x110));
       const hc = r21Comp(hd, true), pre = new Uint8Array(3 * 239), dv = new DataView(pre.buffer);
-      L64(pre, 16, crc64(hc, hc.length)); dv.setInt32(24, hc.length, true); pre.set(hc, 32);
-      const blk = new Uint8Array(0x400); RS(0x169, 239).enc(pre, 3, blk, 0);
+      L64(pre, 16, crc64(hc, hc.length)); dv.setInt32(24, hc.length, true); pre.set(hc, 32); if(o.pre) pre.set(o.pre.subarray(0, 16), 0);
+      const blk = new Uint8Array(0x400); RS(0x169, 239).enc(pre, 3, blk, 0); if(o.check) blk.set(o.check.subarray(0, 0x28), 0x3d8);
       // 0x80 byte đầu file
       const H0 = new Uint8Array(0x80); for(let i = 0; i < 6; i++) H0[i] = 'AC1021'.charCodeAt(i);
       H0[0x0b] = 0x32; H0[0x0c] = 3; le(H0, 0x0d, at['AcDb:Preview'] || 0); H0[0x11] = o.dwgv || 0x1b; H0[0x12] = o.maint || 0; H0[0x13] = 30; H0[0x16] = o.dwgv || 0x1b; H0[0x17] = o.maint || 0;
