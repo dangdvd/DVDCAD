@@ -288,7 +288,9 @@ ipcMain.handle('print:svg', async (_e, o = {}) => {
   try{
     await w.loadFile(tmp);
     const land = W > H, opt = { silent: o.silent !== false, printBackground: true, deviceName: String(o.deviceName || ''), copies: Math.max(1, Math.min(999, Math.round(+o.copies || 1))),
-      margins: { marginType: 'none' }, landscape: land, pageSize: { width: Math.round(Math.min(W, H) * 1000), height: Math.round(Math.max(W, H) * 1000) } };
+      margins: { marginType: 'none' }, landscape: land, pageSize: { width: Math.round(Math.min(W, H) * 1000), height: Math.round(Math.max(W, H) * 1000) },
+      color: o.color !== false, collate: o.collate !== false, duplexMode: ['simplex', 'longEdge', 'shortEdge'].includes(o.duplex) ? o.duplex : 'simplex' };
+    if(+o.dpi > 0) opt.dpi = { horizontal: +o.dpi, vertical: +o.dpi };   // Thuộc tính… của máy in trong hộp PLOT
     return await new Promise(res => w.webContents.print(opt, (ok, reason) => res({ ok: !!ok, error: ok ? '' : String(reason || '') })));
   }catch(e){ return { ok: false, error: String(e && e.message || e) }; }
   finally{ setTimeout(() => { try{ w.destroy(); }catch(_){} fs.promises.rm(tmp, { force: true }).catch(() => {}); }, 1500); }

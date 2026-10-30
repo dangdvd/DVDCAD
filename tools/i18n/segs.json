@@ -8293,6 +8293,12 @@
 "Hai màu": [
 "dvd-acad-dlg.js"
 ],
+"Hai mặt — lật cạnh dài": [
+"dvd-acad-dlg4.js"
+],
+"Hai mặt — lật cạnh ngắn": [
+"dvd-acad-dlg4.js"
+],
 "Hai điểm": [
 "dvd-acad-x4.js"
 ],
@@ -9139,6 +9145,9 @@
 "In gì:": [
 "dvd-acad-more.js"
 ],
+"In hai mặt:": [
+"dvd-acad-dlg4.js"
+],
 "In hàng loạt": [
 "dvd-acad-ui.js"
 ],
@@ -9150,6 +9159,9 @@
 ],
 "In lộn ngược": [
 "dvd-acad-more.js"
+],
+"In màu": [
+"dvd-acad-dlg4.js"
 ],
 "In màu theo đối tượng, riêng màu 8, 9, 250–254 in xám mờ (nét phụ)": [
 "dvd-acad-x9.js"
@@ -12701,7 +12713,8 @@
 ],
 "Màu:": [
 "dvd-acad-dlg.js",
-"dvd-acad-dlg2.js"
+"dvd-acad-dlg2.js",
+"dvd-acad-dlg4.js"
 ],
 "Màu…": [
 "dvd-acad-dlg.js",
@@ -13003,6 +13016,9 @@
 "Mặc định cho hình chiếu mới": [
 "dvd-acad-x19.js"
 ],
+"Mặc định của máy in": [
+"dvd-acad-dlg4.js"
+],
 "Mặc định theo phạm vi biên": [
 "dvd-acad-dlg.js"
 ],
@@ -13192,6 +13208,9 @@
 ],
 "Một màu": [
 "dvd-acad-dlg.js"
+],
+"Một mặt": [
+"dvd-acad-dlg4.js"
 ],
 "Mới": [
 "dvd-acad-cmdline.js",
@@ -17183,6 +17202,9 @@
 "Tuỳ chọn khớp": [
 "dvd-acad-dlg.js"
 ],
+"Tuỳ chọn máy in (Windows)": [
+"dvd-acad-dlg4.js"
+],
 "Tuỳ chọn người dùng": [
 "dvd-acad-dlg.js"
 ],
@@ -18099,6 +18121,9 @@
 ],
 "Tệp AutoLISP (*.lsp)": [
 "dvd-acad-dlg2.js"
+],
+"Tệp DWFx vector (XPS) — mở bằng trình xem XPS / DWF": [
+"dvd-acad-more.js"
 ],
 "Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in": [
 "dvd-acad-more.js"
@@ -19742,6 +19767,9 @@
 ],
 "Xếp bản vẽ": [
 "dvd-acad-ui.js"
+],
+"Xếp bộ khi in nhiều bản (collate)": [
+"dvd-acad-dlg4.js"
 ],
 "Xếp chồng": [
 "dvd-acad-ui.js",
@@ -21921,6 +21949,9 @@
 "Đen trắng (1-bit)": [
 "dvd-acad-dlg4.js"
 ],
+"Đen trắng (máy in tự chuyển)": [
+"dvd-acad-dlg4.js"
+],
 "Đi bộ": [
 "dvd-acad-3d.js",
 "dvd-acad-ui.js"
@@ -22730,6 +22761,9 @@
 ],
 "Đã huỷ thay đổi khối.": [
 "dvd-acad-ext.js"
+],
+"Đã in DWFx:": [
+"dvd-acad-more.js"
 ],
 "Đã in PDF vector: khổ": [
 "dvd-acad-more.js"
@@ -24934,6 +24968,9 @@
 "Độ phân giải [Thô/Tối ưu/Mịn/Rất mịn] <Tối ưu>": [
 "dvd-acad-dlg4.js"
 ],
+"Độ phân giải:": [
+"dvd-acad-dlg4.js"
+],
 "Độ rộng": [
 "dvd-acad-cmds.js",
 "dvd-acad-x15.js",
@@ -25937,6 +25974,9 @@
 ],
 "— không thoả được hết": [
 "dvd-acad-x4.js"
+],
+"— khổ": [
+"dvd-acad-more.js"
 ],
 "— lớp đóng băng:": [
 "dvd-acad-x16.js"

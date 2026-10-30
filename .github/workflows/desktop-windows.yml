@@ -137,6 +137,38 @@ jobs:
           Pop-Location
           if($code -ne 0){ Write-Host "::error::ACadSharp không đọc được $code file DWG"; exit 1 }
 
+      # DWFx = gói XPS: bộ đọc XPS của Windows (.NET XpsDocument, WPF) mở tệp, phân trang, vẽ trang 1 ra PNG (phông nhúng hỏng → lỗi khi vẽ chữ)
+      - name: Kiểm tra DWFx bằng XPS của Windows (.NET XpsDocument)
+        shell: pwsh
+        run: |
+          $f = Join-Path $env:RUNNER_TEMP 'dwg-out\kiem-tra.dwfx'
+          if(-not (Test-Path $f)){ Write-Host '::error::Kiểm thử nhanh không ghi được tệp DWFx'; exit 1 }
+          $ps = Join-Path $env:RUNNER_TEMP 'xpscheck.ps1'
+          @'
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName WindowsBase, PresentationCore, PresentationFramework, ReachFramework
+          $f = $args[0]
+          try {
+            $x = New-Object System.Windows.Xps.Packaging.XpsDocument($f, [System.IO.FileAccess]::Read)
+            $pg = $x.GetFixedDocumentSequence().DocumentPaginator; $n = $pg.PageCount
+            $p = $pg.GetPage(0); $sz = $p.Size; $fp = $p.Visual
+            $gl = 0; $q = New-Object System.Collections.Queue; $q.Enqueue($fp)
+            while($q.Count){ $e = $q.Dequeue(); if($e -is [System.Windows.Documents.Glyphs]){ $gl++; [void]$e.ToGlyphRun() } ; foreach($c in [System.Windows.LogicalTreeHelper]::GetChildren($e)){ if($c -is [System.Windows.DependencyObject]){ $q.Enqueue($c) } } }
+            $k = 0.5; $W = [int]($sz.Width * $k); $H = [int]($sz.Height * $k)
+            $dv = New-Object System.Windows.Media.DrawingVisual; $dc = $dv.RenderOpen(); $dc.DrawRectangle((New-Object System.Windows.Media.VisualBrush($fp)), $null, (New-Object System.Windows.Rect(0, 0, $W, $H))); $dc.Close()
+            $bmp = New-Object System.Windows.Media.Imaging.RenderTargetBitmap($W, $H, 96, 96, [System.Windows.Media.PixelFormats]::Pbgra32); $bmp.Render($dv)
+            $px = New-Object byte[] ($W * $H * 4); $bmp.CopyPixels($px, $W * 4, 0); $dark = 0
+            for($i = 0; $i -lt $px.Length; $i += 4){ if($px[$i + 3] -gt 200 -and $px[$i] -lt 100 -and $px[$i + 1] -lt 100){ $dark++ } }
+            $enc = New-Object System.Windows.Media.Imaging.PngBitmapEncoder; $enc.Frames.Add([System.Windows.Media.Imaging.BitmapFrame]::Create($bmp)); $fs = [IO.File]::Create(($f -replace '\.dwfx$', '-xps.png')); $enc.Save($fs); $fs.Close()
+            Write-Host "XpsDocument: $n trang, khổ $([math]::Round($sz.Width * 25.4 / 96)) x $([math]::Round($sz.Height * 25.4 / 96)) mm, $gl đoạn chữ Glyphs, $dark điểm ảnh nét đậm"
+            $x.Close()
+            if($n -lt 1 -or $gl -lt 1 -or $dark -lt 500){ exit 1 }
+          } catch { Write-Host ('LỖI: ' + $_.Exception.ToString()); exit 1 }
+          '@ | Set-Content -Encoding utf8BOM $ps
+          powershell -STA -NoProfile -ExecutionPolicy Bypass -File $ps $f
+          if($LASTEXITCODE -ne 0){ Write-Host '::error::Bộ đọc XPS của Windows không mở / vẽ được tệp DWFx'; exit 1 }
+          Write-Host '✓ DWFx mở và vẽ được bằng XpsDocument (WPF) của Windows'
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

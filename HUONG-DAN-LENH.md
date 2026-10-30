@@ -1,4 +1,4 @@
-# DVDCAD v6b — Lệnh & thao tác kiểu AutoCAD
+# DVDCAD v6c — Lệnh & thao tác kiểu AutoCAD
 
 Trên **máy tính** (màn hình rộng ≥ 900px, có chuột) DVDCAD hiện giao diện kiểu AutoCAD: ribbon, dòng lệnh, thanh trạng thái, bảng Thuộc tính, tab Model/Layout.
 Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở cột trái để mở bảng lệnh CAD, chạm lên bản vẽ để chọn điểm (tự bắt điểm). Thanh lệnh có nút **↵** (Enter) và **✕** (huỷ).
@@ -26,6 +26,15 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
   Lệnh lồng chạy xong thì trở lại lệnh đang dở (`>>CAL` … `Tiếp tục lệnh LINE.`). `'CAL` đưa kết quả thẳng vào lời nhắc; `'ID` đặt LASTPOINT để gõ `@dx,dy` tiếp.
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
+
+## Bổ sung như AutoCAD 2027 (v6c)
+- **DWFx ePlot (XPS Compatible).pc3** trong danh sách máy in của `PLOT`:
+  - Ghi tệp `.dwfx` vector: đường nét, tô, gradient, ảnh, chữ **nhúng phông TrueType** (chọn / tìm được chữ, đủ dấu tiếng Việt).
+  - Gói gồm phần XPS (mở bằng trình xem XPS của Windows) và phần DWF (manifest, trang ePlot với khổ giấy mm) như tệp DWFx của AutoCAD.
+  - `PUBLISH`: mục **Xuất ra: DWFx** — mỗi layout một trang trong cùng một tệp `.dwfx`.
+- **Thuộc tính… của máy in Windows** (chọn máy in đã cài trong `PLOT` rồi bấm **Thuộc tính…**): ngoài độ sâu màu có thêm
+  **In màu / Đen trắng**, **In hai mặt** (lật cạnh dài / cạnh ngắn), **Độ phân giải** (300 / 600 / 1200 dpi), **Xếp bộ** khi in nhiều bản. Các tuỳ chọn này gửi kèm lệnh in thẳng.
+- **Chưa có**: DWF6 ePlot (`.dwf`, luồng W2D) — chưa có bộ đọc chuẩn để kiểm chứng tệp ghi ra; dùng DWFx thay.
 
 ## Bổ sung như AutoCAD 2027 (v6b)
 - **Plot Preview** (nút **Xem trước…** trong hộp PLOT, bấm vào hình xem trước nhỏ, hoặc lệnh `PREVIEW` / `PRE`):

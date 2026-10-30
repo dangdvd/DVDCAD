@@ -427,9 +427,15 @@
   // nút "Thuộc tính…" cạnh máy in trong hộp PLOT: Trình sửa cấu hình máy vẽ (chỉ mục Độ sâu màu)
   A.plotterProps = (dev, done) => { const name = pc3(dev); if(!name){ say('Thiết bị này không có thuộc tính tuỳ chỉnh.'); return; }
     const P = A.PS || {}, K = A.acw, cur = depthOf(dev);
-    const html = '<div class="acw" style="width:420px">' + K.row('Máy vẽ:', '<b>' + esc(name) + '</b>') + K.grp('Thuộc tính tuỳ chỉnh — Độ sâu màu', DEPTHS.map(([v, t]) => K.rad('ppD', v, t, v === cur)).join('<br>')) +
+    // máy in Windows in thẳng (đã cài / mặc định): tuỳ chọn của trình điều khiển gửi kèm lệnh in — màu, hai mặt, độ phân giải, xếp bộ
+    const prn = dev === 'defprn' || /^sys:/.test(dev), O = Object.assign({ color: 1, duplex: 'simplex', dpi: 0, collate: 1 }, (P.prn || {})[dev] || {});
+    const html = '<div class="acw" style="width:420px">' + K.row('Máy vẽ:', '<b translate="no">' + esc(name) + '</b>') + K.grp('Thuộc tính tuỳ chỉnh — Độ sâu màu', DEPTHS.map(([v, t]) => K.rad('ppD', v, t, v === cur)).join('<br>')) +
+      (prn ? K.grp('Tuỳ chọn máy in (Windows)', K.row('Màu:', K.sel('ppC', [['1', 'In màu'], ['0', 'Đen trắng (máy in tự chuyển)']], String(O.color ? 1 : 0))) + K.row('In hai mặt:', K.sel('ppX', [['simplex', 'Một mặt'], ['longEdge', 'Hai mặt — lật cạnh dài'], ['shortEdge', 'Hai mặt — lật cạnh ngắn']], O.duplex)) +
+        K.row('Độ phân giải:', K.sel('ppR', [['0', 'Mặc định của máy in'], ['300', '300 dpi'], ['600', '600 dpi'], ['1200', '1200 dpi']], String(O.dpi || 0))) + K.chk('ppL', 'Xếp bộ khi in nhiều bản (collate)', O.collate)) : '') +
       '<div class="acw-note">Khi giảm màu, mục "Bật dither" của từng màu trong bảng kiểu in (.ctb) có tác dụng: bật — giả màu bằng chấm (Floyd–Steinberg), tắt — lấy màu gần nhất, nét đặc.</div></div>';
-    A.dialog({ title: 'Trình sửa cấu hình máy vẽ — ' + name, cls: 'acw-free', help: 'PLOT', html, ok: r => { P.cdep = Object.assign({}, P.cdep || {}, { [dev]: K.radio(r, 'ppD') || 'tc' }); if(done) done(); } }); };
+    A.dialog({ title: 'Trình sửa cấu hình máy vẽ — ' + name, cls: 'acw-free', help: 'PLOT', html, ok: r => { P.cdep = Object.assign({}, P.cdep || {}, { [dev]: K.radio(r, 'ppD') || 'tc' });
+      if(prn) P.prn = Object.assign({}, P.prn || {}, { [dev]: { color: K.val(r, 'ppC') === '1' ? 1 : 0, duplex: K.val(r, 'ppX'), dpi: +K.val(r, 'ppR') || 0, collate: K.on(r, 'ppL') ? 1 : 0 } }); if(done) done(); } }); };
+  A.plotPrnOpts = dev => Object.assign({ color: 1, duplex: 'simplex', dpi: 0, collate: 1 }, ((A.PS || {}).prn || {})[dev] || {});
 
   try{ DVDCmd.refresh && DVDCmd.refresh(); }catch(_){}
 })();

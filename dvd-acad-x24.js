@@ -47,7 +47,8 @@
     return { u8, face: face | 0, upm, bbox, asc, desc, cap, ital, ps, adv, ng, gid, glyf: !!(T.glyf && T.loca), cff: !!T['CFF '], locFmt, T, dv, bold: !!(mac & 1), embeddable: (fsType & 0x0F) !== 2 };
   }
   // phông chỉ còn các glyph dùng tới (giữ nguyên số glyph → CID = GID)
-  function subsetTTF(F, used){
+  // all: giữ mọi bảng khác (cmap, name, OS/2, post…) — phông nhúng trong XPS / DWFx phải nạp được như phông thường
+  function subsetTTF(F, used, all){
     const { dv, T, u8 } = F; const loc = i => F.locFmt ? dv.getUint32(T.loca.off + 4 * i) : dv.getUint16(T.loca.off + 2 * i) * 2;
     const keep = new Set([0]); const stack = [...used];
     while(stack.length){ const g = stack.pop(); if(keep.has(g) || g >= F.ng) continue; keep.add(g); const a = loc(g), b = loc(g + 1); if(b - a < 10) continue; const o = T.glyf.off + a;
@@ -56,7 +57,7 @@
     for(let g = 0; g < F.ng; g++){ L[g] = size; if(keep.has(g)){ const n = loc(g + 1) - loc(g); size += (n + 3) & ~3; } } L[F.ng] = size;
     const glyf = new Uint8Array(size); for(const g of keep){ const a = loc(g), n = loc(g + 1) - a; if(n > 0) glyf.set(u8.subarray(T.glyf.off + a, T.glyf.off + a + n), L[g]); }
     const loca = new Uint8Array(4 * (F.ng + 1)); const ldv = new DataView(loca.buffer); for(let i = 0; i <= F.ng; i++) ldv.setUint32(4 * i, L[i]);
-    const tabs = { glyf, loca }; for(const t of ['head', 'hhea', 'maxp', 'hmtx', 'cvt ', 'fpgm', 'prep']) if(T[t]) tabs[t] = u8.slice(T[t].off, T[t].off + T[t].len);
+    const tabs = { glyf, loca }; for(const t of all ? Object.keys(T).filter(t => t !== 'glyf' && t !== 'loca' && t !== 'DSIG') : ['head', 'hhea', 'maxp', 'hmtx', 'cvt ', 'fpgm', 'prep']) if(T[t]) tabs[t] = u8.slice(T[t].off, T[t].off + T[t].len);
     new DataView(tabs.head.buffer).setInt16(50, 1); new DataView(tabs.head.buffer).setUint32(8, 0);   // loca dạng dài, checkSumAdjustment = 0
     const tags = Object.keys(tabs).sort(), n = tags.length; let off = 12 + 16 * n; const dir = []; for(const t of tags){ dir.push([t, off, tabs[t].length]); off += (tabs[t].length + 3) & ~3; }
     const out = new Uint8Array(off), od = new DataView(out.buffer); od.setUint32(0, 0x00010000); od.setUint16(4, n); let es = 1, lg = 0; while(es * 2 <= n){ es *= 2; lg++; } od.setUint16(6, es * 16); od.setUint16(8, lg); od.setUint16(10, n * 16 - es * 16);
@@ -320,5 +321,5 @@
   }
   A.SvgCtx = SvgCtx;
 
-  A.PdfCtx = PdfCtx; A.pdfBuild = buildPDF; A.pdfParseFont = parseFont; A.pdfSubset = (F, used) => subsetTTF(F, used);
+  A.PdfCtx = PdfCtx; A.pdfBuild = buildPDF; A.pdfParseFont = parseFont; A.pdfSubset = (F, used, all) => subsetTTF(F, used, all); A.pdfFontChain = fontChain; A.pdfFamOf = famOf; A.pdfColor = color;
 })();

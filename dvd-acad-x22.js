@@ -56,7 +56,7 @@
     const num = +(cur[142] || 1), den = +(cur[143] || 1), std = +(cur[75] || 0), f147 = +(cur[147] || 0);
     if((fl & 16) && std === 0) P.fit = true; else { P.fit = false; const sc = (fl & 16) ? (f147 > 0 ? 1 / f147 : null) : (num > 0 ? den / num : null); if(sc > 0) P.scale = +sc.toPrecision(6); }
     const ctb = String(cur[7] || '').toLowerCase(); P.style = /mono/.test(ctb) ? 'mono' : /gray/.test(ctb) ? 'gray' : ctb ? 'mono' : 'color';
-    const dev = String(cur[2] || '').toLowerCase(); P.dev = /high quality/.test(dev) ? 'pdfhq' : /smallest/.test(dev) ? 'pdfsm' : /general doc/.test(dev) ? 'pdfgd' : /web and mobile/.test(dev) ? 'pdfwm' : /default windows/.test(dev) ? 'defprn' : /pdf/.test(dev) ? 'pdf' : /jpg|jpeg/.test(dev) ? 'jpg' : /png|publishtoweb/.test(dev) ? 'png' : /hpgl|designjet|\.pc3/.test(dev) && !/pdf|png/.test(dev) ? 'plt' : dev && !/none_device/.test(dev) ? 'sys:' + String(cur[2]) : 'print';   // tên máy in Windows
+    const dev = String(cur[2] || '').toLowerCase(); P.dev = /high quality/.test(dev) ? 'pdfhq' : /smallest/.test(dev) ? 'pdfsm' : /general doc/.test(dev) ? 'pdfgd' : /web and mobile/.test(dev) ? 'pdfwm' : /default windows/.test(dev) ? 'defprn' : /dwfx/.test(dev) ? 'dwfx' : /dwf6|dwf\.pc3|eplot/.test(dev) ? 'dwf' : /pdf/.test(dev) ? 'pdf' : /jpg|jpeg/.test(dev) ? 'jpg' : /png|publishtoweb/.test(dev) ? 'png' : /hpgl|designjet|\.pc3/.test(dev) && !/pdf|png/.test(dev) ? 'plt' : dev && !/none_device/.test(dev) ? 'sys:' + String(cur[2]) : 'print';   // tên máy in Windows
     return P; }
   // DXF: PLOTSETTINGS (thiết lập trang có tên) + thiết lập riêng của từng LAYOUT (tên *Layout1* như Page Setup Manager của AutoCAD)
   function setupsFromDXF(text, opt){

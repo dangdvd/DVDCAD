@@ -6,6 +6,17 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6c: DWFx ePlot (XPS), thuộc tính máy in Windows
+- **`dvd-acad-x25.js`** — `XpsCtx extends SvgCtx`: lệnh vẽ canvas → XAML của FixedPage (đơn vị 1/96 inch = px CSS):
+  đường / Bézier → `<Path Data="F1 M… L… C… Z">` (F1 = nonzero, mặc định XPS là even-odd), nét đứt `StrokeDashArray` theo bội số bề dày, cắt → `<Canvas Clip>`,
+  gradient → `LinearGradientBrush` / `RadialGradientBrush` (MappingMode Absolute + Transform), ảnh → phần PNG + `ImageBrush`, chữ → bản ghi, nối phông lúc đóng gói.
+- **`A.dwfxBuild(pages, info)`**: chữ → `<Glyphs Indices="gid,advance…" FontUri>` với phông nhúng (`A.pdfSubset(F, used, true)`: cắt glyf/loca, giữ cmap / name / OS/2 / post để phông nạp được như phông thường);
+  gói OPC: `[Content_Types].xml`, `_rels/.rels` (fixedrepresentation → FixedDocumentSequence.fdseq, documentsequence → DWFDocumentSequence.dwfseq, core-properties),
+  `dwf/documents/<id>/manifest.xml` (section `com.autodesk.dwf.ePlot`, tài nguyên "2d streaming graphics" = trang .fpage), `descriptor.xml` (ePlot:Page, Paper mm). ZIP nén `deflate-raw` (`A.zipParts`).
+- `plotRender(…, 'xps')` → `R.xps`; thiết bị `dwfx` trong PLOT; PUBLISH `pbTo = dwfx`.
+- CI Windows: `.NET XpsDocument` (WPF, `powershell -STA`) mở tệp DWFx của kiểm thử nhanh, đếm trang + `Glyphs` (`ToGlyphRun` nạp phông nhúng), vẽ trang 1 ra PNG.
+- **Máy in Windows**: `A.plotPrnOpts(dev)` (Thuộc tính… → `PS.prn[dev]`): `color`, `duplex` (simplex / longEdge / shortEdge), `dpi`, `collate` → `print:svg` → `webContents.print({ color, duplexMode, dpi, collate })`.
+
 ## v6b: Plot Preview vector zoom / pan, máy in Windows đã cài, khổ giấy như DWG To PDF.pc3, mọi PDF là vector
 - **`plotPreview(onPlot)`** (`dvd-acad-more.js`, `A.plotPreview`, lệnh `PREVIEW`): `plotRender(0, false, 'svg')` → SVG đặt vào lớp phủ toàn màn hình;
   camera `{x, y, s}` đổi `viewBox` (không co giãn ảnh → luôn sắc nét). Lăn chuột `zoomAt`, kéo = Pan, chuột giữa = Pan, Zoom thời gian thực, Zoom Window (`zoomRect`), Zoom Original (`fit`), chụm hai ngón.

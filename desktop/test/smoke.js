@@ -150,7 +150,7 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       out.pdf = String.fromCharCode.apply(null, u.slice(0, 8)) === '%PDF-1.7' && u.length > 1000; out.info = bl.dvdInfo; out.ui = (A.PLOT_DEVICES || []).length; return out; }, process.platform === 'win32' ? 'Arial' : 'DejaVu Sans');
     check(v5y.font, 'cầu nối dvdDesktop.font: đọc được phông hệ thống (' + (process.platform === 'win32' ? 'Arial' : 'DejaVu Sans') + ')');
     check(v5y.pdf && v5y.info && v5y.info.fonts.length >= 1 && v5y.info.rasterText === 0, 'PLOT DWG To PDF: PDF vector, chữ tiếng Việt nhúng phông ' + ((v5y.info && v5y.info.fonts) || []).join(', '));
-    check(v5y.ui === 10, 'hộp PLOT có 10 máy in / máy vẽ .pc3 như AutoCAD (DWG To PDF, 4 kiểu AutoCAD PDF, máy in Windows, PNG, JPG, HPGL/2)');
+    check(v5y.ui === 11, 'hộp PLOT có 11 máy in / máy vẽ .pc3 như AutoCAD (DWG To PDF, 4 kiểu AutoCAD PDF, DWFx ePlot, máy in Windows, PNG, JPG, HPGL/2)');
   }
   {
     // v6b: máy in Windows đã cài (getPrintersAsync), in thẳng theo tên máy in, Plot Preview vector zoom / pan, bảng Xuất PDF vector, khổ giấy đầy đủ
@@ -162,12 +162,17 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       A.commit({ add: [A.newProps({ type: 'LINE', x1: 0, y1: 0, x2: 200, y2: 100 }), A.newProps({ type: 'TEXT', x: 10, y: 50, h: 5, text: 'Xem trước' })] });
       Object.assign(A.PS, { paper: 'A3', land: true, fit: true, dev: 'pdf', area: 'extents' }); await A.plotPreview(); await w(300);
       const P = A._pv; out.pv = !!P && !P.svg.querySelector('image') && /Xem trước/.test(P.svg.innerHTML); out.pvd = P ? [P.svg.querySelectorAll('*').length, P.fitS, P.svg.innerHTML.length] : 'không mở'; if(P){ P.zoomAt(100, 100, 40); await w(100); out.zoom = P.cam.s / P.fitS > 30; P.close(); }   // chữ bản vẽ không bị bộ dịch giao diện đổi; đóng xem trước để các bước sau bấm được
-      const pg = renderForPDF('a3l', null, true); out.exp = !!pg.pdf; return out; });
+      const pg = renderForPDF('a3l', null, true); out.exp = !!pg.pdf;
+      // DWFx ePlot: trang XPS + phần DWF (CI: .NET XpsDocument của Windows mở và vẽ lại trang)
+      const rx = A.plotRender(0, false, 'xps'), bx = await A.dwfxBuild([{ ctx: rx.xps, Wmm: rx.Wmm, Hmm: rx.Hmm, title: 'Model' }], { title: 'kiem-tra' }), ux = new Uint8Array(await bx.arrayBuffer());
+      let sx = ''; for(let i = 0; i < ux.length; i += 0x8000) sx += String.fromCharCode.apply(null, ux.subarray(i, i + 0x8000)); out.dwfx = { b64: btoa(sx), ok: ux[0] === 0x50 && ux[1] === 0x4B && bx.dvdInfo.fonts.length > 0 && bx.dvdInfo.rasterText === 0 }; return out; });
     check(v6b.list, 'máy in Windows đã cài: ' + v6b.n + ' máy (getPrintersAsync)');
     check(v6b.bad, 'in thẳng tới máy in không có → báo lỗi, không treo');
     check(v6b.papers >= 85 && v6b.media, 'khổ giấy như DWG To PDF.pc3: ' + v6b.papers + ' khổ (ISO / full bleed / expand / B / C, ANSI, ARCH, JIS), tên khổ chuẩn AutoCAD');
     check(v6b.pv && v6b.zoom, 'Plot Preview: trang SVG vector, phóng to ×40 vẫn là nét vector (' + JSON.stringify(v6b.pvd) + ')');
     check(v6b.exp, 'bảng Xuất → PDF: trang vector (không còn ảnh JPEG)');
+    check(v6b.dwfx.ok, 'DWFx ePlot: gói OPC / XPS, chữ nhúng phông TrueType (không thành ảnh)');
+    if(process.env.DVD_DWG_OUT){ fs.mkdirSync(process.env.DVD_DWG_OUT, { recursive: true }); fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'kiem-tra.dwfx'), Buffer.from(v6b.dwfx.b64, 'base64')); }
   }
   {
     // v5x: MTEXT nhiều phông (\F SHX / \f TrueType), thiết lập trang có tên → PLOTSETTINGS, khung nhìn xoay (VIEWTWIST) → DWG đọc lại

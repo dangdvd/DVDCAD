@@ -8439,5 +8439,18 @@
 "Đã in vector ra máy in": "Plotted vector output to printer",
 "Đã mở hộp in (vector): khổ": "Opened the print dialog (vector): paper",
 "Đóng cửa sổ xem trước (Esc)": "Close the preview window (Esc)",
-"In": "Plot"
+"In": "Plot",
+"Hai mặt — lật cạnh dài": "Two-sided — flip on long edge",
+"Hai mặt — lật cạnh ngắn": "Two-sided — flip on short edge",
+"In hai mặt:": "Duplex:",
+"In màu": "Color",
+"Mặc định của máy in": "Printer default",
+"Một mặt": "One-sided",
+"Tuỳ chọn máy in (Windows)": "Printer options (Windows)",
+"Tệp DWFx vector (XPS) — mở bằng trình xem XPS / DWF": "Vector DWFx file (XPS) — opens in XPS / DWF viewers",
+"Xếp bộ khi in nhiều bản (collate)": "Collate multiple copies",
+"Đen trắng (máy in tự chuyển)": "Monochrome (converted by the printer)",
+"Đã in DWFx:": "Plotted DWFx:",
+"Độ phân giải:": "Resolution:",
+"— khổ": "— paper"
 }
