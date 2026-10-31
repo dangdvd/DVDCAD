@@ -69,6 +69,9 @@
 "\" khỏi thư viện?": [
 "dvd-acad-ui.js"
 ],
+"\" khỏi tập? (layout vẫn còn trong bản vẽ)": [
+"dvd-acad-x31.js"
+],
 "\" khổ": [
 "dvd-acad-pro.js"
 ],
@@ -216,6 +219,9 @@
 "\" — dùng x,y · @dx,dy · dài<góc": [
 "dvd-acad-core.js"
 ],
+"\" — mở bản vẽ đó rồi bấm lại.": [
+"dvd-acad-x31.js"
+],
 "\" — nạp tệp .dcl cùng tệp .lsp (APPLOAD › Thư mục hỗ trợ).": [
 "dvd-lisp2.js"
 ],
@@ -241,7 +247,8 @@
 "dvd-acad-x9.js"
 ],
 "\". Ghi đè?": [
-"dvd-acad-cmds.js"
+"dvd-acad-cmds.js",
+"dvd-acad-x31.js"
 ],
 "\". Gõ ? để xem danh sách.": [
 "dvd-acad-dlg2.js"
@@ -558,6 +565,9 @@
 "(theo kiểu ô)": [
 "dvd-acad-dlg2.js"
 ],
+"(theo màu)": [
+"dvd-acad-x30.js"
+],
 "(thiếu tệp)": [
 "dvd-addins.js"
 ],
@@ -600,6 +610,9 @@
 ],
 "(vẫn giữ trong danh sách).": [
 "dvd-acad-pro.js"
+],
+"(vật liệu mới)": [
+"dvd-acad-x30.js"
 ],
 "(xoá": [
 "dvd-acad-dlg2.js"
@@ -675,6 +688,9 @@
 ],
 "), hướng bắc": [
 "dvd-acad-x20.js"
+],
+"). Gán: MATERIALS hoặc MATERIALATTACH.": [
+"dvd-acad-x30.js"
 ],
 "). Hình 2D gốc vẫn giữ — xem 3D: 3DORBIT.": [
 "dvd-acad-3d.js"
@@ -873,6 +889,9 @@
 ", nêm": [
 "dvd-acad-x27.js"
 ],
+", nền": [
+"dvd-acad-x30.js"
+],
 ", phông nhúng:": [
 "dvd-acad-more.js"
 ],
@@ -1057,6 +1076,9 @@
 "3DMESH: lưới": [
 "dvd-acad-x20.js"
 ],
+"3DORBITCTR: tâm quay": [
+"dvd-acad-x30.js"
+],
 "4 cạnh phải nối đầu nhau thành vòng kín.": [
 "dvd-acad-x14.js"
 ],
@@ -1135,6 +1157,9 @@
 ":;?*|=`]/g, '_'); if(!n){ say('Nhập tên khối.'); return false; } st.name = n; if(!st.sel.length && !st.selOn){ say('Chưa chọn đối tượng.'); return false; } fin('ok'); },": [
 "dvd-acad-dlg.js"
 ],
+":;?*|=`]/g, '_'); if(!name){ say('Cần đặt tên tập bản vẽ.'); return false; }": [
+"dvd-acad-x31.js"
+],
 ":;?*|=`]/g, '_'); if(!nm){ say('Cần đặt tên.'); return; }": [
 "dvd-acad-cmds.js"
 ],
@@ -1212,6 +1237,12 @@
 "= Bằng": [
 "dvd-acad-more.js"
 ],
+"> Bật": [
+"dvd-acad-x30.js"
+],
+"> Chuyển cảnh mượt khi đổi góc nhìn (cảnh quay, tâm quay 3D)": [
+"dvd-acad-x30.js"
+],
 "> Có thông tin lớp (Layer information)": [
 "dvd-acad-x28.js"
 ],
@@ -1220,6 +1251,9 @@
 ],
 "> Cỡ theo đơn vị tuyệt đối": [
 "dvd-acad-x7.js"
+],
+"> Lấy từ": [
+"dvd-acad-x31.js"
 ],
 "> Lớn hơn": [
 "dvd-acad-more.js"
@@ -1232,6 +1266,9 @@
 ],
 ">>PAN — giữ chuột giữa (hoặc Space + kéo) để kéo màn hình, rồi tiếp tục lệnh.": [
 "dvd-cmd.js"
+],
+">Chuyển màu": [
+"dvd-acad-x30.js"
 ],
 ">Chuyển màu (Gradient)": [
 "dvd-acad-x6.js"
@@ -1251,6 +1288,12 @@
 ],
 ">Mẫu (Pattern)": [
 "dvd-acad-dlg.js"
+],
+">Mặc định (trời)": [
+"dvd-acad-x30.js"
+],
+">Một màu": [
+"dvd-acad-x30.js"
 ],
 ">Theo đối tượng": [
 "dvd-acad-x9.js"
@@ -1335,6 +1378,12 @@
 ],
 "ANALYSISOPTIONS: đã lưu.": [
 "dvd-acad-x27.js"
+],
+"ANIPATH: đang chạy": [
+"dvd-acad-x30.js"
+],
+"ANIPATH: đã chạy": [
+"dvd-acad-x30.js"
 ],
 "ANSI31 (gạch 45°)": [
 "dvd-acad-cmds.js"
@@ -1716,7 +1765,8 @@
 "dvd-acad-x22.js"
 ],
 "Bê tông": [
-"dvd-acad-3d.js"
+"dvd-acad-3d.js",
+"dvd-acad-x30.js"
 ],
 "Bên": [
 "dvd-acad-3dy.js"
@@ -1900,6 +1950,9 @@
 "Bản vẽ không có khối nào có thuộc tính.": [
 "dvd-acad-pro.js"
 ],
+"Bản vẽ không có layout \"": [
+"dvd-acad-x31.js"
+],
 "Bản vẽ không có layout.": [
 "dvd-acad-x2.js"
 ],
@@ -2028,6 +2081,12 @@
 ],
 "Bảng công cụ soạn khối động (tham số, hành động, trạng thái, bảng tra)": [
 "dvd-acad-x26.js"
+],
+"Bảng danh mục": [
+"dvd-acad-x31.js"
+],
+"Bảng danh mục bản vẽ:": [
+"dvd-acad-x31.js"
 ],
 "Bảng khối": [
 "dvd-acad-dlg.js",
@@ -2306,6 +2365,9 @@
 ],
 "Bật / tắt lớp của nền PDF": [
 "dvd-acad-x28.js"
+],
+"Bật / tắt mặt cắt sống (cắt mô hình trong khung 3D)": [
+"dvd-acad-x30.js"
 ],
 "Bật / tắt: tự hoàn thành, tự nối chữ, tự sửa lỗi gõ, từ đồng nghĩa, tìm giữa chuỗi, biến hệ thống, nội dung bản vẽ; thời gian chờ; số dòng lời nhắc.": [
 "dvd-help.js"
@@ -2744,6 +2806,9 @@
 "Bỏ tệp": [
 "dvd-acad-x21.js"
 ],
+"Bỏ tờ \"": [
+"dvd-acad-x31.js"
+],
 "Bỏ vùng": [
 "index.html:html"
 ],
@@ -2878,6 +2943,9 @@
 "CUIUNLOAD: đã gỡ": [
 "dvd-acad-dlg3.js"
 ],
+"Camera nhìn [Theo hướng đi / Một điểm]": [
+"dvd-acad-x30.js"
+],
 "Camera — cao mắt": [
 "dvd-cmd.js"
 ],
@@ -2917,6 +2985,7 @@
 "dvd-acad-pro.js",
 "dvd-acad-x11.js",
 "dvd-acad-x22.js",
+"dvd-acad-x31.js",
 "dvd-acad-x6.js",
 "dvd-acad-x9.js",
 "dvd-cmd.js",
@@ -2994,6 +3063,9 @@
 "Cao độ mắt": [
 "dvd-acad-3dy.js"
 ],
+"Cao độ mắt trên đường": [
+"dvd-acad-x30.js"
+],
 "Cao độ mặt bằng": [
 "dvd-acad-x8.js"
 ],
@@ -3006,6 +3078,12 @@
 "Cao độ mới cho khối 3D": [
 "dvd-acad-3dx.js"
 ],
+"Cao độ điểm nhìn": [
+"dvd-acad-x30.js"
+],
+"Cao độ điểm nhắm": [
+"dvd-acad-x30.js"
+],
 "Cao độ điểm rọi": [
 "dvd-acad-x16.js"
 ],
@@ -3014,7 +3092,8 @@
 ],
 "Cao độ đèn (Z)": [
 "dvd-acad-3dy.js",
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x30.js"
 ],
 "Cao độ đặt khối 3D mới (Z của đáy)": [
 "dvd-acad-3dx.js"
@@ -3232,6 +3311,15 @@
 ],
 "Chuyển cả đối tượng trong khối": [
 "dvd-acad-dlg2.js"
+],
+"Chuyển cảnh": [
+"dvd-acad-x30.js"
+],
+"Chuyển cảnh [Mượt / Cắt]": [
+"dvd-acad-x30.js"
+],
+"Chuyển cảnh mượt (view transitions): bật / tắt, thời gian": [
+"dvd-acad-x30.js"
 ],
 "Chuyển lớp": [
 "dvd-acad-dlg2.js"
@@ -3471,6 +3559,9 @@
 "Chèn thông báo cho người dùng vào macro đang ghi": [
 "dvd-acad-dlg2.js"
 ],
+"Chèn trường": [
+"dvd-acad-x31.js"
+],
 "Chèn trường (Field)": [
 "dvd-acad-x6.js"
 ],
@@ -3658,6 +3749,12 @@
 "Chưa có bộ nạp add-in.": [
 "dvd-acad-dlg2.js"
 ],
+"Chưa có cảnh quay (NEWSHOT).": [
+"dvd-acad-x30.js"
+],
+"Chưa có cảnh — NEWSHOT": [
+"dvd-acad-x30.js"
+],
 "Chưa có dịch vụ ảnh vệ tinh (đặt biến GEOMAPURL) — dùng GEOMAP để chọn bản đồ.": [
 "dvd-acad-dlg4.js"
 ],
@@ -3736,6 +3833,9 @@
 "Chưa có trạng thái — bấm Mới…": [
 "dvd-acad-x5.js"
 ],
+"Chưa có tập bản vẽ nào.": [
+"dvd-acad-x31.js"
+],
 "Chưa có tệp .lsp trong thư mục hỗ trợ.": [
 "dvd-acad-x26.js"
 ],
@@ -3745,6 +3845,9 @@
 "Chưa có tệp nào.": [
 "dvd-acad-x21.js",
 "dvd-addins.js"
+],
+"Chưa có tờ — thêm layout hiện tại.": [
+"dvd-acad-x31.js"
 ],
 "Chưa có ánh xạ nào.": [
 "dvd-acad-dlg2.js"
@@ -3804,6 +3907,9 @@
 "dvd-acad-x6.js",
 "dvd-acad-x7.js",
 "dvd-acad-x8.js"
+],
+"Chưa mở tập bản vẽ.": [
+"dvd-acad-x31.js"
 ],
 "Chưa nhập nội dung.": [
 "dvd-acad-dlg.js",
@@ -3904,6 +4010,9 @@
 "Chạy lại script vừa chạy (lặp; Esc / Backspace để dừng)": [
 "dvd-acad-dlg2.js"
 ],
+"Chạy lặp": [
+"dvd-acad-x30.js:attr"
+],
 "Chạy lệnh và làm theo lời nhắc ở dòng lệnh; bấm chữ vàng (hoặc gõ chữ tắt) để chọn tuỳ chọn.": [
 "dvd-cmd.js"
 ],
@@ -3931,6 +4040,9 @@
 ],
 "Chạy tiếp script đã bị ngắt (Esc / Backspace)": [
 "dvd-acad-dlg2.js"
+],
+"Chạy tất cả": [
+"dvd-acad-x30.js:attr"
 ],
 "Chấm (Dot)": [
 "dvd-acad-cmds.js",
@@ -4071,6 +4183,7 @@
 "dvd-acad-dlg.js"
 ],
 "Chỉ xem": [
+"dvd-acad-x30.js",
 "dvd-cloud.js"
 ],
 "Chỉ xem (không có quyền sửa)": [
@@ -5210,7 +5323,8 @@
 "dvd-acad-x10.js",
 "dvd-acad-x12.js",
 "dvd-acad-x15.js",
-"dvd-acad-x2.js"
+"dvd-acad-x2.js",
+"dvd-acad-x30.js"
 ],
 "Chọn khối 3D cần gán vật liệu": [
 "dvd-acad-3dx.js"
@@ -5545,6 +5659,7 @@
 "dvd-acad-dlg.js"
 ],
 "Chọn tệp": [
+"dvd-acad-x30.js",
 "dvd-lisp4.js"
 ],
 "Chọn tệp bổ sung cần gỡ.": [
@@ -5769,6 +5884,9 @@
 ],
 "Chọn đường trục tường (LINE / đa tuyến)": [
 "dvd-acad-3d.js"
+],
+"Chọn đường đi của camera": [
+"dvd-acad-x30.js"
 ],
 "Chọn đường đôi thứ hai": [
 "dvd-acad-x10.js"
@@ -6105,6 +6223,9 @@
 ],
 "Chụp một vùng bản đồ nền thành ảnh trong bản vẽ (in được, lưu kèm DXF / DWG): 2 góc hoặc Khung nhìn, độ phân giải": [
 "dvd-acad-dlg4.js"
+],
+"Chủ đầu tư": [
+"dvd-acad-x31.js"
 ],
 "Chủ đề": [
 "dvd-acad-dlg.js"
@@ -6762,7 +6883,8 @@
 ],
 "Cường độ (1–50)": [
 "dvd-acad-3dy.js",
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x30.js"
 ],
 "Cạnh": [
 "dvd-acad-cmds.js",
@@ -6824,8 +6946,21 @@
 "Cả hai phía": [
 "dvd-acad-x27.js"
 ],
+"Cảnh": [
+"dvd-acad-x30.js"
+],
 "Cảnh báo bảo mật": [
 "dvd-acad-dlg2.js"
+],
+"Cảnh mới": [
+"dvd-acad-ui.js",
+"dvd-acad-x30.js:attr"
+],
+"Cảnh quay": [
+"dvd-acad-ui.js"
+],
+"Cảnh quay mới (ShowMotion): lưu góc nhìn hiện tại (2D hoặc khung 3D), thời lượng, chuyển cảnh": [
+"dvd-acad-x30.js"
 ],
 "Cấp nước ---- CN ---- CN ----": [
 "dvd-acad-x9.js"
@@ -6962,7 +7097,8 @@
 "dvd-acad-dlg.js",
 "dvd-acad-ui.js",
 "dvd-acad-x15.js",
-"dvd-acad-x27.js"
+"dvd-acad-x27.js",
+"dvd-acad-x30.js"
 ],
 "Cầu ngược": [
 "dvd-acad-dlg.js"
@@ -7012,6 +7148,7 @@
 "dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x29.js",
+"dvd-acad-x30.js",
 "dvd-help.js",
 "index.html:html"
 ],
@@ -7093,6 +7230,9 @@
 "Cắt vào bộ nhớ tạm (Ctrl+X)": [
 "dvd-acad-cmds.js"
 ],
+"Cắt vùng": [
+"dvd-acad-x30.js"
+],
 "Cắt xoay": [
 "dvd-acad-x19.js"
 ],
@@ -7118,7 +7258,8 @@
 "index.html"
 ],
 "Cỏ": [
-"dvd-acad-3d.js"
+"dvd-acad-3d.js",
+"dvd-acad-x30.js"
 ],
 "Cố định": [
 "dvd-acad-dlg.js",
@@ -7286,6 +7427,9 @@
 ],
 "Cửa đi 2 cánh": [
 "dvd-acad-x8.js"
+],
+"DANH MỤC BẢN VẼ —": [
+"dvd-acad-x31.js"
 ],
 "DATALINK: chèn bảng": [
 "dvd-acad-x9.js"
@@ -7904,7 +8048,8 @@
 "dvd-acad-x11.js"
 ],
 "Dừng": [
-"dvd-acad-ui.js"
+"dvd-acad-ui.js",
+"dvd-acad-x30.js:attr"
 ],
 "Dừng con trỏ trên điểm bắt để lấy điểm truy bắt (như AutoCAD).": [
 "dvd-acad-dlg.js"
@@ -7953,6 +8098,9 @@
 ],
 "EDGE: hiện lại cạnh của": [
 "dvd-acad-x20.js"
+],
+"EDITSHOT: đã sửa \"": [
+"dvd-acad-x30.js"
 ],
 "ELEV: khối 3D mới đặt ở cao độ Z =": [
 "dvd-acad-3dx.js"
@@ -8024,6 +8172,9 @@
 ],
 "FLATSHOT: đã chèn": [
 "dvd-acad-3dx.js"
+],
+"FREESPOT: đèn rọi tự do": [
+"dvd-acad-x30.js"
 ],
 "File .dll / .arx / .dvb là add-in Windows cho riêng AutoCAD — trình duyệt không chạy được. Dùng .lsp hoặc .js.": [
 "dvd-addins.js"
@@ -8439,6 +8590,9 @@
 "Gán vật liệu cho khối 3D (bê tông, gạch, gỗ, kính…)": [
 "dvd-acad-3dx.js"
 ],
+"Gán vật liệu theo lớp: khối 3D trên lớp dùng vật liệu của lớp": [
+"dvd-acad-x30.js"
+],
 "Góc": [
 "dvd-acad-3d.js",
 "dvd-acad-cmds.js",
@@ -8449,6 +8603,7 @@
 "dvd-acad-x10.js",
 "dvd-acad-x2.js",
 "dvd-acad-x27.js",
+"dvd-acad-x30.js",
 "dvd-acad-x4.js",
 "dvd-help.js",
 "index.html",
@@ -8485,7 +8640,8 @@
 "dvd-acad-x14.js"
 ],
 "Góc chiếu (độ)": [
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x30.js"
 ],
 "Góc chiếu thứ ba": [
 "dvd-acad-x13.js",
@@ -8503,6 +8659,9 @@
 ],
 "Góc chiếu xuống so với mặt bằng (độ)": [
 "dvd-acad-x16.js"
+],
+"Góc chúc xuống (độ, 90 = thẳng xuống)": [
+"dvd-acad-x30.js"
 ],
 "Góc chữ:": [
 "dvd-acad-dlg2.js"
@@ -8621,6 +8780,9 @@
 ],
 "Góc nhỏ nhất / lớn nhất (°)": [
 "dvd-acad-x27.js"
+],
+"Góc phương vị trên mặt bằng (độ)": [
+"dvd-acad-x30.js"
 ],
 "Góc phần tư": [
 "dvd-acad-core.js"
@@ -8793,6 +8955,9 @@
 "Gõ tên lớp": [
 "dvd-acad-x2.js"
 ],
+"Gạch": [
+"dvd-acad-x30.js"
+],
 "Gạch chân (Ctrl+U)": [
 "dvd-acad-dlg.js"
 ],
@@ -8826,6 +8991,9 @@
 ],
 "Gạch dài kép": [
 "dvd-acad-dlg2.js"
+],
+"Gạch lát": [
+"dvd-acad-x30.js"
 ],
 "Gạch lát nền": [
 "dvd-acad-3d.js"
@@ -8874,6 +9042,9 @@
 ],
 "GẦN ĐÂY": [
 "index.html:html"
+],
+"Gần / xa (% khoảng nhìn)": [
+"dvd-acad-x30.js"
 ],
 "Gần bằng": [
 "dvd-acad-dlg.js"
@@ -9020,7 +9191,8 @@
 "dvd-acad-dlg2.js"
 ],
 "Gỗ": [
-"dvd-acad-3d.js"
+"dvd-acad-3d.js",
+"dvd-acad-x30.js"
 ],
 "Gộp": [
 "dvd-acad-pro.js",
@@ -9528,6 +9700,12 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js"
 ],
+"Hoạt hình": [
+"dvd-acad-ui.js"
+],
+"Hoạt hình theo đường: camera đi dọc đường (đa tuyến / 3D / cung), nhìn theo hướng đi hoặc một điểm → video WebM": [
+"dvd-acad-x30.js"
+],
 "Hoặc chọn từ danh sách:": [
 "dvd-acad-dlg2.js"
 ],
@@ -9727,6 +9905,9 @@
 "Hướng bắc": [
 "dvd-acad-dlg3.js"
 ],
+"Hướng chiếu [Thẳng xuống / Góc]": [
+"dvd-acad-x30.js"
+],
 "Hướng chiếu: từ điểm": [
 "dvd-acad-x16.js"
 ],
@@ -9919,7 +10100,8 @@
 "Hộp": [
 "dvd-acad-ui.js",
 "dvd-acad-x15.js",
-"dvd-acad-x27.js"
+"dvd-acad-x27.js",
+"dvd-acad-x30.js"
 ],
 "Hộp (Box)": [
 "dvd-acad-x27.js"
@@ -9944,6 +10126,12 @@
 ],
 "Hở gốc gióng:": [
 "dvd-acad-dlg.js"
+],
+"IES thiếu cường độ": [
+"dvd-acad-x30.js"
+],
+"IES thiếu số liệu": [
+"dvd-acad-x30.js"
 ],
 "IMAGEFRAME (0 = ẩn, 1 = hiện & in, 2 = hiện, không in)": [
 "dvd-acad-x16.js"
@@ -10575,6 +10763,7 @@
 "dvd-acad-x18.js",
 "dvd-acad-x2.js",
 "dvd-acad-x3.js",
+"dvd-acad-x30.js",
 "dvd-acad-x6.js",
 "dvd-acad-x7.js",
 "dvd-acad-x9.js",
@@ -10708,6 +10897,9 @@
 ],
 "Không có cạnh nào để chiếu (bản vẽ chưa có khối 3D?).": [
 "dvd-acad-3dx.js"
+],
+"Không có cảnh \"": [
+"dvd-acad-x30.js"
 ],
 "Không có cặp đường dẫn / chữ nào để gắn.": [
 "dvd-acad-x26.js"
@@ -11129,6 +11321,9 @@
 "dvd-cloud.js",
 "dvd-desktop.js"
 ],
+"Không mở được khung 3D.": [
+"dvd-acad-x30.js"
+],
 "Không mở được layout này — đã quay về Model.": [
 "index.html"
 ],
@@ -11185,6 +11380,9 @@
 "Không phải tệp DWS / DWG / DXF": [
 "dvd-acad-dlg2.js"
 ],
+"Không phải tệp IES": [
+"dvd-acad-x30.js"
+],
 "Không phải tệp WMF (Windows Metafile).": [
 "dvd-acad-x23.js"
 ],
@@ -11199,6 +11397,9 @@
 ],
 "Không phải tệp slide (.sld)": [
 "dvd-acad-dlg3.js"
+],
+"Không phải tệp tập bản vẽ .dvdsst.": [
+"dvd-acad-x31.js"
 ],
 "Không phải tệp zip": [
 "dvd-acad-dlg3.js"
@@ -11405,6 +11606,9 @@
 "Không tắt được lệnh này.": [
 "dvd-acad-x15.js"
 ],
+"Không vân": [
+"dvd-acad-x30.js"
+],
 "Không xem trước được:": [
 "dvd-acad-dlg2.js"
 ],
@@ -11593,6 +11797,9 @@
 "Khối 3D (3D Solid)": [
 "dvd-acad-dlg2.js"
 ],
+"Khối 3D trên lớp chưa gán vật liệu riêng sẽ dùng vật liệu của lớp (cả khối vẽ sau).": [
+"dvd-acad-x30.js"
+],
 "Khối bị co dẹt — không sửa được.": [
 "dvd-acad-ext.js"
 ],
@@ -11769,6 +11976,9 @@
 ],
 "Kim loại": [
 "dvd-acad-3d.js"
+],
+"Kim loại 0 – 1": [
+"dvd-acad-x30.js"
 ],
 "Kinh độ": [
 "dvd-acad-3d.js"
@@ -12218,6 +12428,12 @@
 "Kiểu và mẫu": [
 "dvd-acad-dlg.js"
 ],
+"Kiểu ánh xạ [Hộp / Phẳng / Trụ / Cầu / Đặt lại]": [
+"dvd-acad-x30.js"
+],
+"Kiểu ánh xạ vân vật liệu cho khối: hộp / phẳng / trụ / cầu, tỉ lệ vân": [
+"dvd-acad-x30.js"
+],
 "Kiểu ô": [
 "dvd-acad-dlg2.js",
 "dvd-acad-ext.js"
@@ -12547,6 +12763,9 @@
 "dvd-acad-dlg2.js",
 "qs-khoi-luong.js"
 ],
+"Kết quả [Video WebM / Chỉ xem]": [
+"dvd-acad-x30.js"
+],
 "Kết quả chuyển đổi không phải file DWG.": [
 "dvd-acad-x3.js"
 ],
@@ -12569,6 +12788,24 @@
 ],
 "Kết thúc sửa khối (lưu / huỷ)": [
 "dvd-acad-ext.js"
+],
+"Kết xuất": [
+"dvd-acad-x30.js"
+],
+"Kết xuất khung 3D ra ảnh (Render Window): lịch sử, lưu PNG, cắt vùng": [
+"dvd-acad-x30.js"
+],
+"Kết xuất lại": [
+"dvd-acad-x30.js"
+],
+"Kết xuất rồi cắt lấy một vùng của ảnh (kéo chuột trên ảnh)": [
+"dvd-acad-x30.js"
+],
+"Kết xuất trực tuyến của Autodesk: DVDCAD kết xuất ngay trên máy (RENDERWINDOW)": [
+"dvd-acad-x30.js"
+],
+"Kết xuất ảnh": [
+"dvd-acad-ui.js"
 ],
 "Kỹ thuật (Engineering)": [
 "dvd-acad-dlg.js"
@@ -12907,6 +13144,7 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
 "dvd-acad-x10.js:attr",
+"dvd-acad-x31.js:attr",
 "dvd-acad-x5.js"
 ],
 "Lùi về": [
@@ -12933,6 +13171,9 @@
 "Lưu (Ctrl+S): Drive hoặc file DWG / DXF trên máy": [
 "dvd-cmd.js"
 ],
+"Lưu .dvdsst": [
+"dvd-acad-x31.js"
+],
 "Lưu / gọi lại góc nhìn 2D đặt tên": [
 "dvd-acad-x2.js"
 ],
@@ -12952,6 +13193,9 @@
 ],
 "Lưu DXF:": [
 "dvd-acad-dxf.js"
+],
+"Lưu PNG…": [
+"dvd-acad-x30.js"
 ],
 "Lưu UCS cùng khung nhìn": [
 "dvd-acad-dlg2.js"
@@ -13152,7 +13396,8 @@
 "dvd-acad-x21.js"
 ],
 "Lạnh": [
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x30.js"
 ],
 "Lạnh (xanh)": [
 "dvd-acad-3dy.js"
@@ -13168,6 +13413,9 @@
 ],
 "Lấy giá trị hiện tại": [
 "dvd-acad-x22.js"
+],
+"Lấy góc nhìn hiện tại": [
+"dvd-acad-x30.js"
 ],
 "Lấy khối, lớp… từ bản vẽ khác": [
 "dvd-acad-x16.js"
@@ -13335,7 +13583,8 @@
 "dvd-cmd.js"
 ],
 "Lịch sử": [
-"dvd-acad-dlg2.js"
+"dvd-acad-dlg2.js",
+"dvd-acad-x30.js"
 ],
 "Lịch sử dòng lệnh": [
 "dvd-acad-x13.js",
@@ -13437,6 +13686,7 @@
 "dvd-acad-x11.js",
 "dvd-acad-x13.js",
 "dvd-acad-x22.js",
+"dvd-acad-x30.js",
 "dvd-acad-x6.js",
 "dvd-acad-x9.js",
 "dvd-cmd.js",
@@ -13590,6 +13840,9 @@
 "MATCHCELL: ô": [
 "dvd-acad-dlg2.js"
 ],
+"MATERIALATTACH: đã lưu (": [
+"dvd-acad-x30.js"
+],
 "MESHCAP: bịt lỗ": [
 "dvd-acad-x27.js"
 ],
@@ -13733,6 +13986,7 @@
 "dvd-acad-x13.js",
 "dvd-acad-x16.js",
 "dvd-acad-x22.js",
+"dvd-acad-x30.js",
 "dvd-acad-x6.js",
 "dvd-cmd.js",
 "dvd-help.js",
@@ -13846,7 +14100,8 @@
 "dvd-acad-3dy.js"
 ],
 "Màu ánh sáng [Vàng ấm / Trắng / Lạnh]": [
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x30.js"
 ],
 "Màu đường gióng": [
 "dvd-acad-dlg.js"
@@ -13960,10 +14215,14 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
 "dvd-acad-ui.js",
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x31.js"
 ],
 "Mô tả siêu liên kết": [
 "dvd-acad-dlg.js"
+],
+"Mô tả tập": [
+"dvd-acad-x31.js"
 ],
 "Mô tả:": [
 "dvd-acad-dlg.js",
@@ -13971,6 +14230,12 @@
 "dvd-acad-dlg3.js",
 "dvd-acad-ui.js",
 "dvd-acad-x21.js"
+],
+"Môi trường": [
+"dvd-acad-ui.js"
+],
+"Môi trường kết xuất: sương mù (gần / xa), nền (màu / chuyển màu)": [
+"dvd-acad-x30.js"
 ],
 "Múi giờ": [
 "dvd-acad-3d.js",
@@ -14026,6 +14291,9 @@
 ],
 "Mũi tên: kéo từ chỗ cần chỉ tới chỗ đặt chữ, nhấc tay rồi nhập nội dung": [
 "index.html"
+],
+"Mượt": [
+"dvd-acad-x30.js"
 ],
 "Mảng": [
 "dvd-acad-cmds.js",
@@ -14394,6 +14662,9 @@
 "Một mặt": [
 "dvd-acad-dlg4.js"
 ],
+"Một điểm": [
+"dvd-acad-x30.js"
+],
 "Mới": [
 "dvd-acad-cmdline.js",
 "dvd-acad-dlg.js:attr",
@@ -14554,8 +14825,23 @@
 "Mở trình sửa lệnh tắt (ALIASEDIT)…": [
 "dvd-acad-dlg3.js"
 ],
+"Mở tập": [
+"dvd-acad-ui.js"
+],
+"Mở tập bản vẽ đã lưu hoặc tệp .dvdsst": [
+"dvd-acad-x31.js"
+],
+"Mở tập…": [
+"dvd-acad-x31.js"
+],
+"Mở tệp .dvdsst…": [
+"dvd-acad-x31.js"
+],
 "Mở tệp PDF khi xong": [
 "dvd-acad-dlg2.js"
+],
+"Mở tờ": [
+"dvd-acad-x31.js"
 ],
 "Mở từ Drive": [
 "dvd-acad-ui.js"
@@ -14589,6 +14875,16 @@
 ],
 "Mục dọn được": [
 "dvd-acad-dlg.js"
+],
+"Mức kết xuất": [
+"dvd-acad-ui.js",
+"dvd-acad-x30.js"
+],
+"Mức kết xuất (Thấp / Trung bình / Cao / Trình chiếu) và phơi sáng": [
+"dvd-acad-x30.js"
+],
+"Mức kết xuất:": [
+"dvd-acad-x30.js"
 ],
 "Mức trơn (MESHSMOOTH)": [
 "dvd-acad-x27.js"
@@ -14707,7 +15003,8 @@
 "dvd-acad-x16.js"
 ],
 "Ngói": [
-"dvd-acad-3d.js"
+"dvd-acad-3d.js",
+"dvd-acad-x30.js"
 ],
 "Ngôn ngữ": [
 "dvd-acad-x7.js"
@@ -15586,7 +15883,8 @@
 "dvd-acad-dlg4.js"
 ],
 "Nền": [
-"dvd-acad-x28.js"
+"dvd-acad-x28.js",
+"dvd-acad-x30.js"
 ],
 "Nền PDF / DWF": [
 "dvd-acad-ui.js"
@@ -16074,6 +16372,16 @@
 "Phút giữa các lần lưu:": [
 "dvd-acad-dlg.js"
 ],
+"Phơi sáng": [
+"dvd-acad-ui.js",
+"dvd-acad-x30.js"
+],
+"Phơi sáng EV (−3 … +3)": [
+"dvd-acad-x30.js"
+],
+"Phơi sáng của ảnh kết xuất (EV −3 … +3)": [
+"dvd-acad-x30.js"
+],
 "Phương ngang:": [
 "dvd-acad-dlg.js"
 ],
@@ -16133,6 +16441,7 @@
 ],
 "Phẳng": [
 "dvd-acad-dlg.js",
+"dvd-acad-x30.js",
 "dvd-acad-x6.js"
 ],
 "Phối cảnh": [
@@ -16330,6 +16639,15 @@
 ],
 "REINIT: đã nạp lại": [
 "dvd-acad-dlg2.js"
+],
+"RENDERCROP: kéo chuột trên ảnh để chọn vùng.": [
+"dvd-acad-x30.js"
+],
+"RENDERENVIRONMENT: sương mù": [
+"dvd-acad-x30.js"
+],
+"RENDERONLINE: dịch vụ kết xuất đám mây là của Autodesk — DVDCAD kết xuất ngay trên máy.": [
+"dvd-acad-x30.js"
 ],
 "REPURLS: đổi": [
 "dvd-acad-x26.js"
@@ -16649,6 +16967,9 @@
 "Sau khi đổi thành lưới": [
 "dvd-acad-x27.js"
 ],
+"Sheet Set Manager: các tờ của tập bản vẽ, mở tờ, số / tên tờ, bảng danh mục, trường, xuất bản": [
+"dvd-acad-x31.js"
+],
 "Shift+bấm": [
 "dvd-cmd.js"
 ],
@@ -16732,6 +17053,9 @@
 ],
 "Sơn trắng": [
 "dvd-acad-3d.js"
+],
+"Sương mù (Fog)": [
+"dvd-acad-x30.js"
 ],
 "Sắp thứ tự hiển thị theo màu (màu đứng đầu danh sách nằm trên cùng)": [
 "dvd-acad-x11.js"
@@ -16859,6 +17183,9 @@
 "Số dương = ngược chiều kim đồng hồ": [
 "index.html"
 ],
+"Số dự án": [
+"dvd-acad-x31.js"
+],
 "Số file gần đây:": [
 "dvd-acad-dlg.js"
 ],
@@ -16873,6 +17200,9 @@
 ],
 "Số hàng (theo Y)": [
 "dvd-acad-x2.js"
+],
+"Số hình / giây": [
+"dvd-acad-x30.js"
 ],
 "Số khoảng chia": [
 "dvd-acad-x6.js"
@@ -16959,6 +17289,12 @@
 "Số tầng (theo Z)": [
 "dvd-acad-x2.js"
 ],
+"Số tờ": [
+"dvd-acad-x31.js"
+],
+"Số tờ bắt đầu": [
+"dvd-acad-x31.js"
+],
 "Số vòng": [
 "dvd-acad-x6.js"
 ],
@@ -17002,6 +17338,7 @@
 "dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x11.js",
+"dvd-acad-x31.js:attr",
 "index.html:html"
 ],
 "Sửa / cập nhật chữ tham chiếu RTEXT": [
@@ -17009,6 +17346,9 @@
 ],
 "Sửa / nhập kiểu in .ctb (STYLESMANAGER)": [
 "dvd-acad-x9.js"
+],
+"Sửa [Tên / Thời lượng / Chuyển cảnh / Lấy góc nhìn hiện tại / Xoá]": [
+"dvd-acad-x30.js"
 ],
 "Sửa biên…": [
 "dvd-acad-dlg.js"
@@ -17036,6 +17376,9 @@
 ],
 "Sửa chữ: Enter = lưu · Esc = bỏ": [
 "dvd-acad-dlg.js"
+],
+"Sửa cảnh quay: tên, thời lượng, chuyển cảnh, cập nhật góc nhìn hiện tại": [
+"dvd-acad-x30.js"
 ],
 "Sửa danh sách tỉ lệ": [
 "dvd-acad-dlg2.js"
@@ -17201,6 +17544,9 @@
 "Sửa vi phạm chuẩn": [
 "dvd-acad-dlg2.js"
 ],
+"Sửa vật liệu": [
+"dvd-acad-ui.js"
+],
 "Sửa đa tuyến": [
 "dvd-acad-dlg4.js",
 "dvd-acad-ui.js"
@@ -17223,6 +17569,9 @@
 "Sửa…": [
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js"
+],
+"TARGETPOINT: đèn điểm có điểm nhắm": [
+"dvd-acad-x30.js"
 ],
 "TCASE: đổi": [
 "dvd-acad-x11.js"
@@ -17359,6 +17708,9 @@
 "Thang màu tự động theo độ cong của các mặt.": [
 "dvd-acad-x27.js"
 ],
+"Thanh ShowMotion: các cảnh quay, chạy lần lượt / lặp, bấm cảnh để chuyển tới": [
+"dvd-acad-x30.js"
+],
 "Thanh dòng lệnh (Ctrl+9)": [
 "dvd-acad-ui.js"
 ],
@@ -17439,6 +17791,9 @@
 "Theo dõi thay đổi lớp cho LAYERP": [
 "dvd-acad-x15.js"
 ],
+"Theo hướng đi": [
+"dvd-acad-x30.js"
+],
 "Theo khoảng": [
 "dvd-acad-x6.js"
 ],
@@ -17453,6 +17808,9 @@
 ],
 "Theo loại:": [
 "dvd-acad-dlg2.js"
+],
+"Theo lớp": [
+"dvd-acad-ui.js"
 ],
 "Theo lớp đích": [
 "dvd-acad-ui.js"
@@ -17618,6 +17976,7 @@
 "dvd-acad-x10.js",
 "dvd-acad-x12.js",
 "dvd-acad-x13.js",
+"dvd-acad-x31.js",
 "dvd-acad-x6.js",
 "dvd-cmd.js"
 ],
@@ -17884,6 +18243,9 @@
 "Thông tin bản vẽ: tiêu đề, người vẽ, từ khoá, ghi chú, thống kê": [
 "dvd-acad-x6.js"
 ],
+"Thông tin dự án": [
+"dvd-acad-x31.js"
+],
 "Thông tin phiên bản DVDCAD": [
 "dvd-acad-x14.js"
 ],
@@ -17956,6 +18318,9 @@
 "Thường (Regular)": [
 "dvd-acad-dlg.js"
 ],
+"Thấp (Low)": [
+"dvd-acad-x30.js"
+],
 "Thập phân (Decimal)": [
 "dvd-acad-dlg.js"
 ],
@@ -17978,6 +18343,9 @@
 "dvd-acad-dlg4.js",
 "dvd-acad-ui.js",
 "dvd-acad-x4.js"
+],
+"Thẳng xuống": [
+"dvd-acad-x30.js"
 ],
 "Thẳng đứng": [
 "dvd-acad-dlg4.js"
@@ -18014,6 +18382,9 @@
 "Thời gian": [
 "dvd-acad-ui.js"
 ],
+"Thời gian (ms)": [
+"dvd-acad-x30.js"
+],
 "Thời gian chờ trước khi gợi ý (mili giây)": [
 "dvd-acad-cmdline.js"
 ],
@@ -18031,6 +18402,15 @@
 ],
 "Thời gian: tạo bản vẽ, sửa lần cuối, tổng thời gian sửa": [
 "dvd-acad-x6.js"
+],
+"Thời lượng": [
+"dvd-acad-x30.js"
+],
+"Thời lượng (giây)": [
+"dvd-acad-x30.js"
+],
+"Thời lượng giữ cảnh (giây)": [
+"dvd-acad-x30.js"
 ],
 "Thứ hai:": [
 "dvd-acad-dlg.js"
@@ -18160,6 +18540,9 @@
 "Tiền tố / hậu tố": [
 "dvd-acad-cmds.js"
 ],
+"Tiền tố số tờ (vd KT-):": [
+"dvd-acad-x31.js"
+],
 "Tiền tố thay thế": [
 "dvd-acad-dlg.js"
 ],
@@ -18277,6 +18660,9 @@
 "Trung bình": [
 "dvd-acad-x27.js"
 ],
+"Trung bình (Medium)": [
+"dvd-acad-x30.js"
+],
 "Trung điểm": [
 "dvd-acad-core.js"
 ],
@@ -18375,6 +18761,9 @@
 "Trên đối tượng": [
 "dvd-acad-x3.js"
 ],
+"Trình chiếu (Presentation)": [
+"dvd-acad-x30.js"
+],
 "Trình cắm": [
 "dvd-acad-dlg2.js"
 ],
@@ -18434,6 +18823,9 @@
 ],
 "Trình sửa khối": [
 "dvd-acad-dlg.js"
+],
+"Trình sửa vật liệu: tạo / sửa màu, độ nhám, kim loại, trong suốt, vân, cỡ vân": [
+"dvd-acad-x30.js"
 ],
 "Trình thêm bảng kiểu in": [
 "dvd-acad-dlg2.js"
@@ -18531,11 +18923,17 @@
 "dvd-acad-dlg.js",
 "dvd-acad-ui.js"
 ],
+"Trường [Số tờ / Tên tờ / Tổng số tờ / Tên tập / Tên dự án / Số dự án / Chủ đầu tư]": [
+"dvd-acad-x31.js"
+],
 "Trường do người dùng định nghĩa": [
 "dvd-acad-dlg2.js"
 ],
 "Trường dấu in": [
 "dvd-acad-dlg2.js"
+],
+"Trường tập bản vẽ:": [
+"dvd-acad-x31.js"
 ],
 "Trường tự cập nhật": [
 "dvd-acad-ui.js"
@@ -18617,7 +19015,8 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
 "dvd-acad-x16.js",
-"dvd-acad-x22.js"
+"dvd-acad-x22.js",
+"dvd-acad-x30.js"
 ],
 "Trắng (7)": [
 "dvd-cmd.js"
@@ -18652,6 +19051,7 @@
 "dvd-acad-ui.js",
 "dvd-acad-x15.js",
 "dvd-acad-x27.js",
+"dvd-acad-x30.js",
 "dvd-acad-x6.js"
 ],
 "Trụ ngược": [
@@ -18904,6 +19304,9 @@
 "Tâm mảng (trục đứng Z)": [
 "dvd-acad-x2.js"
 ],
+"Tâm quay": [
+"dvd-acad-x30.js"
+],
 "Tâm vòng tròn trục đo (mặt": [
 "dvd-acad-x7.js"
 ],
@@ -18932,6 +19335,7 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
 "dvd-acad-start.js",
+"dvd-acad-x30.js",
 "dvd-acad-x4.js",
 "dvd-acad-x6.js",
 "dvd-acad-x7.js",
@@ -18981,9 +19385,18 @@
 "Tên cũ:": [
 "dvd-acad-dlg.js"
 ],
+"Tên cảnh": [
+"dvd-acad-x30.js"
+],
+"Tên cảnh cần sửa <": [
+"dvd-acad-x30.js"
+],
 "Tên cột": [
 "dvd-acad-dlg2.js",
 "dvd-acad-ext.js"
+],
+"Tên dự án": [
+"dvd-acad-x31.js"
 ],
 "Tên file": [
 "dvd-acad-dlg.js",
@@ -19104,6 +19517,7 @@
 "dvd-acad-x8.js"
 ],
 "Tên mới": [
+"dvd-acad-x30.js",
 "dvd-acad-x6.js"
 ],
 "Tên mới:": [
@@ -19177,6 +19591,12 @@
 "Tên trục": [
 "dvd-acad-x8.js"
 ],
+"Tên tập": [
+"dvd-acad-x31.js"
+],
+"Tên tập bản vẽ": [
+"dvd-acad-x31.js"
+],
 "Tên tắt": [
 "dvd-acad-x6.js"
 ],
@@ -19198,6 +19618,9 @@
 ],
 "Tên tỉ lệ": [
 "dvd-acad-dlg2.js"
+],
+"Tên tờ": [
+"dvd-acad-x31.js"
 ],
 "Tên và biểu thức": [
 "dvd-acad-x4.js"
@@ -19601,6 +20024,15 @@
 "Tạo tham số người dùng mới": [
 "dvd-acad-x4.js:attr"
 ],
+"Tạo tập": [
+"dvd-acad-ui.js"
+],
+"Tạo tập bản vẽ (Sheet Set): thông tin dự án, các tờ lấy từ layout": [
+"dvd-acad-x31.js"
+],
+"Tạo tập mới…": [
+"dvd-acad-x31.js"
+],
 "Tạo tệp nhật ký": [
 "dvd-acad-dlg2.js"
 ],
@@ -19711,6 +20143,9 @@
 "Tầng:": [
 "dvd-acad-dlg.js"
 ],
+"Tập bản vẽ": [
+"dvd-acad-ui.js"
+],
 "Tập bản vẽ: in hàng loạt các layout": [
 "dvd-acad-x16.js"
 ],
@@ -19790,6 +20225,9 @@
 "Tệp .actm không hợp lệ (chỉ đọc được macro DVDCAD).": [
 "dvd-acad-dlg2.js"
 ],
+"Tệp .dst là định dạng mã hoá riêng của AutoCAD — DVDCAD chưa đọc được. Dùng NEWSHEETSET tạo lại tập từ các layout (hoặc tệp .dvdsst).": [
+"dvd-acad-x31.js"
+],
 "Tệp .dvdcui (JSON) chứa lệnh tự tạo, thanh truy cập nhanh, tab ribbon riêng, phím tắt và thao tác nhấp đúp — dùng để chép sang máy khác.": [
 "dvd-acad-dlg3.js"
 ],
@@ -19808,6 +20246,9 @@
 "Tệp HPGL/2 (.plt) cho máy vẽ — số bút / bút ảo theo bảng kiểu in": [
 "dvd-acad-more.js"
 ],
+"Tệp IES phân bố ánh sáng [Chọn tệp / Không]": [
+"dvd-acad-x30.js"
+],
 "Tệp JavaScript (*.js)": [
 "dvd-acad-dlg2.js"
 ],
@@ -19819,6 +20260,9 @@
 ],
 "Tệp chuẩn ưu tiên dùng để thay thế:": [
 "dvd-acad-dlg2.js"
+],
+"Tệp của tờ": [
+"dvd-acad-x31.js"
 ],
 "Tệp gần đây": [
 "dvd-acad-dlg2.js"
@@ -19834,6 +20278,9 @@
 ],
 "Tệp không có trang XPS.": [
 "dvd-acad-x28.js"
+],
+"Tệp không hợp lệ.": [
+"dvd-acad-x31.js"
 ],
 "Tệp này là phông chữ SHX (unifont / bigfont), không phải tệp hình.": [
 "dvd-acad-x20.js"
@@ -19866,7 +20313,8 @@
 "dvd-acad-dlg3.js"
 ],
 "Tệp:": [
-"dvd-acad-dlg2.js"
+"dvd-acad-dlg2.js",
+"dvd-acad-x31.js"
 ],
 "Tệp…": [
 "dvd-acad-dlg2.js",
@@ -20031,6 +20479,9 @@
 "Tỉ lệ toàn cục:": [
 "dvd-acad-dlg.js"
 ],
+"Tỉ lệ vân (1 = theo vật liệu)": [
+"dvd-acad-x30.js"
+],
 "Tỉ lệ ×": [
 "dvd-acad-cmds.js"
 ],
@@ -20104,6 +20555,9 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js"
 ],
+"Tổng số tờ": [
+"dvd-acad-x31.js"
+],
 "Tổng thời gian sửa:": [
 "dvd-acad-dlg.js"
 ],
@@ -20115,6 +20569,12 @@
 ],
 "Tờ": [
 "dvd-acad-x22.js"
+],
+"Tờ bản vẽ": [
+"dvd-acad-x31.js"
+],
+"Tờ nằm trong bản vẽ \"": [
+"dvd-acad-x31.js"
 ],
 "Từ dữ liệu đối tượng (Data Extraction)": [
 "dvd-acad-ext.js"
@@ -20422,7 +20882,8 @@
 ],
 "Vàng ấm": [
 "dvd-acad-3dy.js",
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x30.js"
 ],
 "Vành khuyên": [
 "dvd-acad-ui.js"
@@ -20469,6 +20930,9 @@
 ],
 "Vát nhọn (Miter)": [
 "dvd-acad-dlg2.js"
+],
+"Vân": [
+"dvd-acad-x30.js"
 ],
 "Ví dụ hiển thị": [
 "dvd-acad-dlg.js"
@@ -20604,6 +21068,7 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
 "dvd-acad-ui.js",
+"dvd-acad-x30.js",
 "dvd-cmd.js"
 ],
 "Vật liệu hiện trong khung nhìn 3D ở kiểu \"Thực tế\". Đã chọn": [
@@ -20786,7 +21251,8 @@
 "index.html:html"
 ],
 "Vị trí đèn": [
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x30.js"
 ],
 "Vị trí đèn trên mặt bằng": [
 "dvd-acad-3dy.js"
@@ -21112,6 +21578,8 @@
 "dvd-acad-x10.js:attr",
 "dvd-acad-x16.js",
 "dvd-acad-x17.js",
+"dvd-acad-x30.js",
+"dvd-acad-x31.js:attr",
 "dvd-acad-x5.js",
 "dvd-acad-x7.js",
 "dvd-acad-x9.js",
@@ -21351,7 +21819,8 @@
 "Xuất bản": [
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
-"dvd-acad-x21.js"
+"dvd-acad-x21.js",
+"dvd-acad-x31.js"
 ],
 "Xuất bản (Publish): danh sách trang (layout), sắp xếp, xem trước, xuất PDF nhiều trang": [
 "dvd-acad-dlg2.js"
@@ -21709,6 +22178,7 @@
 "dvd-acad-core.js",
 "dvd-acad-dlg2.js",
 "dvd-acad-x16.js",
+"dvd-acad-x30.js",
 "dvd-acad-x7.js",
 "dvd-acad-x9.js"
 ],
@@ -21741,6 +22211,9 @@
 ],
 "bộ lọc ssget sai:": [
 "dvd-lisp3.js"
+],
+"cd, chùm": [
+"dvd-acad-x30.js"
 ],
 "chi tiết bản vẽ ghi chú tỷ tỉ lệ kích thước khung tên thiết kế kiểm tra chủ trì công trình hạng mục địa điểm chủ đầu tư nhà ở phố biệt thự văn chung cư điện nước cấp thoát điều hoà hòa chiếu sáng ổ cắm công tắc": [
 "dvd-acad-x8.js"
@@ -21910,6 +22383,12 @@
 "cần": [
 "dvd-addins.js"
 ],
+"cầu": [
+"dvd-acad-x30.js"
+],
+"cắt vùng": [
+"dvd-acad-x30.js"
+],
 "cặp khối.": [
 "dvd-acad-x2.js"
 ],
@@ -21921,6 +22400,9 @@
 ],
 "cột).": [
 "dvd-acad-x14.js"
+],
+"cỡ vân (mm)": [
+"dvd-acad-x30.js"
 ],
 "của": [
 "dvd-acad-core.js"
@@ -22189,8 +22671,17 @@
 "hình vẽ (mở Model để nhập)": [
 "index.html"
 ],
+"hình).": [
+"dvd-acad-x30.js"
+],
 "hình,": [
 "dvd-acad-x20.js"
+],
+"hình.": [
+"dvd-acad-x30.js"
+],
+"hình/s…": [
+"dvd-acad-x30.js"
 ],
 "hôm qua": [
 "index.html"
@@ -22203,6 +22694,9 @@
 ],
 "hướng tiếp tuyến tại điểm đầu cung": [
 "dvd-help.js"
+],
+"hộp": [
+"dvd-acad-x30.js"
 ],
 "hộp thoại mẫu, tỉ lệ, góc": [
 "dvd-help.js"
@@ -22320,6 +22814,9 @@
 "khối lưới.": [
 "dvd-acad-x15.js"
 ],
+"khối nhận vật liệu theo lớp": [
+"dvd-acad-x30.js"
+],
 "khối qua mặt Z =": [
 "dvd-acad-3dx.js"
 ],
@@ -22341,6 +22838,9 @@
 "khối ×": [
 "dvd-acad-x10.js",
 "dvd-acad-x26.js"
+],
+"khối —": [
+"dvd-acad-x30.js"
 ],
 "khối →": [
 "dvd-acad-3dx.js",
@@ -22439,6 +22939,9 @@
 ],
 "kết quả": [
 "index.html"
+],
+"layout của \"": [
+"dvd-acad-x31.js"
 ],
 "liên kết": [
 "dvd-acad-x26.js"
@@ -22598,6 +23101,9 @@
 "lớp) — DWFLAYERS, DWFCLIP": [
 "dvd-acad-x28.js"
 ],
+"lớp).": [
+"dvd-acad-x30.js"
+],
 "lớp,": [
 "dvd-acad-dlg2.js"
 ],
@@ -22651,11 +23157,15 @@
 "mũi tên).": [
 "dvd-acad-x10.js"
 ],
+"mượt,": [
+"dvd-acad-x30.js"
+],
 "mẫu DVDCAD": [
 "dvd-acad-dlg2.js"
 ],
 "mặc định": [
-"dvd-acad-dlg3.js:attr"
+"dvd-acad-dlg3.js:attr",
+"dvd-acad-x30.js"
 ],
 "mặc định của Windows": [
 "dvd-acad-more.js"
@@ -22666,6 +23176,9 @@
 ],
 "mặt (bỏ phần": [
 "dvd-acad-x27.js"
+],
+"mặt bằng 2D": [
+"dvd-acad-x30.js"
 ],
 "mặt bằng tầng trệt lầu mái cao độ cột dầm sàn tường cửa đi sổ phòng khách ngủ bếp ăn vệ sinh cầu thang hiên ban công lan can kết cấu kiến trúc móng cọc đài giằng thép bê tông cốt gạch vữa trát lát ốp sơn trần thạch cao nhôm kính gỗ inox": [
 "dvd-acad-x8.js"
@@ -22859,6 +23372,9 @@
 "phần.": [
 "dvd-acad-3dx.js"
 ],
+"phẳng": [
+"dvd-acad-x30.js"
+],
 "placeholder=\"<Không>\"": [
 "dvd-acad-dlg.js"
 ],
@@ -22876,6 +23392,9 @@
 ],
 "rã băng": [
 "dvd-acad-cmds.js"
+],
+"s). NAVSMOTION để xem.": [
+"dvd-acad-x30.js"
 ],
 "sao chép": [
 "index.html"
@@ -23008,6 +23527,9 @@
 "tiếp xúc 2 đối tượng với bán kính cho trước": [
 "dvd-help.js"
 ],
+"tiền tố": [
+"dvd-acad-x31.js"
+],
 "toạ độ": [
 "dvd-acad-x2.js"
 ],
@@ -23040,6 +23562,9 @@
 ],
 "trở về các đỉnh gốc": [
 "dvd-help.js"
+],
+"trụ": [
+"dvd-acad-x30.js"
 ],
 "tuỳ chọn": [
 "index.html"
@@ -23095,6 +23620,7 @@
 "dvd-acad-dlg2.js",
 "dvd-acad-x16.js",
 "dvd-acad-x22.js",
+"dvd-acad-x30.js",
 "dvd-acad-x7.js",
 "dvd-acad-x9.js"
 ],
@@ -23145,6 +23671,15 @@
 ],
 "tới điểm": [
 "dvd-acad-x16.js"
+],
+"tờ": [
+"dvd-acad-x31.js"
+],
+"tờ)": [
+"dvd-acad-x31.js"
+],
+"tờ.": [
+"dvd-acad-x31.js"
 ],
 "từ": [
 "dvd-acad-x9.js"
@@ -23249,6 +23784,9 @@
 ],
 "vùng.": [
 "dvd-acad-x9.js"
+],
+"vật liệu đang dùng đã theo kiểu mới (PBR: màu, độ nhám, kim loại, trong suốt).": [
+"dvd-acad-x30.js"
 ],
 "vẽ theo 2 đầu một cạnh": [
 "dvd-help.js"
@@ -23421,6 +23959,9 @@
 "Ánh sáng": [
 "dvd-acad-ui.js"
 ],
+"Ánh sáng, bóng đổ, vật liệu: kiểu hiển thị Thực tế của khung 3D. Môi trường: RENDERENVIRONMENT.": [
+"dvd-acad-x30.js"
+],
 "Ánh xạ": [
 "dvd-acad-dlg2.js"
 ],
@@ -23429,6 +23970,9 @@
 ],
 "Ánh xạ cùng tên": [
 "dvd-acad-dlg2.js"
+],
+"Ánh xạ vân": [
+"dvd-acad-ui.js"
 ],
 "Áp cho": [
 "dvd-acad-x5.js"
@@ -23541,6 +24085,9 @@
 ],
 "Ô vuông đặc (Box filled)": [
 "dvd-acad-cmds.js"
+],
+"× độ phân giải khung 3D": [
+"dvd-acad-x30.js"
 ],
 "ÚÙỦŨỤ": [
 "index.html"
@@ -23887,6 +24434,9 @@
 "Đang ở Model (1) hay Layout (0) — chỉ đọc": [
 "dvd-acad-x7.js"
 ],
+"Đang ở Model — chuyển sang một layout rồi thêm.": [
+"dvd-acad-x31.js"
+],
 "Đang ở Model.": [
 "dvd-acad-x12.js"
 ],
@@ -23968,6 +24518,7 @@
 "dvd-acad-core.js",
 "dvd-acad-dlg.js",
 "dvd-acad-x26.js",
+"dvd-acad-x31.js",
 "dvd-acad-x8.js"
 ],
 "Điểm chèn \"": [
@@ -23981,6 +24532,9 @@
 ],
 "Điểm chèn bảng (góc trên trái)": [
 "dvd-acad-x9.js"
+],
+"Điểm chèn bảng danh mục": [
+"dvd-acad-x31.js"
 ],
 "Điểm chèn chữ": [
 "dvd-acad-x6.js"
@@ -24117,13 +24671,17 @@
 "dvd-acad-ui.js"
 ],
 "Điểm nhìn tới": [
-"dvd-acad-3dy.js"
+"dvd-acad-3dy.js",
+"dvd-acad-x30.js"
 ],
 "Điểm nhìn x,y,z (vd 1,-1,1 = ISO Tây Nam; 0,0,1 = mặt bằng) hoặc [Xoay]": [
 "dvd-acad-x14.js"
 ],
 "Điểm nhập cuối cùng (gõ @ để dùng lại)": [
 "dvd-acad-cmdline.js"
+],
+"Điểm nhắm": [
+"dvd-acad-x30.js"
 ],
 "Điểm rọi tới": [
 "dvd-acad-x16.js"
@@ -24365,6 +24923,9 @@
 "Đà Nẵng": [
 "dvd-acad-dlg3.js"
 ],
+"Đá": [
+"dvd-acad-x30.js"
+],
 "Đá ốp": [
 "dvd-acad-3d.js"
 ],
@@ -24417,6 +24978,9 @@
 ],
 "Đánh số chữ": [
 "dvd-acad-ui.js"
+],
+"Đánh số lại": [
+"dvd-acad-x31.js"
 ],
 "Đánh số thứ tự cho các chữ (thay, thêm trước, thêm sau) — Express Tools": [
 "dvd-acad-x6.js"
@@ -24633,6 +25197,9 @@
 "Đã có trạng thái \"": [
 "dvd-acad-dlg.js",
 "dvd-acad-x5.js"
+],
+"Đã có tập \"": [
+"dvd-acad-x31.js"
 ],
 "Đã cô lập": [
 "dvd-acad-cmds.js",
@@ -24851,6 +25418,7 @@
 ],
 "Đã lưu": [
 "dvd-acad-x3.js",
+"dvd-acad-x31.js",
 "dvd-cloud.js"
 ],
 "Đã lưu \"": [
@@ -24923,6 +25491,9 @@
 "Đã lưu thuộc tính bản vẽ.": [
 "dvd-acad-dlg.js"
 ],
+"Đã lưu thuộc tính tập bản vẽ (trường đã cập nhật).": [
+"dvd-acad-x31.js"
+],
 "Đã lưu thông tin bản vẽ.": [
 "dvd-acad-x6.js"
 ],
@@ -24930,6 +25501,12 @@
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
 "dvd-acad-x6.js"
+],
+"Đã lưu vật liệu \"": [
+"dvd-acad-x30.js"
+],
+"Đã lưu ảnh kết xuất": [
+"dvd-acad-x30.js"
 ],
 "Đã lưu:": [
 "index.html"
@@ -25083,6 +25660,9 @@
 "Đã sửa thuộc tính lớp": [
 "dvd-acad-dlg2.js"
 ],
+"Đã sửa tờ": [
+"dvd-acad-x31.js"
+],
 "Đã sửa đối tượng · ↶ Hoàn tác để khôi phục": [
 "index.html"
 ],
@@ -25114,6 +25694,7 @@
 "Đã thêm": [
 "dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
+"dvd-acad-x31.js",
 "dvd-acad-x8.js",
 "index.html"
 ],
@@ -25441,6 +26022,9 @@
 "Đã đánh dấu.": [
 "dvd-acad-cmdline.js"
 ],
+"Đã đánh số lại": [
+"dvd-acad-x31.js"
+],
 "Đã đóng": [
 "dvd-acad-x15.js"
 ],
@@ -25590,9 +26174,21 @@
 "Đã ẩn các bảng — SHOWPALETTES để hiện lại.": [
 "dvd-acad-x15.js"
 ],
+"Đèn IES": [
+"dvd-acad-ui.js"
+],
+"Đèn có điểm nhắm": [
+"dvd-acad-ui.js"
+],
 "Đèn rọi": [
 "dvd-acad-ui.js",
 "dvd-acad-x16.js"
+],
+"Đèn rọi tự do": [
+"dvd-acad-ui.js"
+],
+"Đèn rọi tự do (không có điểm nhắm): vị trí, hướng, góc chiếu": [
+"dvd-acad-x30.js"
 ],
 "Đèn song song": [
 "dvd-acad-ui.js",
@@ -25601,9 +26197,18 @@
 "Đèn trong bản vẽ (": [
 "dvd-acad-x16.js"
 ],
+"Đèn trắc quang (web light) có điểm nhắm: phân bố ánh sáng từ tệp IES": [
+"dvd-acad-x30.js"
+],
+"Đèn trắc quang tự do (không điểm nhắm): tệp IES": [
+"dvd-acad-x30.js"
+],
 "Đèn điểm": [
 "dvd-acad-ui.js",
 "dvd-acad-x16.js"
+],
+"Đèn điểm có điểm nhắm (target point light)": [
+"dvd-acad-x30.js"
 ],
 "Đèn — cao độ Z": [
 "dvd-cmd.js"
@@ -25637,6 +26242,9 @@
 "dvd-acad-x22.js:attr",
 "dvd-acad-x23.js",
 "dvd-acad-x26.js",
+"dvd-acad-x30.js",
+"dvd-acad-x30.js:attr",
+"dvd-acad-x31.js:attr",
 "dvd-acad-x4.js",
 "dvd-acad-x5.js",
 "dvd-acad-x6.js",
@@ -25658,6 +26266,9 @@
 ],
 "Đóng DesignCenter": [
 "dvd-acad-dlg2.js"
+],
+"Đóng Sheet Set Manager": [
+"dvd-acad-x31.js"
 ],
 "Đóng băng": [
 "dvd-acad-cmdline.js",
@@ -25728,6 +26339,9 @@
 "Đóng chế độ sửa mảng": [
 "dvd-acad-x15.js"
 ],
+"Đóng cửa sổ kết xuất": [
+"dvd-acad-x30.js"
+],
 "Đóng cửa sổ lịch sử dòng lệnh (về màn hình vẽ)": [
 "dvd-acad-x15.js"
 ],
@@ -25763,6 +26377,9 @@
 ],
 "Đóng sửa khối": [
 "dvd-acad-ui.js"
+],
+"Đóng thanh ShowMotion": [
+"dvd-acad-x30.js"
 ],
 "Đóng trình khôi phục bản vẽ": [
 "dvd-acad-dlg2.js"
@@ -26342,7 +26959,8 @@
 ],
 "Đặt lại": [
 "dvd-acad-dlg2.js",
-"dvd-acad-x16.js"
+"dvd-acad-x16.js",
+"dvd-acad-x30.js"
 ],
 "Đặt lại biên của hatch theo đối tượng kín khác (đối tượng đầu = biên ngoài, còn lại = lỗ)": [
 "dvd-acad-x11.js"
@@ -26391,6 +27009,9 @@
 ],
 "Đặt thuộc tính lên hình rồi dùng BLOCK để gộp thành khối. Khi chèn khối sẽ được hỏi giá trị; kích đúp vào khối để sửa.": [
 "dvd-acad-pro.js"
+],
+"Đặt tâm quay của khung 3D (bấm điểm trong khung 3D hoặc gõ x,y,z)": [
+"dvd-acad-x30.js"
 ],
 "Đặt tên khối — khối được lưu vào thư viện của tôi và dùng được cho mọi bản vẽ.": [
 "dvd-help.js"
@@ -27001,6 +27622,9 @@
 "Đổi tỉ lệ quanh điểm gốc (C = sao chép, R = tham chiếu)": [
 "dvd-acad-cmds.js"
 ],
+"Đổi vật liệu kiểu cũ: vật liệu của DVDCAD đã theo kiểu mới": [
+"dvd-acad-x30.js"
+],
 "Đổi điểm gốc mảng chưa hỗ trợ.": [
 "dvd-acad-cmds.js"
 ],
@@ -27009,6 +27633,9 @@
 ],
 "Đổi điểm đầu đường thẳng, bán kính tròn, thuộc tính chữ; P = đổi thuộc tính (màu, lớp…)": [
 "dvd-acad-x6.js"
+],
+"Đổi đèn kiểu cũ sang đèn trắc quang: đèn của DVDCAD đã theo kiểu mới": [
+"dvd-acad-x30.js"
 ],
 "Đổi đường dẫn trong tham chiếu ngoài, ảnh, kiểu chữ, RTEXT (Express)": [
 "dvd-acad-x26.js"
@@ -27090,6 +27717,9 @@
 ],
 "Độ mờ (Fade) 0 – 80": [
 "dvd-acad-x28.js"
+],
+"Độ nhám 0 – 1": [
+"dvd-acad-x30.js"
 ],
 "Độ phân giải": [
 "dvd-acad-dlg.js"
@@ -27193,6 +27823,9 @@
 ],
 "Độ đục": [
 "dvd-cmd.js"
+],
+"Độ đục 0.05 – 1": [
+"dvd-acad-x30.js"
 ],
 "Độ/phút/giây": [
 "dvd-acad-dlg.js"
@@ -27327,6 +27960,12 @@
 ],
 "đã ẩn": [
 "dvd-acad-x20.js"
+],
+"đèn trong bản vẽ đã là đèn theo cường độ thật (không cần đổi).": [
+"dvd-acad-x30.js"
+],
+"đèn web mặc định": [
+"dvd-acad-x30.js"
 ],
 "đèn.": [
 "dvd-acad-x16.js"
@@ -28185,6 +28824,9 @@
 "— chọn lại file để cập nhật.": [
 "dvd-acad-x9.js"
 ],
+"— cực đại": [
+"dvd-acad-x30.js"
+],
 "— dùng GEOMARKLATLONG để nhập tay.": [
 "dvd-acad-x20.js"
 ],
@@ -28519,8 +29161,14 @@
 "＋ Kiểu mới": [
 "dvd-acad-more.js"
 ],
+"＋ Layout hiện tại": [
+"dvd-acad-x31.js"
+],
 "＋ Lưu góc nhìn này…": [
 "dvd-acad-3d.js"
+],
+"＋ Mọi layout": [
+"dvd-acad-x31.js"
 ],
 "＋ Nạp cả thư mục…": [
 "dvd-addins.js"
