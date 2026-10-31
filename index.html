@@ -1596,11 +1596,11 @@ function explodeInto(list,blocks,M,out,depth,ctxAci,ix){
         else if(e.lt) x.lt=e.lt;
         const ls=(e.lts||1)*(ix&&e.lt==='BYBLOCK'?(ix.lts||1):1); if(Math.abs(ls-1)>1e-9) x.lts=ls;
         if(ix&&ix.grp){ x.grp=ix.grp; x.blk=ix.blk; if(ix.bip) x.bip=ix.bip; if(ix.bm){ x.bm=ix.bm; if(effL!==(e.layer||'0')) x.l0=1; } }
-        if(e.style!=null)x.style=e.style; { const xx=e._x; delete x._x; if(xx&&depth===0) Object.assign(x, xx); else if(xx&&depth===1&&ix&&ix.grp){ if(xx.dvs) x.dvs=xx.dvs; if(xx.dyn) x.dyn=xx.dyn; } }
+        if(e.style!=null)x.style=e.style; { const xx=e._x; delete x._x; if(xx&&depth===0) Object.assign(x, xx); else if(xx&&depth===1&&ix&&ix.grp){ if(xx.dvs) x.dvs=xx.dvs; if(xx.dyn) x.dyn=xx.dyn; if(xx.ull){ x.ull=xx.ull; if(xx.ulh) x.vh=1; if(xx.ulc) x.ulc=xx.ulc; } } }
         if(ix&&ix.dv&&!x.dvs){ const d=depth===1?(e._et!=null?ix.dv.by.get(e._et):null):ix.dvs; if(d){ x.dvs=d.slice(); if(ix.dyn) x.dyn=Object.assign({},ix.dyn); } }   // khối động AutoCAD (cả nét của khối lồng)
         delete x._et; delete x._h; delete x.inv;
         if(e.inv&&depth>1) continue;   // nét ẩn bên trong khối lồng (trạng thái riêng của khối lồng): không vẽ
-        if(e.inv||(depth>1&&ix&&ix.hid)){ if(!x.dvs) continue; x.vh=1; }   // nét ẩn: chỉ giữ khi thuộc khối động (đổi trạng thái được), còn lại không vẽ như AutoCAD
+        if(e.inv||(depth>1&&ix&&ix.hid)){ if(!x.dvs&&!x.ull) continue; x.vh=1; }   /* lớp tắt của nền PDF / DWF (ull) vẫn giữ để bật lại */   // nét ẩn: chỉ giữ khi thuộc khối động (đổi trạng thái được), còn lại không vẽ như AutoCAD
         out.push(x); }
     }
   }
@@ -2657,14 +2657,14 @@ function drawWipeFill(e){ const v=e.vertices||[]; if(v.length<3) return; ctx.sav
 function _drawPasses(vi,m,hideL,cMinX,cMinY,cMaxX,cMaxY){
   _clipCur=null;
   // lượt 1: HATCH (nền)
-  for(let k=0;k<m;k++){ const e=entities[vi[k]]; if(e.vh||e.xh||e.avh) continue; if(e.wipe && e.type==='POLYLINE' && !hideL.has(e.layer||'0') && !(OBJ_HIDE&&OBJ_HIDE.has(e))){ applyClip(e.clip||null); drawWipeFill(e); continue; } if((e.type==='HATCH'||e.type==='IMAGE') && !hideL.has(e.layer||'0') && !(OBJ_HIDE&&OBJ_HIDE.has(e))){ applyClip(e.clip||null); if(e.type==='IMAGE') drawImageEnt(e); else if(!FILLMODE){ ctx.strokeStyle=plotColor(e.col||getCSS('--entity')); ctx.lineWidth=1; for(const lp of (e.loops||[])) strokePts(lp,true); } else drawHatch(e); } }
+  for(let k=0;k<m;k++){ const e=entities[vi[k]]; if(e.vh||e.xh||e.avh) continue; if(e.wipe && e.type==='POLYLINE' && !hideL.has(e.layer||'0') && !(OBJ_HIDE&&OBJ_HIDE.has(e))){ applyClip(e.clip||null); drawWipeFill(e); continue; } if((e.type==='HATCH'||e.type==='IMAGE') && !hideL.has(e.layer||'0') && !(OBJ_HIDE&&OBJ_HIDE.has(e))){ applyClip(e.clip||null); if(ctx.setOC&&window.DVDAcad&&DVDAcad.pdfLayersOn&&DVDAcad.pdfLayersOn()) ctx.setOC(e.layer||'0'); if(e.type==='IMAGE') drawImageEnt(e); else if(!FILLMODE){ ctx.strokeStyle=plotColor(e.col||getCSS('--entity')); ctx.lineWidth=1; for(const lp of (e.loops||[])) strokePts(lp,true); } else drawHatch(e); } }
   applyClip(null);
   // lượt 2: nét vẽ — gộp các nét đơn liền nhau cùng màu (và cùng bề rộng nếu bật) thành 1 lần stroke
   ctx.lineWidth=1.15; ctx.lineJoin='round'; ctx.lineCap='round';
   const entCss=getCSS('--entity');
   ltBegin(); _ltVB={x0:cMinX,y0:cMinY,x1:cMaxX,y1:cMaxY};
   // gom MỌI nét đơn theo (màu, bề rộng, kiểu nét) trong cả lượt → mỗi nhóm 1 lần stroke (bản vẽ nhiều lớp xen kẽ không còn stroke từng nét)
-  const buckets=new Map(), later=[];
+  const buckets=new Map(), later=[]; const _ocL=!!(ctx.setOC&&window.DVDAcad&&DVDAcad.pdfLayersOn&&DVDAcad.pdfLayersOn());   // PDF / DWFx có lớp: gom nét theo cả lớp
   for(let k=0;k<m;k++){
     const e=entities[vi[k]];
     if(e.vh || e.xh || e.avh || e.type==='HATCH' || e.type==='IMAGE' || hideL.has(e.layer||'0') || (OBJ_HIDE&&OBJ_HIDE.has(e))) continue;
@@ -2674,11 +2674,12 @@ function _drawPasses(vi,m,hideL,cMinX,cMinY,cMaxX,cMaxY){
       const c=plotColor(e.col||entCss);
       const w=showLW ? (lwPx(lwOf(e))||1.15) : 1.15;
       const dsh=ltDash(e), cj=(plotMode&&window._plotCJ)?_plotCJ(e):'';   // kiểu đầu nét / nối nét của bảng kiểu in
-      const key=c+'|'+w+'|'+(dsh?dsh.key:'')+'|'+cj; let b=buckets.get(key); if(!b){ b={c,w,dsh,cj,list:[]}; buckets.set(key,b); } b.list.push(e);
+      const ly=_ocL?(e.layer||'0'):''; const key=c+'|'+w+'|'+(dsh?dsh.key:'')+'|'+cj+'|'+ly; let b=buckets.get(key); if(!b){ b={c,w,dsh,cj,ly,list:[]}; buckets.set(key,b); } b.list.push(e);
     } else later.push(e);
   }
   if(_clipCur) applyClip(null);
   for(const b of buckets.values()){
+    if(_ocL) ctx.setOC(b.ly);
     ctx.strokeStyle=b.c; ctx.lineWidth=b.w; if(b.dsh){ ctx.setLineDash(b.dsh.arr); ctx.lineDashOffset=b.dsh.off||0; } else ctx.setLineDash([]);
     if(b.cj){ const q=window._plotCJc?_plotCJc(b.cj):b.cj.split(','); ctx.lineCap=q[0]; ctx.lineJoin=q[1]; } else { ctx.lineCap='round'; ctx.lineJoin='round'; }
     ctx.beginPath(); let n=0; for(const e of b.list){ addPath(e,b.dsh); if(++n>=6000){ ctx.stroke(); ctx.beginPath(); n=0; } } ctx.stroke();
@@ -6228,6 +6229,8 @@ if('serviceWorker' in navigator && !window.dvdDesktop){
 <script src="./dvd-acad-x25.js"></script>
 <script src="./dvd-acad-x26.js"></script>
 <script src="./dvd-acad-x27.js"></script>
+<script src="./dvd-acad-x28.js"></script>
+<script src="./dvd-acad-x29.js"></script>
 <script src="./dvd-lisp.js"></script>
 <script src="./dvd-lisp2.js"></script>
 <script src="./dvd-lisp3.js"></script>

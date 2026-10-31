@@ -58,7 +58,7 @@
       if(prev) prev(); }; })(A.onLoad);
   function writeR2000(ents, opt){
     const full = !!(opt && opt.layouts) || (typeof modelEntities !== 'undefined' && ents === modelEntities);   // lưu cả bản vẽ → ghi kèm các layout giấy
-    ents = ents.filter(e => e && !e.xr && (!e.vh || e.dvs));   // nét ẩn của khối động (trạng thái hiển thị khác) vẫn ghi — cờ ẩn 60
+    ents = ents.filter(e => e && !e.xr && (!e.vh || e.dvs || e.ull));   // nét ẩn của khối động (trạng thái hiển thị khác) vẫn ghi — cờ ẩn 60
     ents = ents.map((e, i) => [e, i]).sort((a, b) => ((a[0].dord | 0) - (b[0].dord | 0)) || (a[1] - b[1])).map(x => x[0]);   // thứ tự vẽ (DRAWORDER) = thứ tự trong file
     const needTC = ents.some(e => e.col && !e.bl && !isAciColor(e.col) && String(e.col).toLowerCase() !== String(A.layerHex(e.layer || '0')).toLowerCase()) || [...new Set(ents.map(e => e.layer || '0'))].some(l => !isAciColor(A.layerHex(l)));
     const VR = ACV[A.dxfVer] ? A.dxfVer : (A.dxfVer === 'AUTO' && needTC) ? 'R2004' : A.dxfVer === 'AUTO' ? 'R2000' : 'R2018';
@@ -182,7 +182,7 @@
             const U = { name: '*U' + (++nU), ents: loc, n: mem.length, bb: bbox(loc.filter(x => !x.att)) || { x0: 0, y0: 0, x1: 0, y1: 0 }, atts: loc.filter(x => x.att), hBR: H(), hB: H(), hE: H(), anon: 1, rep: B };
             blockDefs.set(U.name, U);
             inserts.set(gid, { D: U, m: m1, mem, xR: null, dyn: B, st: st0, fl: sx < 0 || sy < 0 ? [sx, sy] : null }); for(const x of mem) done.add(x); continue; } } }
-      if(f.bm && f.bm.name && !String(f.blk || '').startsWith('*') && !(xR && xR.inv) && !mem.some(x => x.vh || x.type === 'SOLID3D' || x.type === 'IMAGE')){
+      if(f.bm && f.bm.name && !String(f.blk || '').startsWith('*') && !(xR && xR.inv) && !mem.some(x => (x.vh && !x.ull) || x.type === 'SOLID3D' || x.type === 'IMAGE')){
         const Mi = inv(f.bm); if(!Mi || mem.some(x => !x.bm || x.bm.name !== f.bm.name)) continue; const nm = String(f.bm.name).replace(/[<>\\/":;?*|=`]/g, '_').slice(0, 250); if(!nm) continue;
         const loc = mem.map(x => A.xformEnt(clone(x), Mi)); const bb = bbox(loc.filter(x => !x.att)) || { x0: 0, y0: 0, x1: 0, y1: 0 };
         const tol = Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0, 1) * 1e-6; const same = D0 => D0.n === mem.length && Math.abs(D0.bb.x0 - bb.x0) <= tol && Math.abs(D0.bb.y0 - bb.y0) <= tol && Math.abs(D0.bb.x1 - bb.x1) <= tol && Math.abs(D0.bb.y1 - bb.y1) <= tol;
@@ -279,10 +279,10 @@
       const xd = () => { if(o.dimBlock) return;
         // XDATA của ứng dụng / LISP (regapp + entmod -3): ghi lại nguyên như AutoCAD
         if(e.xd && !o.inBlock) for(const [app, items] of e.xd){ P(1001, dxfStr(app)); for(const [c, v] of items){ if(c >= 1010 && c <= 1013){ const q = Array.isArray(v) ? v : [0, 0, 0]; P(c, +q[0] || 0); P(c + 10, +q[1] || 0); P(c + 20, +q[2] || 0); } else P(c, typeof v === 'string' ? dxfStr(v) : v); } }
-        if(o.inBlock){ if(!o.dyn) return; if(DYNX && e._et != null){ P(1001, 'AcDbBlockRepETag'); P(1070, 1); P(1071, e._et); }
-          const q = {}; if(e.dvs) q.dvs = e.dvs; if(o.dyn === 2 && e.dyn) q.dyn = e.dyn; if(Object.keys(q).length){ const js = JSON.stringify(q); P(1001, 'DVDCAD'); for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); } return; }
+        if(o.inBlock){ if(!o.dyn && !e.ull) return; if(o.dyn && DYNX && e._et != null){ P(1001, 'AcDbBlockRepETag'); P(1070, 1); P(1071, e._et); }
+          const q = {}; if(e.dvs) q.dvs = e.dvs; if(o.dyn === 2 && e.dyn) q.dyn = e.dyn; if(e.ull){ q.ull = e.ull; if(e.vh) q.ulh = 1; if(e.ulc) q.ulc = e.ulc; } if(Object.keys(q).length){ const js = JSON.stringify(q); P(1001, 'DVDCAD'); for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); } return; }
         const pr = {}; for(const k of XKEYS) if(e[k] != null && e[k] !== '' && !(k === 'mt' && e.type !== 'TEXT')) pr[k] = e[k];
-        if(e.type === 'IMAGE'){ const q = {}; for(const k of ['x', 'y', 'w', 'h', 'rot', 'op', 'name', 'frame', 'img', 'gmi', 'cpoly']) if(e[k] != null) q[k] = e[k]; pr.imgx = q; }   // ảnh: khung đa tuyến + thông số ảnh (dữ liệu ảnh ở DVDCAD_DATA)
+        if(e.type === 'IMAGE'){ const q = {}; for(const k of ['x', 'y', 'w', 'h', 'rot', 'op', 'name', 'frame', 'img', 'gmi', 'cpoly', 'pc']) if(e[k] != null) q[k] = e[k]; pr.imgx = q; }   // ảnh: khung đa tuyến + thông số ảnh (dữ liệu ảnh ở DVDCAD_DATA)
         const js = Object.keys(pr).length ? JSON.stringify(pr) : null;
         if(!e.rgn && !js) return; P(1001, 'DVDCAD'); if(e.rgn) P(1000, 'RGN' + (e.grp && e.blk === '*REGION' ? ':' + e.grp : '')); if(js){ for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); } };
       // đa tuyến có độ rộng: độ rộng đầu / cuối từng đỉnh (40 / 41) lấy lại từ các tứ giác tô

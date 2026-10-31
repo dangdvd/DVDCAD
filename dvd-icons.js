@@ -649,5 +649,18 @@
     I.ANALYSISCURVATURE = '<circle class="fa" cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="8.5"/><circle class="fy" cx="9.5" cy="9.5" r="3"/>';
     I.ANALYSISDRAFT = '<path d="M4 20h16"/><path class="a" d="M8 20l3-15h2l3 15"/><path class="y" d="M12 20V5" stroke-dasharray="2 1.5"/>';
     I.ANALYSISOPTIONS = I.ANALYSISZEBRA + BGEAR; }
+  // v6j: nền PDF / DWF, đám mây điểm
+  { const has = k => I[k] || '';
+    const PDFI = DOC + '<text x="12" y="17" font-size="6" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">PDF</text>';
+    const DWFI = DOC + '<text x="12" y="17" font-size="5" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700">DWF</text>';
+    I.PDFATTACH = I.PDFATTACH || PDFI + BLINK; I.DWFATTACH = DWFI + BLINK; I.PDFLAYERS = PDFI + BADGE + '<path class="a" d="M14.5 17l3.5-2 3.5 2-3.5 2zM14.5 19.5l3.5 2 3.5-2"/>'; I.DWFLAYERS = DWFI + BADGE + '<path class="a" d="M14.5 17l3.5-2 3.5 2-3.5 2zM14.5 19.5l3.5 2 3.5-2"/>';
+    I.ULAYERS = has('LAYER') + BLINK; I.PDFCLIP = PDFI + '<path class="r" d="M3 21L21 3" stroke-dasharray="2.5 1.5"/>'; I.DWFCLIP = DWFI + '<path class="r" d="M3 21L21 3" stroke-dasharray="2.5 1.5"/>';
+    I.PDFADJUST = PDFI + BGEAR; I.DWFADJUST = DWFI + BGEAR; I.PDFFRAME = '<rect class="a" x="3" y="4" width="18" height="16" stroke-dasharray="3 1.5"/>' + PDFI; I.DWFFRAME = I.PDFFRAME; I.UFRAMES = '<rect class="a" x="3" y="4" width="18" height="16" stroke-dasharray="3 1.5"/>'; I.FRAME = I.UFRAMES;
+    I.EXPORTDWFX = DWFI + '<path class="y" d="M14 21h7M18.5 18.5L21 21l-2.5 2.5"/>'; I.EXPORTDWF = I.EXPORTDWFX; I.DWFFORMAT = DWFI + BGEAR; I.EXPORTSETTINGS = PDFI + BGEAR;
+    const PCI = [[5, 16], [7, 12], [9, 17], [11, 9], [12, 14], [14, 18], [15, 11], [17, 15], [18, 8], [19, 13], [8, 7], [13, 6], [20, 18], [6, 19], [16, 5]].map(([x, y]) => '<circle class="fa" cx="' + x + '" cy="' + y + '" r="1.1"/>').join('');
+    I.POINTCLOUDATTACH = PCI + BLINK; I.PCATTACH = I.POINTCLOUDATTACH; I.POINTCLOUD = PCI; I.PC = PCI; I.POINTCLOUDCOLORMAP = PCI + '<circle class="fy" cx="18" cy="18" r="3"/>'; I.PCCOLORMAP = I.POINTCLOUDCOLORMAP;
+    I.POINTCLOUDCROP = PCI + '<rect class="r" x="4" y="4" width="12" height="12" stroke-dasharray="2 1.5"/>'; I.PCCROP = I.POINTCLOUDCROP; I.POINTCLOUDUNCROP = I.POINTCLOUDCROP + BX; I.PCUNCROP = I.POINTCLOUDUNCROP; I.POINTCLOUDPOINTSIZE = PCI + BGEAR; I.PCPOINTSIZE = I.POINTCLOUDPOINTSIZE;
+    I.PCEXTRACTSECTION = PCI + '<path class="y" d="M3 15l5-3 4 2 5-5 4 2" stroke-width="1.8"/>'; I.PCEXTRACTEDGE = PCI + '<path class="y" d="M12 3v18" stroke-width="1.8"/>'; I.PCEXTRACTCORNER = PCI + '<path class="y" d="M5 19V8M5 19h12" stroke-width="1.8"/>';
+    I.PCEXTRACTCENTERLINE = PCI + '<path class="y" d="M12 2v20" stroke-dasharray="3 1.5" stroke-width="1.6"/>'; I.PCINWIZARD = PCI + BSTAR; I.RECAP = PCI + BLINK; }
   window.DVDIcons = I;
 })();

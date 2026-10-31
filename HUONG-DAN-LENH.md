@@ -27,6 +27,39 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v6j) — nền PDF / DWF có lớp, đám mây điểm
+- **PDF và DWFx xuất ra có lớp** như AutoCAD.
+  - PDF: mỗi lớp bản vẽ thành một lớp PDF (OCG). Mở bằng Acrobat / trình xem PDF bật / tắt được.
+  - DWFx: lớp ghi trong trang XPS.
+  - `EXPORTSETTINGS` bật / tắt việc ghi thông tin lớp.
+- **Nền PDF** (`PDFATTACH`): gắn một trang PDF làm nền tham chiếu (một khối), giữ lớp của PDF. Hỏi trang, tỉ lệ, điểm chèn, góc xoay.
+  - `PDFLAYERS`: bật / tắt lớp của nền.
+  - `PDFCLIP`: cắt nền theo khung (như XCLIP).
+  - `PDFADJUST`: độ mờ, đơn sắc.
+  - `PDFFRAME`: khung nền.
+  - `PDFIMPORT` vẫn nhập thành nét rời; nay lớp trong PDF thành lớp bản vẽ.
+- **Nền DWF** (`DWFATTACH`): gắn trang DWFx / XPS làm nền (nét, vùng tô, chữ, lớp).
+  - Có thêm `DWFLAYERS`, `DWFCLIP`, `DWFADJUST`, `DWFFRAME`.
+  - Tệp `.dwf` (DWF6 nhị phân) chưa đọc được; chương trình báo rõ.
+- `ULAYERS`: lớp của mọi nền trong bản vẽ. `UFRAMES`: 0 ẩn khung / 1 hiện và in / 2 hiện không in.
+- **Xuất**: `EXPORTDWFX` (theo thiết lập in). `EXPORTDWF` ghi DWFx vì DWF6 chưa ghi được. `DWFFORMAT`.
+- **Đám mây điểm** (thẻ Insert › Point Cloud):
+  - `POINTCLOUDATTACH` gắn `.las` (1.0 – 1.4, chưa nén), `.xyz` / `.txt` / `.csv` / `.pts`, `.ply` (ascii / nhị phân).
+    - Giữ toạ độ trong tệp, hoặc chọn điểm chèn / tỉ lệ / góc.
+    - Giữ màu RGB, cường độ, phân loại LAS.
+    - Tệp trên 4 triệu điểm được lấy mẫu đều.
+  - Hiển thị: màn hình vẽ từng điểm; khung 3D hiện điểm (tự đưa camera tới đám mây). Bản in và AutoCAD thấy ảnh nhìn từ trên.
+  - `POINTCLOUDCOLORMAP`: tô màu RGB / cường độ / cao độ / phân loại / một màu.
+  - `POINTCLOUDCROP` / `POINTCLOUDUNCROP`: cắt theo chữ nhật / đa giác, giữ trong / ngoài; bỏ cắt.
+  - `POINTCLOUDPOINTSIZE`: cỡ điểm.
+  - `POINTCLOUD`: thông tin và các tuỳ chọn.
+  - **Trích hình học**:
+    - `PCEXTRACTSECTION`: mặt cắt đứng qua 2 điểm, lát cắt dày tuỳ chọn → đa tuyến 3D.
+    - `PCEXTRACTEDGE` / `PCEXTRACTCORNER`: giao tuyến / góc của 2 mặt tường (và sàn).
+    - `PCEXTRACTCENTERLINE`: tâm ống / cột đứng và bán kính.
+  - `.laz`, `.e57`, `.rcp` / `.rcs`: chưa đọc được, chương trình hướng dẫn chuyển định dạng. `PCINWIZARD`, `RECAP`: giải thích.
+  - Điểm lưu trong bộ nhớ của máy (IndexedDB): mở lại bản vẽ trên cùng máy vẫn có điểm. Trên máy khác chỉ thấy ảnh; gắn lại tệp điểm.
+
 ## Bổ sung như AutoCAD 2027 (v6i) — lưới và mặt 3D, phân tích bề mặt
 Không gian **3D Modeling** có thêm hai thẻ ribbon **Mesh** (Lưới) và **Surface** (Mặt) như AutoCAD.
 
