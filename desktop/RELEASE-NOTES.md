@@ -37,7 +37,7 @@ Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More in
   2. **ODA File Converter** và **ACadSharp** đọc lại các tệp DWG do DVDCAD ghi.
   3. Bộ đọc XPS của Windows mở tệp DWFx.
   4. Cài lặng bộ cài, chạy kiểm thử trên `DVDCAD.exe` đã cài, rồi gỡ cài.
-- Kiểm thử giao diện tự động (DGN 26 mục; điều hướng / bắt điểm / mặt cắt / chữ SHX 18 mục):
+- Kiểm thử giao diện tự động (DGN 29 mục; điều hướng / bắt điểm / mặt cắt / chữ SHX 18 mục):
   - DGN dựng tay:
     - số thực VAX D; đơn vị M / CM; đường có màu / kiểu nét / bề rộng; hình kín có tô;
     - cung thuận và chiều kim; elip xoay; tròn; chữ 8 bit + 16 bit;
