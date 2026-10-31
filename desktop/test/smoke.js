@@ -201,6 +201,11 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       for(const v of ['R2018', 'R2013', 'R2007', 'R2000']){ const d = DVDAcad.dwgNative(ents, { version: v }); let s = ''; for(let i = 0; i < d.length; i += 0x8000) s += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000)); out.dwg[v] = btoa(s); }
       out.back = atob(out.dwg.R2018).includes('DVD_TEST') ? 1 : 0; return out; });
     check(v6f.cmd === '"Dam D1"' && v6f.back, 'LISP: (command) với "_E" / "_W", XDATA entmod / entget, XDATA ghi vào DWG');
+    // v6g: reactor lệnh, COM Excel / FileSystemObject
+    const v6g = await win.evaluate(async () => { await DVDLisp.evalToString('(progn (setq *rx* nil) (vlr-command-reactor nil (list (cons :vlr-commandEnded (function (lambda (r a) (setq *rx* (car a))))))) T)');
+      await DVDLisp.evalToString('(command "_.LINE" (list 0 0) (list 5 5) "")'); await new Promise(q => setTimeout(q, 500));
+      return DVDLisp.evalToString('(progn (vlr-remove-all) (setq xl (vlax-get-or-create-object "Excel.Application") sh (vlax-get-property (vlax-invoke-method (vlax-get-property xl (quote Workbooks)) (quote Add)) (quote ActiveSheet))) (vlax-put-property (vlax-get-property sh (quote Range) "B2") (quote Value) 12.5) (list *rx* (vlax-variant-value (vlax-get-property (vlax-get-property sh (quote Range) "B2") (quote Value))) (dos_strreplace "a-b" "-" "+")))'); });
+    check(v6g === '("LINE" 12.5 "a+b")', 'LISP: vlr-command-reactor, COM Excel.Application (Range.Value), DOSLib: ' + v6g);
     if(process.env.DVD_DWG_OUT) for(const v of Object.keys(v6f.dwg)) fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'xdata-' + v + '.dwg'), Buffer.from(v6f.dwg[v], 'base64'));
   }
   {

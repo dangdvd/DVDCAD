@@ -127,10 +127,35 @@ Tệp do LISP ghi (`open … "w"`) nằm trong thư mục hỗ trợ của DVDCA
   - `TrueColor` (`SetRGB`, `ColorIndex`, `Red/Green/Blue`), `Preferences.Files.SupportPath`, `TextStyles` (`FontFile`, `Height`), `Layouts` (`Block`), `ZoomExtents` / `ZoomWindow`.
 - **Hàm thêm**: `vl-sort-i vl-member-if-not cddddr nentselp initdia acad_helpdlg vlax-tmatrix vlax-map-collection vlax-add-cmd layerstate-getnames / save / restore / delete / has / rename / getlayers`.
 
+### Reactor, COM, DOSLib, gói ứng dụng (v6g)
+
+- **Reactor** (`vlr-…`) phát sinh sự kiện thật:
+  - `vlr-command-reactor` / `vlr-editor-reactor`: `:vlr-commandWillStart`, `:vlr-commandEnded`, `:vlr-commandCancelled`, `:vlr-commandFailed`, `:vlr-beginSave`, `:vlr-saveComplete`;
+  - `vlr-acdb-reactor`: `:vlr-objectAppended`, `:vlr-objectModified`, `:vlr-objectErased`;
+  - `vlr-object-reactor` (đối tượng sở hữu): `:vlr-modified`, `:vlr-erased`;
+  - `vlr-sysvar-reactor`: `:vlr-sysVarWillChange`, `:vlr-sysVarChanged`;
+  - `vlr-mouse-reactor`: `:vlr-beginDoubleClick`, `:vlr-beginRightClick`;
+  - `vlr-lisp-reactor`: `:vlr-lispWillStart`, `:vlr-lispEnded`, `:vlr-lispCancelled`.
+  - Quản lý: `vlr-add`, `vlr-remove`, `vlr-remove-all`, `vlr-added-p`, `vlr-reactors`, `vlr-reactions`, `vlr-reaction-set`, `vlr-data`, `vlr-data-set`, `vlr-owners`, `vlr-owner-add`, `vlr-owner-remove`, `vlr-type`, `vlr-types`, `vlr-pers`, `vlr-current-reaction-name`.
+  - Từ khoá `:vlr-…`, `:vlax-true`… tự trả về chính nó như AutoLISP.
+- **COM** (`vlax-create-object` / `vlax-get-or-create-object` / `vlax-get-object`, gọi bằng `vlax-get-property`, `vlax-put-property`, `vlax-invoke-method`, `vlax-invoke`, `vlax-get`, `vlax-put`):
+  - `Excel.Application`: `Workbooks.Add` / `Open` (.csv), `Worksheets` / `Sheets` (`Add`, `Item`), `ActiveSheet`, `Cells.Item(r, c)`, `Range("A1")` / `Range("A1:C3")`, `Value` / `Value2` / `Formula` / `Text`, `Offset`, `Resize`, `UsedRange`, `ColumnWidth`, `SaveAs` / `Save` → ghi **tệp .xlsx thật** (hoặc .csv), `Visible = True` → giao tệp .xlsx để mở bằng Excel, `Quit`.
+  - `Scripting.FileSystemObject` (tệp trong thư mục hỗ trợ): `CreateTextFile`, `OpenTextFile`, `WriteLine`, `ReadLine`, `ReadAll`, `AtEndOfStream`, `FileExists`, `GetFile`, `DeleteFile`, `CopyFile`, `GetBaseName`, `GetExtensionName`, `BuildPath`…
+  - `Scripting.Dictionary` (`Add`, `Item`, `Exists`, `Keys`, `Items`, `Count`, `Remove`), `WScript.Shell` (`ExpandEnvironmentStrings`, `RegRead` / `RegWrite`, `Popup`, `SpecialFolders`, `Run` mở đường link), `Shell.Application`.
+  - `vlax-import-type-library` với `:methods-prefix` / `:properties-prefix` (vd `msxl-`) → `msxl-get-Cells`, `msxl-put-Value`, `msxl-Add`…
+- **DOSLib** (hay dùng): `dos_msgbox`, `dos_getstring`, `dos_getint`, `dos_getreal`, `dos_listbox`, `dos_multilist`, `dos_checklist`, `dos_getdir`, `dos_getfiled`, `dos_filep`, `dos_dir`, `dos_delete`, `dos_copy`, `dos_strtokens`, `dos_strreplace`, `dos_strtrim`, `dos_strcase`, `dos_proper`, `dos_strleft` / `right` / `mid`, `dos_sortlist`, `dos_clipboard`, `dos_version`, `dos_username`, `dos_computer`…
+- **Gói ứng dụng `.bundle`** (cách cài của Autodesk App Store, `ApplicationPlugins`): APPLOAD › Nạp cả thư mục… chọn thư mục `.bundle` (hoặc gói .zip). DVDCAD đọc `PackageContents.xml`:
+  - `.lsp` `LoadOnAutoCADStartup` → nạp và tự nạp khi mở; `LoadOnCommandInvocation` + `Commands` → `autoload`;
+  - `.cuix` / `.cui` → nạp menu / ribbon (kèm `.mnl` cùng tên);
+  - `.dll` / `.arx` / `.fas` → bỏ qua, các lệnh của chúng báo rõ "chỉ chạy trong AutoCAD".
+  - Lệnh `APPAUTOLOADER` liệt kê gói đã cài; OPTIONS › Tệp cũng hiện.
+- **Menu**: `MENULOAD` nạp `.cuix` / `.cui` hoặc menu cũ `.mnu` / `.mns` (POP, menu con `->` / `<-`, macro `^C^C…`); tệp `.mnl` cùng tên tự nạp như AutoCAD. Bộ tiện ích nạp bằng thư mục / zip có menu thì menu cũng được nạp.
+- **OPTIONS › Tệp**: đường dẫn tìm tệp hỗ trợ (thư mục hỗ trợ), vị trí tin cậy (`TRUSTEDPATHS`), ứng dụng đã cài. `SECURITYOPTIONS` mở tab này.
+- `NETLOAD`, `ARX`, `VBALOAD` / `VBARUN` / `VBAMAN` / `VBAIDE`: có lệnh, giải thích vì sao .dll / .arx / .dvb không chạy và cách thay thế.
+
 Chưa làm được như AutoCAD:
-- Reactor (`vlr-…`): tạo được nhưng DVDCAD chưa phát sinh sự kiện (thông báo một lần).
 - `trans` trả nguyên điểm (DVDCAD vẽ trên một hệ toạ độ WCS); `osnap` trả nguyên điểm.
-- COM ngoài AutoCAD (`vlax-create-object "Excel.Application"`, `Scripting.FileSystemObject`), DOSLib (`dos_…`), OpenDCL (`dcl_…`) chưa có.
+- OpenDCL (`dcl_…`) chưa có. COM khác ngoài các lớp kể trên (Word, Access, ADODB…) chưa có. Excel làm lại không tính công thức (ghi công thức vào tệp, Excel tính khi mở).
 - XDATA của khối chèn (INSERT) đọc từ tệp chưa giữ lại; XDATA trên đường, tròn, chữ, đa tuyến… thì giữ.
 - Registry, `getcfg` lưu trong máy (trình duyệt), không phải registry Windows.
 

@@ -88,7 +88,7 @@
 
   /* ---------------- môi trường (phạm vi động) ---------------- */
   const G = new Map();   // biến + hàm toàn cục (cùng không gian tên như AutoLISP)
-  const getv = s => G.has(s.n) ? G.get(s.n) : (s === T ? T : null);
+  const getv = s => G.has(s.n) ? G.get(s.n) : (s === T ? T : s.n[0] === ':' ? s : null);   // :từ-khoá (:vlr-commandEnded, :vlax-true…) tự trả về chính nó như AutoLISP
   const setv = (s, v) => { if(s === T) throw new LispErr('attempt to set constant T'); G.set(s.n, v); };
   async function withBindings(names, vals, fn){
     const saved = names.map(s => [s.n, G.has(s.n), G.get(s.n)]);

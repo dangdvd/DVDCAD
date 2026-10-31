@@ -958,10 +958,18 @@
      ================================================================== */
   function openOptions(tab){
     const S = A.SET, G = k => { try{ return eval(k); }catch(_){ return undefined; } };
-    const cur = ['display', 'open', 'plot', 'system', 'user', 'drafting', 'selection'].includes(tab) ? tab : 'display';
+    const cur = ['files', 'display', 'open', 'plot', 'system', 'user', 'drafting', 'selection'].includes(tab) ? tab : 'display';
     const slider = (id, v, mn, mx) => '<div class="acw-row"><input type="range" id="' + id + '" min="' + mn + '" max="' + mx + '" value="' + v + '" style="flex:1;width:auto"><input type="number" id="' + id + 'N" min="' + mn + '" max="' + mx + '" value="' + v + '" style="width:60px;flex:0 0 60px"></div>';
     const dxfV = [['R2018', 'AutoCAD 2018 DXF (*.dxf)'], ['R2013', 'AutoCAD 2013 DXF (*.dxf)'], ['R2010', 'AutoCAD 2010 DXF (*.dxf)'], ['R2007', 'AutoCAD 2007 DXF (*.dxf)'], ['R2004', 'AutoCAD 2004 DXF (*.dxf)'], ['R2000', 'AutoCAD 2000 DXF (*.dxf)'], ['R12', 'AutoCAD R12 DXF (*.dxf)']];
+    // tab Tệp (Files): đường dẫn tìm tệp hỗ trợ = thư mục hỗ trợ của AutoLISP, vị trí tin cậy, ứng dụng đã cài
+    const sfFolders = (() => { try{ const m = new Map(); for(const f of (window.DVDLisp && DVDLisp.fs ? DVDLisp.fs.list() : [])){ const k = f.folder || '(gốc)'; m.set(k, (m.get(k) || 0) + 1); } return [...m]; }catch(_){ return []; } })();
+    const bundles = (() => { try{ return JSON.parse(localStorage.getItem('dvd:bundles') || '[]'); }catch(_){ return []; } })();
+    const trusted = (() => { try{ return localStorage.getItem('dvd:trusted') || ''; }catch(_){ return ''; } })();
     const T = {
+      files: K.grp('Đường dẫn tìm tệp hỗ trợ (Support File Search Path)', '<div class="acw-list" style="height:110px;padding:4px">' + (sfFolders.length ? sfFolders.map(([k, n]) => '<div translate="no">📁 ' + esc(k) + ' <span style="opacity:.7">— ' + n + ' tệp</span></div>').join('') : '<div style="opacity:.7">Chưa có tệp hỗ trợ.</div>') + '</div>' +
+          '<div class="acw-row" style="margin-top:6px">' + K.btn('opSfM', 'Quản lý tệp hỗ trợ…') + K.btn('opSfA', 'Nạp ứng dụng / thư mục…') + '</div>') +
+        K.grp('Vị trí tin cậy (Trusted Locations)', K.vrow('Thư mục, cách nhau bằng dấu ;', '<input id="opTr" value="' + esc(trusted) + '" style="width:100%">') + '<div class="acw-note">Như biến TRUSTEDPATHS của AutoCAD. DVDCAD hỏi xác nhận khi nạp tiện ích ngoài các thư mục này.</div>') +
+        K.grp('Ứng dụng đã cài (ApplicationPlugins / .bundle)', bundles.length ? '<div class="acw-list" style="height:80px;padding:4px">' + bundles.map(b => '<div translate="no">🧩 ' + esc(b.name) + ' <span style="opacity:.7">— ' + esc((b.comps || []).length + ' thành phần') + '</span></div>').join('') + '</div>' : '<div class="acw-note" style="margin:0">Chưa cài gói .bundle nào (APPLOAD › Nạp cả thư mục… chọn thư mục .bundle).</div>'),
       display: '<div class="acw-cols"><div class="c1">' + K.grp('Phối màu', K.row('Giao diện:', K.sel('opScheme', [['dark', 'Tối']], 'dark', { dis: 1 }))) +
           K.grp('Thành phần cửa sổ', K.chk('opSb', 'Hiện thanh tỉ lệ trên màn hình', G('scaleBarOn') !== false) + '<br>' + K.chk('opTip', 'Hiện chú giải công cụ (tooltip)', S.rollover !== false) + '<br>' + K.chk('opScroll', 'Hiện thanh cuộn trong vùng vẽ', 0, { dis: 1 }) +
             '<div class="acw-row" style="margin-top:6px">' + K.btn('opColors', 'Màu…') + '<span class="acw-note" style="margin:0">Nền trắng ↔ tối (bản in)</span></div>') +
@@ -986,7 +994,7 @@
           K.grp('Chế độ chọn', K.chk('opPf', 'Chọn trước rồi gọi lệnh (noun/verb)', S.pickfirst !== false) + '<br>' + K.chk('opSh', 'Giữ Shift để thêm vào tập chọn', 0, { dis: 1 }) + '<br>' + K.chk('opIw', 'Kéo khung khi bấm vào chỗ trống', 1, { dis: 1 }) + '<br>' + K.chk('opGr', 'Chọn cả nhóm', S.pickGroup !== false) + '<br>' + K.chk('opRo', 'Xem trước khi rê chuột lên đối tượng', S.rollover !== false)) + '</div><div class="c1">' +
           K.grp('Ô nắm (grip)', K.chk('opGs', 'Hiện ô nắm', 1, { dis: 1 }) + '<br>' + K.chk('opGb', 'Hiện ô nắm trong khối', 0, { dis: 1 }) + K.row('Giới hạn số đối tượng hiện ô nắm:', K.num('opGl', 100, { dis: 1 }), { dis: 1 })) + '</div></div>'
     };
-    const TABS = [['display', 'Hiển thị'], ['open', 'Mở và lưu'], ['plot', 'In và xuất bản'], ['system', 'Hệ thống'], ['user', 'Tuỳ chọn người dùng'], ['drafting', 'Hỗ trợ vẽ'], ['selection', 'Vùng chọn']];
+    const TABS = [['files', 'Tệp'], ['display', 'Hiển thị'], ['open', 'Mở và lưu'], ['plot', 'In và xuất bản'], ['system', 'Hệ thống'], ['user', 'Tuỳ chọn người dùng'], ['drafting', 'Hỗ trợ vẽ'], ['selection', 'Vùng chọn']];
     const html = '<div class="acw"><div class="acw-row" style="margin:0 0 6px"><span>Hồ sơ hiện hành:</span> <span class="nm">&lt;&lt;Hồ sơ chưa đặt tên&gt;&gt;</span><span class="l"></span><span>Bản vẽ hiện hành:</span> <span class="nm" id="opDn"></span></div>' +
       K.tabs('op', TABS, cur) + '<div class="acw-panes" style="height:min(400px,calc(90vh - 200px));overflow:auto">' + TABS.map(([k]) => K.pane('op', k, cur, T[k])).join('') + '</div></div>';
     const apply = r => { const c = id => K.on(r, id), n = id => num(K.val(r, id));
@@ -995,9 +1003,11 @@
       try{ const sb = c('opSb'); if(sb !== scaleBarOn){ scaleBarOn = sb; localStorage.setItem('dvdcad_scalebar', sb ? '1' : '0'); } }catch(_){}
       try{ const lw = c('opLw'); if(lw !== !!showLW){ showLW = lw; syncDisplayToggles(); } }catch(_){}
       if(A.setDxfVer) A.setDxfVer(K.val(r, 'opDxf')); if(A.PS){ A.PS.dev = K.val(r, 'opPdev'); try{ localStorage.setItem('dvd:plot', JSON.stringify(A.PS)); }catch(_){} }
+      try{ const tr = r.querySelector('#opTr'); if(tr) localStorage.setItem('dvd:trusted', tr.value.trim()); }catch(_){}
       A.saveSet(); try{ draw(); }catch(_){} };
     const d = A.dialog({ title: 'Tuỳ chọn', cls: 'acw-free', help: 'OPTIONS', html, ok: r => apply(r), left: '' });
     const root = d.root; root.querySelector('.modal').style.width = 'min(720px,97vw)';
+    { const b1 = root.querySelector('#opSfM'), b2 = root.querySelector('#opSfA'); if(b1) b1.onclick = () => DVDCmd.run('SUPPORTFILES'); if(b2) b2.onclick = () => DVDCmd.run('APPLOAD'); }
     try{ root.querySelector('#opDn').textContent = (typeof currentName !== 'undefined' && currentName) || '—'; }catch(_){}
     const ap = document.createElement('button'); ap.type = 'button'; ap.className = 'btn-ghost'; ap.textContent = 'Áp dụng'; root.querySelector('.dvd-help').before(ap); ap.onclick = () => apply(root);
     K.bindTabs(root);
