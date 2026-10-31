@@ -317,11 +317,13 @@
     const a = cnt(oldE), b = cnt(newE); const removed = [], added = []; const ra = new Map(a), rb = new Map(b);
     for(const e of oldE){ const s = sig(e); const nb = rb.get(s) || 0; if(nb > 0) rb.set(s, nb - 1); else removed.push(e); }
     for(const e of newE){ const s = sig(e); const na = ra.get(s) || 0; if(na > 0) ra.set(s, na - 1); else added.push(e); } return { added, removed, same: newE.length - added.length }; }
-  A.diffEnts = diffSets;
+  A.diffEnts = diffSets; A.markDiff = (D, tag) => markDiff(D, tag);
   // đánh dấu khác biệt: bản sao tô màu trên lớp riêng (xanh = thêm, đỏ = mất)
   function markDiff(D, tag){ const L = 'DIFF$' + tag; A.addLayer(L + '_THEM', '#22c55e'); A.addLayer(L + '_MAT', '#ef4444'); const add = [];
-    for(const e of D.added){ const w = copy(e); delete w.xr; delete w.grp; delete w.blk; w.layer = L + '_THEM'; w.col = '#22c55e'; delete w.bl; w.lw = 50; add.push(w); }
-    for(const e of D.removed){ const w = copy(e); delete w.xr; delete w.grp; delete w.blk; w.layer = L + '_MAT'; w.col = '#ef4444'; delete w.bl; w.lw = 50; add.push(w); }
+    const dfo = e => ({ layer: e.layer || '0', col: e.col, bl: e.bl, lw: e.lw });   // thuộc tính gốc (COMPAREIMPORT lấy lại)
+    for(const e of D.added){ const w = copy(e); delete w.xr; delete w.grp; delete w.blk; w.dfo = dfo(e); w.layer = L + '_THEM'; w.col = '#22c55e'; delete w.bl; w.lw = 50; add.push(w); }
+    for(const e of D.removed){ const w = copy(e); delete w.xr; delete w.grp; delete w.blk; w.dfo = dfo(e); w.layer = L + '_MAT'; w.col = '#ef4444'; delete w.bl; w.lw = 50; add.push(w); }
+    A._lastCompare = { tag, added: D.added.length, removed: D.removed.length, same: D.same, t: Date.now() };
     if(add.length) A.commit({ add }, tag + ': +' + D.added.length + ' / −' + D.removed.length + ' (lớp ' + L + '_THEM / _MAT)'); return add.length; }
   plain(['DWGHISTORY'], 'Lịch sử bản vẽ: các phiên bản đã lưu (tự chụp khi lưu + SNAPSHOT) — mở, so sánh với hiện tại, xoá', async () => {
     const H = (await A.dwgHistory()).reverse(); if(!H.length){ log('DWGHISTORY: chưa có phiên bản nào của "' + docName() + '" — lưu bản vẽ (Ctrl+S) hoặc dùng SNAPSHOT.'); return; }

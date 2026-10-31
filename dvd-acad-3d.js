@@ -46,6 +46,7 @@
     const v = (x, y, z) => { P.push(x, y, z); return P.length / 3 - 1; };
     if(e.type === 'SOLID' && e.face){ const z = e.zs || []; const q = e.pts.map((p, i) => v(p.x, p.y, z[i] || 0)); I.push(q[0], q[1], q[2]); if(q.length > 3 && Math.hypot(e.pts[3].x - e.pts[2].x, e.pts[3].y - e.pts[2].y) + Math.abs((z[3] || 0) - (z[2] || 0)) > 1e-9) I.push(q[0], q[2], q[3]); return { p: P, i: I, flat: true }; }
     if(e.type !== 'SOLID3D') return null;
+    if(A.meshOfExt){ const r = A.meshOfExt(e); if(r) return r; }   // kiểu khối bổ sung (mặt NURBS…)
     if(e.k === 'ext'){
       const V = (e.pts || []).concat(...(e.holes || [])); const n = V.length, z0 = e.z0 || 0, z1 = z0 + (e.h || 0);
       for(const q of V) v(q.x, q.y, z0); for(const q of V) v(q.x, q.y, z1);
@@ -372,6 +373,7 @@
         if(e.mat && MATS[e.mat] && MATS[e.mat].tex){ if(e.mapk && A.uvMap) A.uvMap(T, g, MATS[e.mat].ts / U * (e.mapsc || 1), e); else boxUV(T, g, MATS[e.mat].ts / U * (e.mapsc || 1)); }
         const mesh = new T.Mesh(g, matOf(e.mat && MATS[e.mat] ? MATS[e.mat].c : e.col)); mesh.castShadow = true; mesh.receiveShadow = true; root.add(mesh);
         const eg = new T.EdgesGeometry(g, 25); const ed = new T.LineSegments(eg, edgeMat); root.add(ed);
+        if(A.extraEdges){ const X = []; for(const pt of (parts || [])) try{ A.extraEdges(pt.e, X); }catch(_){} if(X.length){ const xg = new T.BufferGeometry(); xg.setAttribute('position', new T.Float32BufferAttribute(X, 3)); ed.add(new T.LineSegments(xg, edgeMat)); } }   // nét in dấu (IMPRINT)
         let iso = null; const IP = isoP || isoLines(e); if(IP.length){ const ig = new T.BufferGeometry(); ig.setAttribute('position', new T.Float32BufferAttribute(IP, 3)); iso = new T.LineSegments(ig, wireMat); iso.visible = false; root.add(iso); }
         solids.push({ mesh, ed, iso, col: e.col, lam: mesh.material, std: stdOf(e.col, e.mat), parts });
       }
@@ -622,6 +624,7 @@
       ground.visible = real; sun.castShadow = real; lightGroup.visible = real; applySun(); scene.environment = real ? envMap() : null; renderer.toneMapping = real ? T.ACESFilmicToneMapping : T.NoToneMapping;
       for(const m of mats.values()){ m.transparent = s === 'xray'; m.opacity = s === 'xray' ? 0.4 : 1; m.depthWrite = s !== 'xray'; m.needsUpdate = true; }
       applyVSX(); applyAna();
+      if(A.hlHook) try{ A.hlHook({ T, solids, style: s, renderer }); }catch(_){}   // HLSETTINGS: nét khuất
       need = true;
     }
     // kiểu hiển thị riêng (Visual Styles Manager / VSSAVE): ghi đè kiểu mặt, cạnh, màu cạnh, độ mờ, bóng đổ, màu nền lên kiểu gốc
@@ -767,7 +770,7 @@
     for(const e of list){ const m = meshOf(e); if(!m) continue; const ly = String(e.layer || '0').replace(/[^\x20-\x7e]/g, '_');
       let aci = 256; try{ if(!(e.bl || String(e.col || '').toLowerCase() === String(A.layerHex(e.layer || '0')).toLowerCase())) aci = A.aciNear(e.col || '#ffffff'); }catch(_){}
       const nf = m.i.length / 3; let xd = null;
-      if(e.type === 'SOLID3D'){ const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms', 'mapk', 'mapsc', 'matL']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
+      if(e.type === 'SOLID3D'){ const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms', 'mapk', 'mapsc', 'matL', 'ns', 'imp']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
         let js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); if(js.length > 15000){ delete d.ms; js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); } if(js.length > 15000) js = JSON.stringify({ k: 'mesh', mat: e.mat, srf: e.srf });
         xd = []; for(let k = 0; k < js.length; k += 240) xd.push(js.slice(k, k + 240)); }
       for(let t = 0; t < m.i.length; t += 3){ const q = [m.i[t], m.i[t + 1], m.i[t + 2], m.i[t + 2]]; P(0, '3DFACE'); P(8, ly); if(aci !== 256) P(62, aci); q.forEach((ix, j) => { P(10 + j, m.p[ix * 3]); P(20 + j, m.p[ix * 3 + 1]); P(30 + j, m.p[ix * 3 + 2]); });
@@ -795,7 +798,7 @@
       if(def && def.k && def.k !== 'mesh'){ const c = Object.assign({ type: 'SOLID3D' }, def); const m = meshOf(c);
         if(m && m.i.length / 3 === n){ const a = m.i[0] * 3; const z = (e.zs || [])[0] || 0; const sz = Math.max(1, Math.abs(m.p[a]) + Math.abs(m.p[a + 1]) + Math.abs(m.p[a + 2])); if(Math.abs(m.p[a] - e.pts[0].x) + Math.abs(m.p[a + 1] - e.pts[0].y) + Math.abs(m.p[a + 2] - z) < sz * 1e-6 + 1e-6) sol = c; } }
       if(!sol){ const P = [], I = []; for(const q of F){ const m = meshOf(q); const b = P.length / 3; for(const v of m.p) P.push(v); for(const t of m.i) I.push(t + b); } sol = meshEnt(P, I); if(sol && def && def.mat) sol.mat = def.mat; }
-      if(sol && def && sol.k === 'mesh'){ if(def.srf) sol.srf = 1; for(const k of ['mapk', 'mapsc', 'matL']) if(def[k] != null) sol[k] = def[k]; if(def.ms && A.meshApplyMs){ try{ A.meshApplyMs(sol, def.ms); }catch(_){} } }
+      if(sol && def && sol.k === 'mesh'){ if(def.srf) sol.srf = 1; for(const k of ['mapk', 'mapsc', 'matL', 'imp']) if(def[k] != null) sol[k] = def[k]; if(def.ms && A.meshApplyMs){ try{ A.meshApplyMs(sol, def.ms); }catch(_){} } }
       if(!sol){ for(const q of F) out.push(q); i += n - 1; continue; }
       sol.layer = e.layer; if(e.aci !== undefined) sol.aci = e.aci; for(const k of ['lt', 'lw', 'lts']) if(e[k] != null) sol[k] = e[k];
       out.push(sol); i += n - 1;
