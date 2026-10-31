@@ -662,5 +662,18 @@
     I.POINTCLOUDCROP = PCI + '<rect class="r" x="4" y="4" width="12" height="12" stroke-dasharray="2 1.5"/>'; I.PCCROP = I.POINTCLOUDCROP; I.POINTCLOUDUNCROP = I.POINTCLOUDCROP + BX; I.PCUNCROP = I.POINTCLOUDUNCROP; I.POINTCLOUDPOINTSIZE = PCI + BGEAR; I.PCPOINTSIZE = I.POINTCLOUDPOINTSIZE;
     I.PCEXTRACTSECTION = PCI + '<path class="y" d="M3 15l5-3 4 2 5-5 4 2" stroke-width="1.8"/>'; I.PCEXTRACTEDGE = PCI + '<path class="y" d="M12 3v18" stroke-width="1.8"/>'; I.PCEXTRACTCORNER = PCI + '<path class="y" d="M5 19V8M5 19h12" stroke-width="1.8"/>';
     I.PCEXTRACTCENTERLINE = PCI + '<path class="y" d="M12 2v20" stroke-dasharray="3 1.5" stroke-width="1.6"/>'; I.PCINWIZARD = PCI + BSTAR; I.RECAP = PCI + BLINK; }
+  // v6k: kết xuất, đèn, vật liệu, cảnh quay, tập bản vẽ
+  { const has = k => I[k] || '';
+    const PIC = '<rect x="2.5" y="4" width="19" height="16" rx="1"/><path class="a" d="M5 17l4.5-5 3 3 2.5-2.5L19 17z"/><circle class="fy" cx="16.5" cy="8" r="1.6"/>';
+    I.RENDERWINDOW = PIC + BSTAR; I.RENDERWIN = I.RENDERWINDOW; I.RENDERWINDOWCLOSE = PIC + BX; I.RENDERCROP = PIC + '<rect class="r" x="7" y="7" width="10" height="8" stroke-dasharray="2 1.5"/>'; I.RC = I.RENDERCROP;
+    I.RENDERPRESETS = has('RENDER') + BGEAR; I.RPREF = I.RENDERPRESETS; I.RPR = I.RENDERPRESETS; I.RENDEREXPOSURE = '<circle cx="12" cy="12" r="8.5"/><path class="fy" d="M12 3.5a8.5 8.5 0 0 1 0 17z"/>'; I.RENDERENVIRONMENT = '<path class="a" d="M3 15c3-2 6-2 9 0s6 2 9 0M3 19c3-2 6-2 9 0s6 2 9 0"/><circle class="fy" cx="16" cy="7" r="3"/>'; I.RENDERONLINE = has('RENDER') + BLINK;
+    I.TARGETPOINT = has('LIGHT') + '<circle class="r" cx="18" cy="19" r="2.5"/>'; I.FREESPOT = has('SPOTLIGHT') || has('LIGHT'); I.WEBLIGHT = has('LIGHT') + '<path class="a" d="M4 20c3-4 13-4 16 0" stroke-dasharray="2 1.5"/>'; I.FREEWEB = I.WEBLIGHT; I.CONVERTOLDLIGHTS = has('LIGHT') + BOK; I.CONVERTOLDMATERIALS = has('MATERIALS') + BOK;
+    I.MATEDITOROPEN = has('MATERIALS') + BGEAR; I.MATEDITOR = I.MATEDITOROPEN; I.MATEDITORCLOSE = I.MATEDITOROPEN; I.MATERIALATTACH = has('MATERIALS') + BLINK; I.MATERIALMAP = '<path class="fa" d="M4 8l8-4 8 4-8 4z"/><path d="M4 8v8l8 4 8-4V8M12 12v8"/><path class="y" d="M6 10l4 2M14 12l4-2"/>'; I.SETUV = I.MATERIALMAP;
+    const SH = '<rect x="2.5" y="6" width="19" height="13" rx="1"/><path class="a" d="M2.5 9h19M6 6V4M10 6V4M14 6V4M18 6V4"/>';
+    I.NEWSHOT = SH + BSTAR; I.EDITSHOT = SH + BGEAR; I.NAVSMOTION = SH + '<path class="fy" d="M10 11.5v5l4.5-2.5z"/>'; I.NAVSMOTIONCLOSE = SH + BX; I.VTOPTIONS = '<path class="a" d="M3 12c4-6 14-6 18 0"/><path class="a" d="M18 8l3 4-4.5 1"/>' + BGEAR;
+    I.ANIPATH = '<path class="a" d="M3 19c4-12 10 2 18-12" stroke-dasharray="3 1.5"/><rect class="fa" x="14" y="12" width="7" height="5" rx="1"/><path d="M21 13l2-1v5l-2-1"/>';
+    I['3DORBITCTR'] = has('3DORBIT') + '<circle class="r" cx="12" cy="12" r="2"/>'; I.LIVESECTION = has('SECTIONPLANE') + BOK;
+    const SS = '<rect class="fd" x="5" y="3" width="13" height="16"/><rect x="5" y="3" width="13" height="16"/><rect class="fd" x="3" y="5" width="13" height="16"/><rect x="3" y="5" width="13" height="16"/><path class="a" d="M6 9h7M6 12h7M6 15h5"/>';
+    I.SHEETSET = SS; I.SSM = SS; I.SHEETSETHIDE = SS + BX; I.NEWSHEETSET = SS + BSTAR; I.OPENSHEETSET = SS + '<path class="y" d="M14 21h7M18.5 18.5L21 21l-2.5 2.5"/>'; }
   window.DVDIcons = I;
 })();

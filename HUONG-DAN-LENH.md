@@ -27,6 +27,44 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v6k) — kết xuất, đèn, vật liệu, cảnh quay, hoạt hình, tập bản vẽ
+- **Kết xuất (Render)**: thẻ Visualize › Render.
+  - `RENDERWINDOW` / `RENDERWIN`: kết xuất khung 3D ra ảnh (kiểu Thực tế, theo mức kết xuất), cửa sổ có lịch sử, **Lưu PNG**, **Cắt vùng**. `RENDERWINDOWCLOSE` đóng cửa sổ.
+  - `RENDERCROP`: kết xuất rồi kéo chuột chọn vùng cần lấy.
+  - `RENDERPRESETS` / `RPREF`: mức Thấp / Trung bình / Cao / Trình chiếu (1× – 3× độ phân giải khung 3D), phơi sáng.
+  - `RENDEREXPOSURE`: phơi sáng EV −3 … +3.
+  - `RENDERENVIRONMENT`: sương mù (màu, gần / xa) và nền (một màu / chuyển màu).
+  - `RENDERONLINE`: kết xuất ngay trên máy.
+- **Đèn**:
+  - `TARGETPOINT`: đèn điểm có điểm nhắm.
+  - `FREESPOT`: đèn rọi tự do (thẳng xuống hoặc theo góc).
+  - `WEBLIGHT` / `FREEWEB`: đèn trắc quang đọc tệp **IES** (cường độ cực đại, góc chùm sáng).
+  - `CONVERTOLDLIGHTS`, `CONVERTOLDMATERIALS`.
+- **Vật liệu**:
+  - `MATEDITOROPEN`: tạo / sửa vật liệu (màu, độ nhám, kim loại, độ đục, vân, cỡ vân), lưu cho các bản vẽ sau.
+  - `MATERIALATTACH`: vật liệu theo lớp (cả khối vẽ sau).
+  - `MATERIALMAP`: ánh xạ vân hộp / phẳng / trụ / cầu, tỉ lệ vân.
+  - Lưu trong DXF / DWG.
+- **Cảnh quay (ShowMotion)**:
+  - `NEWSHOT`: lưu góc nhìn mặt bằng hoặc camera khung 3D, kèm thời lượng và kiểu chuyển cảnh (mượt / cắt).
+  - `EDITSHOT`: sửa cảnh.
+  - `NAVSMOTION`: thanh cảnh quay (bấm cảnh để chuyển tới, chạy lần lượt / lặp). `NAVSMOTIONCLOSE` đóng thanh.
+  - `VTOPTIONS`: chuyển cảnh mượt, thời gian.
+- **Hoạt hình** `ANIPATH`: camera đi dọc một đường (đa tuyến, đa tuyến 3D, cung…).
+  - Nhìn theo hướng đi hoặc nhìn một điểm; cao độ mắt, thời lượng, số hình / giây.
+  - Ghi ra **video WebM**.
+- **Khung 3D**: `3DORBITCTR` đặt tâm quay; `LIVESECTION` bật / tắt mặt cắt.
+- **Tập bản vẽ (Sheet Set)**, thẻ Output › Sheet Set:
+  - `NEWSHEETSET`: tên, mô tả, tên / số dự án, chủ đầu tư; các tờ lấy từ layout, đánh số có tiền tố (vd `KT-01`).
+  - `OPENSHEETSET`: mở tập đã lưu hoặc tệp `.dvdsst`. Tệp `.dst` của AutoCAD chưa đọc được.
+  - `SHEETSET` / `SSM` (Sheet Set Manager):
+    - bấm tên tờ để chuyển tới layout;
+    - sửa số / tên tờ, sắp xếp, thêm layout, đánh số lại;
+    - **Bảng danh mục** (bảng số tờ – tên tờ);
+    - **Chèn trường** (số tờ, tên tờ, tổng số tờ, tên tập, tên / số dự án, chủ đầu tư — tự cập nhật khi đổi);
+    - **Xuất bản** (PUBLISH), **Lưu .dvdsst**.
+  - `SHEETSETHIDE` đóng.
+
 ## Bổ sung như AutoCAD 2027 (v6j) — nền PDF / DWF có lớp, đám mây điểm
 - **PDF và DWFx xuất ra có lớp** như AutoCAD.
   - PDF: mỗi lớp bản vẽ thành một lớp PDF (OCG). Mở bằng Acrobat / trình xem PDF bật / tắt được.

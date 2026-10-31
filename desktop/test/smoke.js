@@ -223,6 +223,9 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       const C = A.pcParse.las(buf); const e = R.ents[0];
       return [R.layers[0], e.type, e.x2.toFixed(1), e.y1.toFixed(1), C.n, C.b[3], C.o[2], ['PDFATTACH', 'PDFLAYERS', 'DWFATTACH', 'POINTCLOUDATTACH', 'PCEXTRACTSECTION', 'EXPORTDWFX'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
     check(v6j === 'TU,LINE,25.4,0.0,2,1,5,true', 'Nền DWFx (lớp từ Canvas), đọc LAS, lệnh PDF / DWF / đám mây điểm: ' + v6j);
+    // v6k: tệp IES, lệnh kết xuất / cảnh quay / tập bản vẽ
+    const v6k = await win.evaluate(() => { const R = DVDAcad.parseIES('IESNA:LM-63-2002\nTILT=NONE\n1 1000 1 3 1 1 2 0 0 0\n1 1 50\n0 30 60\n0\n1000 900 100\n'); return [R.maxCd, R.beam, ['RENDERWINDOW', 'RENDERPRESETS', 'WEBLIGHT', 'MATEDITOROPEN', 'NEWSHOT', 'NAVSMOTION', 'ANIPATH', 'NEWSHEETSET', 'OPENSHEETSET'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
+    check(v6k === '1000,60,true', 'Đọc IES, lệnh kết xuất / cảnh quay / ANIPATH / tập bản vẽ: ' + v6k);
     if(process.env.DVD_DWG_OUT) for(const v of Object.keys(v6f.dwg)) fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'xdata-' + v + '.dwg'), Buffer.from(v6f.dwg[v], 'base64'));
   }
   {
