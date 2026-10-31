@@ -1,51 +1,49 @@
-## DVDCAD 5.25.0 — Tiện ích LISP của AutoCAD chạy đúng hơn: tuỳ chọn "_X", lệnh dòng lệnh, biến hệ thống, XDATA
+## DVDCAD 5.26.0 — Cài ứng dụng ngoài như AutoCAD: gói .bundle, menu, reactor, Excel, DOSLib
 
 Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Windows. Tên lệnh, lệnh tắt và cách dùng giống AutoCAD để người dùng chuyển sang không bỡ ngỡ.
 
 ### Tải về
-- **DVDCAD-Setup-5.25.0.exe** — bộ cài.
+- **DVDCAD-Setup-5.26.0.exe** — bộ cài.
   - Cài cho tài khoản Windows đang dùng, không cần quyền quản trị.
   - Có lối tắt Desktop và Start Menu.
   - Nhấp đúp file .dwg / .dxf là mở bằng DVDCAD.
-- **DVDCAD-5.25.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
+- **DVDCAD-5.26.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
 
 Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More info → Run anyway**.
 
 ### Có gì mới
-Bản này sửa và bổ sung những chỗ khiến tiện ích LISP viết cho AutoCAD chạy sai trên DVDCAD (kết quả kiểm tra ở bản 5.24.0).
+Bản này bổ sung phần hạ tầng mà các ứng dụng / tiện ích cài thêm cho AutoCAD hay dùng.
 
-- **Tuỳ chọn kiểu quốc tế `"_W"`, `"_J"`, `"_E"`…** (dấu gạch dưới trước tuỳ chọn) và tên tuỳ chọn tiếng Anh đầy đủ được hiểu ở mọi lời nhắc.
-  - Đây là cách hầu hết tiện ích LISP chuyên nghiệp viết; bản trước báo "Điểm không hợp lệ".
-- **Lệnh gọi từ `(command …)` chạy và kết thúc như AutoCAD**:
-  - `HATCH` (tên mẫu, tỉ lệ, góc, chọn biên), `-HATCH`, `-INSERT` có `S` / `R`, `-ARRAY` (mảng cổ điển), `ATTDEF`, `TABLE`, `-WBLOCK` dùng bản dòng lệnh, không mở hộp thoại;
-  - `LEADER`, `QLEADER`, `MLEADER`, `MTEXT` nhận chữ từng dòng; `TEXT` một dòng rồi kết thúc; `POINT` một điểm;
-  - `CHANGE` (điểm thay đổi hoặc Thuộc tính), `BREAK` với tên đối tượng, `DRAWORDER` sau khi chọn bằng tên đối tượng.
-- **Biến hệ thống**: `DIMSCALE`, `CDATE`, `CTAB`, `ATTREQ`, `FILEDIA`, `USERI1`…, cùng các biến điểm (`EXTMIN`, `INSBASE`…) trả đúng kiểu như AutoCAD. Bản trước có 62 biến trả `nil` làm tiện ích báo lỗi khi tính toán.
-- **XDATA** (dữ liệu riêng tiện ích gắn vào đối tượng):
-  - `regapp`, `entget` với tên ứng dụng, `entmod` / `entmake` nhóm `-3`, `vla-SetXData` / `vla-GetXData`;
-  - lưu trong DXF và DWG như AutoCAD, mở lại vẫn còn.
-- **`ssget`**: bộ lọc logic `<OR` / `<AND` / `<NOT`, so sánh `>` `<` `>=`…, lọc theo XDATA, `"_WP"` / `"_CP"` / `"_F"` với danh sách điểm.
-- **`entmake`**: tạo được hatch, kích thước, định nghĩa khối (`BLOCK` … `ENDBLK`), khối có thuộc tính (`INSERT` + `ATTRIB` … `SEQEND`).
-- **ActiveX**:
-  - hằng số `vlax-vbDouble`, `acRed`, `acSelectionSetAll`…;
-  - `vla-InsertBlock`, `GetAttributes` (đọc / sửa giá trị thuộc tính), `GetDynamicBlockProperties`;
-  - `AddHatch`, `AddDimAligned`, `AddDimRotated`, `AddTable`, `SelectionSets`, `TrueColor`, `Preferences.Files`…
-- **Lệnh mới / sửa** (dùng được cả khi gõ tay): `-HATCH`, `-ARRAY`, `-ATTDEF`, `-TABLE`, `-WBLOCK`, `CHANGE`, `LEADER` cổ điển.
+- **Cài gói ứng dụng `.bundle`** (cách cài của Autodesk App Store, thư mục `ApplicationPlugins`): `APPLOAD` → **Nạp cả thư mục…**, chọn thư mục `.bundle` hoặc gói .zip.
+  - DVDCAD đọc `PackageContents.xml`: tệp LISP tự nạp khi mở hoặc nạp khi gõ lệnh; menu `.cuix` nạp kèm `.mnl`.
+  - Phần `.dll` / `.arx` / `.fas` bị bỏ qua; gõ lệnh của phần đó thì DVDCAD báo rõ là cần AutoCAD.
+  - Lệnh `APPAUTOLOADER` liệt kê gói đã cài.
+- **Menu**: `MENULOAD` / `MENUUNLOAD` nạp và gỡ menu `.cuix` / `.cui` và menu cũ `.mnu` / `.mns`. Tệp `.mnl` cùng tên tự nạp như AutoCAD.
+- **Reactor** phát sinh sự kiện thật: lệnh bắt đầu / kết thúc / huỷ; thêm / sửa / xoá đối tượng; đối tượng sở hữu bị sửa / xoá; đổi biến hệ thống; nhấp đúp / chuột phải; lưu bản vẽ. Tiện ích tự cập nhật (đánh số, bảng khối lượng, nhãn liên kết) chạy được.
+- **Xuất Excel từ LISP**: `(vlax-get-or-create-object "Excel.Application")` với `Workbooks`, `Worksheets`, `Cells`, `Range`, `Value`, `Formula`, `SaveAs` ghi ra **tệp .xlsx thật**, mở bằng Excel được. Máy không cần cài Excel.
+- **`Scripting.FileSystemObject`**, **`Scripting.Dictionary`**, **`WScript.Shell`** dùng được trong LISP.
+- **DOSLib**: các hàm hay dùng (`dos_msgbox`, `dos_listbox`, `dos_checklist`, `dos_getstring`, `dos_strtokens`, `dos_strreplace`…).
+- **OPTIONS › Tệp**: đường dẫn tìm tệp hỗ trợ, vị trí tin cậy (`TRUSTEDPATHS`), ứng dụng đã cài. `SECURITYOPTIONS` mở tab này.
+- **`NETLOAD`, `ARX`, `VBALOAD` / `VBARUN` / `VBAMAN` / `VBAIDE`**: có lệnh như AutoCAD, giải thích vì sao tệp `.dll` / `.arx` / `.dvb` không chạy và cách thay thế.
 
 ### Kiểm thử
 - GitHub Actions trên Windows:
-  1. Kiểm thử nhanh như 5.24.0, thêm `(command)` với `"_E"` / `"_W"` và XDATA.
-  2. **ODA File Converter** và **ACadSharp** đọc lại các tệp DWG 2018 / 2013 / 2007 / 2000 có XDATA do DVDCAD ghi.
+  1. Kiểm thử nhanh như 5.25.0, thêm reactor lệnh, Excel qua COM, DOSLib.
+  2. **ODA File Converter** và **ACadSharp** đọc lại các tệp DWG do DVDCAD ghi.
   3. Bộ đọc XPS của Windows mở tệp DWFx.
   4. Cài lặng bộ cài, chạy kiểm thử trên `DVDCAD.exe` đã cài, rồi gỡ cài.
 - Kiểm thử giao diện tự động:
-  - 30 câu `(command …)` viết theo AutoCAD (PLINE `_W` / `_A`, TEXT `_J _MC`, HATCH, -HATCH, -INSERT `_S`, -ARRAY R / P, LEADER, QLEADER, MLEADER, TABLE, ATTDEF, -PURGE, BREAK `_F`, CHANGE `_P`, DRAWORDER, UNDO `_BE` / `_E`…): đều tạo đúng số đối tượng và kết thúc lệnh.
-  - Biến hệ thống đúng kiểu; XDATA qua DXF và DWG; `ssget` lọc logic; `entmake` khối có thuộc tính; `vla-AddHatch`, `vla-AddTable`, `SelectionSets`.
-  - Bộ kiểm thử AutoLISP / DCL của 5.24.0 vẫn đạt đủ.
+  - reactor lệnh / CSDL / đối tượng / biến hệ thống phát sinh đúng;
+  - Excel: ghi ô, đọc lại `Value` / `Text`, `SaveAs` ra tệp `.xlsx` (gói zip hợp lệ);
+  - FileSystemObject ghi / đọc tệp; Dictionary; `vlax-import-type-library` với tiền tố `msxl-`;
+  - DOSLib `dos_listbox`, `dos_msgbox`, hàm chuỗi;
+  - gói `.bundle` mẫu: LISP khởi động, `autoload` theo lệnh, menu `.cuix` + `.mnl`, lệnh của `.dll` báo rõ;
+  - `MENULOAD` đọc menu `.mnu`; OPTIONS › Tệp.
+  - Các bộ kiểm thử LISP của 5.24.0 và 5.25.0 vẫn đạt đủ.
 
 ### Giới hạn
-- **Chưa có COM ngoài AutoCAD**: `vlax-create-object "Excel.Application"` (xuất bảng khối lượng ra Excel), `Scripting.FileSystemObject`. Chưa có thư viện DOSLib (`dos_…`), OpenDCL (`dcl_…`). Dự kiến ở bản sau.
-- Reactor (`vlr-…`) tạo được nhưng chưa phát sinh sự kiện. Dự kiến ở bản sau.
+- **OpenDCL** (`dcl_…`, hộp thoại của thư viện OpenDCL) chưa có. COM khác (Word, Access, ADODB…) chưa có.
+- Excel làm lại không tính công thức: công thức được ghi vào tệp, Excel tính khi mở.
 - **Không chạy được `.fas` / `.vlx`**: đây là LISP đã biên dịch và mã hoá cho riêng AutoCAD, không có mã nguồn. Nhiều bộ tiện ích thương mại chỉ phát hành dạng này, kèm khoá bản quyền. Cần xin tác giả bản `.lsp` (hoặc bản dành cho DVDCAD).
 - **Không chạy được `.dll` / `.arx` / `.dvb`**: đây là chương trình Windows (.NET, ObjectARX, VBA) chạy bên trong AutoCAD và gọi thẳng thư viện của Autodesk.
 - **Chưa có DWF6 ePlot** (`.dwf`): không lấy được đặc tả WHIP / W2D, và không có bộ đọc chuẩn để kiểm chứng tệp ghi ra. Dùng DWFx thay.

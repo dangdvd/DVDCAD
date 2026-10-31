@@ -6,6 +6,21 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6g: hạ tầng cài ứng dụng ngoài — reactor, COM (Excel / FSO / Dictionary / Shell), DOSLib, gói .bundle, MENULOAD + .mnl, OPTIONS › Tệp
+- `dvd-lisp4.js`:
+  - Reactor: lớp `Reactor` (type, data, reactions, owners); `fire()` gọi hàm phản hồi bằng `setTimeout` + `runTop` (không chặn lệnh, tránh lặp quá 3 tầng).
+    Móc vào: `A.run` (lệnh: WillStart / Ended / Cancelled / Failed), `A.commit` (acdb Appended / Modified / Erased, object-reactor của đối tượng sở hữu), SETVAR, `dblclick` / `contextmenu` trên `#cv`, `DVDLisp.evalToString` (`c:`), QSAVE / SAVE / SAVEAS / SAVEDWG.
+  - COM: `VObj` kind `com` (`ref.cls`); các builtin `VLAX-GET/PUT-PROPERTY`, `VLAX-INVOKE(-METHOD)`, `VLAX-GET/PUT` chuyển sang `comGet` / `comPut` / `comCall` khi là đối tượng COM.
+    Excel giữ ô trong `Map("r,c")`, `xlsxBlob()` ghi SpreadsheetML tối giản (inlineStr / số / công thức, độ rộng cột) đóng gói bằng `A.zipParts`; FSO đọc / ghi `DVDLisp.fs`.
+  - `vlax-import-type-library`: tiền tố tự đặt sinh hàm `…get-X` / `…put-X` / `…X` khi tra `G`.
+  - DOSLib: hộp thoại bằng `A.dialog`.
+- `dvd-lisp.js` `getv`: ký hiệu bắt đầu bằng `:` tự trả về chính nó (từ khoá reactor, `:vlax-true`).
+- `dvd-addins.js`:
+  - `installBundle` (`PackageContents.xml`: `ComponentEntry` ModuleName / LoadOnAutoCADStartup / LoadOnCommandInvocation / Commands); lệnh giả `stubCmds` cho phần .dll / .arx / .fas; `dvd:bundles`;
+  - `APPAUTOLOADER`, `MENULOAD` (`mnuToCui`: ***POPn, `->` / `<-`, `[--]` → cấu trúc .dvdcui), `MENUUNLOAD`; `A.cuiLoadFile` được bọc để tự nạp `.mnl` cùng tên;
+  - `NETLOAD` / `ARX` / `VBA*` / `SECURITYOPTIONS`.
+- `dvd-acad-dlg.js` OPTIONS: tab **Tệp** (thư mục hỗ trợ, `dvd:trusted` = TRUSTEDPATHS, gói đã cài).
+
 ## v6f: tiện ích LISP chạy như trên AutoCAD — tuỳ chọn "_X", lệnh dòng lệnh, biến hệ thống, XDATA, ssget lọc, entmake, ActiveX bổ sung
 - `dvd-acad-core.js` `inputImpl`: bỏ `_` đầu tuỳ chọn (trừ lời nhắc chuỗi không khớp tuỳ chọn); `matchKw` khớp thêm tên tuỳ chọn tiếng Anh (từ điển `DVD_I18N_EN`).
 - `dvd-lisp.js` `(command)`: `A.fromLisp()` (lệnh đang do LISP điều khiển), giữ `-` ở tên lệnh, `HATCH` → `LISPHATCH` (lời nhắc cổ điển), không tự Enter sau tên đối tượng khi LISP đã có `""`, `A.input(s, { lisp })` (TEXT một dòng), chờ ô soạn chữ (`A.textEditing`); `VL-CMDF` trả T.

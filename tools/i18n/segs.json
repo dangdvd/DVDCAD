@@ -42,6 +42,9 @@
 "\" không có thuộc tính.": [
 "dvd-acad-x12.js"
 ],
+"\" không có trong DVDCAD (chỉ Excel.Application, Scripting.FileSystemObject, Scripting.Dictionary, WScript.Shell, Shell.Application).": [
+"dvd-lisp4.js"
+],
 "\" không có trong tệp chuẩn.": [
 "dvd-acad-dlg2.js"
 ],
@@ -243,6 +246,9 @@
 "\": gốc (": [
 "dvd-acad-3dy.js"
 ],
+"\": đây là mã chạy bên trong AutoCAD (.dll / .arx / .fas), DVDCAD không chạy được. Cần bản .lsp từ tác giả.": [
+"dvd-addins.js"
+],
 "\">Bỏ": [
 "dvd-acad-dlg3.js"
 ],
@@ -323,6 +329,9 @@
 "(Không)": [
 "dvd-acad-dlg2.js"
 ],
+"(LISP đã biên dịch)": [
+"dvd-addins.js"
+],
 "(^|[^A-Za-zÀ-ỹĐđ])": [
 "dvd-acad-x8.js"
 ],
@@ -380,6 +389,9 @@
 "(chưa nạp tệp bổ sung)": [
 "dvd-acad-dlg3.js"
 ],
+"(chương trình chạy trong AutoCAD)": [
+"dvd-addins.js"
+],
 "(chỉ đọc)": [
 "dvd-acad-x7.js"
 ],
@@ -410,6 +422,9 @@
 ],
 "(gốc 0,0 = điểm gốc đã chọn). Dùng XATTACH hoặc mở file để dùng lại.": [
 "dvd-acad-x6.js"
+],
+"(gốc)": [
+"dvd-acad-dlg.js"
 ],
 "(hiện": [
 "dvd-acad-dlg2.js"
@@ -515,6 +530,9 @@
 "(theo kiểu ô)": [
 "dvd-acad-dlg2.js"
 ],
+"(thiếu tệp)": [
+"dvd-addins.js"
+],
 "(thư mục hỗ trợ).": [
 "dvd-lisp2.js"
 ],
@@ -570,6 +588,9 @@
 "(đang vẽ bằng phông nét đơn thay thế theo FONTALT =": [
 "dvd-acad-x23.js"
 ],
+"(đi kèm menu).": [
+"dvd-addins.js"
+],
 "(đo trực tiếp)": [
 "index.html"
 ],
@@ -600,11 +621,17 @@
 "(đổi bằng tuỳ chọn Tỉ lệ)": [
 "dvd-acad-cmds.js"
 ],
+") là chương trình Windows được nạp": [
+"dvd-addins.js"
+],
 ") · Dài": [
 "dvd-acad-cmds.js"
 ],
 ") đến (": [
 "dvd-acad-cmds.js"
+],
+") — không chạy được trong DVDCAD": [
+"dvd-addins.js"
 ],
 ") — trục X = ngang của mặt, trục Y = lên. Khối tạo mới sẽ nằm trên mặt đó.": [
 "dvd-acad-3dy.js"
@@ -980,6 +1007,12 @@
 ": hiện": [
 "dvd-acad-dlg.js"
 ],
+": không có phương thức": [
+"dvd-lisp4.js"
+],
+": không có thuộc tính": [
+"dvd-lisp4.js"
+],
 ": không nạp được trong DVDCAD (chỉ chạy .lsp / .js mã nguồn).": [
 "dvd-acad-dlg2.js"
 ],
@@ -1024,6 +1057,9 @@
 ],
 "; acad.pgp — xuất từ DVDCAD": [
 "dvd-acad-dlg2.js"
+],
+"; bỏ qua:": [
+"dvd-addins.js"
 ],
 "; lỗi (xem dòng lệnh)": [
 "dvd-addins.js"
@@ -1905,6 +1941,9 @@
 ],
 "Bảng…": [
 "dvd-acad-dlg4.js"
+],
+"Bảo mật khi nạp tiện ích: vị trí tin cậy (TRUSTEDPATHS)": [
+"dvd-addins.js"
 ],
 "Bấm \"Bắt đầu\" để kiểm tra chính tả.": [
 "dvd-acad-dlg2.js"
@@ -3351,6 +3390,12 @@
 "Chưa cài": [
 "dvd-acad-x3.js"
 ],
+"Chưa cài gói .bundle nào (APPLOAD › Nạp cả thư mục… chọn thư mục .bundle).": [
+"dvd-acad-dlg.js"
+],
+"Chưa cài gói .bundle nào. APPLOAD › Nạp cả thư mục… rồi chọn thư mục .bundle (có PackageContents.xml).": [
+"dvd-addins.js"
+],
 "Chưa có ODA File Converter / máy chủ chuyển DWG.": [
 "dvd-acad-x3.js"
 ],
@@ -3453,6 +3498,9 @@
 ],
 "Chưa có trạng thái — bấm Mới…": [
 "dvd-acad-x5.js"
+],
+"Chưa có tệp hỗ trợ.": [
+"dvd-acad-dlg.js"
 ],
 "Chưa có tệp nào.": [
 "dvd-acad-x21.js",
@@ -5107,6 +5155,9 @@
 ],
 "Chọn tất cả trừ lớp hiện hành": [
 "dvd-acad-dlg.js"
+],
+"Chọn tệp": [
+"dvd-lisp4.js"
 ],
 "Chọn tệp bổ sung cần gỡ.": [
 "dvd-acad-dlg3.js"
@@ -6774,6 +6825,9 @@
 "DVDCAD chạy add-in AutoLISP dạng mã nguồn (.lsp, kèm hộp thoại .dcl, hàm vla- / vlax-) và JavaScript (.js). Bộ tiện ích nhiều tệp: bấm \"Nạp cả thư mục…\" hoặc chọn gói .zip. File .fas / .vlx (LISP đã biên dịch, mã hoá), .dll / .arx / .dvb (chương trình Windows nối vào AutoCAD) không chạy được — cần bản .lsp từ tác giả. Có thể gõ thẳng biểu thức LISP ở dòng lệnh, ví dụ": [
 "dvd-addins.js"
 ],
+"DVDCAD không chạy chương trình Windows:": [
+"dvd-lisp4.js"
+],
 "DVDCAD luôn ghi đầy đủ các bước hoàn tác.": [
 "dvd-acad-cmdline.js"
 ],
@@ -7347,6 +7401,9 @@
 "dvd-acad-ext.js",
 "dvd-acad-ui.js"
 ],
+"Dự án VBA": [
+"dvd-addins.js"
+],
 "Dựng lại biên": [
 "dvd-acad-dlg.js"
 ],
@@ -7402,6 +7459,18 @@
 ],
 "Enter để kết thúc, C để đóng.": [
 "dvd-help.js"
+],
+"Excel (DVDCAD): đã ghi": [
+"dvd-lisp4.js"
+],
+"Excel: không có sổ": [
+"dvd-lisp4.js"
+],
+"Excel: không có trang": [
+"dvd-lisp4.js"
+],
+"Excel: ô không hợp lệ \"": [
+"dvd-lisp4.js"
 ],
 "F1 = trợ giúp": [
 "dvd-acad-more.js"
@@ -8384,6 +8453,9 @@
 ],
 "Gỡ (CUIUNLOAD)": [
 "dvd-acad-dlg3.js"
+],
+"Gỡ menu bổ sung (như CUIUNLOAD)": [
+"dvd-addins.js"
 ],
 "Gỡ nạp": [
 "dvd-acad-dlg2.js",
@@ -9452,6 +9524,9 @@
 "Khoá vị trí=Y": [
 "dvd-acad-dlg.js"
 ],
+"Khoá đã có": [
+"dvd-lisp4.js"
+],
 "Khoảng OFFSET mặc định": [
 "dvd-acad-x7.js"
 ],
@@ -10339,6 +10414,9 @@
 "Không nạp được bộ chuyển đổi.": [
 "dvd-acad-x21.js"
 ],
+"Không nạp được menu": [
+"dvd-addins.js"
+],
 "Không nối được (không gặp ranh giới hoặc không dài thêm) — thử đầu khác.": [
 "index.html"
 ],
@@ -10458,6 +10536,9 @@
 ],
 "Không tìm thấy thực thể vẽ nào trong file.": [
 "index.html"
+],
+"Không tìm thấy tệp": [
+"dvd-lisp4.js"
 ],
 "Không tìm thấy vùng kín bao quanh điểm này (biên hở hoặc nằm ngoài khung nhìn).": [
 "dvd-acad-cmds.js"
@@ -12382,6 +12463,9 @@
 "Lệnh add-in": [
 "dvd-addins.js"
 ],
+"Lệnh của": [
+"dvd-addins.js"
+],
 "Lệnh của tôi": [
 "dvd-acad-dlg3.js"
 ],
@@ -12742,6 +12826,9 @@
 "MVSETUP: khung tên vẽ trên lớp hiện hành; tỉ lệ dùng đơn vị bản vẽ (mm).": [
 "dvd-acad-x22.js"
 ],
+"Macro VBA (.dvb) — chỉ chạy trong AutoCAD có VBA Enabler": [
+"dvd-addins.js"
+],
 "Macro chờ bạn nhập:": [
 "dvd-acad-dlg2.js"
 ],
@@ -12780,6 +12867,9 @@
 ],
 "Mong muốn": [
 "dvd-acad-x22.js"
+],
+"Muốn dùng tiện ích trên DVDCAD: xin tác giả bản": [
+"dvd-addins.js"
 ],
 "Màn hình": [
 "dvd-acad-x7.js"
@@ -13852,6 +13942,9 @@
 "Nhóm đối tượng (Object Grouping) kiểu cũ: tạo, đổi tên, thêm / bớt, mô tả, rã nhóm, chọn được": [
 "dvd-acad-dlg2.js"
 ],
+"Như biến TRUSTEDPATHS của AutoCAD. DVDCAD hỏi xác nhận khi nạp tiện ích ngoài các thư mục này.": [
+"dvd-acad-dlg.js"
+],
 "Nhạt": [
 "dvd-acad-dlg.js"
 ],
@@ -14519,6 +14612,9 @@
 "Nạp lại tất cả tham chiếu": [
 "dvd-acad-pro.js:attr"
 ],
+"Nạp menu bổ sung: .cuix / .cui hoặc menu cũ .mnu / .mns (kèm .mnl cùng tên)": [
+"dvd-addins.js"
+],
 "Nạp ngay và đưa vào Startup Suite": [
 "dvd-addins.js"
 ],
@@ -14549,6 +14645,12 @@
 ],
 "Nạp ứng dụng (APPLOAD)": [
 "dvd-addins.js"
+],
+"Nạp ứng dụng .NET (.dll) — chỉ chạy trong AutoCAD; DVDCAD giải thích cách thay thế": [
+"dvd-addins.js"
+],
+"Nạp ứng dụng / thư mục…": [
+"dvd-acad-dlg.js"
 ],
 "Nạp ứng dụng trước (APPLOAD), rồi thêm vào Startup Suite.": [
 "dvd-acad-dlg2.js"
@@ -14816,6 +14918,9 @@
 "PURGE: đã dọn": [
 "dvd-acad-dlg.js",
 "dvd-acad-x7.js"
+],
+"PackageContents.xml lỗi": [
+"dvd-addins.js"
 ],
 "Pha điện": [
 "dvd-acad-dlg.js"
@@ -15204,6 +15309,9 @@
 ],
 "Quản lý trạng thái lớp: lưu / gọi lại tình trạng bật, tắt, khoá, màu của các lớp": [
 "dvd-acad-x6.js"
+],
+"Quản lý tệp hỗ trợ…": [
+"dvd-acad-dlg.js"
 ],
 "Quốc tế (International)": [
 "dvd-acad-dlg.js"
@@ -16718,6 +16826,9 @@
 ],
 "Thư mục hỗ trợ của AutoLISP: tệp .lsp / .dcl / .lin / .pat dùng chung cho add-in": [
 "dvd-addins.js"
+],
+"Thư mục, cách nhau bằng dấu ;": [
+"dvd-acad-dlg.js"
 ],
 "Thư pháp": [
 "dvd-acad-x11.js"
@@ -18443,6 +18554,7 @@
 "dvd-acad-x3.js"
 ],
 "Tệp": [
+"dvd-acad-dlg.js",
 "dvd-acad-dlg2.js",
 "dvd-acad-dlg4.js",
 "dvd-acad-x21.js",
@@ -19396,6 +19508,9 @@
 "dvd-acad-x6.js"
 ],
 "Vị trí theo phương đứng:": [
+"dvd-acad-dlg.js"
+],
+"Vị trí tin cậy (Trusted Locations)": [
 "dvd-acad-dlg.js"
 ],
 "Vị trí trong bản vẽ (tuỳ chọn):": [
@@ -20482,6 +20597,9 @@
 "cạnh tiếp xúc đường tròn": [
 "dvd-help.js"
 ],
+"cần": [
+"dvd-addins.js"
+],
 "cặp khối.": [
 "dvd-acad-x2.js"
 ],
@@ -20496,6 +20614,9 @@
 ],
 "của": [
 "dvd-acad-core.js"
+],
+"của \"": [
+"dvd-addins.js"
 ],
 "của DVDCAD để": [
 "dvd-addins.js"
@@ -21437,6 +21558,9 @@
 "thiết lập trang có tên trong tệp DWG không đọc được — lưu tệp thành DXF trong AutoCAD rồi nhập để lấy đủ.": [
 "dvd-acad-x22.js"
 ],
+"thuộc": [
+"dvd-addins.js"
+],
 "thuộc tính": [
 "dvd-acad-dlg.js",
 "dvd-acad-pro.js"
@@ -21449,6 +21573,9 @@
 ],
 "thành khối đặc": [
 "dvd-acad-x15.js"
+],
+"thành phần": [
+"dvd-acad-dlg.js"
 ],
 "thành ảnh": [
 "dvd-acad-x8.js"
@@ -21572,6 +21699,9 @@
 "tắt/đóng băng ·": [
 "dvd-acad-x6.js"
 ],
+"tệp": [
+"dvd-acad-dlg.js"
+],
 "tệp .dll/.arx": [
 "dvd-addins.js"
 ],
@@ -21582,6 +21712,12 @@
 "dvd-addins.js"
 ],
 "tệp .lsp,": [
+"dvd-addins.js"
+],
+"tệp LISP,": [
+"dvd-addins.js"
+],
+"tệp giao diện": [
 "dvd-addins.js"
 ],
 "tệp hỗ trợ (.dcl, .lin, .pat…)": [
@@ -21641,8 +21777,14 @@
 "vlax-curve: đối tượng không phải đường cong": [
 "dvd-lisp2.js"
 ],
+"và gọi thẳng thư viện của Autodesk (ObjectARX / .NET API / VBA). Phần mềm khác không nạp được loại tệp này.": [
+"dvd-addins.js"
+],
 "vàng": [
 "dvd-acad-x9.js"
+],
+"vào bên trong tiến trình AutoCAD": [
+"dvd-addins.js"
 ],
 "vào một ô sẽ tự trải ra nhiều hàng/cột. Hàng đầu = độ rộng cột (đơn vị bản vẽ).": [
 "dvd-acad-ext.js"
@@ -22056,6 +22198,9 @@
 ],
 "ô) — in được, lưu kèm bản vẽ.": [
 "dvd-acad-dlg4.js"
+],
+"ô.": [
+"dvd-lisp4.js"
 ],
 "õ": [
 "index.html"
@@ -22980,6 +23125,9 @@
 "Đã copy:": [
 "index.html"
 ],
+"Đã cài \"": [
+"dvd-addins.js"
+],
 "Đã cân chỉnh: 1 đơn vị vẽ =": [
 "index.html"
 ],
@@ -23369,7 +23517,8 @@
 "Đã nạp": [
 "dvd-acad-dlg2.js",
 "dvd-acad-pro.js",
-"dvd-acad-x8.js"
+"dvd-acad-x8.js",
+"dvd-addins.js"
 ],
 "Đã nạp \"": [
 "dvd-addins.js"
@@ -24379,6 +24528,9 @@
 ],
 "Đường dẫn quá ngắn.": [
 "dvd-acad-3dx.js"
+],
+"Đường dẫn tìm tệp hỗ trợ (Support File Search Path)": [
+"dvd-acad-dlg.js"
 ],
 "Đường dẫn: (lưu trong DVDCAD — xuất .ctb bằng \"Lưu thành…\")": [
 "dvd-acad-dlg2.js"
@@ -26327,11 +26479,26 @@
 "Ứng dụng \"": [
 "dvd-lisp3.js"
 ],
+"Ứng dụng .NET": [
+"dvd-addins.js"
+],
 "Ứng dụng AutoCAD (*.lsp; *.js; *.fas; *.vlx; *.arx; *.dvb)": [
 "dvd-acad-dlg2.js"
 ],
+"Ứng dụng ObjectARX": [
+"dvd-addins.js"
+],
+"Ứng dụng ObjectARX (.arx / .dbx / .crx) — chỉ chạy trong AutoCAD": [
+"dvd-addins.js"
+],
 "Ứng dụng Windows (Electron)": [
 "dvd-acad-x14.js"
+],
+"Ứng dụng đã cài (ApplicationPlugins / .bundle)": [
+"dvd-acad-dlg.js"
+],
+"Ứng dụng đã cài dạng gói .bundle: LIST liệt kê, RELOAD nạp lại tệp LISP khởi động": [
+"dvd-addins.js"
 ],
 "Ứng dụng đã nạp": [
 "dvd-acad-dlg2.js"
@@ -26381,6 +26548,9 @@
 "— DVDCAD Bản vẽ gốc:": [
 "dvd-acad-x16.js"
 ],
+"— DVDCAD chạy được .lsp kèm hộp thoại .dcl, hàm vla- / vlax-, Excel, reactor — hoặc viết lại phần xử lý bằng": [
+"dvd-addins.js"
+],
 "— Enter / chuột phải để xong": [
 "dvd-acad-core.js"
 ],
@@ -26404,6 +26574,9 @@
 ],
 "— chạm để tới, hoặc dùng ◀ ▶ để chuyển.": [
 "index.html"
+],
+"— chỉ chạy trong AutoCAD.": [
+"dvd-addins.js"
 ],
 "— chỉ có .fas / .vlx (LISP đã biên dịch, DVDCAD không chạy được).": [
 "dvd-addins.js"

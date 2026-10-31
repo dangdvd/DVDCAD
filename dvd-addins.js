@@ -119,7 +119,7 @@
   // byte → chữ: UTF-8, nếu không hợp lệ thì theo bảng mã ANSI tiếng Việt (Windows-1258) như LISP soạn trên Windows
   const decode = u8 => { try{ return new TextDecoder('utf-8', { fatal: true }).decode(u8).replace(/^\uFEFF/, ''); }catch(_){ try{ return new TextDecoder('windows-1258').decode(u8); }catch(__){ return new TextDecoder('latin1').decode(u8); } } };
   const SUPPORT = /\.(dcl|txt|lin|pat|csv|mnl|scr|ini|dat|cfg|xml|json|mnu|mns|shp|sld|lsp)$/i;
-  function pickFiles(dir){ return new Promise(res => { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; if(dir) inp.webkitdirectory = true; else inp.accept = '.lsp,.js,.dcl,.zip,.fas,.vlx,.dll,.arx,.dvb,.txt,.lin,.pat,.csv,.mnl,.scr,.ini,.dat,.cfg,.sld';
+  function pickFiles(dir){ return new Promise(res => { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; if(dir) inp.webkitdirectory = true; else inp.accept = '.lsp,.js,.dcl,.zip,.xml,.cuix,.cui,.mnu,.mns,.fas,.vlx,.dll,.arx,.dvb,.txt,.lin,.pat,.csv,.mnl,.scr,.ini,.dat,.cfg,.sld';
     inp.onchange = async () => { const out = []; for(const f of inp.files) out.push({ name: f.name, path: f.webkitRelativePath || f.name, bytes: new Uint8Array(await f.arrayBuffer()) }); res(out); }; inp.click(); }); }
   // giải các gói .zip thành danh sách tệp như khi chọn cả thư mục
   async function expand(files){ const out = [];
@@ -129,6 +129,9 @@
   // nạp một bộ tiện ích (cả thư mục / gói zip): tệp hỗ trợ vào kho, chọn .lsp nào nạp và tự nạp
   async function installSet(files){
     files = await expand(files); if(!files.length) return;
+    // gói ứng dụng Autodesk (.bundle có PackageContents.xml): cài theo danh sách thành phần như APPAUTOLOADER
+    const pkg = files.find(f => /(^|[\\/])PackageContents\.xml$/i.test(f.path || f.name));
+    if(pkg) return installBundle(files, pkg);
     const lsp = [], js = [], sup = [], fas = [], nat = [];
     for(const f of files){ const t = typeOf(f.name); if(/\.lsp$/i.test(f.name)) lsp.push(f); else if(t === 'js') js.push(f); else if(t === 'fas') fas.push(f); else if(t === 'native') nat.push(f); else if(SUPPORT.test(f.name)) sup.push(f); }
     if(!lsp.length && !js.length && !sup.length){ say('Không có tệp .lsp / .dcl / .js nào' + (fas.length ? ' — chỉ có .fas / .vlx (LISP đã biên dịch, DVDCAD không chạy được).' : '.')); return; }
@@ -148,9 +151,92 @@
     const pick = lsp.concat(js); let n = 0;
     for(const i of ok){ const f = pick[i]; if(!f) continue; if(/\.lsp$/i.test(f.name)){ await addFile(f.name, decode(f.bytes), true, true); n++; } else { await addFile(f.name, decode(f.bytes), true); n++; } }
     if(auto) await DVDLisp.startup();
+    // menu đi kèm bộ tiện ích (.cuix / .cui / .mnu): nạp như CUILOAD / MENULOAD, kèm .mnl cùng tên
+    for(const f of files.filter(x => /\.(cuix|cui|mnu|mns)$/i.test(x.name))){ try{ if(/\.mn[us]$/i.test(f.name)){ const o = mnuToCui(decode(f.bytes), f.name.replace(/\.[^.]+$/, '')); await A.cuiLoadFile(new File([JSON.stringify(o)], f.name.replace(/\.[^.]+$/, '') + '.mnu')); } else await A.cuiLoadFile(new File([f.bytes], f.name)); }catch(err){ log('Không nạp được menu ' + f.name + ': ' + (err.message || err)); } }
     log('Đã chép ' + (sup.length + lsp.length) + ' tệp vào thư mục hỗ trợ, nạp ' + n + ' tệp.' + (fas.length + nat.length ? ' Bỏ qua ' + (fas.length + nat.length) + ' tệp đã biên dịch / native.' : ''));
   }
   A.addinInstallSet = installSet;
+
+  /* ---------------- APPAUTOLOADER: gói .bundle (PackageContents.xml) ---------------- */
+  const BKEY = 'dvd:bundles';
+  const bundles = () => { try{ return JSON.parse(localStorage.getItem(BKEY) || '[]'); }catch(_){ return []; } };
+  const saveBundles = l => { try{ localStorage.setItem(BKEY, JSON.stringify(l)); }catch(_){} };
+  function parsePackage(xml){
+    const doc = new DOMParser().parseFromString(xml, 'application/xml'); const root = doc.documentElement; if(!root || doc.getElementsByTagName('parsererror').length) throw new Error('PackageContents.xml lỗi');
+    const at = (el, n) => { for(const a of el.attributes) if(a.name.toLowerCase() === n.toLowerCase()) return a.value; return ''; };
+    const comps = [];
+    for(const ce of root.getElementsByTagName('ComponentEntry')){ const cmds = [...ce.getElementsByTagName('Command')].map(c => (at(c, 'Global') || at(c, 'Local')).toUpperCase()).filter(Boolean);
+      comps.push({ app: at(ce, 'AppName'), module: at(ce, 'ModuleName').replace(/\\/g, '/'), startup: /true/i.test(at(ce, 'LoadOnAutoCADStartup')), onCmd: /true/i.test(at(ce, 'LoadOnCommandInvocation')), cmds }); }
+    return { name: at(root, 'Name') || at(root, 'AppNameSpace') || 'Ứng dụng', company: (root.getElementsByTagName('CompanyDetails')[0] && at(root.getElementsByTagName('CompanyDetails')[0], 'Name')) || '', version: at(root, 'AppVersion'), comps };
+  }
+  async function installBundle(files, pkg){
+    let P; try{ P = parsePackage(decode(pkg.bytes)); }catch(err){ say(err.message); return; }
+    const byPath = new Map(files.map(f => [String(f.path || f.name).replace(/\\/g, '/').toLowerCase(), f]));
+    const dir = String(pkg.path || pkg.name).replace(/\\/g, '/').replace(/[^/]*$/, '').toLowerCase();
+    const find = m => byPath.get((dir + m.replace(/^\.\//, '')).toLowerCase()) || files.find(f => f.name.toLowerCase() === m.replace(/^.*\//, '').toLowerCase());
+    const ok = await confirmTrust([P.name + (P.version ? ' ' + P.version : '') + (P.company ? ' (' + P.company + ')' : '')]); if(!ok) return;
+    // mọi tệp hỗ trợ (dcl, lin, pat, mnl…) vào thư mục hỗ trợ trước
+    for(const f of files) if(SUPPORT.test(f.name)) await DVDLisp.fs.put(f.name, decode(f.bytes), String(f.path || '').replace(/[\\/][^\\/]*$/, ''));
+    const res = { lsp: [], cui: [], skip: [] };
+    for(const c of P.comps){ const f = find(c.module); const ext = (/\.([^.]+)$/.exec(c.module) || [, ''])[1].toLowerCase();
+      if(!f){ res.skip.push(c.module + ' (thiếu tệp)'); continue; }
+      if(ext === 'lsp' || ext === 'mnl'){ if(c.onCmd && c.cmds.length && !c.startup){ await DVDLisp.fs.put(f.name, decode(f.bytes)); try{ await DVDLisp.eval('(autoload "' + f.name.replace(/\.lsp$/i, '') + '" (list ' + c.cmds.map(x => '"' + x + '"').join(' ') + '))'); }catch(_){} }
+        else await addFile(f.name, decode(f.bytes), true, true); res.lsp.push(f.name); continue; }
+      if(ext === 'cuix' || ext === 'cui'){ try{ await A.cuiLoadFile(new File([f.bytes], f.name)); res.cui.push(f.name); await loadMnl(f.name); }catch(err){ res.skip.push(f.name + ' (' + (err.message || err) + ')'); } continue; }
+      if(/^(fas|vlx)$/.test(ext)){ res.skip.push(f.name + ' (LISP đã biên dịch)'); stubCmds(c.cmds, P.name, f.name); continue; }
+      if(/^(dll|arx|dbx|crx|dvb)$/.test(ext)){ res.skip.push(f.name + ' (chương trình chạy trong AutoCAD)'); stubCmds(c.cmds, P.name, f.name); continue; }
+    }
+    const l = bundles().filter(b => b.name !== P.name); l.push({ name: P.name, version: P.version, company: P.company, comps: P.comps.map(c => c.module), t: Date.now() }); saveBundles(l);
+    log('Đã cài "' + P.name + '": ' + res.lsp.length + ' tệp LISP, ' + res.cui.length + ' tệp giao diện' + (res.skip.length ? '; bỏ qua: ' + res.skip.join(', ') : '') + '.');
+    return res;
+  }
+  A.addinInstallBundle = (files) => installBundle(files, files.find(f => /PackageContents\.xml$/i.test(f.path || f.name)));
+  // lệnh của phần .dll / .arx / .fas trong gói: gõ thì báo rõ thay vì "lệnh không biết"
+  function stubCmds(cmds, app, file){ for(const k of cmds || []){ if(DVDCmd.commands.some(c => c.k.includes(k))) continue; DVDCmd.register([k], 'Lệnh của ' + app + ' (' + file + ') — không chạy được trong DVDCAD', () => { log('Lệnh ' + k + ' thuộc ' + file + ' của "' + app + '": đây là mã chạy bên trong AutoCAD (.dll / .arx / .fas), DVDCAD không chạy được. Cần bản .lsp từ tác giả.'); say('Lệnh ' + k + ' cần ' + file + ' — chỉ chạy trong AutoCAD.'); }, {}); } }
+  // .mnl cùng tên tệp menu: tự nạp khi nạp menu (như AutoCAD)
+  async function loadMnl(menuName){ const b = String(menuName).replace(/\.[^.]+$/, ''); const f = window.DVDLisp && DVDLisp.fs && DVDLisp.fs.get(b + '.mnl'); if(f){ try{ await DVDLisp.load(f.text, f.name); log('Đã nạp ' + f.name + ' (đi kèm menu).'); }catch(_){} } }
+  { const cl0 = A.cuiLoadFile; if(cl0) A.cuiLoadFile = async function(f){ const r = await cl0.apply(this, arguments); try{ await loadMnl(f.name); }catch(_){} return r; }; }
+  plain(['APPAUTOLOADER'], 'Ứng dụng đã cài dạng gói .bundle: LIST liệt kê, RELOAD nạp lại tệp LISP khởi động', async () => {
+    const l = bundles(); if(!l.length){ log('Chưa cài gói .bundle nào. APPLOAD › Nạp cả thư mục… rồi chọn thư mục .bundle (có PackageContents.xml).'); return; }
+    for(const b of l) log('🧩 ' + b.name + (b.version ? ' ' + b.version : '') + (b.company ? ' — ' + b.company : '') + ': ' + (b.comps || []).join(', '));
+  });
+
+  /* ---------------- MENULOAD / MENUUNLOAD: menu .mnu / .mns (AutoCAD cũ) và .cuix / .cui ---------------- */
+  function mnuToCui(text, name){
+    const out = { dvdcui: 1, cmds: [], keys: [], dbl: {}, tabs: [], menus: [], qat: null }; const byMac = new Map(); let n = 0;
+    const cmdOf = (label, macro) => { const m = macro.trim(); if(!m) return null; if(byMac.has(m)) return byMac.get(m); const k = 'MNU_' + String(name).replace(/\W+/g, '').toUpperCase().slice(0, 8) + '_' + (++n); out.cmds.push({ name: k, desc: label.replace(/&/g, '') + ' (' + name + ')', macro: m }); byMac.set(m, k); return k; };
+    let sec = null, cur = null, stack = [];
+    for(const raw of String(text).split(/\r?\n/)){ const line = raw.replace(/\s+$/, ''); if(!line || /^\/\//.test(line)) continue;
+      const s = /^\*\*\*(\w+)/.exec(line); if(s){ sec = s[1].toUpperCase(); cur = null; stack = []; continue; }
+      if(!/^POP\d+$/.test(sec || '')) continue; if(/^\*\*/.test(line)) continue;
+      const m = /^\s*(?:(\w+)\s+)?\[(.*?)\](.*)$/.exec(line); if(!m) continue; let label = m[2], macro = m[3] || '';
+      if(!cur){ cur = { t: label.replace(/&/g, '') || 'Menu', items: [] }; out.menus.push(cur); stack = [cur]; continue; }
+      const top = stack[stack.length - 1];
+      if(/^-+$/.test(label) || label === '--'){ top.items.push({ sep: 1 }); continue; }
+      if(label.startsWith('->')){ const sub = { t: label.slice(2).replace(/&/g, ''), items: [] }; top.items.push(sub); stack.push(sub); continue; }
+      let pop = 0; while(label.startsWith('<-')){ label = label.slice(2); pop++; }
+      const c = cmdOf(label, macro); if(c) top.items.push({ t: label.replace(/&/g, ''), c });
+      while(pop-- > 0 && stack.length > 1) stack.pop(); }
+    out.menus = out.menus.filter(mm => mm.items.length);
+    out.stat = { macros: byMac.size, cmds: out.cmds.length, keys: 0, dbl: 0, panels: 0, menus: out.menus.length, imgs: 0 };
+    return out; }
+  A.mnuToCui = mnuToCui;
+  plain(['MENULOAD'], 'Nạp menu bổ sung: .cuix / .cui hoặc menu cũ .mnu / .mns (kèm .mnl cùng tên)', async () => {
+    const F = await new Promise(res => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.cuix,.cui,.mnu,.mns,.mnl'; inp.multiple = true; inp.onchange = () => res([...inp.files]); inp.click(); });
+    for(const f of F.filter(x => /\.mnl$/i.test(x.name))) await DVDLisp.fs.put(f.name, decode(new Uint8Array(await f.arrayBuffer())));
+    for(const f of F.filter(x => !/\.mnl$/i.test(x.name))){
+      if(/\.mn[us]$/i.test(f.name)){ const o = mnuToCui(decode(new Uint8Array(await f.arrayBuffer())), f.name.replace(/\.[^.]+$/, '')); await A.cuiLoadFile(new File([JSON.stringify(o)], f.name.replace(/\.[^.]+$/, '') + '.mnu')); }
+      else await A.cuiLoadFile(f); }
+  });
+  plain(['MENUUNLOAD'], 'Gỡ menu bổ sung (như CUIUNLOAD)', () => DVDCmd.run('CUIUNLOAD'));
+
+  /* ---------------- NETLOAD / ARX / VBA: báo rõ vì sao không chạy được ---------------- */
+  const nativeMsg = (kind, ext) => '<div class="acw" style="line-height:1.6;max-width:520px">' + kind + ' (<code>' + ext + '</code>) là chương trình Windows được nạp <b>vào bên trong tiến trình AutoCAD</b> và gọi thẳng thư viện của Autodesk (ObjectARX / .NET API / VBA). Phần mềm khác không nạp được loại tệp này.<br><br>Muốn dùng tiện ích trên DVDCAD: xin tác giả bản <b>AutoLISP (.lsp)</b> — DVDCAD chạy được .lsp kèm hộp thoại .dcl, hàm vla- / vlax-, Excel, reactor — hoặc viết lại phần xử lý bằng <b>JavaScript</b> (xem ADDIN-API.md).</div>';
+  const nativeDlg = (title, kind, ext) => A.dialog({ title, html: nativeMsg(kind, ext), noCancel: true, help: false });
+  plain(['NETLOAD'], 'Nạp ứng dụng .NET (.dll) — chỉ chạy trong AutoCAD; DVDCAD giải thích cách thay thế', () => nativeDlg('NETLOAD', 'Ứng dụng .NET', '.dll'));
+  plain(['ARX', 'ARXLOAD'], 'Ứng dụng ObjectARX (.arx / .dbx / .crx) — chỉ chạy trong AutoCAD', () => nativeDlg('ARX', 'Ứng dụng ObjectARX', '.arx / .dbx / .crx'));
+  plain(['VBALOAD', 'VBARUN', 'VBAMAN', 'VBAIDE', 'VBASTMT', 'VBAUNLOAD', '-VBARUN'], 'Macro VBA (.dvb) — chỉ chạy trong AutoCAD có VBA Enabler', () => nativeDlg('VBA', 'Dự án VBA', '.dvb'));
+  plain(['SECURITYOPTIONS'], 'Bảo mật khi nạp tiện ích: vị trí tin cậy (TRUSTEDPATHS)', () => { if(A.openOptions) A.openOptions('files'); else DVDCmd.run('OPTIONS'); });
   // xem / xoá tệp trong thư mục hỗ trợ
   function supportDlg(){ let root = null; const fs = DVDLisp.fs;
     const render = () => { const L = fs.list().sort((a, b) => a.name.localeCompare(b.name)); root.querySelector('#sfList').innerHTML = L.length ? '<table style="width:100%;font-size:12.5px"><tr style="color:#aab3c0;text-align:left"><th>Tệp</th><th>Thư mục gốc</th><th></th></tr>' + L.map(f => '<tr style="border-top:1px solid rgba(255,255,255,.06)"><td translate="no">' + esc(f.name) + '</td><td translate="no" style="color:#9aa4b2">' + esc(f.folder || '') + '</td><td><button type="button" class="acw-btn" data-del="' + esc(f.name) + '">Xoá</button></td></tr>').join('') + '</table>' : '<div style="color:#7c8696">Chưa có tệp nào.</div>';
