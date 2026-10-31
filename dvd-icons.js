@@ -675,5 +675,26 @@
     I['3DORBITCTR'] = has('3DORBIT') + '<circle class="r" cx="12" cy="12" r="2"/>'; I.LIVESECTION = has('SECTIONPLANE') + BOK;
     const SS = '<rect class="fd" x="5" y="3" width="13" height="16"/><rect x="5" y="3" width="13" height="16"/><rect class="fd" x="3" y="5" width="13" height="16"/><rect x="3" y="5" width="13" height="16"/><path class="a" d="M6 9h7M6 12h7M6 15h5"/>';
     I.SHEETSET = SS; I.SSM = SS; I.SHEETSETHIDE = SS + BX; I.NEWSHEETSET = SS + BSTAR; I.OPENSHEETSET = SS + '<path class="y" d="M14 21h7M18.5 18.5L21 21l-2.5 2.5"/>'; }
+  // v6l: IGES, DXB, OLE, PSFILL, WMFCLIP, lệnh tiện ích
+  { const has = k => I[k] || '';
+    const IG = '<path d="M4 4h12l4 4v12H4z"/><path class="a" d="M16 4v4h4"/><text x="12" y="16.5" font-size="6.5" text-anchor="middle" stroke="none" fill="currentColor" font-family="Arial" font-weight="700">IGS</text>';
+    I.IGESIMPORT = IG + '<path class="y" d="M2 13h6M5.5 10.5L8 13l-2.5 2.5"/>'; I.IGESIN = I.IGESIMPORT; I.IGESEXPORT = IG + '<path class="y" d="M15 21h7M19.5 18.5L22 21l-2.5 2.5"/>'; I.IGESOUT = I.IGESEXPORT;
+    I.DXBIN = '<path d="M4 4h12l4 4v12H4z"/><path class="a" d="M16 4v4h4"/><text x="12" y="16.5" font-size="6.5" text-anchor="middle" stroke="none" fill="currentColor" font-family="Arial" font-weight="700">DXB</text><path class="y" d="M2 13h6M5.5 10.5L8 13l-2.5 2.5"/>';
+    const OL = '<rect x="3" y="5" width="18" height="14" rx="1"/><rect class="fa" x="6" y="8" width="7" height="8"/><path class="a" d="M15 9h3M15 12h3M15 15h3"/>';
+    I.INSERTOBJ = OL + BSTAR; I.IO = I.INSERTOBJ; I.OLESCALE = OL + '<path class="y" d="M14 21l7-7M17 14h4v4"/>'; I.OLELINKS = OL + BLINK;
+    I.WMFCLIP = '<rect x="6" y="3" width="12" height="18" rx="1.5"/><path class="a" d="M9 3v2h6V3"/><path class="y" d="M9 15l2.5-3 2 2 2-3"/>';
+    I.PSFILL = '<path class="fy" d="M4 18l3-12 10 2 3 10z"/><path d="M4 18l3-12 10 2 3 10z"/>';
+    I.REGENAUTO = has('REGEN') + BGEAR; I.HATCHGAPTOL = has('HATCH') + '<path class="r" d="M16 20h2M20 20h2"/>';
+    I.FILEOPEN = has('OPEN') || has('QOPEN'); I.WHOHAS = '<circle cx="10" cy="8" r="3.5"/><path d="M3.5 20c0-4 3-6.5 6.5-6.5s6.5 2.5 6.5 6.5"/><path class="y" d="M17 9a3 3 0 1 1 3 3v2M20 17v.5"/>';
+    I.TASKBAR = '<rect x="2" y="16" width="20" height="5" rx="1"/><rect class="fa" x="4" y="17.5" width="4" height="2"/><rect class="fa" x="9.5" y="17.5" width="4" height="2"/><rect x="5" y="4" width="14" height="9" rx="1"/>';
+    I.TRAYSETTINGS = '<rect x="2" y="15" width="20" height="6" rx="1"/><path class="a" d="M14 18h2M18 18h2"/>' + BGEAR; I.TOOLPALETTESCLOSE = has('TOOLPALETTES') + BX; I.TPCLOSE = I.TOOLPALETTESCLOSE;
+    I.TABLET = '<rect x="3" y="4" width="18" height="16" rx="2"/><path class="y" d="M8 16l7-7 2 2-7 7H8z"/>'; I.TA = I.TABLET;
+    I.SIGVALIDATE = '<path d="M4 4h12l4 4v12H4z"/><path class="y" d="M7 16c2-3 3 1 5-2s2 1 4-1"/><circle class="fy" cx="17" cy="17" r="3.5"/><path d="M15.5 17l1 1 2-2"/>';
+    I.CONVERT = has('PEDIT') + '<path class="y" d="M14 19h7M18.5 16.5L21 19l-2.5 2.5"/>'; I.CONVERTPSTYLES = has('STYLESMANAGER') + '<path class="y" d="M14 19h7M18.5 16.5L21 19l-2.5 2.5"/>';
+    I.ADCNAVIGATE = has('ADCENTER') + '<path class="y" d="M14 19h7M18.5 16.5L21 19l-2.5 2.5"/>'; I.AUTOPUBLISH = has('PUBLISH') + '<path class="y" d="M17 13a4 4 0 1 1-1 5.5M16 13v3h3"/>';
+    I.VIEWPLOTDETAILS = has('PLOT') + '<path class="y" d="M15 15h6M15 18h6M15 21h4"/>';
+    I.ACTIVITYINSIGHTS = '<path d="M3 20h18"/><path class="y" d="M4 16l4-5 4 3 4-7 4 4" stroke-width="1.8"/><circle class="fy" cx="16" cy="7" r="1.5"/>'; I.MYINSIGHTS = '<path class="fy" d="M12 3a6 6 0 0 0-3.5 10.9V17h7v-3.1A6 6 0 0 0 12 3z"/><path d="M9.5 20h5M10.5 22h3"/>';
+    I.XREFCOMPARE = (has('XREF') || has('XATTACH')) + '<path class="r" d="M15 15h6M15 19h6"/>'; I.SMARTBLOCKSREPLACE = (has('BREPLACE') || has('INSERT')) + BSTAR; I.SBREPLACE = I.SMARTBLOCKSREPLACE;
+    I.DWGHISTORY = '<circle cx="12" cy="12" r="8.5"/><path class="a" d="M12 7v5l3.5 2"/><path class="y" d="M3 6v4h4"/>'; I.SNAPSHOT = '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7l2-3h4l2 3"/><circle class="fa" cx="12" cy="13.5" r="3.5"/>'; }
   window.DVDIcons = I;
 })();

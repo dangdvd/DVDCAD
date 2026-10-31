@@ -6,6 +6,32 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6l: IGES, DXB, OLE, lịch sử bản vẽ, lệnh tiện ích
+- `dvd-acad-x32.js`:
+  - IGES: `parseIGES` tách các mục S / G / D / P (cột 73), tham số theo dấu phân cách của mục G, chuỗi Hollerith `nH…`, số mũ `D`.
+  - `igesToEnts`: ma trận 124 ghép lồng, đơn vị G14 (cờ 3 → tên đơn vị) đổi theo `unitToMM()`.
+    - Đường cong lấy mẫu trong không gian định nghĩa rồi nhân ma trận. Cung / elip / đường ghép giữ dạng chính xác khi ma trận giữ mặt XY (`planarSim`: trục z → ±z, đồng dạng; lật → đảo chiều cung).
+    - NURBS: thuật toán tìm khoảng + hàm cơ sở (Piegl & Tiller), có trọng số. NURBS phẳng lưu `e.nurbs` (điểm điều khiển đã biến đổi + chữ ký `bvSig`) để xuất lại 126 đúng.
+    - Mặt: hàm f(u, v) cho 128 / 118 / 120 / 122. 144 phẳng: biên mô hình (142 CPTR, hoặc BPTR qua f) → nối lỗ vào biên ngoài → `earcut3`. 144 cong: lưới ≥ 24 × 24, giữ tam giác có trọng tâm (u, v) trong biên tham số.
+    - Mỗi thực thể gốc → một lưới (`meshEnt`, `srf: 1`). Mặt của cùng khối DVDCAD (nhãn DE `DVDSOLID` + số phụ) gộp lại.
+  - `igesWrite`: S / G / D / P / T 80 cột, số thực dạng `1.` / `1.E-7`. Cung chiều kim đồng hồ trong 102 dùng ma trận 124 lật `diag(1, −1, −1)`. Spline Catmull-Rom đều → Bézier bậc 3 → 126 (nút bội 3). Màu 314, lớp 406 dạng 3, kiểu nét DE trường 4.
+  - DXB: đầu `AutoCAD DXB 1.0\r\n\x1a\0`; bản ghi 1 byte.
+    - Mã: 1 / 2 / 3 / 8 / 9 / 10 / 11 / 17 / 19 / 20 / 22 / 128 – 136.
+    - Chế độ nguyên: n = int16 × hệ số 128, bulge int32 / 2²⁴, góc int32 phần triệu độ.
+    - Chế độ thực: float64, góc radian.
+- `dvd-acad-x33.js`:
+  - OLE = `IMAGE` có `e.ole` (`oid`, `name`, `mime`, `link`, `path`, `kind`, `w0` / `h0`, `upd`).
+    - Ảnh xem trước vẽ bằng canvas (bảng CSV, văn bản, PDF trang 1 qua pdf.js, biểu tượng). Dữ liệu tệp trong IndexedDB `dvdcad-x33/ole`.
+    - DXF giữ `ole` trong `imgx`.
+  - `HPGAPTOL` → `A.hpGapTol()`. `dvd-acad-cmds.js` `closeGaps` nối các đầu mút hở (bậc 1) gần nhau ≤ dung sai trước khi dò biên.
+  - Theo dõi:
+    - bọc `A.commit` (hoạt động), `A.run` (đếm lệnh), `A.log` (PLOT / PUBLISH / EXPORT… → `dvd:plotlog`);
+    - bọc `toast`: nhận "Đã lưu …dwg/dxf" là sự kiện lưu → `AUTOPUBLISH` (`A.plotPDF`) + chụp phiên bản; TRAYSETTINGS đổi thời gian / tắt thông báo.
+  - Lịch sử: DXF của bản vẽ trong IndexedDB `dvdcad-x33/hist`, khoá `h:<tên>:<thời điểm>`, tối đa 30.
+    - So sánh: `entSig` đếm theo bội số, đánh dấu bằng bản sao trên lớp `DIFF$…`.
+  - `XREFCOMPARE` dùng `A.parseRef` / `A.placeRef` (mở từ `dvd-acad-pro.js`). `ADCNAVIGATE` dùng `A.dcOpen` (`dvd-acad-x8.js`).
+  - `SMARTBLOCKSREPLACE`: độ giống = 0.75 × Jaccard số đối tượng theo loại + 0.25 × độ khớp tỉ lệ khung.
+
 ## v6k: kết xuất, đèn IES, vật liệu, cảnh quay, ANIPATH, tập bản vẽ
 - `dvd-acad-x30.js`:
   - Kết xuất: `renderNow` đặt kiểu Thực tế, áp môi trường, tăng `renderer.setPixelRatio` theo mức (1× – 3×), `canvas.toDataURL`.

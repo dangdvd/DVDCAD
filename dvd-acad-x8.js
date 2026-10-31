@@ -346,6 +346,7 @@
         const at = root.querySelector('#dcAddT'); if(at) at.onclick = () => { let n = 0; root.querySelectorAll('[data-t2]:checked').forEach(c => { const nm = c.dataset.t2, d = D.ltypes[nm]; if(d && d.pat){ LTYPES[nm] = d; A.LS.ltd[nm] = d; n++; } }); A.lsSave(); say('Đã nạp ' + n + ' kiểu nét.'); };
       } });
   }
+  A.dcOpen = dcOpen;
   plain(['ADCENTER', 'DC', 'DESIGNCENTER'], 'DesignCenter (Ctrl+2): lấy khối, lớp, kiểu nét từ bản vẽ DWG/DXF khác', () => { if(DC){ dcDialog(); return; } pick('.dwg,.dxf').then(f => f && dcOpen(f)); });
 
   /* =====================================================================

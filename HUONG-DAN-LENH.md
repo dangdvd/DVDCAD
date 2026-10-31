@@ -27,6 +27,60 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v6l) — IGES, DXB, OLE, lịch sử bản vẽ, lệnh tiện ích
+- **IGES** (thẻ Insert › Import › thêm; Output › Xuất bản):
+  - `IGESIMPORT` / `IGESIN`: đọc tệp `.igs` / `.iges` (IGES 5.3, ASCII 80 cột) vào bản vẽ hiện hành, đổi đơn vị theo bản vẽ.
+    - Đường: 110 đường thẳng, 100 cung / tròn, 104 elip / hyperbol / parabol, 106 đường gấp (cả 2D / 3D, đường cắt 31–38), 112 spline tham số, 126 NURBS, 102 đường ghép (đoạn + cung → đa tuyến có cung), 142 đường trên mặt, 116 điểm.
+    - Mặt → lưới: 128 NURBS, 118 mặt kẻ, 120 mặt tròn xoay, 122 mặt trụ kéo, 108 mặt phẳng có biên, 144 mặt cắt xén (mặt phẳng: theo biên thật, có lỗ; mặt cong: theo biên trong miền tham số).
+    - Ma trận 124 (lồng nhau), khối con 308 / 408, chữ 212, mũi tên 214, kích thước 2xx (lấy nét + chữ), màu 314, tên lớp 406 dạng 3, kiểu nét.
+    - B-rep (186) và vài loại hiếm báo "bỏ qua" kèm số lượng.
+  - `IGESEXPORT` / `IGESOUT`: ghi IGES 5.3 (chọn đối tượng, Enter = cả bản vẽ):
+    - LINE, ARC, CIRCLE, ELLIPSE (104 + 124), POINT, đa tuyến (106; có cung → 102 gồm 110 / 100), đa tuyến 3D, spline (NURBS 126 đúng hình), chữ (212, bỏ dấu tiếng Việt vì IGES chỉ có ASCII).
+    - SOLID / 3DFACE / khối 3D / lưới / mặt → mặt NURBS 128 song tuyến từng tam giác (đọc lại thành một lưới cho mỗi khối).
+    - Màu (số màu chuẩn hoặc 314), lớp (số lớp + tên 406), kiểu nét (DASHED, CENTER…).
+- `DXBIN`: nhập tệp DXB ("AutoCAD DXB 1.0" — tệp nhị phân do máy vẽ ADI xuất): đường, đường nối tiếp, cung, tròn, điểm, đa tuyến (có cung), trace, solid, 3DFACE, đường 3D, lớp, màu, hệ số tỉ lệ, chế độ số nguyên / số thực.
+- **OLE** (thẻ Insert › Import › thêm):
+  - `INSERTOBJ` / `IO`:
+    - **Tạo mới**: ghi chú văn bản hoặc bảng (CSV / Tab).
+    - **Từ tệp**: ảnh, PDF (hiện trang 1), văn bản, CSV (hiện thành bảng), tệp khác (biểu tượng); **Liên kết** hoặc nhúng; **Hiện dạng biểu tượng**.
+    - Đặt bằng góc trên trái; cỡ theo 96 dpi như AutoCAD.
+  - `OLESCALE`: chiều cao / rộng, tỉ lệ %, khoá tỉ lệ, đặt lại cỡ gốc (giữ góc trên trái).
+  - `OLELINKS`: danh sách đối tượng OLE.
+    - Cập nhật ngay (đọc lại tệp gốc), Mở nguồn (ghi chú / bảng: sửa nội dung tại chỗ; tệp: mở / lưu ra), Đổi nguồn, Ngắt liên kết.
+    - Cập nhật Tự động / Thủ công; bản Windows tự cập nhật liên kết khi mở bản vẽ.
+  - Đối tượng OLE lưu trong DXF / DWG như ảnh; dữ liệu tệp nhúng giữ trong máy.
+- `WMFCLIP`: chép đối tượng chọn vào bộ nhớ tạm dạng hình (nền trắng) để dán vào Word / Excel / PowerPoint; trình duyệt không cho chép thì lưu tệp `.wmf`.
+- `PSFILL`: tô đa tuyến kín / tròn / elip bằng mẫu tô PostScript.
+  - Grayscale (mức xám), RGBcolor (đỏ / lục / lam %), Lineargray, Radialgray (chuyển màu).
+  - Square, Waffle, Zigzag, Stars, Brick, Specks (mẫu hatch tương ứng, tỉ lệ).
+- **Hatch**: `HATCHGAPTOL` (biến `HPGAPTOL`, 0 – 5000). Khe hở nhỏ hơn giá trị này vẫn coi là vùng kín khi HATCH / BOUNDARY dò biên.
+- **Lịch sử, hoạt động** (thẻ Manage › Lịch sử):
+  - `DWGHISTORY`: các phiên bản của bản vẽ (tự chụp mỗi lần lưu + `SNAPSHOT`, giữ 30 bản).
+    - Mở phiên bản thành bản vẽ riêng, xoá.
+    - **So sánh** với bản vẽ hiện tại: tô xanh chỗ thêm (lớp `DIFF$HIST_THEM`), đỏ chỗ mất (`DIFF$HIST_MAT`).
+  - `SNAPSHOT`: lưu phiên bản hiện tại kèm ghi chú.
+  - `ACTIVITYINSIGHTS`: bảng hoạt động (mở / lưu / sửa — ai, lúc nào, lệnh gì), lọc, xuất CSV.
+  - `MYINSIGHTS`: lệnh dùng nhiều nhất, gợi ý lệnh tắt và mẹo theo thói quen.
+  - `VIEWPLOTDETAILS`: các lần in / xuất (PLOT, PUBLISH, EXPORT…) — thành công / lỗi.
+- **So sánh, thay khối**:
+  - `XREFCOMPARE`: so tham chiếu ngoài đang gắn với bản mới của tệp đó (tô xanh / đỏ).
+  - `SMARTBLOCKSREPLACE` / `SBREPLACE`: chọn nhóm đối tượng → gợi ý khối giống nhất (theo loại nét + tỉ lệ khung) → thay, khớp tâm và co giãn theo cỡ.
+- **Xuất bản, tệp**:
+  - `AUTOPUBLISH`: tự xuất PDF (vector) / DWFx mỗi khi lưu (`AUTODWFPUBLISH`); nút Xuất bản ngay.
+  - `FILEOPEN`: mở bản vẽ theo tên không hiện hộp thoại (dùng trong script; tìm trong bản vẽ gần đây).
+  - `WHOHAS`: đọc tệp khoá `.dwl` / `.dwl2` (AutoCAD tạo khi mở bản vẽ trên mạng) → ai đang mở, máy nào, lúc nào.
+  - `SIGVALIDATE`: tệp DWG / PDF có chữ ký số không + mã SHA-256 để đối chiếu toàn vẹn. Chứng thư không kiểm được — cần AutoCAD / Adobe.
+  - `ADCNAVIGATE`: mở DesignCenter tại tệp chỉ định.
+- **Chuyển đổi**:
+  - `CONVERT`: đa tuyến 3D phẳng (z = 0) → 2D, bỏ đỉnh trùng; hatch bỏ điểm lặp ở cuối biên.
+  - `CONVERTPSTYLES`: đổi bản vẽ giữa kiểu in theo màu (CTB) và theo tên (STB, "Style N" lấy theo màu — bản in không đổi). Biến `PSTYLEMODE`.
+- **Khác**:
+  - `REGENAUTO` (`REGENMODE`).
+  - `TRAYSETTINGS`: bật / tắt thông báo, thời gian hiện, hiện tới khi đóng.
+  - `TASKBAR`: tiêu đề cửa sổ hiện số bản vẽ đang mở.
+  - `TOOLPALETTESCLOSE`.
+  - `TABLET`: báo không có bảng số hoá WinTab — bút / bảng vẽ dùng như chuột.
+
 ## Bổ sung như AutoCAD 2027 (v6k) — kết xuất, đèn, vật liệu, cảnh quay, hoạt hình, tập bản vẽ
 - **Kết xuất (Render)**: thẻ Visualize › Render.
   - `RENDERWINDOW` / `RENDERWIN`: kết xuất khung 3D ra ảnh (kiểu Thực tế, theo mức kết xuất), cửa sổ có lịch sử, **Lưu PNG**, **Cắt vùng**. `RENDERWINDOWCLOSE` đóng cửa sổ.

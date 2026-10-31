@@ -1,55 +1,75 @@
-## DVDCAD 5.30.0 — Kết xuất ảnh, đèn IES, vật liệu, cảnh quay, hoạt hình, tập bản vẽ
+## DVDCAD 5.31.0 — IGES, DXB, đối tượng OLE, lịch sử bản vẽ, lệnh tiện ích
 
 Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Windows. Tên lệnh, lệnh tắt và cách dùng giống AutoCAD để người dùng chuyển sang không bỡ ngỡ.
 
 ### Tải về
-- **DVDCAD-Setup-5.30.0.exe** — bộ cài.
+- **DVDCAD-Setup-5.31.0.exe** — bộ cài.
   - Cài cho tài khoản Windows đang dùng, không cần quyền quản trị.
   - Có lối tắt Desktop và Start Menu.
   - Nhấp đúp file .dwg / .dxf là mở bằng DVDCAD.
-- **DVDCAD-5.30.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
+- **DVDCAD-5.31.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
 
 Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More info → Run anyway**.
 
 ### Có gì mới
-- **Kết xuất ảnh** (thẻ Visualize › Render):
-  - `RENDERWINDOW` kết xuất khung 3D ra ảnh. Cửa sổ có lịch sử, lưu PNG, cắt vùng (`RENDERCROP`).
-  - `RENDERPRESETS`: mức Thấp → Trình chiếu (tới 3× độ phân giải).
-  - `RENDEREXPOSURE`: phơi sáng. `RENDERENVIRONMENT`: sương mù, nền một màu / chuyển màu.
-- **Đèn**: `WEBLIGHT` / `FREEWEB` đọc tệp **IES** của nhà sản xuất đèn (cường độ, góc chùm). `FREESPOT`: đèn rọi tự do. `TARGETPOINT`: đèn điểm có điểm nhắm.
-- **Vật liệu**:
-  - `MATEDITOROPEN`: tạo / sửa vật liệu (màu, độ nhám, kim loại, độ đục, vân).
-  - `MATERIALATTACH`: vật liệu theo lớp.
-  - `MATERIALMAP`: ánh xạ vân hộp / phẳng / trụ / cầu.
-- **Cảnh quay (ShowMotion)**: `NEWSHOT` / `EDITSHOT` lưu góc nhìn 2D hoặc camera 3D. Thanh `NAVSMOTION` chạy lần lượt / lặp với chuyển cảnh mượt (`VTOPTIONS`).
-- **Hoạt hình** `ANIPATH`: camera đi dọc đường (nhìn theo hướng đi hoặc nhìn một điểm), ghi ra **video WebM**.
-- `3DORBITCTR` (tâm quay khung 3D), `LIVESECTION` (bật / tắt mặt cắt).
-- **Tập bản vẽ** (thẻ Output › Sheet Set):
-  - `NEWSHEETSET`: tạo tập từ các layout, đánh số tờ có tiền tố, thông tin dự án.
-  - Bảng **Sheet Set Manager** (`SHEETSET`):
-    - mở tờ, sửa số / tên tờ, sắp xếp;
-    - bảng danh mục bản vẽ;
-    - trường số tờ / tên tờ / tên dự án… tự cập nhật khi đổi;
-    - xuất bản; lưu / mở tệp `.dvdsst` (`OPENSHEETSET`).
+- **IGES**:
+  - `IGESIMPORT` đọc tệp `.igs` / `.iges` từ các phần mềm CAD khác:
+    - đường, cung, elip, NURBS, đường ghép (giữ cung chính xác);
+    - mặt NURBS / mặt kẻ / tròn xoay / mặt cắt xén → lưới 3D;
+    - chữ, mũi tên, kích thước, khối con, màu, tên lớp.
+  - `IGESEXPORT` ghi IGES 5.3: đường, cung, elip, đa tuyến có cung, spline (NURBS), chữ, khối 3D / lưới (mặt), màu, lớp, kiểu nét.
+- `DXBIN`: nhập tệp DXB (bản vẽ nhị phân do máy vẽ ADI xuất).
+- **Đối tượng OLE** (thẻ Insert › Import):
+  - `INSERTOBJ`: nhúng hoặc liên kết tệp. Ảnh, PDF (trang 1), văn bản, bảng CSV hiện đúng nội dung; tệp khác hiện biểu tượng. Có thể tạo mới ghi chú / bảng.
+  - `OLESCALE`: đổi cỡ theo % hoặc kích thước.
+  - `OLELINKS`: cập nhật, mở, đổi nguồn, ngắt liên kết. Bản Windows tự cập nhật liên kết khi mở bản vẽ.
+- **Lịch sử bản vẽ** (thẻ Manage › Lịch sử):
+  - `DWGHISTORY`: mỗi lần lưu tự chụp một phiên bản; mở lại hoặc **so sánh** với hiện tại (tô xanh chỗ thêm, đỏ chỗ mất). `SNAPSHOT` chụp kèm ghi chú.
+  - `ACTIVITYINSIGHTS`: ai mở / lưu / sửa, lúc nào, lệnh gì; xuất CSV.
+  - `MYINSIGHTS`: lệnh dùng nhiều nhất và gợi ý lệnh tắt. `VIEWPLOTDETAILS`: các lần in / xuất.
+- `HATCHGAPTOL`: HATCH nhận vùng có khe hở nhỏ.
+- `PSFILL`: tô xám / màu / chuyển màu / mẫu.
+- `WMFCLIP`: chép đối tượng dạng hình để dán vào Word / Excel.
+- `AUTOPUBLISH`: tự xuất PDF / DWFx mỗi khi lưu.
+- `XREFCOMPARE`: so tham chiếu ngoài với bản mới.
+- `SMARTBLOCKSREPLACE`: thay nhóm nét bằng khối giống nhất.
+- `WHOHAS`: ai đang mở bản vẽ (tệp .dwl).
+- `SIGVALIDATE`: chữ ký số + mã SHA-256.
+- Lệnh khác: `CONVERT`, `CONVERTPSTYLES`, `ADCNAVIGATE`, `FILEOPEN`, `TRAYSETTINGS`, `REGENAUTO`, `TASKBAR`, `TABLET`, `TOOLPALETTESCLOSE`.
 
 ### Kiểm thử
 - GitHub Actions trên Windows:
-  1. Kiểm thử nhanh như 5.29.0, thêm đọc tệp IES và các lệnh mới.
+  1. Kiểm thử nhanh như 5.30.0, thêm IGES ghi → đọc lại, DXB và các lệnh mới.
   2. **ODA File Converter** và **ACadSharp** đọc lại các tệp DWG do DVDCAD ghi.
   3. Bộ đọc XPS của Windows mở tệp DWFx.
   4. Cài lặng bộ cài, chạy kiểm thử trên `DVDCAD.exe` đã cài, rồi gỡ cài.
-- Kiểm thử giao diện tự động (30 mục):
-  - cửa sổ kết xuất, cắt vùng, phơi sáng +1 EV, sương mù + nền chuyển màu, mức kết xuất;
-  - đèn có điểm nhắm / rọi tự do / IES (cực đại 1000 cd, chùm 60°);
-  - vật liệu tự tạo, theo lớp, ánh xạ trụ; DXF giữ vật liệu;
-  - cảnh quay 2D / 3D, chuyển cảnh mượt 300 ms, thanh ShowMotion, sửa cảnh;
-  - tâm quay 3D; ANIPATH ghi video WebM;
-  - tập bản vẽ từ 2 layout: mở tờ chuyển layout, trường số tờ tự cập nhật khi đổi số, bảng danh mục, lưu / mở `.dvdsst`, `.dst` báo rõ.
-  - Các bộ kiểm thử của 5.24.0 → 5.29.0 vẫn đạt đủ.
+- Kiểm thử giao diện tự động (IGES / DXB 25 mục; OLE và lệnh tiện ích 37 mục):
+  - IGES ghi rồi đọc lại:
+    - đủ dòng 80 cột;
+    - cung, tròn, elip (cung + đủ vòng), đa tuyến có cung (thuận + nghịch), spline → NURBS đúng hình;
+    - đa tuyến 3D, màu riêng, tên lớp, chữ, khối 3D → lưới.
+  - IGES viết tay:
+    - ma trận xoay + dời, conic → elip, NURBS bậc 2, mặt tròn xoay;
+    - mặt cắt xén theo biên tham số (diện tích đúng một nửa);
+    - khối con 308 / 408, kích thước → chữ + mũi tên, màu 314, đơn vị inch → mm.
+  - DXB: chế độ thực / nguyên, hệ số tỉ lệ, đường nối tiếp, cung, đa tuyến có cung, lớp, màu.
+  - OLE: bảng tạo mới, ảnh liên kết (96 px = 25,4 mm), biểu tượng; OLESCALE 200 % / 50 %; OLELINKS ngắt liên kết; DXF giữ OLE.
+  - Các lệnh khác:
+    - WMFCLIP chép hình, PSFILL (xám 25 %, chuyển màu tròn, gạch);
+    - HPGAPTOL: khe 0,5 với dung sai 1 → tìm được biên;
+    - TRAYSETTINGS tắt / giữ thông báo; WHOHAS đọc .dwl / .dwl2; SIGVALIDATE;
+    - CONVERT, CONVERTPSTYLES hai chiều;
+    - VIEWPLOTDETAILS, ACTIVITYINSIGHTS, MYINSIGHTS;
+    - SNAPSHOT + tự chụp khi lưu, DWGHISTORY so sánh;
+    - SMARTBLOCKSREPLACE đúng chỗ, đúng tỉ lệ; AUTOPUBLISH lưu → PDF.
+  - Các bộ kiểm thử của 5.24.0 → 5.30.0 vẫn đạt đủ.
 
 ### Giới hạn
-- **OpenDCL** (`dcl_…`, hộp thoại của thư viện OpenDCL) chưa có. Còn khoảng 71 lệnh AutoCAD chưa có: nền DGN, IGES, NURBS (`CONVTONURBS`, `SURFFILLET`), OLE, đám mây và dịch vụ trực tuyến của Autodesk, một số lệnh nhỏ.
-- Kết xuất dùng bộ vẽ thời gian thực của khung 3D (bóng đổ, vật liệu PBR), chưa có dò tia (ray tracing) như AutoCAD. Tệp tập bản vẽ `.dst` của AutoCAD chưa đọc được; tập bản vẽ của DVDCAD lưu trong máy hoặc tệp `.dvdsst`. COM khác (Word, Access, ADODB…) chưa có.
+- **OpenDCL** (`dcl_…`, hộp thoại của thư viện OpenDCL) chưa có. Còn khoảng 43 lệnh AutoCAD chưa có: nền DGN (7 lệnh), NURBS (`CONVTONURBS`, `SURFFILLET`, `INSERTCONTROLPOINT`), đánh dấu DWF (`MARKUP…`), đám mây và dịch vụ trực tuyến của Autodesk, một số lệnh nhỏ.
+- IGES: chưa đọc B-rep (186, khối đặc kiểu MSBO) — chỉ đọc dạng mặt (144 / 128…). Mặt cong cắt xén được lấy theo lưới nên mép hơi răng cưa. Chữ IGES chỉ có ASCII nên tiếng Việt bị bỏ dấu khi xuất.
+- OLE không phải OLE thật của Windows: tài liệu Word / Excel hiện dạng biểu tượng, mở ra bằng chương trình ngoài, không sửa tại chỗ. AutoCAD mở bản vẽ thấy đối tượng OLE dạng ảnh. Dữ liệu tệp nhúng lưu trong máy.
+- DXB đọc theo mô tả định dạng của AutoCAD R12, chưa thử với tệp do AutoCAD xuất. `SIGVALIDATE` chỉ biết tệp có chữ ký hay không, không kiểm được chứng thư.
+- Kết xuất dùng bộ vẽ thời gian thực của khung 3D (bóng đổ, vật liệu PBR), chưa có dò tia (ray tracing) như AutoCAD. Tệp tập bản vẽ `.dst` của AutoCAD chưa đọc được. COM khác (Word, Access, ADODB…) chưa có.
 - Excel làm lại không tính công thức: công thức được ghi vào tệp, Excel tính khi mở.
 - **Không chạy được `.fas` / `.vlx`**: đây là LISP đã biên dịch và mã hoá cho riêng AutoCAD, không có mã nguồn. Nhiều bộ tiện ích thương mại chỉ phát hành dạng này, kèm khoá bản quyền. Cần xin tác giả bản `.lsp` (hoặc bản dành cho DVDCAD).
 - **Không chạy được `.dll` / `.arx` / `.dvb`**: đây là chương trình Windows (.NET, ObjectARX, VBA) chạy bên trong AutoCAD và gọi thẳng thư viện của Autodesk.

@@ -394,7 +394,7 @@
       { sep: 1 }, { t: 'Xoá layout', ic: 'ERASE', fn: () => { if(!confirm('Xoá layout "' + L.name + '"?')) return; if(L.def && L.def.from != null){ gone(L.def.from); return; } const mi = dwgLayouts.findIndex(z => z.isModel); if(mi >= 0) switchLayout(mi); usave(ulays().filter(z => z.name !== L.name)); installLayouts(); } });
     A.menu(x, y - items.length * 30 - 10, items);
   }
-  A.layoutMenu = layoutMenu; A.saveLayoutDef = saveDef; A.proIdbGet = idbGet; A.xrefList = xrefs; A.refreshLayout = refreshLayout;
+  A.layoutMenu = layoutMenu; A.saveLayoutDef = saveDef; A.proIdbGet = idbGet; A.xrefList = xrefs; A.refreshLayout = refreshLayout; A.parseRef = parseRef; A.placeRef = placeRef;
   A.sheetPrims = sheetPrims;
   // lưu định nghĩa layout mà không dựng lại (đối tượng giấy giữ nguyên tham chiếu)
   A.saveLayoutQuiet = D => { const L = ulays(); const o = JSON.parse(JSON.stringify(D, (k, v) => k === 'userAdded' ? undefined : v)); const i = L.findIndex(x => x.name === D.name); if(i >= 0) L[i] = o; else L.push(o); usave(L); };
