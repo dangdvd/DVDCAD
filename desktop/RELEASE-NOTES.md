@@ -1,71 +1,67 @@
-## DVDCAD 5.31.0 — IGES, DXB, đối tượng OLE, lịch sử bản vẽ, lệnh tiện ích
+## DVDCAD 5.32.0 — MicroStation DGN, vòng điều hướng, bắt điểm 3D, mặt cắt gấp khúc, nhận chữ SHX
 
 Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Windows. Tên lệnh, lệnh tắt và cách dùng giống AutoCAD để người dùng chuyển sang không bỡ ngỡ.
 
 ### Tải về
-- **DVDCAD-Setup-5.31.0.exe** — bộ cài.
+- **DVDCAD-Setup-5.32.0.exe** — bộ cài.
   - Cài cho tài khoản Windows đang dùng, không cần quyền quản trị.
   - Có lối tắt Desktop và Start Menu.
   - Nhấp đúp file .dwg / .dxf là mở bằng DVDCAD.
-- **DVDCAD-5.31.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
+- **DVDCAD-5.32.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
 
 Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More info → Run anyway**.
 
 ### Có gì mới
-- **IGES**:
-  - `IGESIMPORT` đọc tệp `.igs` / `.iges` từ các phần mềm CAD khác:
-    - đường, cung, elip, NURBS, đường ghép (giữ cung chính xác);
-    - mặt NURBS / mặt kẻ / tròn xoay / mặt cắt xén → lưới 3D;
-    - chữ, mũi tên, kích thước, khối con, màu, tên lớp.
-  - `IGESEXPORT` ghi IGES 5.3: đường, cung, elip, đa tuyến có cung, spline (NURBS), chữ, khối 3D / lưới (mặt), màu, lớp, kiểu nét.
-- `DXBIN`: nhập tệp DXB (bản vẽ nhị phân do máy vẽ ADI xuất).
-- **Đối tượng OLE** (thẻ Insert › Import):
-  - `INSERTOBJ`: nhúng hoặc liên kết tệp. Ảnh, PDF (trang 1), văn bản, bảng CSV hiện đúng nội dung; tệp khác hiện biểu tượng. Có thể tạo mới ghi chú / bảng.
-  - `OLESCALE`: đổi cỡ theo % hoặc kích thước.
-  - `OLELINKS`: cập nhật, mở, đổi nguồn, ngắt liên kết. Bản Windows tự cập nhật liên kết khi mở bản vẽ.
-- **Lịch sử bản vẽ** (thẻ Manage › Lịch sử):
-  - `DWGHISTORY`: mỗi lần lưu tự chụp một phiên bản; mở lại hoặc **so sánh** với hiện tại (tô xanh chỗ thêm, đỏ chỗ mất). `SNAPSHOT` chụp kèm ghi chú.
-  - `ACTIVITYINSIGHTS`: ai mở / lưu / sửa, lúc nào, lệnh gì; xuất CSV.
-  - `MYINSIGHTS`: lệnh dùng nhiều nhất và gợi ý lệnh tắt. `VIEWPLOTDETAILS`: các lần in / xuất.
-- `HATCHGAPTOL`: HATCH nhận vùng có khe hở nhỏ.
-- `PSFILL`: tô xám / màu / chuyển màu / mẫu.
-- `WMFCLIP`: chép đối tượng dạng hình để dán vào Word / Excel.
-- `AUTOPUBLISH`: tự xuất PDF / DWFx mỗi khi lưu.
-- `XREFCOMPARE`: so tham chiếu ngoài với bản mới.
-- `SMARTBLOCKSREPLACE`: thay nhóm nét bằng khối giống nhất.
-- `WHOHAS`: ai đang mở bản vẽ (tệp .dwl).
-- `SIGVALIDATE`: chữ ký số + mã SHA-256.
-- Lệnh khác: `CONVERT`, `CONVERTPSTYLES`, `ADCNAVIGATE`, `FILEOPEN`, `TRAYSETTINGS`, `REGENAUTO`, `TASKBAR`, `TABLET`, `TOOLPALETTESCLOSE`.
+- **MicroStation DGN (V7)**:
+  - `DGNIMPORT`: nhập tệp `.dgn`.
+    - Đối tượng: đường, chuỗi đường, hình kín (có tô), cung, elip, đường cong, chuỗi / hình phức, chữ (cả tiếng Việt 16 bit), ô (cell).
+    - Mức → lớp; giữ màu theo bảng màu của tệp, kiểu nét, bề rộng nét.
+    - Đổi đơn vị theo bản vẽ (chọn đơn vị chính hoặc phụ).
+  - `DGNATTACH`: gắn DGN làm nền tham chiếu. `DGNLAYERS` bật / tắt mức, `DGNCLIP` cắt, `DGNADJUST` mờ / đơn sắc.
+  - `DGNEXPORT`: ghi DGN V7 2D.
+    - Lớp → mức, bảng màu riêng (giữ đúng màu), kiểu nét, bề rộng.
+    - Cung, elip, chữ tiếng Việt, hình tô.
+  - `DGNMAPPING`: đặt tên lớp cho từng mức, ánh xạ kiểu nét.
+- `NAVSWHEEL`: vòng điều hướng 8 múi — thu phóng, lia, quay quanh, tua lại, tâm, đi bộ, nhìn quanh, lên / xuống; dùng cho 2D và khung 3D.
+- `3DOSNAP` (phím **F4**): bắt đỉnh, giữa cạnh, tâm mặt, điểm trên mặt khi chọn điểm trong khung 3D.
+- **Mặt cắt gấp khúc**:
+  - `SECTIONPLANEJOG` / `JOGSECTION`: thêm bậc gấp vào đường cắt.
+  - `SECTIONPLANESETTINGS`: tên, hatch, màu, hướng nhìn; tạo mặt cắt 2D qua các khối 3D theo đường cắt gấp khúc.
+- `PDFSHXTEXT`: nét chữ SHX trong bản vẽ nhập từ PDF → đối tượng chữ thật.
+  - Tự nhận hướng dòng, cỡ chữ, khoảng trắng.
+  - So khớp với phông txt / simplex / romans / iso / romand.
 
 ### Kiểm thử
 - GitHub Actions trên Windows:
-  1. Kiểm thử nhanh như 5.30.0, thêm IGES ghi → đọc lại, DXB và các lệnh mới.
+  1. Kiểm thử nhanh như 5.31.0, thêm DGN ghi → đọc lại và các lệnh mới.
   2. **ODA File Converter** và **ACadSharp** đọc lại các tệp DWG do DVDCAD ghi.
   3. Bộ đọc XPS của Windows mở tệp DWFx.
   4. Cài lặng bộ cài, chạy kiểm thử trên `DVDCAD.exe` đã cài, rồi gỡ cài.
-- Kiểm thử giao diện tự động (IGES / DXB 25 mục; OLE và lệnh tiện ích 37 mục):
-  - IGES ghi rồi đọc lại:
-    - đủ dòng 80 cột;
-    - cung, tròn, elip (cung + đủ vòng), đa tuyến có cung (thuận + nghịch), spline → NURBS đúng hình;
-    - đa tuyến 3D, màu riêng, tên lớp, chữ, khối 3D → lưới.
-  - IGES viết tay:
-    - ma trận xoay + dời, conic → elip, NURBS bậc 2, mặt tròn xoay;
-    - mặt cắt xén theo biên tham số (diện tích đúng một nửa);
-    - khối con 308 / 408, kích thước → chữ + mũi tên, màu 314, đơn vị inch → mm.
-  - DXB: chế độ thực / nguyên, hệ số tỉ lệ, đường nối tiếp, cung, đa tuyến có cung, lớp, màu.
-  - OLE: bảng tạo mới, ảnh liên kết (96 px = 25,4 mm), biểu tượng; OLESCALE 200 % / 50 %; OLELINKS ngắt liên kết; DXF giữ OLE.
-  - Các lệnh khác:
-    - WMFCLIP chép hình, PSFILL (xám 25 %, chuyển màu tròn, gạch);
-    - HPGAPTOL: khe 0,5 với dung sai 1 → tìm được biên;
-    - TRAYSETTINGS tắt / giữ thông báo; WHOHAS đọc .dwl / .dwl2; SIGVALIDATE;
-    - CONVERT, CONVERTPSTYLES hai chiều;
-    - VIEWPLOTDETAILS, ACTIVITYINSIGHTS, MYINSIGHTS;
-    - SNAPSHOT + tự chụp khi lưu, DWGHISTORY so sánh;
-    - SMARTBLOCKSREPLACE đúng chỗ, đúng tỉ lệ; AUTOPUBLISH lưu → PDF.
-  - Các bộ kiểm thử của 5.24.0 → 5.30.0 vẫn đạt đủ.
+- Kiểm thử giao diện tự động (DGN 26 mục; điều hướng / bắt điểm / mặt cắt / chữ SHX 18 mục):
+  - DGN dựng tay:
+    - số thực VAX D; đơn vị M / CM; đường có màu / kiểu nét / bề rộng; hình kín có tô;
+    - cung thuận và chiều kim; elip xoay; tròn; chữ 8 bit + 16 bit;
+    - chuỗi phức → một đa tuyến; chuỗi điểm; bỏ phần tử đã xoá.
+  - DGNIMPORT đổi đơn vị M → mm, đơn vị phụ; DGNATTACH + DGNLAYERS; DGN V8 báo rõ.
+  - DGNEXPORT rồi đọc lại:
+    - đường, tròn, cung qua 0°, cung elip;
+    - đa tuyến có cung, đa tuyến 250 đỉnh;
+    - SOLID có tô màu riêng, chữ tiếng Việt, điểm.
+  - DGNMAPPING.
+  - 3DOSNAP: tâm mặt, giữa cạnh, đỉnh, tắt, gần nhất trên mặt.
+  - NAVSWHEEL 2D / 3D: thu phóng, quay quanh, nhìn quanh giữ chỗ đứng, tua lại.
+  - Mặt cắt gấp khúc qua 2 khối (khối thứ 3 không cắt), tạo 2D + tên, thiết lập.
+  - PDFSHXTEXT: "AB 12" (txt), chữ xoay 30°, "KHOI 3" (romans), lệnh thay nét bằng chữ.
+  - Các bộ kiểm thử của 5.24.0 → 5.31.0 vẫn đạt đủ.
 
 ### Giới hạn
-- **OpenDCL** (`dcl_…`, hộp thoại của thư viện OpenDCL) chưa có. Còn khoảng 43 lệnh AutoCAD chưa có: nền DGN (7 lệnh), NURBS (`CONVTONURBS`, `SURFFILLET`, `INSERTCONTROLPOINT`), đánh dấu DWF (`MARKUP…`), đám mây và dịch vụ trực tuyến của Autodesk, một số lệnh nhỏ.
+- **OpenDCL** (`dcl_…`, hộp thoại của thư viện OpenDCL) chưa có. Còn khoảng 30 lệnh AutoCAD chưa có: NURBS (`CONVTONURBS`, `SURFFILLET`, `INSERTCONTROLPOINT`), đánh dấu DWF (`MARKUP…`), `ACISOUT`, `IMPRINT`, đám mây và dịch vụ trực tuyến của Autodesk, một số lệnh nhỏ.
+- DGN:
+  - Chỉ đọc / ghi DGN V7. DGN V8 (MicroStation V8 / CONNECT) cần đổi sang V7 bằng MicroStation hoặc ODA File Converter.
+  - V7 không lưu tên mức nên lớp xuất ra thành mức số (đặt tên bằng `DGNMAPPING`). B-spline, kích thước, ô dùng chung (shared cell) chưa đọc.
+  - Bảng màu mặc định khi tệp không có bảng màu chỉ gần đúng.
+  - Đọc / ghi theo mô tả định dạng V7 (giống GDAL), chưa thử với MicroStation.
+- `PDFSHXTEXT` chỉ nhận đúng khi nét chữ dùng phông giống phông nét đơn kèm theo (txt / simplex / romans / iso / romand). Phông khác hoặc chữ bị cắt nét thì ký tự có thể sai — kiểm lại sau khi đổi.
 - IGES: chưa đọc B-rep (186, khối đặc kiểu MSBO) — chỉ đọc dạng mặt (144 / 128…). Mặt cong cắt xén được lấy theo lưới nên mép hơi răng cưa. Chữ IGES chỉ có ASCII nên tiếng Việt bị bỏ dấu khi xuất.
 - OLE không phải OLE thật của Windows: tài liệu Word / Excel hiện dạng biểu tượng, mở ra bằng chương trình ngoài, không sửa tại chỗ. AutoCAD mở bản vẽ thấy đối tượng OLE dạng ảnh. Dữ liệu tệp nhúng lưu trong máy.
 - DXB đọc theo mô tả định dạng của AutoCAD R12, chưa thử với tệp do AutoCAD xuất. `SIGVALIDATE` chỉ biết tệp có chữ ký hay không, không kiểm được chứng thư.
