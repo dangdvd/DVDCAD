@@ -23,10 +23,10 @@
     window.drawEntity = function(e){ try{ if(e && e.np && typeof plotMode !== 'undefined' && plotMode) return; }catch(_){} try{ const c = typeof ctx !== 'undefined' ? ctx : null; if(c && c.setOC && e && A.pdfLayersOn()) c.setOC(e.layer || '0'); }catch(_){} return _de.apply(this, arguments); }; }
 
   /* ===================== khối nền ===================== */
-  const ulKind = e => { const m = /^UL\$(PDF|DWF)\$/.exec((e && e.blk) || ''); return m && e.grp ? m[1] : null; };
+  const ulKind = e => { const m = /^UL\$(PDF|DWF|DGN)\$/.exec((e && e.blk) || ''); return m && e.grp ? m[1] : null; };
   const isUL = (e, k) => { const t = ulKind(e); return !!t && (!k || t === k); };
   const members = gid => (A.groupMembers ? A.groupMembers(gid) : (typeof modelEntities !== 'undefined' ? modelEntities.filter(x => x.grp === gid) : []));
-  const ulTitle = e => String(e.blk || '').replace(/^UL\$(PDF|DWF)\$/, '');
+  const ulTitle = e => String(e.blk || '').replace(/^UL\$(PDF|DWF|DGN)\$/, '');
   A.isUnderlay = isUL;
   function makeUnderlay(kind, title, ents, ins, rot, size){
     const name = 'UL$' + kind + '$' + String(title || 'nen').replace(/[<>\/\\":;?*|=`$]/g, '_').slice(0, 200);
@@ -126,7 +126,7 @@
   /* ===================== lớp của nền ===================== */
   function layersDialog(gid, then){ const mem = members(gid); if(!mem.length) return; const L = [...new Set(mem.map(e => e.ull).filter(x => x && x !== FRAME))].sort((a, b) => a.localeCompare(b));
     const on = l => mem.some(e => e.ull === l && !e.vh);
-    const d = A.dialog({ title: (ulKind(mem[0]) === 'PDF' ? 'PDF' : 'DWF') + ' Layers — ' + ulTitle(mem[0]), html: '<div class="acw" style="min-width:320px"><div class="acw-row" style="margin-bottom:4px"><button type="button" class="acw-btn" id="ulAll">Bật hết</button> <button type="button" class="acw-btn" id="ulNone">Tắt hết</button></div><div class="acw-list" style="max-height:340px;overflow:auto;padding:4px">' +
+    const d = A.dialog({ title: ulKind(mem[0]) + ' Layers — ' + ulTitle(mem[0]), html: '<div class="acw" style="min-width:320px"><div class="acw-row" style="margin-bottom:4px"><button type="button" class="acw-btn" id="ulAll">Bật hết</button> <button type="button" class="acw-btn" id="ulNone">Tắt hết</button></div><div class="acw-list" style="max-height:340px;overflow:auto;padding:4px">' +
       (L.length ? L.map((l, i) => '<label style="display:block"><input type="checkbox" data-i="' + i + '"' + (on(l) ? ' checked' : '') + '> ' + esc(l) + ' <span style="opacity:.6">(' + mem.filter(e => e.ull === l).length + ')</span></label>').join('') : '<i>Nền này không có lớp.</i>') + '</div></div>',
       ok: root => { const show = new Set(); root.querySelectorAll('[data-i]').forEach(c => { if(c.checked) show.add(L[+c.dataset.i]); }); const rep = [];
         for(const e of mem){ if(!e.ull || e.ull === FRAME) continue; const hide = !show.has(e.ull); if(!!e.vh === hide) continue; const w = copy(e); if(hide) w.vh = 1; else delete w.vh; rep.push([e, w]); }
@@ -149,7 +149,7 @@
   cmd(['DWFCLIP'], 'Cắt nền DWF theo khung như XCLIP', clipVia('DWF'));
   const gray = h => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h || '')); if(!m) return '#8c8c8c'; const v = parseInt(m[1], 16); const y = Math.round(0.299 * (v >> 16 & 255) + 0.587 * (v >> 8 & 255) + 0.114 * (v & 255)); const s = y.toString(16).padStart(2, '0'); return '#' + s + s + s; };
   function adjustDialog(gid){ const mem = members(gid); if(!mem.length) return; const f0 = mem[0].tp || 0, mono0 = mem.some(e => e.ulc);
-    const d = A.dialog({ title: (ulKind(mem[0]) === 'PDF' ? 'PDF' : 'DWF') + ' Adjust — ' + ulTitle(mem[0]), html: '<div class="acw" style="min-width:320px"><div class="acw-row"><label>Độ mờ (Fade) 0 – 80</label><input id="uaF" type="range" min="0" max="80" value="' + f0 + '"> <b id="uaFv">' + f0 + '</b></div><div class="acw-row"><label><input id="uaM" type="checkbox"' + (mono0 ? ' checked' : '') + '> Đơn sắc (Monochrome)</label></div></div>',
+    const d = A.dialog({ title: ulKind(mem[0]) + ' Adjust — ' + ulTitle(mem[0]), html: '<div class="acw" style="min-width:320px"><div class="acw-row"><label>Độ mờ (Fade) 0 – 80</label><input id="uaF" type="range" min="0" max="80" value="' + f0 + '"> <b id="uaFv">' + f0 + '</b></div><div class="acw-row"><label><input id="uaM" type="checkbox"' + (mono0 ? ' checked' : '') + '> Đơn sắc (Monochrome)</label></div></div>',
       ok: root => { const F = +root.querySelector('#uaF').value || 0, mono = root.querySelector('#uaM').checked; const rep = [];
         for(const e of mem){ const w = copy(e); if(F > 0) w.tp = F; else delete w.tp; if(mono && !w.ulc && e.ull !== FRAME){ w.ulc = w.col || '#ffffff'; w.col = gray(w.col); } if(!mono && w.ulc){ w.col = w.ulc; delete w.ulc; } rep.push([e, w]); }
         A.commit({ rep }, 'Chỉnh nền: mờ ' + F + '%' + (mono ? ', đơn sắc' : '')); } });
@@ -163,7 +163,7 @@
     if(rep.length) A.commit({ rep }, name + ' = ' + v); else log(name + ' = ' + v); }
   cmd(['PDFFRAME'], 'Khung nền PDF: 0 ẩn, 1 hiện và in, 2 hiện không in', () => frameCmd('PDFFRAME', ['PDF']));
   cmd(['DWFFRAME'], 'Khung nền DWF: 0 ẩn, 1 hiện và in, 2 hiện không in', () => frameCmd('DWFFRAME', ['DWF']));
-  cmd(['UFRAMES', 'FRAME'], 'Khung mọi nền tham chiếu (PDF, DWF): 0 ẩn, 1 hiện và in, 2 hiện không in', () => frameCmd('UFRAMES', ['PDF', 'DWF']));
+  cmd(['UFRAMES', 'FRAME'], 'Khung mọi nền tham chiếu (PDF, DWF): 0 ẩn, 1 hiện và in, 2 hiện không in', () => frameCmd('UFRAMES', ['PDF', 'DWF', 'DGN']));
 
   /* ===================== xuất DWFx / DWF, cài đặt xuất ===================== */
   async function exportDwfx(){ if(!A.plotRender || !A.dwfxBuild){ say('Không có bộ ghi DWFx.'); return; }

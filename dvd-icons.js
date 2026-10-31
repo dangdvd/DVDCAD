@@ -696,5 +696,15 @@
     I.ACTIVITYINSIGHTS = '<path d="M3 20h18"/><path class="y" d="M4 16l4-5 4 3 4-7 4 4" stroke-width="1.8"/><circle class="fy" cx="16" cy="7" r="1.5"/>'; I.MYINSIGHTS = '<path class="fy" d="M12 3a6 6 0 0 0-3.5 10.9V17h7v-3.1A6 6 0 0 0 12 3z"/><path d="M9.5 20h5M10.5 22h3"/>';
     I.XREFCOMPARE = (has('XREF') || has('XATTACH')) + '<path class="r" d="M15 15h6M15 19h6"/>'; I.SMARTBLOCKSREPLACE = (has('BREPLACE') || has('INSERT')) + BSTAR; I.SBREPLACE = I.SMARTBLOCKSREPLACE;
     I.DWGHISTORY = '<circle cx="12" cy="12" r="8.5"/><path class="a" d="M12 7v5l3.5 2"/><path class="y" d="M3 6v4h4"/>'; I.SNAPSHOT = '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7l2-3h4l2 3"/><circle class="fa" cx="12" cy="13.5" r="3.5"/>'; }
+  // v6m: DGN, điều hướng, bắt điểm 3D, mặt cắt gấp khúc, chữ SHX
+  { const has = k => I[k] || '';
+    const DG = '<path d="M4 4h12l4 4v12H4z"/><path class="a" d="M16 4v4h4"/><text x="12" y="16.5" font-size="6.5" text-anchor="middle" stroke="none" fill="currentColor" font-family="Arial" font-weight="700">DGN</text>';
+    I.DGNIMPORT = DG + '<path class="y" d="M2 13h6M5.5 10.5L8 13l-2.5 2.5"/>'; I.DGNEXPORT = DG + '<path class="y" d="M15 21h7M19.5 18.5L22 21l-2.5 2.5"/>'; I.DGNATTACH = DG + BLINK;
+    I.DGNLAYERS = (has('LAYER') || DG) + '<text x="18" y="22" font-size="5" text-anchor="middle" stroke="none" fill="currentColor" font-family="Arial">DGN</text>'; I.DGNCLIP = DG + '<rect class="r" x="6" y="9" width="11" height="9" stroke-dasharray="2 1.5"/>'; I.DGNADJUST = DG + BGEAR; I.DGNMAPPING = DG + '<path class="y" d="M14 20h7M18.5 17.5L21 20l-2.5 2.5"/>';
+    I.NAVSWHEEL = '<circle cx="12" cy="12" r="9.5"/><circle class="fa" cx="12" cy="12" r="3.5"/><path class="a" d="M12 2.5v6M12 15.5v6M2.5 12h6M15.5 12h6"/>'; I.WHEEL = I.NAVSWHEEL;
+    I['3DOSNAP'] = '<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path class="a" d="M4 8l8 4 8-4M12 12v8"/><rect class="r" x="9.5" y="9.5" width="5" height="5"/>'; I['-3DOSNAP'] = I['3DOSNAP'];
+    const SL = '<path class="r" d="M3 7h8v10h10" stroke-dasharray="4 1.5 1 1.5" stroke-width="1.6"/><path class="y" d="M3 4v3M21 14v3"/>';
+    I.SECTIONPLANEJOG = SL + BSTAR; I.JOGSECTION = I.SECTIONPLANEJOG; I.SECTIONPLANESETTINGS = SL + BGEAR; I.SECTIONSETTINGS = I.SECTIONPLANESETTINGS;
+    I.PDFSHXTEXT = '<path d="M4 4h12l4 4v12H4z"/><path class="a" d="M16 4v4h4"/><text x="12" y="17" font-size="8" text-anchor="middle" stroke="none" fill="currentColor" font-family="Arial" font-weight="700">A</text><path class="y" d="M6 19h12" stroke-dasharray="1.5 1"/>'; }
   window.DVDIcons = I;
 })();

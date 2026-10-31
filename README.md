@@ -6,6 +6,32 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6m: DGN V7, NAVSWHEEL, 3DOSNAP, mặt cắt gấp khúc, PDFSHXTEXT
+- `dvd-acad-x34.js` — DGN V7:
+  - Phần tử: byte 0 = mức (6 bit) + cờ phức, byte 1 = loại + cờ xoá, từ 1 = số từ còn lại. Số nguyên 32 bit "giữa-đầu" (từ cao trước), số thực VAX D (mũ lệch 128, `A.dgnVax`).
+  - TCB (loại 9): 3D ở byte 1214 bit 0x40, số đơn vị phụ / chính (1112), UOR / phụ (1116), tên đơn vị (1120, 1122), gốc toạ độ chung (1240…).
+  - Bảng màu: loại 5 mức 1, 256 bộ RGB từ byte 38. Tô: liên kết `07 10 41 00 …` (màu ở byte +8), cờ thuộc tính 0x0800.
+  - Cung / elip:
+    - 2D: góc đầu / quét (1/360000 độ, quét âm = bit 31), bán trục VAX, góc xoay, tâm VAX.
+    - 3D: quaternion → ma trận; trục z còn là ±Z thì về cung phẳng.
+  - Chữ: độ cao = hệ số × 6 / 1000 UOR; chữ 16 bit có tiền tố `FF FD`.
+  - Ghi: TCB 1536 byte `08 09 FE 02`, bảng màu, phần tử 2D (khung bao: số nguyên lật bit 31), `attindx` = (độ dài dữ liệu + 4) / 2, kết thúc `FF FF`.
+  - Nền: `A.makeUnderlay('DGN', …)`; `dvd-acad-x28.js` nhận `UL$DGN$`.
+- `dvd-acad-x35.js`:
+  - NAVSWHEEL:
+    - 2D: `applyZoom`, `view.offsetX/Y`, `A.prevView`.
+    - 3D: `view3D.state` (az, el, dist, target); camera = target + dist·(cos el cos az, cos el sin az, sin el). Nhìn quanh giữ vị trí camera, dời target.
+  - 3DOSNAP: `dvd-acad-3d.js` `pointAt` đọc `A.snap3DMode()`.
+    - Giữa cạnh: bỏ cạnh mà tam giác kề cùng mặt phẳng.
+    - Tâm mặt: trọng tâm có trọng số diện tích của mọi tam giác cùng mặt phẳng.
+  - Đường cắt = `POLYLINE` có `secl` (`name`, `pat`, `psc`, `col`, `flip`).
+    - Mặt cắt 2D: mỗi đoạn cắt lưới khối theo mặt đứng, nối thành vòng, cắt theo 0 ≤ t ≤ L (Sutherland–Hodgman), chiếu u = (A + t·d − V0)·u0.
+  - PDFSHXTEXT:
+    - Góc dòng: quét −90° … 90° chọn góc có nhiều nét chạm cùng đường chân chữ nhất.
+    - Thành phần liên thông (đỉnh chạm đoạn).
+    - Chiều cao chữ hoa = trung vị đỉnh các ký tự lớn so với chân chữ.
+    - Điểm khớp = khoảng cách chamfer hai chiều + chênh bề rộng; chỉ xét glyph có bề rộng / cao / thấp gần đúng.
+
 ## v6l: IGES, DXB, OLE, lịch sử bản vẽ, lệnh tiện ích
 - `dvd-acad-x32.js`:
   - IGES: `parseIGES` tách các mục S / G / D / P (cột 73), tham số theo dấu phân cách của mục G, chuỗi Hollerith `nH…`, số mũ `D`.

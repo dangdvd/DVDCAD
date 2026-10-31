@@ -27,6 +27,36 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v6m) — DGN, vòng điều hướng, bắt điểm 3D, mặt cắt gấp khúc, nhận chữ SHX
+- **DGN (MicroStation V7)**, thẻ Insert:
+  - `DGNIMPORT`: nhập tệp `.dgn` V7 (2D / 3D), chọn đơn vị chính / phụ; tự đổi theo đơn vị bản vẽ (vd M → mm ×1000).
+    - Đối tượng: đường, chuỗi đường, hình kín (có liên kết tô → hatch đặc), đường cong (→ spline), chuỗi điểm, cung / elip (cả chiều kim đồng hồ, xoay, cung elip).
+    - Chuỗi / hình phức → một đa tuyến; chữ (8 bit và 16 bit, có dấu tiếng Việt); thành phần của ô (cell).
+    - Mức → lớp ("Level N" hoặc tên theo `DGNMAPPING`), bảng màu của tệp, kiểu nét 0–7, bề rộng 0–31.
+    - DGN V8 (MicroStation V8 / CONNECT) báo rõ — cần lưu lại thành V7 hoặc đổi bằng ODA File Converter.
+  - `DGNATTACH`: gắn DGN làm nền tham chiếu (tỉ lệ, điểm chèn, góc xoay), có khung.
+    - `DGNLAYERS`: bật / tắt mức. `DGNCLIP`: cắt như XCLIP. `DGNADJUST`: độ mờ, đơn sắc.
+    - `ULAYERS` / `UFRAMES` dùng chung với nền PDF / DWF.
+  - `DGNEXPORT`: ghi DGN V7 2D.
+    - Đơn vị theo bản vẽ, gốc toạ độ chung ở tâm bản vẽ (độ phân giải 1000 UOR / đơn vị, tự giảm nếu bản vẽ rất rộng).
+    - Bảng màu riêng (giữ đúng màu RGB), lớp → mức 1–63, kiểu nét, bề rộng.
+    - Đa tuyến có cung → đoạn + cung; đa tuyến > 101 đỉnh tách thành nhiều chuỗi.
+    - SOLID / hatch đặc → hình kín có liên kết tô; chữ tiếng Việt ghi 16 bit.
+  - `DGNMAPPING`: ánh xạ mức → tên lớp, tiền tố tên mức, kiểu nét DGN 1–7 → kiểu nét.
+- `NAVSWHEEL` (thẻ Visualize › Camera): vòng điều hướng 8 múi.
+  - Thu phóng, Lia, Quay quanh, Tua lại (góc nhìn trước), Tâm (bấm điểm làm tâm), Đi bộ, Nhìn quanh (giữ chỗ đứng), Lên / xuống.
+  - Kéo chuột trên múi để dùng; dùng cho cả mặt bằng 2D và khung 3D. Esc hoặc × để đóng.
+- `3DOSNAP` (biến `3DOSMODE`, phím **F4** bật / tắt): bắt điểm khi chọn điểm trong khung 3D — đỉnh, giữa cạnh (bỏ qua cạnh chéo trong mặt phẳng), tâm mặt (trọng tâm cả mặt phẳng), gần nhất trên mặt.
+- **Mặt cắt gấp khúc** (thẻ 3D › Section):
+  - `SECTIONPLANEJOG` / `JOGSECTION`: thêm bậc gấp vào đường cắt — điểm trên đường cắt, độ lệch (dương = sang trái). Chưa có đường cắt thì chọn 2 điểm để tạo.
+  - `SECTIONPLANESETTINGS`: tên, mẫu hatch, tỉ lệ, màu, đảo hướng nhìn, đặt làm mặc định.
+    - **Tạo mặt cắt 2D**: cắt mọi khối 3D theo mặt đứng của từng đoạn, chỉ lấy phần trong đoạn, chiếu lên phương đoạn đầu.
+    - Kết quả: đường bao + hatch + tên "MẶT CẮT A-A".
+- `PDFSHXTEXT`: nhận dạng chữ SHX trong hình nhập từ PDF thành đối tượng chữ.
+  - Tự tìm hướng dòng chữ (theo đường chân chữ), tách dòng, tách ký tự, khoảng trắng.
+  - So khớp từng ký tự với phông nét đơn txt / simplex / romans / iso / romand, chọn phông khớp nhất.
+  - Thay nét bằng chữ đúng vị trí, cỡ, góc, phông.
+
 ## Bổ sung như AutoCAD 2027 (v6l) — IGES, DXB, OLE, lịch sử bản vẽ, lệnh tiện ích
 - **IGES** (thẻ Insert › Import › thêm; Output › Xuất bản):
   - `IGESIMPORT` / `IGESIN`: đọc tệp `.igs` / `.iges` (IGES 5.3, ASCII 80 cột) vào bản vẽ hiện hành, đổi đơn vị theo bản vẽ.
