@@ -478,12 +478,25 @@
     function vertexNear(ev, tolPx, maxV){ const c = cam(), r = cv3.getBoundingClientRect(), n = ndcOf(ev), v = new T.Vector3(); let best = null, bd = tolPx, cnt = 0;
       for(const o of solids){ const pa = o.mesh.geometry.attributes.position; cnt += pa.count; if(cnt > maxV) return best; for(let i = 0; i < pa.count; i++){ v.set(pa.getX(i), pa.getY(i), pa.getZ(i)).project(c); if(v.z > 1) continue; const d = Math.hypot((v.x - n.x) * r.width / 2, (v.y - n.y) * r.height / 2); if(d < bd){ bd = d; best = new T.Vector3(pa.getX(i), pa.getY(i), pa.getZ(i)); } } }
       return best; }
+    A._pointAt3D = (ev, full) => pointAt(ev, full);
     function pointAt(ev, full){
-      const tolPx = 12; const vn = vertexNear(ev, tolPx, full ? 600000 : 60000); if(vn) return { p: vn, snap: true };
+      // 3DOSMODE (3DOSNAP): 1 tắt hết · 2 đỉnh · 4 giữa cạnh · 8 tâm mặt · 64 gần nhất trên mặt
+      const M3 = A.snap3DMode ? A.snap3DMode() : 14, on = !(M3 & 1);
+      const tolPx = 12; if(on && (M3 & 2)){ const vn = vertexNear(ev, tolPx, full ? 600000 : 60000); if(vn) return { p: vn, snap: true, k: 'v' }; }
       const hs = hitSolid(ev);
-      if(hs){ const g = hs.h.object.geometry, pa = g.attributes.position, f = hs.h.face; let best = null, bd = Infinity; const c = cam(), r = cv3.getBoundingClientRect();
-        for(const ix of [f.a, f.b, f.c]){ const v = new T.Vector3(pa.getX(ix), pa.getY(ix), pa.getZ(ix)); const sp = v.clone().project(c); const dx = (sp.x - ndcOf(ev).x) * r.width / 2, dy = (sp.y - ndcOf(ev).y) * r.height / 2, d = Math.hypot(dx, dy); if(d < bd){ bd = d; best = v; } }
-        if(best && bd < tolPx) return { p: best, snap: true }; return { p: hs.h.point.clone(), snap: false }; }
+      if(hs){ const g = hs.h.object.geometry, pa = g.attributes.position, f = hs.h.face; let best = null, bd = Infinity, bk = ''; const c = cam(), r = cv3.getBoundingClientRect(), nd = ndcOf(ev);
+        const P = ix => new T.Vector3(pa.getX(ix), pa.getY(ix), pa.getZ(ix)); const try2 = (v, k) => { const sp = v.clone().project(c); const d = Math.hypot((sp.x - nd.x) * r.width / 2, (sp.y - nd.y) * r.height / 2); if(d < bd){ bd = d; best = v; bk = k; } };
+        if(on){ const A3 = [P(f.a), P(f.b), P(f.c)];
+          if(M3 & 2) for(const v of A3) try2(v, 'v');
+          if(M3 & 4 || M3 & 8){ const nrm = new T.Vector3().subVectors(A3[1], A3[0]).cross(new T.Vector3().subVectors(A3[2], A3[0])).normalize(); const key = v => v.x.toFixed(5) + ',' + v.y.toFixed(5) + ',' + v.z.toFixed(5);
+            const n = g.index ? g.index.count : pa.count, ix = k => g.index ? g.index.getX(k) : k; const tris = []; for(let t = 0; t + 2 < n && t < 300000; t += 3) tris.push([ix(t), ix(t + 1), ix(t + 2)]);
+            const coplanar = tr => { const a = P(tr[0]), b = P(tr[1]), d2 = P(tr[2]); const m = new T.Vector3().subVectors(b, a).cross(new T.Vector3().subVectors(d2, a)); if(m.lengthSq() < 1e-24) return false; m.normalize(); return m.dot(nrm) > 0.9999 && Math.abs(nrm.dot(new T.Vector3().subVectors(a, A3[0]))) < 1e-6 * (1 + A3[0].length()); };
+            if(M3 & 4){ for(let k = 0; k < 3; k++){ const a = A3[k], b = A3[(k + 1) % 3], ka = key(a), kb = key(b); let diag = false;   // cạnh chéo trong mặt phẳng (giữa 2 tam giác cùng mặt) không phải cạnh thật
+                for(const tr of tris){ const ks = tr.map(q => key(P(q))); if(ks.includes(ka) && ks.includes(kb) && !(ks.includes(key(A3[(k + 2) % 3])))){ if(coplanar(tr)) diag = true; break; } }
+                if(!diag) try2(new T.Vector3().addVectors(a, b).multiplyScalar(0.5), 'm'); } }
+            if(M3 & 8){ let ax = 0, ay = 0, az = 0, at = 0; for(const tr of tris){ if(!coplanar(tr)) continue; const a = P(tr[0]), b = P(tr[1]), d2 = P(tr[2]); const ar = new T.Vector3().subVectors(b, a).cross(new T.Vector3().subVectors(d2, a)).length() / 2; ax += (a.x + b.x + d2.x) / 3 * ar; ay += (a.y + b.y + d2.y) / 3 * ar; az += (a.z + b.z + d2.z) / 3 * ar; at += ar; }
+              if(at > 0) try2(new T.Vector3(ax / at, ay / at, az / at), 'c'); } } }
+        if(best && bd < tolPx) return { p: best, snap: true, k: bk }; return { p: hs.h.point.clone(), snap: on && !!(M3 & 64), k: on && (M3 & 64) ? 'n' : '' }; }
       const z = MEM.z03 || 0, q = groundPt(ev, z); if(!q) return null; const tol = tolPx * wpp(q); let best = null, bd = tol;
       for(const e of (A.selectable ? A.selectable() : modelEntities)){ if(is3D(e)) continue; let gp; try{ gp = A.gripsOf ? A.gripsOf(e) : []; }catch(_){ gp = []; } for(const g2 of gp){ const d = Math.hypot(g2.x - q.x, g2.y - q.y); if(d < bd){ bd = d; best = g2; } } }
       if(best) return { p: new T.Vector3(best.x, best.y, z), snap: true }; return { p: q, snap: false };

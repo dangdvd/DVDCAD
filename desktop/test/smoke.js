@@ -231,6 +231,10 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       const R = A.igesToEnts(A.igesWrite(L).text, { scale: 1 }); const D = A.parseDXB(A.dxbEncode(L));
       return [R.ents.map(e => e.type).join('+'), D.ents.length, ['IGESIMPORT', 'IGESEXPORT', 'DXBIN', 'INSERTOBJ', 'OLELINKS', 'OLESCALE', 'WMFCLIP', 'PSFILL', 'DWGHISTORY', 'ACTIVITYINSIGHTS', 'XREFCOMPARE', 'SMARTBLOCKSREPLACE'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
     check(v6l === 'LINE+ARC,2,true', 'IGES ghi → đọc lại, DXB, lệnh OLE / lịch sử / tiện ích: ' + v6l);
+    // v6m: DGN ghi → đọc lại, lệnh điều hướng / mặt cắt / SHX
+    const v6m = await win.evaluate(() => { const A = DVDAcad; const L = [{ type: 'LINE', x1: 0, y1: 0, x2: 10, y2: 5, layer: '0', col: '#ff0000' }, { type: 'CIRCLE', cx: 3, cy: 4, r: 2, layer: '0', col: '#ffffff' }];
+      const R = A.parseDGN(A.writeDGN(L).data.buffer); return [R.ents.map(e => e.type).join('+'), R.ents[0].col, ['DGNIMPORT', 'DGNATTACH', 'DGNEXPORT', 'NAVSWHEEL', '3DOSNAP', 'SECTIONPLANEJOG', 'PDFSHXTEXT'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
+    check(v6m === 'LINE+CIRCLE,#ff0000,true', 'DGN ghi → đọc lại, lệnh NAVSWHEEL / 3DOSNAP / mặt cắt gấp khúc / PDFSHXTEXT: ' + v6m);
     if(process.env.DVD_DWG_OUT) for(const v of Object.keys(v6f.dwg)) fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'xdata-' + v + '.dwg'), Buffer.from(v6f.dwg[v], 'base64'));
   }
   {
