@@ -17,7 +17,7 @@
   const hexRGB = h => { let s = String(h || '').replace('#', ''); if(s.length === 3) s = s.split('').map(c => c + c).join(''); const n = parseInt(s, 16); return /^[0-9a-f]{6}$/i.test(s) ? n : null; };
   const isAciColor = h => { const n = hexRGB(h); if(n == null) return true; const a = A.aciNear(h); return (ACI_RGB[a] >>> 0) === n; };
   // thuộc tính riêng của DVDCAD ghi kèm (XDATA) để mở lại trong DVDCAD còn nguyên
-  const XKEYS = ['cid', 'dord', 'anno', 'fld', 'url', 'urld', 'urlsub', 'ascl', 'gns', 'gdsc', 'dyn', 'dvs', 'mt', 'rt', 'rtx', 'cols', 'mtp', 'mtwk', 'dvw', 'gmk', 'shp', 'shpx'];   // dvw: thuộc hình chiếu (VIEWBASE…)   // rt / cols: chữ có định dạng, cột (đọc lại đúng trong DVDCAD)
+  const XKEYS = ['cid', 'dord', 'anno', 'fld', 'url', 'urld', 'urlsub', 'ascl', 'gns', 'gdsc', 'dyn', 'dvs', 'mt', 'rt', 'rtx', 'cols', 'mtp', 'mtwk', 'dvw', 'gmk', 'shp', 'shpx', 'psfill', 'pst'];   // dvw: thuộc hình chiếu (VIEWBASE…)   // rt / cols: chữ có định dạng, cột (đọc lại đúng trong DVDCAD)
 
   let UTF8 = false;   // DXF R2007+: chữ ghi thẳng UTF-8 (không cần mã \U+)
   function dxfStr(s){ if(UTF8) return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[\x00-\x1f]/g, ' '); return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }
@@ -282,7 +282,7 @@
         if(o.inBlock){ if(!o.dyn && !e.ull) return; if(o.dyn && DYNX && e._et != null){ P(1001, 'AcDbBlockRepETag'); P(1070, 1); P(1071, e._et); }
           const q = {}; if(e.dvs) q.dvs = e.dvs; if(o.dyn === 2 && e.dyn) q.dyn = e.dyn; if(e.ull){ q.ull = e.ull; if(e.vh) q.ulh = 1; if(e.ulc) q.ulc = e.ulc; } if(Object.keys(q).length){ const js = JSON.stringify(q); P(1001, 'DVDCAD'); for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); } return; }
         const pr = {}; for(const k of XKEYS) if(e[k] != null && e[k] !== '' && !(k === 'mt' && e.type !== 'TEXT')) pr[k] = e[k];
-        if(e.type === 'IMAGE'){ const q = {}; for(const k of ['x', 'y', 'w', 'h', 'rot', 'op', 'name', 'frame', 'img', 'gmi', 'cpoly', 'pc']) if(e[k] != null) q[k] = e[k]; pr.imgx = q; }   // ảnh: khung đa tuyến + thông số ảnh (dữ liệu ảnh ở DVDCAD_DATA)
+        if(e.type === 'IMAGE'){ const q = {}; for(const k of ['x', 'y', 'w', 'h', 'rot', 'op', 'name', 'frame', 'img', 'gmi', 'cpoly', 'pc', 'ole']) if(e[k] != null) q[k] = e[k]; pr.imgx = q; }   // ảnh: khung đa tuyến + thông số ảnh (dữ liệu ảnh ở DVDCAD_DATA)
         const js = Object.keys(pr).length ? JSON.stringify(pr) : null;
         if(!e.rgn && !js) return; P(1001, 'DVDCAD'); if(e.rgn) P(1000, 'RGN' + (e.grp && e.blk === '*REGION' ? ':' + e.grp : '')); if(js){ for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); } };
       // đa tuyến có độ rộng: độ rộng đầu / cuối từng đỉnh (40 / 41) lấy lại từ các tứ giác tô

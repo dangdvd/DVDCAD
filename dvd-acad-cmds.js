@@ -1747,12 +1747,24 @@
   }
   A.findBoundary = findBoundary;
   A.findBoundaryIn = (P, vb, list) => findBoundaryIn(P, vb, list);
+  // nối các đầu mút hở (chỉ thuộc một nét) cách nhau ≤ tol bằng đoạn thẳng — như HPGAPTOL của AutoCAD
+  function closeGaps(S, tol){
+    const q = v => Math.round(v * 1e6) / 1e6, k = (x, y) => q(x) + ',' + q(y), deg = new Map();
+    for(const s of S){ for(const kk of [k(s[0], s[1]), k(s[2], s[3])]) deg.set(kk, (deg.get(kk) || 0) + 1); }
+    const open = []; S.forEach((s, i) => { if(deg.get(k(s[0], s[1])) === 1) open.push({ x: s[0], y: s[1], i }); if(deg.get(k(s[2], s[3])) === 1) open.push({ x: s[2], y: s[3], i }); });
+    if(open.length > 6000) return 0; const used = new Set(); let n = 0;
+    for(let a = 0; a < open.length; a++){ if(used.has(a)) continue; let best = -1, bd = tol;
+      for(let b = 0; b < open.length; b++){ if(b === a || used.has(b) || open[b].i === open[a].i) continue; const d = Math.hypot(open[b].x - open[a].x, open[b].y - open[a].y); if(d <= bd && d > 0){ bd = d; best = b; } }
+      if(best >= 0){ used.add(a); used.add(best); S.push([open[a].x, open[a].y, open[best].x, open[best].y]); n++; } }
+    return n; }
+  A.closeGaps = closeGaps;
   function findBoundaryIn(P, vb, list){
     const span = Math.max(vb.maxX - vb.minX, vb.maxY - vb.minY);
     const ents = (list || A.queryBox(vb.minX, vb.minY, vb.maxX, vb.maxY, 80000)).filter(e => /^(LINE|ARC|CIRCLE|POLYLINE|ELLIPSE|SOLID)$/.test(e.type));
     const S = [];
     for(const e of ents){ const c = G.curveOf(e); if(!c) continue; for(const p of c.pieces){ if(p.t === 's'){ if(Math.hypot(p.bx - p.ax, p.by - p.ay) > 1e-12) S.push([p.ax, p.ay, p.bx, p.by]); } else { const n = Math.max(6, Math.ceil(p.sw / (4 * D2R))); for(let i = 0; i < n; i++){ const a0 = p.a0 + p.sw * i / n, a1 = p.a0 + p.sw * (i + 1) / n; S.push([p.cx + p.r * Math.cos(a0), p.cy + p.r * Math.sin(a0), p.cx + p.r * Math.cos(a1), p.cy + p.r * Math.sin(a1)]); } } } }
     if(!S.length) return { err: 'Không có nét nào trong khung nhìn.' };
+    { const gt = A.hpGapTol ? +A.hpGapTol() || 0 : 0; if(gt > 0) closeGaps(S, gt); }   // HPGAPTOL: khe hở nhỏ hơn dung sai coi như kín (nối đầu mút hở gần nhau)
     if(S.length > 120000) return { err: 'Quá nhiều nét trong khung nhìn — phóng gần vùng cần tô hơn.' };
     const n = S.length, cuts = S.map(() => [0, 1]);
     const cells = Math.max(8, Math.min(700, Math.round(Math.sqrt(n) * 1.3))); const cs = span / cells || 1;

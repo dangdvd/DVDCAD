@@ -226,6 +226,11 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
     // v6k: tệp IES, lệnh kết xuất / cảnh quay / tập bản vẽ
     const v6k = await win.evaluate(() => { const R = DVDAcad.parseIES('IESNA:LM-63-2002\nTILT=NONE\n1 1000 1 3 1 1 2 0 0 0\n1 1 50\n0 30 60\n0\n1000 900 100\n'); return [R.maxCd, R.beam, ['RENDERWINDOW', 'RENDERPRESETS', 'WEBLIGHT', 'MATEDITOROPEN', 'NEWSHOT', 'NAVSMOTION', 'ANIPATH', 'NEWSHEETSET', 'OPENSHEETSET'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
     check(v6k === '1000,60,true', 'Đọc IES, lệnh kết xuất / cảnh quay / ANIPATH / tập bản vẽ: ' + v6k);
+    // v6l: IGES ghi → đọc lại, DXB, lệnh OLE / tiện ích
+    const v6l = await win.evaluate(() => { const A = DVDAcad; const L = [{ type: 'LINE', x1: 0, y1: 0, x2: 10, y2: 5, layer: '0' }, { type: 'ARC', cx: 0, cy: 0, r: 4, a1: 0, a2: 90, layer: '0' }];
+      const R = A.igesToEnts(A.igesWrite(L).text, { scale: 1 }); const D = A.parseDXB(A.dxbEncode(L));
+      return [R.ents.map(e => e.type).join('+'), D.ents.length, ['IGESIMPORT', 'IGESEXPORT', 'DXBIN', 'INSERTOBJ', 'OLELINKS', 'OLESCALE', 'WMFCLIP', 'PSFILL', 'DWGHISTORY', 'ACTIVITYINSIGHTS', 'XREFCOMPARE', 'SMARTBLOCKSREPLACE'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
+    check(v6l === 'LINE+ARC,2,true', 'IGES ghi → đọc lại, DXB, lệnh OLE / lịch sử / tiện ích: ' + v6l);
     if(process.env.DVD_DWG_OUT) for(const v of Object.keys(v6f.dwg)) fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'xdata-' + v + '.dwg'), Buffer.from(v6f.dwg[v], 'base64'));
   }
   {
