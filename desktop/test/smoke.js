@@ -206,6 +206,10 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       await DVDLisp.evalToString('(command "_.LINE" (list 0 0) (list 5 5) "")'); await new Promise(q => setTimeout(q, 500));
       return DVDLisp.evalToString('(progn (vlr-remove-all) (setq xl (vlax-get-or-create-object "Excel.Application") sh (vlax-get-property (vlax-invoke-method (vlax-get-property xl (quote Workbooks)) (quote Add)) (quote ActiveSheet))) (vlax-put-property (vlax-get-property sh (quote Range) "B2") (quote Value) 12.5) (list *rx* (vlax-variant-value (vlax-get-property (vlax-get-property sh (quote Range) "B2") (quote Value))) (dos_strreplace "a-b" "-" "+")))'); });
     check(v6g === '("LINE" 12.5 "a+b")', 'LISP: vlr-command-reactor, COM Excel.Application (Range.Value), DOSLib: ' + v6g);
+    // v6h: thư viện acet-* của Express Tools + lệnh PLT2DWG đọc HPGL
+    const v6h = await win.evaluate(async () => { const r = await DVDLisp.evalToString('(list (acet-str-to-list "," "a,b") (acet-list-remove-duplicates (list 1 1 2) nil) (acet-filename-ext-remove "C:\\\\x\\\\a.dwg"))');
+      const H = DVDAcad.hpglParse('IN;SP1;PU0,0;PD4000,0;CI400;'); return r + ' ' + H.map(e => e.type).join(',') + ' ' + ['SUPERHATCH', 'ATTOUT', 'BTABLE', 'RTEXT', 'MKSHAPE'].every(k => DVDCmd.commands.some(c => c.k.includes(k))); });
+    check(v6h === '(("a" "b") (1 2) "C:\\\\x\\\\a") LINE,CIRCLE true', 'Express Tools: acet-str / list / filename, PLT2DWG, SUPERHATCH / ATTOUT / BTABLE / RTEXT / MKSHAPE: ' + v6h);
     if(process.env.DVD_DWG_OUT) for(const v of Object.keys(v6f.dwg)) fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'xdata-' + v + '.dwg'), Buffer.from(v6f.dwg[v], 'base64'));
   }
   {

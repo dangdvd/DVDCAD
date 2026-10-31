@@ -27,6 +27,45 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v6h) — Express Tools đầy đủ và soạn khối động
+- **Express Tools** còn thiếu nay đã có. `EXPRESSTOOLS` mở thẻ Express trên ribbon.
+  - **Khối và thuộc tính**:
+    - `ATTOUT` / `ATTIN`: xuất giá trị thuộc tính ra tệp văn bản (tab), sửa bằng Excel, rồi nhập lại theo handle.
+    - `BSCALE`: đổi tỉ lệ từng khối quanh điểm chèn của nó.
+    - `PSBSCALE`: tỉ lệ khối theo khổ giấy.
+    - `BLOCKTOXREF`: ghi khối ra DWG rồi thay bản chèn bằng tham chiếu ngoài.
+    - `SHP2BLK`: đổi hình SHAPE thành khối.
+  - **Tô bằng khối**: `SUPERHATCH` lát khối lặp lại (khoảng cách X / Y) trong biên kín; chỉ giữ các ô nằm trọn trong biên.
+  - **Chữ**:
+    - `RTEXT` / `RTEDIT`: chữ tham chiếu, nội dung lấy từ tệp hoặc biểu thức DIESEL, tự cập nhật.
+    - `PSTSCALE`: cao chữ trong Model để in ra đúng cao trên giấy.
+    - `QLATTACH` / `QLATTACHSET` / `QLDETACHSET`: gắn / tách chữ với đường dẫn.
+  - **Chọn và sửa**:
+    - `FASTSEL`: chọn mọi đối tượng chạm vào đối tượng đã chọn.
+    - `BTRIM` / `BEXTEND` / `TREX`: cắt, kéo dài dùng khối làm biên.
+    - `CLIPIT`: cắt khối / ảnh theo đường bao.
+  - **Tệp và đường dẫn**:
+    - `PLT2DWG`: nhập tệp in HPGL `.plt` thành nét.
+    - `MKSHAPE`: tạo hình `.shp` từ nét đã vẽ.
+    - `REDIR` / `REDIRMODE`: đổi đường dẫn tham chiếu / ảnh / kiểu chữ.
+    - `REPURLS`: thay địa chỉ siêu liên kết.
+    - `MOVEBAK`: thư mục chứa tệp .bak.
+    - `IMAGEAPP`: chương trình sửa ảnh.
+  - **Khác**: `JULIAN`, `EDITTIME`, `LSP`, `LSPSURF`, `TFRAMES`, `EXPLAN`, `RTUCS`, `LAYOUTMERGE`.
+- **Thư viện LISP `acet-*`** của Express Tools (116 hàm) mà nhiều tiện ích gọi tới. Gồm:
+  - lỗi và biến hệ thống (`acet-error-init`, `acet-sysvar-set`);
+  - danh sách, chuỗi (`acet-str-replace`, `acet-str-to-list`), tên tệp;
+  - hình học (`acet-geom-ss-extents`…), tập chọn (`acet-ss-union`, `acet-ss-drag-move`…);
+  - lớp, khối và thuộc tính (`acet-insert-attrib-get` / `-set`), giao diện (`acet-ui-message`, `acet-ui-getfile`).
+- **Soạn khối động**:
+  - `BTABLE` / `BLOOKUPTABLE`: bảng tra (Block Properties Table). Mỗi hàng là một bộ giá trị tham số; bấm **Áp dụng** để đặt bản chèn theo hàng đó.
+  - `BAUTHORPALETTE`: bảng công cụ soạn khối.
+  - `BACTION`, `BACTIONSET`, `BASSOCIATE`: mở BPARAMETER, vì DVDCAD gộp tham số và hành động.
+  - `BTESTBLOCK`: thử khối.
+  - `BCPARAMETER`: ràng buộc kích thước.
+  - `BCONSTRUCTION`: hình dựng, ẩn ở mọi trạng thái.
+  - `BWBLOCK`, `BXCLIP`, `BESETTINGS`, `BCYCLEORDER`, `BGRIPSET`, `BACTIONBAR`, `BLOCKICON`.
+
 ## Bổ sung như AutoCAD 2027 (v6g) — cài ứng dụng ngoài: gói .bundle, menu, reactor, Excel
 - **Gói ứng dụng `.bundle`** (cách cài của Autodesk App Store, thư mục `ApplicationPlugins`): `APPLOAD` › **Nạp cả thư mục…** chọn thư mục `.bundle` (hoặc gói .zip).
   - DVDCAD đọc `PackageContents.xml`: tệp `.lsp` tự nạp khi mở hoặc nạp khi gõ lệnh, menu `.cuix` / `.cui` kèm `.mnl`.

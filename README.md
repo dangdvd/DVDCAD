@@ -6,6 +6,20 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6h: Express Tools đủ bộ, thư viện `acet-*`, bảng tra khối động
+- `dvd-lisp5.js` (nạp sau `dvd-lisp4.js`): 116 hàm `acet-*`.
+  - `acet-error-init` / `-restore` lưu và trả biến hệ thống, có `*error*` riêng.
+  - `acet-ss-*`: tập chọn gộp / trừ / giao, `-drag-move` / `-rotate` / `-scale`.
+  - `acet-geom-*`: khung bao, véc tơ, điểm trong đa giác.
+  - `acet-insert-attrib-get` / `-set`, `acet-ui-*` (hộp thoại `A.dialog`), `acet-reg-*` (localStorage).
+- `dvd-acad-x26.js`: lệnh Express Tools.
+  - `ATTOUT` / `ATTIN`: tệp tab, cột HANDLE = `grp` của bản chèn.
+  - `SUPERHATCH`: lát `A.instBlock`; một ô được giữ khi tâm và 4 góc nằm trong vòng `A.hatchClosedLoop` (tối đa 4000 ô).
+  - `PLT2DWG`: `A.hpglParse` đọc PU / PD / PA / PR / SP / CI, 0,025 mm mỗi đơn vị.
+  - `MKSHAPE`: ghi `.shp`, nạp bằng `A.shapeLoadFile`.
+  - `RTEXT` (`A.rtextUpdate`, DIESEL `A.diesel`), `FASTSEL` (đặt `selEnts` sau khi lệnh kết thúc).
+  - `BTABLE`: hàng lưu trong `dvd:dynblk` › `lookup.rows`, áp dụng bằng `A.dynSetState`. Các bí danh B* chuyển sang BPARAMETER / DIMCONSTRAINT / BVHIDE / WBLOCK / XCLIP.
+
 ## v6g: hạ tầng cài ứng dụng ngoài — reactor, COM (Excel / FSO / Dictionary / Shell), DOSLib, gói .bundle, MENULOAD + .mnl, OPTIONS › Tệp
 - `dvd-lisp4.js`:
   - Reactor: lớp `Reactor` (type, data, reactions, owners); `fire()` gọi hàm phản hồi bằng `setTimeout` + `runTop` (không chặn lệnh, tránh lặp quá 3 tầng).
