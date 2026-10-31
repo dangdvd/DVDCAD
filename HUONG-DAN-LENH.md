@@ -27,6 +27,39 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v6n) — ACIS, mặt NURBS, in dấu, nét khuất, đánh dấu, so sánh, dữ liệu
+- **Khối 3D**:
+  - `ACISOUT`: xuất khối ra tệp ACIS `.sat` (bản 7.0). Mỗi khối là một body B-rep.
+    - Mặt phẳng được gộp từ các tam giác cùng mặt phẳng (giữ lỗ); cạnh dùng chung có đủ 2 coedge; đỉnh và điểm.
+    - Đọc lại bằng `ACISIN` đúng thể tích.
+  - `BREP`: bỏ lịch sử / thông số của khối (khối đùn, hộp, trụ, cầu…) thành khối lưới B-rep thuần.
+  - `IMPRINT`: in dấu đường thẳng / đa tuyến / cung / tròn lên mặt khối; tuỳ chọn xoá đường gốc.
+    - Đường nằm trên một mặt thì giữ cao độ, nếu không thì chiếu đứng lên mặt trên cùng.
+    - Nét in hiện trong khung 3D và lưu cùng khối.
+  - `AMECONVERT`: báo số khối AME — khối 3D trong DVDCAD đã là ACIS / lưới nên không cần đổi.
+  - `HLSETTINGS` (biến `OBSCUREDLTYPE`, `OBSCUREDCOLOR`, `HALOGAP`): nét khuất khi xem kiểu Hidden — tắt / liền / đứt / chấm, màu, khe hở.
+- **Mặt NURBS** (thẻ Surface › Control Vertices):
+  - `CONVTONURBS`: khối / mặt / lưới → mặt NURBS.
+    - Trụ, nón, cầu → NURBS hữu tỉ bậc 2 đúng tròn tuyệt đối.
+    - Mặt phẳng 4 cạnh → mặt song tuyến; mặt khác → từng tam giác.
+  - `3DEDITBAR`: chọn điểm trên mặt, nhập vectơ dời (hoặc chỉ độ cao Z). Các điểm điều khiển dời sao cho điểm đó đi đúng vị trí.
+  - `INSERTCONTROLPOINT`: chèn nút theo hướng U hoặc V tại điểm chọn → thêm hàng điểm điều khiển, hình không đổi.
+  - `SURFFILLET`: bo cung tròn bán kính R giữa hai mặt phẳng (NURBS hữu tỉ bậc 2), cắt hai mặt tới đường tiếp xúc.
+  - Mặt NURBS lưu trong DXF / DWG (mở lại trong DVDCAD vẫn sửa được điểm điều khiển).
+- **Đánh dấu (markup)**:
+  - `MARKUPIMPORT`: nhập bản đánh dấu (PDF, ảnh chụp bản in có ghi chú, DWFx) làm nền trên lớp MARKUP.
+  - `MARKUPASSIST`: tìm các vết đánh dấu màu đỏ / cam (nét + chữ gần nhau) → bảng:
+    - Phóng tới; Chèn chữ (đưa nội dung ghi chú vào bản vẽ);
+    - Đám mây (vẽ đám mây sửa đổi quanh vết); Đã xong (đánh dấu, nhớ theo bản vẽ).
+  - `MARKUPCLOSE` đóng bảng. `OPENDWFMARKUP`: mở DWFx có đánh dấu làm nền + bảng đánh dấu.
+- **So sánh**:
+  - `COMPAREEXPORT`: xuất kết quả so sánh (bản vẽ + đối tượng thêm xanh / mất đỏ + chú giải) ra DXF. Chưa so sánh thì chọn bản vẽ để so trước.
+  - `COMPAREIMPORT`: lấy đối tượng chỉ có ở bản so sánh vào bản vẽ hiện tại, đúng lớp / màu gốc (chọn đối tượng xanh, Enter = tất cả).
+- `DBCONNECT` / `DBC` (thẻ Manage): kết nối bảng dữ liệu CSV / Excel.
+  - Chọn cột khoá; liên kết dòng với đối tượng đang chọn.
+  - Chọn đối tượng theo dòng; xem bản ghi của đối tượng; tạo nhãn từ các trường.
+  - Liên kết lưu cùng đối tượng trong DXF.
+
 ## Bổ sung như AutoCAD 2027 (v6m) — DGN, vòng điều hướng, bắt điểm 3D, mặt cắt gấp khúc, nhận chữ SHX
 - **DGN (MicroStation V7)**, thẻ Insert:
   - `DGNIMPORT`: nhập tệp `.dgn` V7 (2D / 3D), chọn đơn vị chính / phụ; tự đổi theo đơn vị bản vẽ (vd M → mm ×1000).

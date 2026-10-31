@@ -706,5 +706,16 @@
     const SL = '<path class="r" d="M3 7h8v10h10" stroke-dasharray="4 1.5 1 1.5" stroke-width="1.6"/><path class="y" d="M3 4v3M21 14v3"/>';
     I.SECTIONPLANEJOG = SL + BSTAR; I.JOGSECTION = I.SECTIONPLANEJOG; I.SECTIONPLANESETTINGS = SL + BGEAR; I.SECTIONSETTINGS = I.SECTIONPLANESETTINGS;
     I.PDFSHXTEXT = '<path d="M4 4h12l4 4v12H4z"/><path class="a" d="M16 4v4h4"/><text x="12" y="17" font-size="8" text-anchor="middle" stroke="none" fill="currentColor" font-family="Arial" font-weight="700">A</text><path class="y" d="M6 19h12" stroke-dasharray="1.5 1"/>'; }
+  // v6n: ACIS, B-rep, in dấu, nét khuất, NURBS, đánh dấu, so sánh, dữ liệu
+  { const has = k => I[k] || '';
+    const CUBE = '<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path class="a" d="M4 8l8 4 8-4M12 12v8"/>';
+    I.ACISOUT = CUBE + '<path class="y" d="M15 21h7M19.5 18.5L22 21l-2.5 2.5"/>'; I.BREP = CUBE + BX; I.IMPRINT = CUBE + '<path class="y" d="M7 9.5l5 2.5 5-2.5" stroke-width="1.8"/>'; I.AMECONVERT = CUBE + BOK;
+    I.HLSETTINGS = CUBE + '<path class="r" d="M4 16l8 4 8-4" stroke-dasharray="2 1.5"/>' + BGEAR;
+    const NS = '<path d="M3 17c3-6 6-9 9-9s6 3 9 9"/><path class="a" d="M3 20c3-5 6-7 9-7s6 2 9 7"/><circle class="fy" cx="12" cy="8" r="1.5"/><circle class="fy" cx="6" cy="12" r="1.2"/><circle class="fy" cx="18" cy="12" r="1.2"/>';
+    I.CONVTONURBS = NS + '<path class="y" d="M14 4h7M18.5 1.5L21 4l-2.5 2.5"/>'; I['3DEDITBAR'] = NS + '<path class="r" d="M12 8V2M10 4l2-2 2 2"/>'; I.INSERTCONTROLPOINT = NS + BSTAR; I.SURFFILLET = '<path d="M3 4v12a4 4 0 0 0 4 4h14"/><path class="y" d="M3 12a8 8 0 0 0 8 8" stroke-width="1.8"/>';
+    const MK = '<rect x="3" y="4" width="18" height="14" rx="1"/><path class="r" d="M7 9c1-2 3-2 4 0s3 2 4 0M8 14h8" stroke-width="1.6"/>';
+    I.MARKUPIMPORT = MK + '<path class="y" d="M2 21h6M5.5 18.5L8 21l-2.5 2.5"/>'; I.MARKUPASSIST = MK + BSTAR; I.MARKUPCLOSE = MK + BX; I.OPENDWFMARKUP = MK + BLINK;
+    I.COMPAREEXPORT = (has('COMPARE') || MK) + '<path class="y" d="M15 21h7M19.5 18.5L22 21l-2.5 2.5"/>'; I.COMPAREIMPORT = (has('COMPARE') || MK) + '<path class="y" d="M2 21h6M5.5 18.5L8 21l-2.5 2.5"/>';
+    I.DBCONNECT = '<ellipse cx="10" cy="5" rx="7" ry="2.5"/><path d="M3 5v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5M3 11c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/>' + BLINK; I.DBC = I.DBCONNECT; }
   window.DVDIcons = I;
 })();

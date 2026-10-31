@@ -17,7 +17,7 @@
   const hexRGB = h => { let s = String(h || '').replace('#', ''); if(s.length === 3) s = s.split('').map(c => c + c).join(''); const n = parseInt(s, 16); return /^[0-9a-f]{6}$/i.test(s) ? n : null; };
   const isAciColor = h => { const n = hexRGB(h); if(n == null) return true; const a = A.aciNear(h); return (ACI_RGB[a] >>> 0) === n; };
   // thuộc tính riêng của DVDCAD ghi kèm (XDATA) để mở lại trong DVDCAD còn nguyên
-  const XKEYS = ['cid', 'dord', 'anno', 'fld', 'url', 'urld', 'urlsub', 'ascl', 'gns', 'gdsc', 'dyn', 'dvs', 'mt', 'rt', 'rtx', 'cols', 'mtp', 'mtwk', 'dvw', 'gmk', 'shp', 'shpx', 'psfill', 'pst'];   // dvw: thuộc hình chiếu (VIEWBASE…)   // rt / cols: chữ có định dạng, cột (đọc lại đúng trong DVDCAD)
+  const XKEYS = ['cid', 'dord', 'anno', 'fld', 'url', 'urld', 'urlsub', 'ascl', 'gns', 'gdsc', 'dyn', 'dvs', 'mt', 'rt', 'rtx', 'cols', 'mtp', 'mtwk', 'dvw', 'gmk', 'shp', 'shpx', 'psfill', 'pst', 'dfo', 'dbl', 'mku'];   // dvw: thuộc hình chiếu (VIEWBASE…)   // rt / cols: chữ có định dạng, cột (đọc lại đúng trong DVDCAD)
 
   let UTF8 = false;   // DXF R2007+: chữ ghi thẳng UTF-8 (không cần mã \U+)
   function dxfStr(s){ if(UTF8) return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[\x00-\x1f]/g, ' '); return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').replace(/[^\x20-\x7e]/g, ch => { const cp = ch.codePointAt(0); return cp > 0xffff ? '?' : '\\U+' + cp.toString(16).toUpperCase().padStart(4, '0'); }); }
@@ -376,7 +376,7 @@
     // khối 3D → mặt 3DFACE + XDATA thông số (mở lại trong DVDCAD vẫn là khối)
     function solid3d(e, head){
       const m = A.meshOf ? A.meshOf(e) : null; if(!m) return; const nf = m.i.length / 3; let xd = null;
-      const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms', 'mapk', 'mapsc', 'matL']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
+      const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms', 'mapk', 'mapsc', 'matL', 'ns', 'imp']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
       let js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); if(js.length > 15000){ delete d.ms; js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); } if(js.length > 15000) js = JSON.stringify({ k: 'mesh', mat: e.mat, srf: e.srf }); xd = []; for(let k = 0; k < js.length; k += 240) xd.push(js.slice(k, k + 240));
       for(let t = 0; t < m.i.length; t += 3){ const q = [m.i[t], m.i[t + 1], m.i[t + 2], m.i[t + 2]]; head('3DFACE', 'AcDbFace'); q.forEach((ix, j) => { P(10 + j, m.p[ix * 3]); P(20 + j, m.p[ix * 3 + 1]); P(30 + j, m.p[ix * 3 + 2]); });
         if(t === 0){ P(1001, 'DVDCAD'); P(1000, 'S3D'); P(1071, nf); for(const c of xd) P(1000, c); } }

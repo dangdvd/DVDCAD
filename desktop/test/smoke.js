@@ -235,6 +235,11 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
     const v6m = await win.evaluate(() => { const A = DVDAcad; const L = [{ type: 'LINE', x1: 0, y1: 0, x2: 10, y2: 5, layer: '0', col: '#ff0000' }, { type: 'CIRCLE', cx: 3, cy: 4, r: 2, layer: '0', col: '#ffffff' }];
       const R = A.parseDGN(A.writeDGN(L).data.buffer); return [R.ents.map(e => e.type).join('+'), R.ents[0].col, ['DGNIMPORT', 'DGNATTACH', 'DGNEXPORT', 'NAVSWHEEL', '3DOSNAP', 'SECTIONPLANEJOG', 'PDFSHXTEXT'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
     check(v6m === 'LINE+CIRCLE,#ff0000,true', 'DGN ghi → đọc lại, lệnh NAVSWHEEL / 3DOSNAP / mặt cắt gấp khúc / PDFSHXTEXT: ' + v6m);
+    // v6n: ACISOUT → ACISIN, NURBS chính xác, lệnh mới
+    const v6n = await win.evaluate(() => { const A = DVDAcad; const bx = { type: 'SOLID3D', k: 'ext', pts: [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 2 }, { x: 0, y: 2 }], z0: 0, h: 3, tri: [0, 1, 2, 0, 2, 3] };
+      const back = DVDAcis.fromSAT(A.satOf([bx]).text.split('\n')); const S = A.convToNurbs({ type: 'SOLID3D', k: 'cyl', cx: 0, cy: 0, r: 2, z0: 0, h: 1 })[0]; const q = A.nurbsSurfPt(S, 0.3, 0.5);
+      return [back && back.f.length / 3, Math.abs(Math.hypot(q[0], q[1]) - 2) < 1e-9, ['ACISOUT', 'IMPRINT', 'CONVTONURBS', 'SURFFILLET', 'MARKUPASSIST', 'COMPAREEXPORT', 'DBCONNECT'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
+    check(v6n === '12,true,true', 'ACISOUT → ACISIN (hộp 12 tam giác), trụ NURBS đúng tròn, lệnh v6n: ' + v6n);
     if(process.env.DVD_DWG_OUT) for(const v of Object.keys(v6f.dwg)) fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'xdata-' + v + '.dwg'), Buffer.from(v6f.dwg[v], 'base64'));
   }
   {

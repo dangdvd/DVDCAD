@@ -6,6 +6,23 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6n: ACISOUT, mặt NURBS, IMPRINT, HLSETTINGS, đánh dấu, so sánh xuất / nhập, DBCONNECT
+- `dvd-acad-x36.js`:
+  - `A.planarFaces(mesh)`: hàn đỉnh, gộp tam giác kề cùng mặt phẳng (BFS theo cạnh, cùng pháp tuyến và hằng số mặt phẳng), biên = cạnh có hướng xuất hiện 1 lần → vòng (vòng ngoài = diện tích lớn nhất).
+  - `A.satOf`: SAT 7.0 — `body → lump → shell → face (plane-surface) → loop → coedge (forward / reversed, partner) → edge (straight-curve, tham số 0…L) → vertex → point`. Mỗi bản ghi `name $-1 -1 $-1 …` (thuộc tính, lịch sử, mẫu).
+  - IMPRINT: `e.imp` = các nét 3D; `dvd-acad-3d.js` vẽ qua `A.extraEdges`.
+  - HLSETTINGS: `A.hlHook` gắn `LineSegments` (`depthTest: false`, nét đứt) dùng chung hình học cạnh, chỉ hiện ở kiểu Hidden.
+- `dvd-acad-x37.js` — mặt NURBS `k: 'nsrf'`, `ns = { du, dv, nu, nv, U, V, P, W }`:
+  - Lưới vẽ qua `A.meshOfExt` (`dvd-acad-3d.js` gọi trước các kiểu khối); lưu khoá `ns` trong XDATA S3D.
+  - Trụ / cầu: vòng tròn 9 điểm điều khiển, trọng số √2/2, nút [0,0,0,¼,¼,½,½,¾,¾,1,1,1].
+  - 3DEDITBAR: ΔP_k = b_k·d / Σ b_k² (b_k = hàm cơ sở hữu tỉ tại (u, v)).
+  - INSERTCONTROLPOINT: thuật toán Boehm từng hàng trong toạ độ đồng nhất.
+  - SURFFILLET: giao tuyến 2 mặt phẳng, khoảng tiếp xúc t = R / tan(θ/2), cung bậc 2 (T1, góc, T2), trọng số sin(θ/2).
+- `dvd-acad-x38.js`:
+  - Vết đánh dấu: đối tượng màu đỏ / cam (sắc độ ≤ 25° hoặc ≥ 330°) hoặc lớp MARKUP, gom theo khung bao. Khe gom = max(5% khung lớn nhất, 1,5 × cao chữ, 2% đường chéo toàn bộ).
+  - So sánh: `markDiff` (`dvd-acad-x33.js`) lưu `dfo` (lớp / màu gốc) trên bản sao đánh dấu; `A._lastCompare`.
+  - DBCONNECT: bảng trong `dvd:db`, liên kết `e.dbl = { t, k }` (khoá XDATA `dbl`).
+
 ## v6m: DGN V7, NAVSWHEEL, 3DOSNAP, mặt cắt gấp khúc, PDFSHXTEXT
 - `dvd-acad-x34.js` — DGN V7:
   - Phần tử: byte 0 = mức (6 bit) + cờ phức, byte 1 = loại + cờ xoá, từ 1 = số từ còn lại. Số nguyên 32 bit "giữa-đầu" (từ cao trước), số thực VAX D (mũ lệch 128, `A.dgnVax`).
