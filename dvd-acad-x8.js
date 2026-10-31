@@ -361,6 +361,9 @@
   const hexC = c => { if(!c) return null; if(typeof c === 'string') return c.startsWith('#') ? c.toLowerCase() : null; if(c.length >= 3){ const v = [c[0], c[1], c[2]].map(x => +x <= 1 && !Number.isInteger(+x) ? Math.round(+x * 255) : Math.round(+x)); return '#' + v.map(x => Math.max(0, Math.min(255, x)).toString(16).padStart(2, '0')).join(''); } return null; };
   async function pdfToEnts(data, pageNo, opt){
     const L = await loadPdfJs(); const doc = await L.getDocument({ data, isEvalSupported: false }).promise; const page = await doc.getPage(Math.max(1, Math.min(doc.numPages, pageNo || 1)));
+    let ocCfg = null; try{ ocCfg = await doc.getOptionalContentConfig(); }catch(_){}
+    const ocName = id => { try{ const g = ocCfg && ocCfg.getGroup(id); return g && g.name ? String(g.name).replace(/[<>\/\\":;?*|=`]/g, '_').trim() || null : null; }catch(_){ return null; } };
+    const ocS = [], ocUsed = new Set(); const curOC = () => opt.ocLayers === false ? null : (ocS.length ? ocS[ocS.length - 1] : null);
     const OPS = L.OPS; const ol = await page.getOperatorList(); const vb = page.view || [0, 0, 0, 0]; const k = opt.k; const org = opt.org || { x: 0, y: 0 };
     const map = p => { const q = { x: org.x + (p.x - vb[0]) * k, y: org.y + (p.y - vb[1]) * k }; if(p.bulge) q.bulge = p.bulge; return q; };
     const flat = v => { if(!v.some(p => p.bulge)) return v; const o = []; for(let i = 0; i < v.length; i++){ const a = v[i], b = v[(i + 1) % v.length]; o.push({ x: a.x, y: a.y }); if(a.bulge && (i < v.length - 1 || true)){ try{ const arc = bulgeArcPoints(a, b, a.bulge); for(let j = 1; j < arc.length - 1; j++) o.push({ x: arc[j].x, y: arc[j].y }); }catch(_){} } } return o; };
@@ -376,10 +379,11 @@
     const col = h => (!h || h === '#000000') ? '#ffffff' : h;
     const flush = (doStroke, doFill, evenOdd) => {
       const closedS = subs.filter(s => s.pts.length >= 3 || (s.pts.length >= 2 && s.pts.some(p => p.bulge)));
-      if(doFill && opt.fill && closedS.length && out.length < opt.max){ const loops = closedS.map(s => flat(s.pts.map(map))); const e = { type: 'HATCH', loops, solid: true, col: col(fill), layer: 'PDF_Solid Fills' }; out.push(e); }
+      const OCL = curOC(); if(OCL) ocUsed.add(OCL);
+      if(doFill && opt.fill && closedS.length && out.length < opt.max){ const loops = closedS.map(s => flat(s.pts.map(map))); const e = { type: 'HATCH', loops, solid: true, col: col(fill), layer: OCL || 'PDF_Solid Fills' }; out.push(e); }
       if(doStroke || (doFill && !opt.fill)) for(const s of subs){ if(s.pts.length < 2) continue; if(out.length >= opt.max){ nSkip++; continue; } const v = s.pts.map(map);
-        if(v.length === 2 && !v[0].bulge) out.push({ type: 'LINE', x1: v[0].x, y1: v[0].y, x2: v[1].x, y2: v[1].y, col: col(doStroke ? stroke : fill), layer: 'PDF_Geometry' });
-        else out.push({ type: 'POLYLINE', vertices: v, closed: !!s.closed, col: col(doStroke ? stroke : fill), layer: 'PDF_Geometry' }); }
+        if(v.length === 2 && !v[0].bulge) out.push({ type: 'LINE', x1: v[0].x, y1: v[0].y, x2: v[1].x, y2: v[1].y, col: col(doStroke ? stroke : fill), layer: OCL || 'PDF_Geometry' });
+        else out.push({ type: 'POLYLINE', vertices: v, closed: !!s.closed, col: col(doStroke ? stroke : fill), layer: OCL || 'PDF_Geometry' }); }
       subs = []; curS = null;
     };
     const bez = (p0, p1, p2, p3, n) => { const o = []; for(let i = 1; i <= n; i++){ const t = i / n, u = 1 - t; o.push({ x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x, y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y }); } return o; };
@@ -407,6 +411,9 @@
       else if(fn === OPS.fill || fn === OPS.eoFill) flush(false, true, fn === OPS.eoFill);
       else if(fn === OPS.fillStroke || fn === OPS.eoFillStroke || fn === OPS.closeFillStroke || fn === OPS.closeEOFillStroke) flush(true, true);
       else if(fn === OPS.endPath){ subs = []; curS = null; }
+      else if(fn === OPS.beginMarkedContentProps){ const pr = args && args[1]; ocS.push(args && args[0] === 'OC' && pr && pr.type === 'OCG' ? (ocName(pr.id) || curOC()) : curOC()); }
+      else if(fn === OPS.beginMarkedContent) ocS.push(curOC());
+      else if(fn === OPS.endMarkedContent) ocS.pop();
     }
     // gộp: bỏ đa tuyến chỉ còn 1 điểm, sửa đa tuyến kín trùng điểm đầu
     for(const e of out) if(e.type === 'POLYLINE'){ const v = e.vertices; if(v.length > 2 && Math.hypot(v[0].x - v[v.length - 1].x, v[0].y - v[v.length - 1].y) < 1e-7 * Math.max(1, Math.abs(v[0].x) + Math.abs(v[0].y))){ v.pop(); e.closed = true; } }
@@ -429,7 +436,7 @@
       if(nv.length < v.length){ e.vertices = nv; nArc++; } }
     for(const e of out) if(e.type === 'POLYLINE' && e.vertices.some(v => v.bulge) && A.setBV) A.setBV(e, e.vertices);
     if(opt.text){ const tc = await page.getTextContent(); for(const it of tc.items){ if(!it.str || !it.str.trim()) continue; const t = it.transform; const h = Math.hypot(t[2], t[3]) * k; const p = map({ x: t[4], y: t[5] }); const rot = Math.atan2(t[1], t[0]) * R2D; out.push({ type: 'TEXT', x: p.x, y: p.y, h: Math.max(h * 0.75, 1e-6), rot: Math.abs(rot) < 1e-6 ? 0 : rot, text: it.str, layer: 'PDF_Text', col: '#ffffff' }); } }
-    return { ents: out, pages: doc.numPages, skipped: nSkip, arcs: nArc, size: [(vb[2] - vb[0]) * k, (vb[3] - vb[1]) * k], page, vb };
+    return { ocgs: [...ocUsed], ents: out, pages: doc.numPages, skipped: nSkip, arcs: nArc, size: [(vb[2] - vb[0]) * k, (vb[3] - vb[1]) * k], page, vb };
   }
   A.pdfToEnts = pdfToEnts;
   async function pdfImport(file){
@@ -447,7 +454,7 @@
     let mn = { x: Infinity, y: Infinity }; for(const e of R.ents){ const b = entBBox(e); if(b){ mn.x = Math.min(mn.x, b.x0); mn.y = Math.min(mn.y, b.y0); } }
     const p = await A.getPoint('Điểm chèn (góc dưới trái) <0,0>', { rubber: false }); const ins = p.pt || { x: 0, y: 0 };
     const dx = ins.x - (isFinite(mn.x) ? mn.x : 0), dy = ins.y - (isFinite(mn.y) ? mn.y : 0);
-    for(const ly of ['PDF_Geometry', 'PDF_Text', 'PDF_Solid Fills']) if(R.ents.some(e => e.layer === ly)) A.addLayer(ly);
+    for(const ly of new Set(R.ents.map(e => e.layer).filter(Boolean))) A.addLayer(ly);
     const add = R.ents.map(e => { A.xformEnt(e, { a: 1, b: 0, c: 0, d: 1, e: dx, f: dy }); return e; });
     A.commit({ add }, 'PDFIMPORT: ' + add.length + ' đối tượng từ trang ' + pg + (R.arcs ? ', ' + R.arcs + ' cung/đường tròn' : '') + (R.skipped ? ' (bỏ ' + R.skipped + ' do quá nhiều)' : ''));
     try{ A.pushView && A.pushView(); fitView(); }catch(_){}

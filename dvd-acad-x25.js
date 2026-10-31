@@ -23,7 +23,10 @@
     // hình học XPS: F1 = tô nonzero (mặc định XPS là even-odd), toạ độ đã nhân ma trận (như PDF / SVG)
     _g(ev){ return (ev ? '' : 'F1 ') + this.path.map(t => { const q = t.split(' '), op = q.pop(); if(op === 'h') return 'Z'; const P = []; for(let i = 0; i + 1 < q.length; i += 2) P.push(q[i] + ',' + q[i + 1]); return (op === 'm' ? 'M' : op === 'l' ? 'L' : 'C') + P.join(' '); }).join(' '); }
     save(){ super.save(); }
-    restore(){ const s = this.stk.pop(); if(!s) return; this.M = s.M; this.st = s.st; this.raw = s.raw; const n = this.grp.pop() || 0; for(let i = 0; i < n; i++) this.out.push('</Canvas>'); }
+    restore(){ const s = this.stk.pop(); if(!s) return; if(this._oc != null && this.stk.length < this._ocD) this.setOC(null); this.M = s.M; this.st = s.st; this.raw = s.raw; const n = this.grp.pop() || 0; for(let i = 0; i < n; i++) this.out.push('</Canvas>'); }
+    // lớp: nhóm <Canvas Name="L_…"> (tên lớp mã hoá hex UTF-8 vì Name của XPS chỉ nhận chữ / số / _) — DWFATTACH đọc lại thành lớp của nền
+    setOC(name){ name = name == null || name === '' ? null : String(name); if(name === this._oc) return; if(this._oc != null) this.out.push('</Canvas>'); this._oc = name;
+      if(name != null){ this._ocD = this.stk.length; this.out.push('<Canvas Name="L_' + [...enc.encode(name)].map(b => b.toString(16).padStart(2, '0')).join('') + '">'); } }
     stroke(){ if(!this.path.length) return; const S = this.st, c = S.strokeStyle._pdfGrad ? (S.strokeStyle.stops[0] || [0, A.pdfColor('#000')])[1] : S.strokeStyle; const a = c.a * S.globalAlpha; if(!(a > 0)) return;
       const k = this._sc(), w = Math.max(1e-3, S.lineWidth * k);
       this.out.push('<Path Data="' + this._g(true) + '" Stroke="' + argb(c, a) + '" StrokeThickness="' + num(w) + '" StrokeStartLineCap="' + CAP[S.lineCap] + '" StrokeEndLineCap="' + CAP[S.lineCap] + '" StrokeDashCap="' + CAP[S.lineCap] + '" StrokeLineJoin="' + JOIN[S.lineJoin] + '"' +
@@ -107,7 +110,7 @@
   async function dwfxBuild(pages, info){ info = info || {};
     const files = [], fonts = new Map(), docId = guid(), base = 'dwf/documents/' + docId, title = info.title || 'DVDCAD'; const pageMeta = [];
     for(let i = 0; i < pages.length; i++){ const P = pages[i], ctx = P.ctx, sid = 'com.autodesk.dwf.ePlot_' + guid(), dir = base + '/sections/' + sid, pid = guid().toUpperCase();
-      const S = { ctx, fonts: new Set(), raster: 0 }; let body = ''; for(const o of ctx.out) body += typeof o === 'string' ? o : await glyphsOf(o, fonts, S);
+      if(ctx.setOC) ctx.setOC(null); const S = { ctx, fonts: new Set(), raster: 0 }; let body = ''; for(const o of ctx.out) body += typeof o === 'string' ? o : await glyphsOf(o, fonts, S);
       for(const n of ctx.grp) body += '</Canvas>'.repeat(n);
       const imgRel = []; for(let k = 0; k < ctx.imgs.length; k++){ const png = await pngOf(ctx.imgs[k]); const nm = '/' + dir + '/' + guid().toUpperCase() + '.png'; if(png) files.push({ name: nm.slice(1), data: png, z: false }); imgRel.push(nm); body = body.split('{IMG' + k + '}').join(nm); }
       const W = ctx.W, H = ctx.H, fpage = dir + '/' + pid + '.fpage';

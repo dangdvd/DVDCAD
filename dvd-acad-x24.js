@@ -133,7 +133,10 @@
     setLineDash(a){ this.st.dash = (a || []).map(Number).filter(v => isFinite(v) && v >= 0); if(this.st.dash.length % 2) this.st.dash = this.st.dash.concat(this.st.dash); }
     getLineDash(){ return this.st.dash.slice(); }
     save(){ this.stk.push({ M: this.M.slice(), st: Object.assign({}, this.st, { dash: this.st.dash.slice() }), raw: Object.assign({}, this.raw) }); this.ems.push(Object.assign({}, this.ems[this.ems.length - 1])); this._o('q\n'); }
-    restore(){ const s = this.stk.pop(); if(!s) return; this.M = s.M; this.st = s.st; this.raw = s.raw; this.ems.pop(); this._o('Q\n'); }
+    restore(){ const s = this.stk.pop(); if(!s) return; if(this._oc != null && this.stk.length < this._ocD) this.setOC(null); this.M = s.M; this.st = s.st; this.raw = s.raw; this.ems.pop(); this._o('Q\n'); }
+    // lớp PDF (Optional Content Group) như AutoCAD xuất PDF: mỗi đối tượng nằm trong /OC /OCn BDC … EMC theo lớp của nó
+    setOC(name){ name = name == null || name === '' ? null : String(name); if(name === this._oc) return; if(this._oc != null) this._o('EMC\n'); this._oc = name;
+      if(name != null){ if(!this.ocs) this.ocs = new Map(); let id = this.ocs.get(name); if(!id){ id = 'OC' + (this.ocs.size + 1); this.ocs.set(name, id); } this._ocD = this.stk.length; this._o('/OC /' + id + ' BDC\n'); } }
     // ma trận
     setTransform(a, b, c, d, e, f){ if(a && typeof a === 'object'){ const m = a; this.M = [m.a, m.b, m.c, m.d, m.e, m.f]; } else this.M = [a, b, c, d, e, f].map(Number); }
     resetTransform(){ this.M = [1, 0, 0, 1, 0, 0]; }
@@ -214,7 +217,9 @@
     const stream = async (dict, data, raw) => { let u8 = typeof data === 'string' ? enc.encode(data) : data; let fl = ''; if(!raw){ const z = await deflate(u8); if(z && z.length < u8.length){ u8 = z; fl = ' /Filter /FlateDecode'; } } return add(['<< ' + dict + fl + ' /Length ' + u8.length + ' >>\nstream\n', u8, '\nendstream']); };
     const catalog = add(''), pagesId = add(''); const kids = []; const fonts = new Map(); let fseq = 0, rasterTxt = 0;
     const fontRes = F => { let r = fonts.get(F); if(!r){ r = { name: 'F' + (++fseq), F, used: new Map() }; fonts.set(F, r); } return r; };
-    for(const P of pages){ const ctx = P.ctx; if(ctx.buf) { ctx.chunks.push(ctx.buf); ctx.buf = ''; }
+    const ocg = new Map();   // tên lớp → số đối tượng OCG (chung cho mọi trang)
+    for(const P of pages){ const ctx = P.ctx; if(ctx.setOC) ctx.setOC(null); if(ctx.buf) { ctx.chunks.push(ctx.buf); ctx.buf = ''; }
+      P.ocD = []; if(ctx.ocs) for(const [nm, id] of ctx.ocs){ let o = ocg.get(nm); if(!o){ o = add(''); ocg.set(nm, o); } P.ocD.push('/' + id + ' ' + o + ' 0 R'); }
       // phông của các đoạn chữ (theo thứ tự ưu tiên; ký tự không có trong phông đầu thì lấy phông sau)
       const specs = new Map(); for(const c of ctx.chunks) if(typeof c !== 'string'){ const s = famOf(c.font); const k = s.fams.join(',') + '|' + s.bold + s.italic; if(!specs.has(k)) specs.set(k, fontChain(s)); c._k = k; }
       for(const [k, p] of specs) specs.set(k, await p);
@@ -255,9 +260,13 @@
       const tu = await stream('', '/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n' + bf + 'endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend');
       R.obj = add('<< /Type /Font /Subtype /Type0 /BaseFont /' + base + ' /Encoding /Identity-H /DescendantFonts [' + cid + ' 0 R] /ToUnicode ' + tu + ' 0 R >>'); }
     for(const P of pages){ const r = P.res, fd = [...r.pageFonts].map(R => '/' + R.name + ' ' + R.obj + ' 0 R').join(' ');
-      objs[P.id - 1] = '<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + num(P.ctx.pw) + ' ' + num(P.ctx.ph) + '] /Contents ' + r.cont + ' 0 R /Resources << /ProcSet [/PDF /Text /ImageB /ImageC]' + (fd ? ' /Font << ' + fd + ' >>' : '') + (r.gsD ? ' /ExtGState << ' + r.gsD + ' >>' : '') + (r.imD.length ? ' /XObject << ' + r.imD.join(' ') + ' >>' : '') + (r.shD.length ? ' /Shading << ' + r.shD.join(' ') + ' >>' : '') + ' >> >>'; }
+      objs[P.id - 1] = '<< /Type /Page /Parent ' + pagesId + ' 0 R /MediaBox [0 0 ' + num(P.ctx.pw) + ' ' + num(P.ctx.ph) + '] /Contents ' + r.cont + ' 0 R /Resources << /ProcSet [/PDF /Text /ImageB /ImageC]' + (fd ? ' /Font << ' + fd + ' >>' : '') + (r.gsD ? ' /ExtGState << ' + r.gsD + ' >>' : '') + (r.imD.length ? ' /XObject << ' + r.imD.join(' ') + ' >>' : '') + (r.shD.length ? ' /Shading << ' + r.shD.join(' ') + ' >>' : '') + (P.ocD && P.ocD.length ? ' /Properties << ' + P.ocD.join(' ') + ' >>' : '') + ' >> >>'; }
     objs[pagesId - 1] = '<< /Type /Pages /Kids [' + kids.map(k => k + ' 0 R').join(' ') + '] /Count ' + kids.length + ' >>';
-    objs[catalog - 1] = '<< /Type /Catalog /Pages ' + pagesId + ' 0 R >>';
+    const pstr0 = s => '(' + [...String(s || '')].map(ch => { const c = ch.codePointAt(0); return c < 128 && !'()\\'.includes(ch) ? ch : '\\' + (c < 256 ? c.toString(8).padStart(3, '0') : '077'); }).join('') + ')';
+    const u16s = s => '<FEFF' + [...String(s || '')].map(ch => { const c = ch.codePointAt(0); const h = v => v.toString(16).padStart(4, '0'); return c > 0xFFFF ? h(0xD800 + ((c - 0x10000) >> 10)) + h(0xDC00 + ((c - 0x10000) & 0x3FF)) : h(c); }).join('') + '>';
+    for(const [nm, o] of ocg) objs[o - 1] = '<< /Type /OCG /Name ' + (/^[\x20-\x7e]*$/.test(nm) ? pstr0(nm) : u16s(nm)) + ' >>';
+    const ocL = [...ocg.values()].map(o => o + ' 0 R').join(' ');
+    objs[catalog - 1] = '<< /Type /Catalog /Pages ' + pagesId + ' 0 R' + (ocg.size ? ' /OCProperties << /OCGs [' + ocL + '] /D << /Order [' + ocL + '] /ON [' + ocL + '] /BaseState /ON >> >> /PageMode /UseOC' : '') + ' >>';
     const pstr = s => '(' + [...String(s || '')].map(ch => { const c = ch.codePointAt(0); return c < 128 && !'()\\'.includes(ch) ? ch : '\\' + (c < 256 ? c.toString(8).padStart(3, '0') : '077'); }).join('') + ')';
     const utf16 = s => '<FEFF' + [...String(s || '')].map(ch => { const c = ch.codePointAt(0); const h = v => v.toString(16).padStart(4, '0'); return c > 0xFFFF ? h(0xD800 + ((c - 0x10000) >> 10)) + h(0xDC00 + ((c - 0x10000) & 0x3FF)) : h(c); }).join('') + '>';
     const d = new Date(), p2 = v => String(v).padStart(2, '0'); const infoId = add('<< /Producer ' + pstr('DVDCAD ' + ((info && info.version) || '')) + ' /Creator ' + pstr('DVDCAD - DWG To PDF') + (info && info.title ? ' /Title ' + utf16(info.title) : '') + ' /CreationDate (D:' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + p2(d.getHours()) + p2(d.getMinutes()) + p2(d.getSeconds()) + ') >>');

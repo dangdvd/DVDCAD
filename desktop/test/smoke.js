@@ -215,6 +215,14 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       const m = A.toMeshOpt(bx, 1, true); const ex = A.meshExtrude({ v: m.ms.v0, f: m.ms.f0, cr: [] }, [0], 2, null); const s = A.surfPatch([[0, 0, 0], [10, 0, 2], [10, 10, 0], [0, 10, 2]], null);
       return [m.f.length / 3, m.ms.lv, A.meshBoundaryLoops(A.weld(ex.v, ex.f).i).length, s.srf, A.meshSlice(s.v, s.f, [1, 0, 0], 5).length, ['MESHSMOOTHMORE', 'MESHEXTRUDE', 'SURFTRIM', 'SURFBLEND', 'ANALYSISZEBRA', 'PROJECTGEOMETRY'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
     check(v6i === '432,1,0,1,1,true', 'Lưới / mặt 3D: MESHSMOOTH mức 1 (432 tam giác), MESHEXTRUDE kín, SURFPATCH, cắt lát, lệnh SURF* / ANALYSIS*: ' + v6i);
+    // v6j: nền DWFx (trang XPS có lớp), đám mây điểm LAS
+    const v6j = await win.evaluate(() => { const A = DVDAcad;
+      const R = A.xpsToEnts('<FixedPage xmlns="http://schemas.microsoft.com/xps/2005/06" Width="96" Height="96"><Canvas Name="L_5455"><Path Data="M0,96 L96,96" Stroke="#FFFF0000" StrokeThickness="1"/></Canvas></FixedPage>', 25.4 / 96);
+      const n = 2, rl = 20, off = 227, buf = new ArrayBuffer(off + n * rl), u = new Uint8Array(buf), dv = new DataView(buf); [76, 65, 83, 70].forEach((c, i) => u[i] = c); u[24] = 1; u[25] = 2; dv.setUint16(94, 227, true); dv.setUint32(96, off, true); u[104] = 0; dv.setUint16(105, rl, true); dv.setUint32(107, n, true);
+      for(const o of [131, 139, 147]) dv.setFloat64(o, 0.01, true); for(let i = 0; i < n; i++){ dv.setInt32(off + i * rl, i * 100, true); dv.setInt32(off + i * rl + 8, 500, true); }
+      const C = A.pcParse.las(buf); const e = R.ents[0];
+      return [R.layers[0], e.type, e.x2.toFixed(1), e.y1.toFixed(1), C.n, C.b[3], C.o[2], ['PDFATTACH', 'PDFLAYERS', 'DWFATTACH', 'POINTCLOUDATTACH', 'PCEXTRACTSECTION', 'EXPORTDWFX'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
+    check(v6j === 'TU,LINE,25.4,0.0,2,1,5,true', 'Nền DWFx (lớp từ Canvas), đọc LAS, lệnh PDF / DWF / đám mây điểm: ' + v6j);
     if(process.env.DVD_DWG_OUT) for(const v of Object.keys(v6f.dwg)) fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'xdata-' + v + '.dwg'), Buffer.from(v6f.dwg[v], 'base64'));
   }
   {

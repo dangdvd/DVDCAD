@@ -6,6 +6,27 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6j: PDF / DWFx có lớp, nền PDF / DWF, đám mây điểm
+- Xuất PDF / DWFx có lớp:
+  - `dvd-acad-x24.js` `PdfCtx.setOC(lớp)`: `/OC /OCn BDC … EMC`. Đóng trước `Q` nếu `q` mở trước BDC. Đối tượng `/OCG`, `/OCProperties` trong Catalog, `/Properties` trong tài nguyên trang.
+  - `dvd-acad-x25.js` `XpsCtx.setOC`: `<Canvas Name="L_<hex UTF-8>">`.
+  - `index.html`: lượt vẽ gom nét theo cả lớp khi đích có `setOC`; hatch / ảnh gọi `setOC`. `drawEntity` được bọc (x28).
+- `dvd-acad-x8.js` `pdfToEnts`: theo dõi `beginMarkedContentProps` (OC → `getOptionalContentConfig().getGroup(id).name`) → lớp; trả `ocgs`.
+- `dvd-acad-x28.js`:
+  - Nền = khối `UL$PDF$…` / `UL$DWF$…`. Thành viên có `ull` (lớp nền; `*FRAME*` = khung), nằm ở lớp hiện hành.
+  - Tắt lớp nền = `vh`. Đơn sắc lưu màu gốc ở `ulc`.
+  - DXF ghi `ull` / `ulh` / `ulc` trong XDATA của nét trong khối. Bộ đọc giữ nét ẩn có `ull`. Bộ ghi cho phép khối có nét ẩn khi là nền.
+  - XPS: `xpsToEnts` đọc Canvas (RenderTransform, Name), Path (Data / PathGeometry: M L H V C S Q A Z F), Glyphs. Thứ tự trang theo `.fdoc`.
+- `dvd-acad-x29.js`:
+  - Đám mây điểm = IMAGE có `pc` (ảnh nhìn từ trên PNG cho bản in / AutoCAD). Điểm tương đối (Float32) + gốc `o`, lưu IndexedDB `dvdcad-pc`.
+  - Vẽ: bọc `drawImageEnt`, vẽ điểm vào ImageData theo ma trận ảnh (bỏ qua khi đích là PdfCtx / SvgCtx).
+  - Khung 3D: `THREE.Points` thêm vào `view3D.scene`.
+  - Đọc tệp:
+    - LAS: định dạng 0 – 10, RGB 16 / 8 bit, phân loại, LAS 1.4 số điểm 64 bit;
+    - PLY: ascii / nhị phân LE / BE;
+    - xyz / pts: 3 / 4 / 6 / 7 cột.
+  - Cắt = đa giác trong toạ độ điểm (đi theo đối tượng khi dời / xoay).
+
 ## v6i: lưới 3D làm trơn / sửa, mặt (SURF*), phân tích bề mặt
 - `dvd-acad-x27.js`:
   - Lưới là `SOLID3D` `k: 'mesh'` (`v` đỉnh, `f` tam giác). Lồng gốc lưu ở `e.ms = { lv, v0, f0, cr }`; `v` / `f` là kết quả chia `lv` lần (`A.meshSubdivide`).
