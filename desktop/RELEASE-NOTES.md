@@ -1,61 +1,65 @@
-## DVDCAD 5.32.0 — MicroStation DGN, vòng điều hướng, bắt điểm 3D, mặt cắt gấp khúc, nhận chữ SHX
+## DVDCAD 5.33.0 — Xuất ACIS, mặt NURBS, in dấu, nét khuất, đánh dấu, so sánh, kết nối dữ liệu
 
 Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Windows. Tên lệnh, lệnh tắt và cách dùng giống AutoCAD để người dùng chuyển sang không bỡ ngỡ.
 
 ### Tải về
-- **DVDCAD-Setup-5.32.0.exe** — bộ cài.
+- **DVDCAD-Setup-5.33.0.exe** — bộ cài.
   - Cài cho tài khoản Windows đang dùng, không cần quyền quản trị.
   - Có lối tắt Desktop và Start Menu.
   - Nhấp đúp file .dwg / .dxf là mở bằng DVDCAD.
-- **DVDCAD-5.32.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
+- **DVDCAD-5.33.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
 
 Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More info → Run anyway**.
 
 ### Có gì mới
-- **MicroStation DGN (V7)**:
-  - `DGNIMPORT`: nhập tệp `.dgn`.
-    - Đối tượng: đường, chuỗi đường, hình kín (có tô), cung, elip, đường cong, chuỗi / hình phức, chữ (cả tiếng Việt 16 bit), ô (cell).
-    - Mức → lớp; giữ màu theo bảng màu của tệp, kiểu nét, bề rộng nét.
-    - Đổi đơn vị theo bản vẽ (chọn đơn vị chính hoặc phụ).
-  - `DGNATTACH`: gắn DGN làm nền tham chiếu. `DGNLAYERS` bật / tắt mức, `DGNCLIP` cắt, `DGNADJUST` mờ / đơn sắc.
-  - `DGNEXPORT`: ghi DGN V7 2D.
-    - Lớp → mức, bảng màu riêng (giữ đúng màu), kiểu nét, bề rộng.
-    - Cung, elip, chữ tiếng Việt, hình tô.
-  - `DGNMAPPING`: đặt tên lớp cho từng mức, ánh xạ kiểu nét.
-- `NAVSWHEEL`: vòng điều hướng 8 múi — thu phóng, lia, quay quanh, tua lại, tâm, đi bộ, nhìn quanh, lên / xuống; dùng cho 2D và khung 3D.
-- `3DOSNAP` (phím **F4**): bắt đỉnh, giữa cạnh, tâm mặt, điểm trên mặt khi chọn điểm trong khung 3D.
-- **Mặt cắt gấp khúc**:
-  - `SECTIONPLANEJOG` / `JOGSECTION`: thêm bậc gấp vào đường cắt.
-  - `SECTIONPLANESETTINGS`: tên, hatch, màu, hướng nhìn; tạo mặt cắt 2D qua các khối 3D theo đường cắt gấp khúc.
-- `PDFSHXTEXT`: nét chữ SHX trong bản vẽ nhập từ PDF → đối tượng chữ thật.
-  - Tự nhận hướng dòng, cỡ chữ, khoảng trắng.
-  - So khớp với phông txt / simplex / romans / iso / romand.
+- **Khối 3D**:
+  - `ACISOUT` xuất khối ra tệp ACIS `.sat` (mặt phẳng, có lỗ, cạnh dùng chung).
+  - `BREP` bỏ lịch sử khối.
+  - `IMPRINT` in dấu đường lên mặt khối.
+  - `HLSETTINGS` hiện nét khuất (đứt / chấm / liền, màu) khi xem kiểu Hidden.
+- **Mặt NURBS** (thẻ Surface):
+  - `CONVTONURBS`: khối / mặt → mặt NURBS; trụ, cầu đúng tròn tuyệt đối.
+  - `3DEDITBAR`: kéo một điểm trên mặt tới vị trí mới.
+  - `INSERTCONTROLPOINT`: thêm hàng điểm điều khiển, hình không đổi.
+  - `SURFFILLET`: bo cung tròn giữa hai mặt phẳng và cắt mặt tới đường tiếp xúc.
+- **Đánh dấu**:
+  - `MARKUPIMPORT` nhập bản đánh dấu (PDF / ảnh / DWFx).
+  - `MARKUPASSIST` tìm vết đánh dấu đỏ: phóng tới, chèn chữ ghi chú vào bản vẽ, vẽ đám mây sửa đổi, đánh dấu đã xong.
+  - `OPENDWFMARKUP`, `MARKUPCLOSE`.
+- **So sánh**: `COMPAREEXPORT` xuất kết quả so sánh ra DXF; `COMPAREIMPORT` lấy đối tượng của bản so sánh vào bản vẽ.
+- `DBCONNECT`: nối bảng CSV / Excel với đối tượng — xem bản ghi, chọn đối tượng theo dòng, nhãn từ dữ liệu.
+- `AMECONVERT`.
 
 ### Kiểm thử
 - GitHub Actions trên Windows:
-  1. Kiểm thử nhanh như 5.31.0, thêm DGN ghi → đọc lại và các lệnh mới.
+  1. Kiểm thử nhanh như 5.32.0, thêm ACISOUT → ACISIN, trụ NURBS và các lệnh mới.
   2. **ODA File Converter** và **ACadSharp** đọc lại các tệp DWG do DVDCAD ghi.
   3. Bộ đọc XPS của Windows mở tệp DWFx.
   4. Cài lặng bộ cài, chạy kiểm thử trên `DVDCAD.exe` đã cài, rồi gỡ cài.
-- Kiểm thử giao diện tự động (DGN 29 mục; điều hướng / bắt điểm / mặt cắt / chữ SHX 18 mục):
-  - DGN dựng tay:
-    - số thực VAX D; đơn vị M / CM; đường có màu / kiểu nét / bề rộng; hình kín có tô;
-    - cung thuận và chiều kim; elip xoay; tròn; chữ 8 bit + 16 bit;
-    - chuỗi phức → một đa tuyến; chuỗi điểm; bỏ phần tử đã xoá.
-  - DGNIMPORT đổi đơn vị M → mm, đơn vị phụ; DGNATTACH + DGNLAYERS; DGN V8 báo rõ.
-  - DGNEXPORT rồi đọc lại:
-    - đường, tròn, cung qua 0°, cung elip;
-    - đa tuyến có cung, đa tuyến 250 đỉnh;
-    - SOLID có tô màu riêng, chữ tiếng Việt, điểm.
-  - DGNMAPPING.
-  - 3DOSNAP: tâm mặt, giữa cạnh, đỉnh, tắt, gần nhất trên mặt.
-  - NAVSWHEEL 2D / 3D: thu phóng, quay quanh, nhìn quanh giữ chỗ đứng, tua lại.
-  - Mặt cắt gấp khúc qua 2 khối (khối thứ 3 không cắt), tạo 2D + tên, thiết lập.
-  - PDFSHXTEXT: "AB 12" (txt), chữ xoay 30°, "KHOI 3" (romans), lệnh thay nét bằng chữ.
-  - Các bộ kiểm thử của 5.24.0 → 5.31.0 vẫn đạt đủ.
+- Kiểm thử giao diện tự động (29 mục):
+  - ACISOUT:
+    - đầu tệp SAT 7.0; hộp 6 mặt + khung có lỗ 10 mặt;
+    - mỗi cạnh đúng 2 coedge; đọc lại đúng thể tích.
+  - BREP. IMPRINT trên mặt đáy, xoá / giữ đường gốc, DXF giữ nét in. HLSETTINGS: nét khuất đứt ở kiểu Hidden.
+  - NURBS:
+    - trụ / cầu đúng tròn (sai số < 10⁻⁹), hộp → 6 mặt song tuyến;
+    - chèn nút U / V không đổi hình; 3DEDITBAR dời đúng +7;
+    - SURFFILLET R = 2 đúng điểm giữa cung, cắt sàn / tường; DXF giữ mặt NURBS.
+  - Đánh dấu:
+    - 2 vết đỏ (nét + chữ), chèn chữ, đám mây, đã xong;
+    - nhập ảnh đánh dấu đúng cỡ (192 px = 50,8 mm).
+  - So sánh thêm 2 / mất 1, COMPAREEXPORT, COMPAREIMPORT đúng lớp / màu.
+  - DBCONNECT liên kết, nhãn, bảng, chọn theo dòng.
+  - Các bộ kiểm thử của 5.24.0 → 5.32.0 vẫn đạt đủ.
 
 ### Giới hạn
-- **OpenDCL** (`dcl_…`, hộp thoại của thư viện OpenDCL) chưa có. Còn khoảng 30 lệnh AutoCAD chưa có: NURBS (`CONVTONURBS`, `SURFFILLET`, `INSERTCONTROLPOINT`), đánh dấu DWF (`MARKUP…`), `ACISOUT`, `IMPRINT`, đám mây và dịch vụ trực tuyến của Autodesk, một số lệnh nhỏ.
+- **OpenDCL** (`dcl_…`, hộp thoại của thư viện OpenDCL) chưa có. Còn khoảng 14 lệnh AutoCAD chưa có: phần lớn là dịch vụ đám mây / trực tuyến của Autodesk (Trace, Shared Views, Design Feed, Docs) và hình chiếu liên kết Inventor (`VIEWCOMPONENT`, `VIEWSETPROJ`, `VIEWSYMBOLSKETCH`), `3DDWF`.
+- ACISOUT ghi khối dạng mặt phẳng (mặt cong thành nhiều mặt phẳng nhỏ). Đã kiểm bằng bộ đọc ACIS của DVDCAD, chưa thử với AutoCAD.
+- Mặt NURBS:
+  - `SURFFILLET` chỉ bo giữa hai mặt phẳng.
+  - `CONVTONURBS` với mặt cong khác trụ / nón / cầu cho mỗi tam giác một mặt.
+  - Chưa có giao diện kéo điểm điều khiển bằng chuột (`3DEDITBAR` dùng dòng lệnh).
+- `MARKUPASSIST` nhận vết đánh dấu theo màu đỏ / cam (không đọc chữ viết tay trong ảnh).
 - DGN:
   - Chỉ đọc / ghi DGN V7. DGN V8 (MicroStation V8 / CONNECT) cần đổi sang V7 bằng MicroStation hoặc ODA File Converter.
   - V7 không lưu tên mức nên lớp xuất ra thành mức số (đặt tên bằng `DGNMAPPING`). B-spline, kích thước, ô dùng chung (shared cell) chưa đọc.
