@@ -400,6 +400,22 @@
   }
   A.editTable = editTable;
   cmd(['TABLE', 'TB'], 'Chèn bảng (gõ hoặc dán dữ liệu từ Excel)', () => tableCmd());
+  // tạo bảng không qua hộp thoại (cho -TABLE, LISP vla-AddTable): rows = tổng số hàng (kể cả tiêu đề / tên cột)
+  A.makeTable = (o, pt) => { const th = o.th || (A.dimTxt ? A.dimTxt() : 2.5); const T = newTableDef({ rows: Math.max(1, o.rows | 0), cols: Math.max(1, o.cols | 0), th, cw: o.cw > 0 ? o.cw : th * 10, rh: o.rh > 0 ? o.rh : th * 2.2, title: o.title !== false, head: o.head !== false, data: o.data || null });
+    try{ const st = A.TS && A.TS.list[A.TS.cur]; if(st) T.ff = st.font; }catch(_){} T.o = { x: pt.x, y: pt.y };
+    const gid = A.newGroupId('T'); return tblBuild(T).map((e, i) => { A.newProps(e); delete e.lt; e.grp = gid; e.blk = '*TABLE'; if(i === 0) e.tbld = deep(T); return e; }); };
+  // -TABLE: bản dòng lệnh như AutoCAD (số cột, số hàng dữ liệu, điểm chèn; Width / Height = rộng cột / cao hàng)
+  cmd(['-TABLE'], 'Chèn bảng bằng dòng lệnh: số cột, số hàng dữ liệu, điểm chèn', async () => {
+    const th = A.dimTxt ? A.dimTxt() : 2.5; let cw = th * 10, rh = th * 2.2;
+    const c = await A.getNum('Nhập số cột', { def: 5, int: true }); const cols = Math.max(1, Math.round(c.num || 5));
+    const r = await A.getNum('Nhập số hàng dữ liệu', { def: 1, int: true }); const rows = Math.max(1, Math.round(r.num || 1)) + 2;
+    let p;
+    for(;;){ p = await A.getPoint('Chỉ định điểm chèn', { kw: [{ k: 'W', t: 'Rộng cột' }, { k: 'H', t: 'Cao hàng' }] });
+      if(p.kw === 'W'){ const v = await A.getDist('Chỉ định rộng cột', { def: cw }); if(v.num > 0) cw = v.num; continue; }
+      if(p.kw === 'H'){ const v = await A.getNum('Chỉ định số dòng chữ mỗi hàng', { def: 1 }); if(v.num > 0) rh = th * 2.2 * v.num; continue; }
+      break; }
+    if(!p.pt) return; const ents = A.makeTable({ rows, cols, th, cw, rh }, p.pt); A.commit({ add: ents }, 'Đã chèn bảng ' + rows + '×' + cols);
+  });
   cmd(['TABLEDIT', 'TABLEEDIT'], 'Sửa nội dung bảng', async () => { const r = await A.getEnt('Chọn bảng', { filter: e => !!tableCarrier(e) }); if(r.ent) setTimeout(() => editTable(r.ent), 0); });
 
   /* kích đúp như AutoCAD: bảng -> sửa bảng · khối -> sửa khối · kích thước -> sửa chữ */

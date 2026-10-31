@@ -194,6 +194,14 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       return out; });
     check(v6e.dlg && v6e.dcl === '(1 "7")', 'AutoLISP: hộp thoại DCL hiện và trả giá trị ' + v6e.dcl);
     check(v6e.vla === '(5.0 2.5)', 'AutoLISP: vla-AddLine / vla-get-Length / vlax-curve ' + v6e.vla);
+    // v6f: LISP như AutoCAD — (command) với tuỳ chọn "_X", XDATA ghi vào DWG (ODA / ACadSharp đọc lại trong CI)
+    const v6f = await win.evaluate(async () => { const out = { dwg: {} };
+      out.cmd = await DVDLisp.evalToString('(progn (command "_.ZOOM" "_E") (command "_.PLINE" (list 0 0) "_W" 1 1 (list 100 0) "") (regapp "DVD_TEST") (entmod (append (entget (entlast)) (list (list -3 (list "DVD_TEST" (cons 1000 "Dam D1") (cons 1040 2.5) (cons 1070 7) (list 1010 1.0 2.0 0.0)))))) (cdr (assoc 1000 (cdr (cadr (assoc -3 (entget (entlast) (list "DVD_TEST"))))))))');
+      const ents = modelEntities.slice();
+      for(const v of ['R2018', 'R2013', 'R2007', 'R2000']){ const d = DVDAcad.dwgNative(ents, { version: v }); let s = ''; for(let i = 0; i < d.length; i += 0x8000) s += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000)); out.dwg[v] = btoa(s); }
+      out.back = atob(out.dwg.R2018).includes('DVD_TEST') ? 1 : 0; return out; });
+    check(v6f.cmd === '"Dam D1"' && v6f.back, 'LISP: (command) với "_E" / "_W", XDATA entmod / entget, XDATA ghi vào DWG');
+    if(process.env.DVD_DWG_OUT) for(const v of Object.keys(v6f.dwg)) fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'xdata-' + v + '.dwg'), Buffer.from(v6f.dwg[v], 'base64'));
   }
   {
     // v5x: MTEXT nhiều phông (\F SHX / \f TrueType), thiết lập trang có tên → PLOTSETTINGS, khung nhìn xoay (VIEWTWIST) → DWG đọc lại

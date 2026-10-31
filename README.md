@@ -6,6 +6,13 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6f: tiện ích LISP chạy như trên AutoCAD — tuỳ chọn "_X", lệnh dòng lệnh, biến hệ thống, XDATA, ssget lọc, entmake, ActiveX bổ sung
+- `dvd-acad-core.js` `inputImpl`: bỏ `_` đầu tuỳ chọn (trừ lời nhắc chuỗi không khớp tuỳ chọn); `matchKw` khớp thêm tên tuỳ chọn tiếng Anh (từ điển `DVD_I18N_EN`).
+- `dvd-lisp.js` `(command)`: `A.fromLisp()` (lệnh đang do LISP điều khiển), giữ `-` ở tên lệnh, `HATCH` → `LISPHATCH` (lời nhắc cổ điển), không tự Enter sau tên đối tượng khi LISP đã có `""`, `A.input(s, { lisp })` (TEXT một dòng), chờ ô soạn chữ (`A.textEditing`); `VL-CMDF` trả T.
+- Lệnh dòng lệnh mới: `-HATCH` / `LISPHATCH` (`cmds`), `-ARRAY` (`cmds`), `-ATTDEF` (`dlg`), `-TABLE` + `A.makeTable` (`ext`), `-WBLOCK` (`x6`), `CHANGE` riêng (`x6`), `LEADER` cổ điển (`more`); `-INSERT` S / R / `*TÊN` (`cmdline`); POINT một điểm, BREAK chọn bằng tên đối tượng (`cmds`).
+- `dvd-lisp3.js`: GETVAR / SETVAR (COMP tính động, DEF mặc định, biến điểm → danh sách); XDATA `e.xd = [[app, [[mã, giá trị]…]]…]` (REGAPP, ENTGET apps, ENTMOD / ENTMAKE -3, TBLSEARCH APPID / STYLE / LTYPE / DIMSTYLE); SSGET lọc cây logic theo `entget` (-4, -3, 410), WP / CP / F; ENTMAKE HATCH / DIMENSION / BLOCK…ENDBLK (`A.makeBlock` 'retain') / INSERT 66 + ATTRIB…SEQEND; ActiveX qua `DVDLisp.ax` (XGET / XPUT / XCOLL nối thêm vào `getProp0` / `putProp0` / `collItems` của `dvd-lisp2.js`).
+- XDATA trong tệp: DXF ghi 1001… sau đối tượng + APPID (`dxf` `xd()`), đọc ở `entExtra` (bỏ ACAD / AcDb* / AcCm* / DVDCAD), giữ qua `transformPrim`; DWG ghi EED (thêm điểm 1010–1013) và bản sao `XD:` trong khối riêng DVDCADX1 để DVDCAD đọc lại (`dvdApplyX`).
+
 ## v6e: chạy bộ tiện ích AutoLISP như AutoCAD — DCL, vla- / vlax- / vlax-curve-, thư mục hỗ trợ
 - `dvd-lisp2.js` (nạp sau `dvd-lisp.js`, dùng `DVDLisp.ext` = BI / G / ev / withBindings / kiểu dữ liệu…):
   - **Thư mục hỗ trợ** `DVDLisp.fs` (IndexedDB `dvdcad-lispfs`, tên tệp không phân biệt hoa thường): `findfile`, `load` (tìm trong kho trước; `.fas/.vlx` báo rõ), `autoload` (đăng ký lệnh, nạp khi gõ), `open/read-line/write-line/close` (lớp `LFile`), `vl-file-*`, `getfiled`.

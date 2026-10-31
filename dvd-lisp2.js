@@ -300,7 +300,7 @@
     switch(o.kind){
       case 'app': if(p === 'ACTIVEDOCUMENT') return DOC; if(p === 'DOCUMENTS') return COLL('Documents'); if(p === 'VERSION') return '25.0s (DVDCAD)'; if(p === 'NAME') return 'DVDCAD'; if(p === 'PREFERENCES') return new VObj('prefs'); break;
       case 'doc': if(p === 'MODELSPACE') return MS; if(p === 'PAPERSPACE') return PSP; if(p === 'UTILITY') return UTIL; if(p === 'APPLICATION') return APP;
-        if(['LAYERS', 'BLOCKS', 'TEXTSTYLES', 'LINETYPES', 'DIMSTYLES', 'LAYOUTS', 'GROUPS', 'DICTIONARIES', 'VIEWS', 'REGISTEREDAPPLICATIONS', 'SELECTIONSETS'].includes(p)) return COLL(P[0].toUpperCase() + P.slice(1).toLowerCase());
+        { const CN = { LAYERS: 'Layers', BLOCKS: 'Blocks', TEXTSTYLES: 'TextStyles', LINETYPES: 'Linetypes', DIMSTYLES: 'DimStyles', LAYOUTS: 'Layouts', GROUPS: 'Groups', DICTIONARIES: 'Dictionaries', VIEWS: 'Views', REGISTEREDAPPLICATIONS: 'RegisteredApplications', SELECTIONSETS: 'SelectionSets', MATERIALS: 'Materials', PLOTCONFIGURATIONS: 'PlotConfigurations', USERCOORDINATESYSTEMS: 'UserCoordinateSystems', VIEWPORTS: 'Viewports' }; if(CN[p]) return COLL(CN[p]); }
         if(p === 'ACTIVELAYER') return new VObj('item', { coll: 'Layers', name: A().LS.cur });
         if(p === 'ACTIVESPACE') return mkInt(1); if(p === 'NAME') return (typeof currentName === 'string' && currentName) || 'Drawing1.dwg'; if(p === 'FULLNAME') return (typeof currentName === 'string' && currentName) || ''; if(p === 'PATH') return '';
         if(p === 'ACTIVETEXTSTYLE') return new VObj('item', { coll: 'TextStyles', name: 'Standard' }); if(p === 'ACTIVELAYOUT') return new VObj('item', { coll: 'Layouts', name: 'Model' }); break;
@@ -336,11 +336,14 @@
           case 'PATTERNNAME': if(ty === 'HATCH') return String(e.pat || 'SOLID'); break;
         } break; }
     }
+    for(const f of XGET){ const r = f(o, p, P); if(r !== undefined) return r; }   // phần mở rộng (dvd-lisp3.js)
     throw new LispErr('ActiveX Server returned the error: unknown name: ' + P); }
+  const XGET = [], XPUT = [], XCOLL = [];
   const hash = s => { let h = 0; for(const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return h; };
   function putProp0(o, P, v){ const p = P.toUpperCase(); if(!(o instanceof VObj)) o = toObj(o);
     if(o.kind === 'doc' && p === 'ACTIVELAYER'){ const n = o.ref && v instanceof VObj ? v.ref.name : toStr(v); A().setCurLayer(n); return v; }
     if(o.kind === 'item' && o.ref.coll === 'Layers'){ const n = o.ref.name; if(p === 'COLOR'){ A().setLayerColor(n, aci(toInt(v))); return v; } if(p === 'LAYERON'){ A().setLayerFlag(n, 'off', !truthy(v)); return v; } if(p === 'FREEZE'){ A().setLayerFlag(n, 'frozen', truthy(v)); return v; } if(p === 'LOCK'){ A().setLayerFlag(n, 'locked', truthy(v)); return v; } if(p === 'LINETYPE'){ A().setLayerLT(n, toStr(v)); return v; } if(p === 'LINEWEIGHT'){ A().setLayerLW(n, Math.max(0, toInt(v))); return v; } if(p === 'TRANSPARENCY' && A().setLayerTP){ A().setLayerTP(n, toInt(v)); return v; } }
+    for(const f of XPUT){ const r = f(o, p, v); if(r !== undefined) return r; }
     if(o.kind !== 'ent') throw new LispErr('ActiveX: không ghi được thuộc tính ' + P);
     const l = entOf(o), e = l[0];
     const geo = (fn) => commitRep([e], fn), all = fn => commitRep(l, fn);
@@ -369,8 +372,9 @@
     if(n === 'Blocks'){ const B = A().blockList ? A().blockList() : { file: [], lib: [] }; return ['*Model_Space', '*Paper_Space'].concat([...(B.file || []), ...(B.lib || [])].map(b => b.name || b)).map(x => new VObj('item', { coll: 'Blocks', name: x })); }
     if(n === 'TextStyles') return ['Standard'].map(x => new VObj('item', { coll: 'TextStyles', name: x }));
     if(n === 'Linetypes') return (A().ltNames ? A().ltNames() : ['CONTINUOUS']).map(x => new VObj('item', { coll: 'Linetypes', name: x }));
-    if(n === 'Layouts') return (typeof dwgLayouts !== 'undefined' ? dwgLayouts : [{ name: 'Model' }]).map(L0 => new VObj('item', { coll: 'Layouts', name: L0.isModel ? 'Model' : L0.name }));
+    if(n === 'Layouts'){ const LL = (typeof dwgLayouts !== 'undefined' && dwgLayouts.length) ? dwgLayouts : [{ isModel: true }]; return LL.map(L0 => new VObj('item', { coll: 'Layouts', name: L0.isModel ? 'Model' : L0.name })); }
     if(n === 'Documents') return [DOC];
+    for(const f of XCOLL){ const r = f(o, n); if(r) return r; }
     return []; }
   const spaceEnts = () => { const seen = new Set(), out = []; for(const e of ME()){ const en = ename(e); if(seen.has(en.id)) continue; seen.add(en.id); out.push(new VObj('ent', en)); } return out; };
   SPECIAL.set('VLAX-FOR', async x => { const v = x[1], coll = await ev(x[2]); const items = coll instanceof VObj ? (coll.kind === 'space' ? spaceEnts() : coll.kind === 'coll' ? collItems(coll) : coll.kind === 'item' && coll.ref.coll === 'Blocks' ? [] : []) : L(unV(coll));
@@ -455,6 +459,9 @@
   // getpropertyvalue / setpropertyvalue (AutoCAD 2012+)
   BI('GETPROPERTYVALUE', (en, p) => { const v = getProp(toObj(en), toStr(p)); return v === VT ? mkInt(1) : cleanV(v); }); BI('SETPROPERTYVALUE', (en, p, v) => { putProp(toObj(en), toStr(p), Array.isArray(v) && v.every(isNum) ? vpt(pt(v)) : v); return null; });
   BI('ISPROPERTYREADONLY', () => null); BI('DUMPALLPROPERTIES', en => { log('; ' + str(en)); return null; });
+
+  // cho phần mở rộng ActiveX (dvd-lisp3.js)
+  DVDLisp.ax = { VObj, Variant, SArr, METHODS, XGET, XPUT, XCOLL, entOf, toObj, vpt, unV, ptOf, toL, ent2, commitRep, insertBlock, collItems, spaceEnts, COLL, APP, DOC, MS, PSP, UTIL, aci, aciOf, setAci, VT, VF, getProp, putProp, cleanV, propName, objName, xform, hash, LFile };
 
   /* ---- vlax-curve-* : tham số như AutoCAD (đường: khoảng cách; cung / tròn / elip: góc; đa tuyến: số thứ tự đỉnh) ---- */
   function pathOf(e){

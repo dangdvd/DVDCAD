@@ -315,8 +315,9 @@
     const out = [], PRIV = {};
     const APPIDS = byName('APPID');
     // EED (XDATA 1001…): BS cỡ + H appid + các mục (RC mã: 0 chuỗi = RC dài + RS_BE trang mã + byte; 70 RS; 71 RL; 40 RD; 2 ngoặc)
-    function eedOf(r){ const L = []; let cur = null;
-      for(const [c, v] of (r ? r.g : [])){
+    function eedOf(r){ const L = []; let cur = null; const G0 = r ? r.g : [];
+      for(let gi = 0; gi < G0.length; gi++){ const [c, v] = G0[gi];
+        if(cur && c >= 1010 && c <= 1013){ const w = cur.w; const y = G0[gi + 1] && G0[gi + 1][0] === c + 10 ? parseFloat(G0[++gi][1]) : 0, z = G0[gi + 1] && G0[gi + 1][0] === c + 20 ? parseFloat(G0[++gi][1]) : 0; w.RC(c - 1000); w.RD(parseFloat(v) || 0); w.RD(y || 0); w.RD(z || 0); continue; }   // điểm: RC + 3 RD
         if(c === 1001){ const h = APPIDS.get(up(v)); cur = h ? { h, w: new BW(64) } : null; if(cur) L.push(cur); continue; }
         if(!cur || c < 1000) continue; const w = cur.w;
         if(c === 1000 && R07){ const s = String(v).slice(0, 255); w.RC(0); w.RS(s.length); for(let i = 0; i < s.length; i++) w.RS(s.charCodeAt(i)); }   // R2007+: RS số ký tự + UTF-16
@@ -520,7 +521,10 @@
     function attData(o, s2){ if(R10) o.d.RC(0); if(R18) o.d.RC(1); o.T(s2.get(2, '')); o.d.BS(s2.int(73)); o.d.RC(s2.int(70)); if(R07) o.d.B(0); }
 
     // dữ liệu riêng DVDCAD (XDATA "DVDCAD" từng đối tượng) — DVDCAD đọc lại từ khối DVDCADX1 (bộ đọc DWG trong trình duyệt không đọc được EED R2000)
-    function keepX(r, h){ let on = false; const it = []; for(const [c, v] of r.g){ if(c === 1001){ on = up(v) === 'DVDCAD'; continue; } if(on && c >= 1000) it.push([c, v]); } if(it.length) PRIV[h.toString(16).toUpperCase()] = it; }
+    function keepX(r, h){ let on = false, cur = null; const it = [], ux = [];
+      for(const [c, v] of r.g){ if(c === 1001){ const a = String(v).trim(); on = up(a) === 'DVDCAD'; cur = !on && !/^(ACAD|AcDb|AcCm|AcadAnno)/i.test(a) ? [a, []] : null; if(cur) ux.push(cur); continue; } if(on && c >= 1000) it.push([c, v]); else if(cur && c >= 1000) cur[1].push([c, v]); }
+      if(ux.length) it.push([1000, 'XD:' + JSON.stringify(ux)]);   // XDATA của ứng dụng / LISP: DVDCAD đọc lại được (bộ đọc DWG trong trình duyệt không đọc EED)
+      if(it.length) PRIV[h.toString(16).toUpperCase()] = it; }
     function entity(r, link, att){
       const h = ref(r.get(5)), P = entProps(r), c = Object.assign({ props: P }, link); let o; keepX(r, h);
       { const x = r.group102('ACAD_XDICTIONARY').map(ref).find(v => outObjH.has(v)); if(x) c.xdic = x; }
@@ -880,8 +884,8 @@
       const secSummary = (() => { const F = new BW(256); for(const s of ['', '', '', '', '', 'DVDCAD', '', '']) T16(F, s);
         F.RL(0); F.RL(0); F.RL(jd[0]); F.RL(jd[1]); F.RL(jd[0]); F.RL(jd[1]); F.RS(0); F.RL(0); F.RL(0); return F.bytes(); })();
       const secAppInfo = (() => { const F = new BW(1024), z16 = () => { for(let i = 0; i < 16; i++) F.RC(0); };
-        F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.24.0'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
-        U16(F, '<ProductInformation name ="DVDCAD" build_version="5.24.0" registry_version="5.24" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
+        F.RL(3); U16(F, 'AppInfoDataList'); F.RL(3); z16(); U16(F, '5.25.0'); z16(); U16(F, 'This file was last saved by DVDCAD (open source, GPL-3.0).'); z16();
+        U16(F, '<ProductInformation name ="DVDCAD" build_version="5.25.0" registry_version="5.25" install_id_string="DVDCAD" registry_localeID="1033"/>'); return F.bytes(); })();
       const secRev = Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0);
       if(VER === 21) return file2007();
       const up32 = (n, q) => Math.max(q, Math.ceil(n / q) * q);

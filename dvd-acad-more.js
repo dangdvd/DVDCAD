@@ -100,8 +100,9 @@
     return out;
   }
   A.leaderEnts = leaderEnts; A.leaderTxtH = txtH;
+  // kind: false = MLEADER (2 điểm), true = QLEADER (tối đa 3 điểm + bề rộng chữ), 'L' = LEADER cổ điển (điểm tới khi Enter)
   async function leaderCmd(multi){
-    const h = txtH();
+    const h = txtH(); const lisp = !!(A.fromLisp && A.fromLisp()), classic = multi === 'L';
     const r1 = await A.getPoint('Chỉ định vị trí đầu mũi tên'); if(!r1.pt) return;
     const pts = [r1.pt];
     for(;;){
@@ -109,16 +110,25 @@
       if(r.none){ if(pts.length >= 2) break; return; }
       if(!r.pt) return; pts.push(r.pt);
       if(!multi && pts.length >= 2) break;
-      if(pts.length >= 6) break;
+      if(multi === true && lisp && pts.length >= 3) break;
+      if(pts.length >= (classic ? 50 : 6)) break;
     }
     let text = null;
-    try{ text = await askText({ title: 'Nội dung ghi chú', value: '', multiline: true }); }catch(_){ text = prompt('Nội dung ghi chú', ''); }
+    // gọi từ LISP / script: chữ nhập ở dòng lệnh từng dòng, dòng trống = xong (như AutoCAD)
+    if(lisp || classic){
+      if(multi === true && lisp) await A.getNum('Chỉ định bề rộng chữ', { def: 0 });
+      const lines = [];
+      for(;;){ const r = await A.getStr(lines.length ? 'Nhập dòng chữ tiếp theo' : 'Nhập dòng chữ đầu tiên'); const t = r.str == null ? '' : String(r.str); if(!t) break; lines.push(t); if(!lisp && !classic) break; }
+      text = lines.join('\n');
+    }
+    else { try{ text = await askText({ title: 'Nội dung ghi chú', value: '', multiline: true }); }catch(_){ text = prompt('Nội dung ghi chú', ''); } }
     if(text == null) return;
     const ents = leaderEnts(pts, String(text).replace(/\r/g, ''), h); const gid = A.newGroupId('L');
     for(const e of ents){ A.newProps(e); delete e.lt; e.grp = gid; e.blk = '*LEADER'; if(e.type === 'TEXT') e.ldp = pts.map(p => ({ x: p.x, y: p.y })); }   // ldp: các điểm đường dẫn (để MLEADEREDIT / ALIGN / COLLECT dựng lại)
     A.commit({ add: ents }, 'Đã thêm ghi chú dẫn');
   }
-  cmd(['MLEADER', 'MLD', 'LEADER', 'LEAD'], 'Ghi chú có mũi tên (multileader)', () => leaderCmd(false));
+  cmd(['MLEADER', 'MLD'], 'Ghi chú có mũi tên (multileader)', () => leaderCmd(false));
+  cmd(['LEADER', 'LEAD'], 'Đường dẫn ghi chú: các điểm, Enter, rồi gõ chữ từng dòng (dòng trống = xong)', () => leaderCmd('L'));
   cmd(['QLEADER', 'LE'], 'Ghi chú dẫn nhiều đoạn', () => leaderCmd(true));
 
   /* ===================== ALIGN ===================== */

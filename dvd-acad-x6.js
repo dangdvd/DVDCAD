@@ -271,8 +271,30 @@
   // ---- CHPROP / CHANGE ----
   const ACI = { 1: '#ff0000', 2: '#ffff00', 3: '#00ff00', 4: '#00ffff', 5: '#0000ff', 6: '#ff00ff', 7: '#ffffff', 8: '#808080', 9: '#c0c0c0' };
   const CNAME = { RED: 1, DO: 1, YELLOW: 2, VANG: 2, GREEN: 3, XANH: 3, CYAN: 4, BLUE: 5, MAGENTA: 6, TIM: 6, WHITE: 7, TRANG: 7 };
-  cmd(['CHPROP', 'CHANGE', '-CH'], 'Đổi thuộc tính qua dòng lệnh: màu, lớp, kiểu nét, tỉ lệ nét, bề rộng nét', async () => {
+  cmd(['CHPROP', '-CH'], 'Đổi thuộc tính qua dòng lệnh: màu, lớp, kiểu nét, tỉ lệ nét, bề rộng nét', async () => {
     const s = await A.getSel('Chọn đối tượng'); let sel = unlocked(s.sel); if(!sel.length) return;
+    await propLoop(sel);
+  });
+  // CHANGE như AutoCAD: điểm thay đổi (đầu đường thẳng, bán kính tròn, vị trí / cao / góc / nội dung chữ) hoặc Thuộc tính
+  cmd(['CHANGE'], 'Đổi điểm đầu đường thẳng, bán kính tròn, thuộc tính chữ; P = đổi thuộc tính (màu, lớp…)', async () => {
+    const s = await A.getSel('Chọn đối tượng'); let sel = unlocked(s.sel); if(!sel.length) return;
+    const r = await A.getPoint('Chỉ định điểm thay đổi', { kw: [{ k: 'P', t: 'Thuộc tính' }] });
+    if(r.kw === 'P'){ await propLoop(sel); return; }
+    const rep = [];
+    for(const e of sel){ const w = JSON.parse(JSON.stringify(e)); delete w.userAdded;
+      if(e.type === 'LINE' && r.pt){ const d1 = Math.hypot(e.x1 - r.pt.x, e.y1 - r.pt.y), d2 = Math.hypot(e.x2 - r.pt.x, e.y2 - r.pt.y); if(d1 < d2){ w.x1 = r.pt.x; w.y1 = r.pt.y; } else { w.x2 = r.pt.x; w.y2 = r.pt.y; } rep.push([e, w]); continue; }
+      if(e.type === 'CIRCLE' && r.pt){ const R = Math.hypot(r.pt.x - e.cx, r.pt.y - e.cy); if(R > 0){ w.r = R; rep.push([e, w]); } continue; }
+      if(e.type === 'TEXT' && !e.grp){
+        const p = r.pt ? { pt: r.pt } : await A.getPoint('Chỉ định vị trí mới của chữ <không đổi>'); if(p.pt){ w.x = p.pt.x; w.y = p.pt.y; }
+        const st = await A.getStr('Nhập kiểu chữ mới', { def: e.style || 'Standard' }); if(st.str && A.tsApply && A.TS && A.TS.list[st.str]) A.tsApply(w, st.str);
+        const h = await A.getNum('Chỉ định chiều cao mới', { def: e.h || 2.5 }); if(h.num > 0) w.h = h.num;
+        const a = await A.getAngle('Chỉ định góc xoay mới', { def: e.rot || 0 }); if(a.num != null) w.rot = a.num;
+        const t = await A.getStr('Nhập nội dung mới', { def: e.text || '' }); if(t.str) w.text = t.str;
+        rep.push([e, w]); continue; }
+    }
+    if(rep.length) A.commit({ rep }, 'Đã đổi ' + rep.length + ' đối tượng');
+  });
+  async function propLoop(sel){
     for(;;){
       const k = await A.getKw('Thuộc tính cần đổi', { kw: [{ k: 'C', t: 'Màu' }, { k: 'LA', t: 'Lớp' }, { k: 'LT', t: 'Kiểu nét' }, { k: 'S', t: 'Tỉ lệ nét' }, { k: 'LW', t: 'Bề rộng nét' }] }); if(!k.kw) return;
       let fn = null, msg = '';
@@ -284,7 +306,7 @@
       if(k.kw === 'LW'){ const v = await A.getStr('Bề rộng nét mm (BYLAYER hoặc vd 0.35)', { def: 'BYLAYER' }); const t = String(v.str || 'BYLAYER').trim().toUpperCase(); fn = w => { if(t === 'BYLAYER') delete w.lw; else w.lw = Math.round(parseFloat(t) * 100) || 0; }; msg = 'Đã đổi bề rộng nét'; }
       if(fn){ const rep = repAll(sel, fn); A.commit({ rep }, msg); sel = rep.map(x => x[1]); }
     }
-  });
+  }
   // ---- FLATTEN: đưa khối 3D / mặt 3D về nét 2D ----
   cmd(['FLATTEN'], 'Làm phẳng: khối 3D thành nét 2D hình chiếu bằng, bỏ cao độ (Express Tools)', async () => {
     const s = await A.getSel('Chọn đối tượng'); const sel = unlocked(s.sel); if(!sel.length) return;
@@ -624,6 +646,25 @@
     let dxf; try{ dxf = entitiesToDXF(ents); }catch(err){ say('Không tạo được DXF.'); return; }
     try{ await shareOrDownload(new Blob([dxf], { type: 'application/dxf' }), fn, 'application/dxf'); }catch(_){}
     log('WBLOCK: đã ghi ' + ents.length + ' đối tượng ra ' + fn + ' (gốc 0,0 = điểm gốc đã chọn). Dùng XATTACH hoặc mở file để dùng lại.');
+  });
+  // -WBLOCK như AutoCAD: tên tệp trước, rồi tên khối / "=" / "*" (cả bản vẽ) / Enter = chọn đối tượng; .dwg ghi DWG 2018, còn lại DXF
+  cmd(['-WBLOCK', '-W'], 'Ghi khối / đối tượng / cả bản vẽ ra tệp bằng dòng lệnh (cho script / LISP)', async () => {
+    const f = await A.getStr('Nhập tên tệp'); let fn = String(f.str || '').trim(); if(!fn) return;
+    const r = await A.getStr('Nhập tên khối có sẵn hoặc [= (khối = tên tệp) / * (cả bản vẽ)]', { def: 'chọn đối tượng' }); let bn = String(r.str || '').trim();
+    const stem = fn.replace(/^.*[\\/]/, '').replace(/\.(dwg|dxf)$/i, '');
+    let ents = [];
+    if(bn === '*') ents = modelEntities.filter(e => !e.vh).map(copy);
+    else if(bn){ if(bn === '=') bn = stem; const B = A.blockPrims && (A.blockPrims(bn, 'file') || A.blockPrims(bn, 'lib')); if(!B){ log('Không có khối "' + bn + '".'); return; }
+      ents = B.prims.map(e => A.xformEnt(copy(e), { a: 1, b: 0, c: 0, d: 1, e: -B.base.x, f: -B.base.y })); }
+    else { const b = await A.getPoint('Chỉ định điểm gốc chèn'); if(!b.pt) return; const s2 = await A.getSel('Chọn đối tượng'); if(!(s2.sel || []).length) return;
+      ents = s2.sel.map(e => A.xformEnt(copy(e), { a: 1, b: 0, c: 0, d: 1, e: -b.pt.x, f: -b.pt.y })); }
+    if(!ents.length) return;
+    const dwg = /\.dwg$/i.test(fn) && A.dwgNative; let blob;
+    try{ blob = dwg ? new Blob([A.dwgNative(ents, { version: 'R2018' })], { type: 'application/acad' }) : new Blob([entitiesToDXF(ents)], { type: 'application/dxf' }); }catch(err){ say('Không tạo được tệp: ' + (err.message || err)); return; }
+    const out = stem + (dwg ? '.dwg' : '.dxf');
+    try{ if(window.DVDLisp && DVDLisp.fs && !dwg) await DVDLisp.fs.put(out, await blob.text()); }catch(_){}
+    try{ await shareOrDownload(blob, out, blob.type); }catch(_){}
+    log('-WBLOCK: đã ghi ' + ents.length + ' đối tượng ra ' + out + '.');
   });
   plain(['RENAME', 'REN'], 'Đổi tên lớp hoặc khối', () => {
     if(!A.hasDoc()){ say('Chưa mở bản vẽ.'); return; }

@@ -789,6 +789,31 @@
     A.commit({ add: [mk(pt)] }, 'Đã định nghĩa thuộc tính ' + o.tag);
     lastAtt = { p: pt, h: o.h, rot: o.rot, j: o.j };
   });
+  // -ATTDEF: bản dòng lệnh như AutoCAD (chế độ, tag, lời nhắc, mặc định, điểm / canh lề, cao chữ, góc)
+  const ATT_MD = { inv: 0, con: 0, ver: 0, pre: 0 };
+  ecmd(['-ATTDEF', '-ATT'], 'Định nghĩa thuộc tính bằng dòng lệnh (cho script / LISP)', async () => {
+    const MN = { I: 'inv', C: 'con', V: 'ver', P: 'pre' }, yn = v => v ? 'Y' : 'N';
+    for(;;){ log('Chế độ hiện tại: Ẩn=' + yn(ATT_MD.inv) + ' Cố định=' + yn(ATT_MD.con) + ' Kiểm tra=' + yn(ATT_MD.ver) + ' Đặt sẵn=' + yn(ATT_MD.pre) + ' Khoá vị trí=Y');
+      const k = await A.getKw('Nhập tuỳ chọn cần đổi', { kw: [{ k: 'I', t: 'Ẩn' }, { k: 'C', t: 'Cố định' }, { k: 'V', t: 'Kiểm tra' }, { k: 'P', t: 'Đặt sẵn' }, { k: 'L', t: 'Khoá vị trí' }, { k: 'A', t: 'Chú thích' }, { k: 'M', t: 'Nhiều dòng' }], def: 'xong' });
+      if(!k.kw) break; if(MN[k.kw]) ATT_MD[MN[k.kw]] = ATT_MD[MN[k.kw]] ? 0 : 1; }
+    const t = await A.getStr('Nhập tên thuộc tính (tag)'); const tag = String(t.str || '').trim().toUpperCase().replace(/\s+/g, '_'); if(!tag){ log('Cần tên thuộc tính.'); return; }
+    const pr = ATT_MD.con ? { str: '' } : await A.getStr('Nhập lời nhắc của thuộc tính');
+    const df = await A.getStr(ATT_MD.con ? 'Nhập giá trị thuộc tính' : 'Nhập giá trị mặc định');
+    let ha = 'left', va = 'alphabetic', style = A.TS ? A.TS.cur : 'Standard', p;
+    const JM = { L: ['left', 'alphabetic'], C: ['center', 'alphabetic'], R: ['right', 'alphabetic'], M: ['center', 'middle'], TL: ['left', 'top'], TC: ['center', 'top'], TR: ['right', 'top'], ML: ['left', 'middle'], MC: ['center', 'middle'], MR: ['right', 'middle'], BL: ['left', 'bottom'], BC: ['center', 'bottom'], BR: ['right', 'bottom'] };
+    for(;;){ p = await A.getPoint('Chỉ định điểm đầu của chữ', { kw: [{ k: 'J', t: 'Canh lề' }, { k: 'S', t: 'Kiểu chữ' }] });
+      if(p.kw === 'J'){ const j = await A.getKw('Nhập tuỳ chọn canh lề', { kw: Object.keys(JM).map(x => ({ k: x, t: x })) }); if(j.kw && JM[j.kw]) [ha, va] = JM[j.kw]; continue; }
+      if(p.kw === 'S'){ const v = await A.getStr('Nhập tên kiểu chữ', { def: style }); if(v.str && A.TS && A.TS.list[v.str]) style = v.str; continue; }
+      break; }
+    if(!p.pt) return;
+    const h0 = (lastAtt && lastAtt.h) || (A.dimTxt ? +(A.dimTxt()).toPrecision(3) : 2.5);
+    const hh = await A.getDist('Chỉ định chiều cao chữ', { base: p.pt, def: h0 }); const h = hh.num > 0 ? hh.num : h0;
+    const ro = await A.getAngle('Chỉ định góc xoay của chữ', { base: p.pt, def: 0 }); const rot = ro.num || 0;
+    const mode = {}; for(const k of Object.keys(ATT_MD)) if(ATT_MD[k]) mode[k] = 1;
+    const e = A.newProps({ type: 'TEXT', x: p.pt.x, y: p.pt.y, h, rot, text: tag, ha, va, attdef: Object.assign({ tag, prompt: String(pr.str || '').trim() || tag, def: String(df.str || '') }, Object.keys(mode).length ? { mode } : {}) });
+    if(A.tsApply && style) A.tsApply(e, style);
+    A.commit({ add: [e] }, 'Đã định nghĩa thuộc tính ' + tag); lastAtt = { p: p.pt, h, rot, j: 'left' };
+  });
 
   /* ==================================================================
      HATCH — Hatch and Gradient (HATCHSET / tuỳ chọn T của HATCH) + tab ngữ cảnh "Hatch Creation"
@@ -1443,12 +1468,14 @@
       log(multi ? 'Soạn chữ: Enter = xuống dòng · Ctrl+Enter hoặc bấm ra ngoài = lưu · Esc = bỏ' : single ? 'Sửa chữ: Enter = lưu · Esc = bỏ' : 'Gõ chữ: Enter = dòng mới · Enter ở dòng trống = xong');
     });
   }
-  A.inplaceText = inplaceText;
+  A.inplaceText = inplaceText; A.textEditing = () => !!TE.cur;
   // script / LISP / dòng lệnh khi đang soạn chữ: mỗi dòng nhập là một dòng chữ, dòng trống = xong (như AutoCAD đọc chữ từ script)
   const _input = A.input;
   A.input = function(text){ const T = TE.cur; if(!T) return _input.apply(this, arguments);
     const t = String(text == null ? '' : text).replace(/\r/g, '');
     if(T.single){ if(t !== '') T.setRuns([{ t }], t.length); T.finish(true); return true; }
+    // (command "TEXT" … "chữ") của LISP: như AutoCAD chỉ nhận một dòng rồi kết thúc lệnh
+    if(!T.multi && arguments[1] && arguments[1].lisp){ if(t !== ''){ const v = T.plain(); T.setRuns(rtNorm(T.runs().concat([{ t: (v ? '\n' : '') + t }])), v.length + (v ? 1 : 0) + t.length); } T.finish(true); return 'end'; }
     if(t === ''){ T.finish(true); return true; }
     const v = T.plain(); T.setRuns(rtNorm(T.runs().concat([{ t: (v ? '\n' : '') + t }])), v.length + (v ? 1 : 0) + t.length); return true; };
   // áp kiểu chữ / phông / màu / khung MTEXT / định dạng / cột đã chọn trong bộ soạn vào đối tượng chữ (gọi sau khi gán w.text)

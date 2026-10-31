@@ -46,7 +46,8 @@ Mã DXF trong `entget` / `entmod` / `entmake`:
 - LINE `10 11`, CIRCLE `10 40`, ARC `10 40 50 51` (radian), POINT `10`.
 - TEXT / MTEXT `10 11 40 1 50 7 72 73`.
 - LWPOLYLINE `90 70 10 42 40 41 43`.
-- INSERT `2 10 41 50 8`: `entmake` chèn khối có trong bản vẽ hoặc thư viện khối; `entmod` đổi được lớp / màu. `entmakex` trả về tên đối tượng mới.
+- INSERT `2 10 41 50 8 66`: `entmake` chèn khối có trong bản vẽ hoặc thư viện khối (kèm `ATTRIB` … `SEQEND`); `entmod` đổi được lớp / màu. `entmakex` trả về tên đối tượng mới.
+- HATCH `2 41 52 91 92 72 10 11`, DIMENSION `10 13 14 70`, BLOCK `2 10` … ENDBLK, ATTDEF `1 2 3 10 40`. Nhóm `-3` (XDATA) đọc / ghi được.
 - DIMENSION `1 42 13 14` (chỉ đọc).
 
 ### Tệp, thư mục hỗ trợ
@@ -93,10 +94,44 @@ Tệp do LISP ghi (`open … "w"`) nằm trong thư mục hỗ trợ của DVDCA
 
 `grread` (phím, di chuột, bấm chuột) `grdraw grvecs grclear grtext redraw` `tblnext tblobjname regapp xdroom xdsize namedobjdict dictsearch dictnext dictadd dictremove dictrename` `osnap trans textbox ssnamex ssgetfirst layoutlist cvunit ver getcfg setcfg vl-registry-read vl-registry-write vl-registry-delete vl-registry-descendents` `vl-string-position vl-string-translate vl-string-elt vl-string-mismatch vl-symbol-value vl-symbolp vl-list* vl-bb-ref vl-bb-set vl-doc-ref vl-doc-set vl-propagate vl-exit-with-value vl-exit-with-error` `acad_colordlg acad_truecolordlg` `acet-error-init acet-error-restore acet-sysvar-set acet-sysvar-restore acet-ui-progress acet-str-replace acet-geom-midpoint acet-list-remove-duplicates` (vài hàm Express Tools hay dùng) `snvalid menucmd setview startapp help`.
 
+### Tương thích với tiện ích viết cho AutoCAD (v6f)
+
+- **`(command …)`**:
+  - Tuỳ chọn viết kiểu quốc tế `"_W"`, `"_J"`, `"_E"`, `"_END"`… và tên tuỳ chọn tiếng Anh đầy đủ (`"_Width"`, `"_Justify"`) đều được hiểu.
+  - Lệnh có hộp thoại chạy bản dòng lệnh như AutoCAD: `HATCH` (tên mẫu, tỉ lệ, góc, chọn đối tượng), `-HATCH`, `-INSERT` (`"_S"`, `"_R"`, `"*TÊN"`), `-ARRAY` (mảng cổ điển), `-ATTDEF` / `ATTDEF`, `-TABLE` / `TABLE`, `-WBLOCK`, `LEADER` / `QLEADER` / `MLEADER` (chữ nhập từng dòng), `TEXT` (một dòng rồi kết thúc), `MTEXT` (các dòng, `""` = xong), `CHANGE` (điểm thay đổi / `"_P"` thuộc tính), `POINT` (một điểm), `BREAK` (tên đối tượng + `"_F"`).
+  - Chọn bằng tên đối tượng / tập chọn rồi `""` kết thúc chọn như AutoCAD.
+- **Biến hệ thống** (`getvar` / `setvar`): đủ các biến tiện ích hay đọc, đúng kiểu dữ liệu:
+  - `DIMSCALE DIMTXT DIMASZ DIMSTYLE DIMDEC DIMLFAC CANNOSCALE CANNOSCALEVALUE`;
+  - `CDATE DATE TDCREATE TDUPDATE MILLISECS CTAB DWGTITLED`;
+  - `ATTREQ ATTDIA FILEDIA CMDDIA EXPERT PICKADD PLINEWID LUPREC AUNITS AUPREC`;
+  - `USERI1…5 USERR1…5 USERS1…5`;
+  - biến điểm trả danh sách: `EXTMIN EXTMAX LIMMIN LIMMAX INSBASE VIEWCTR UCSORG UCSXDIR UCSYDIR VIEWDIR SCREENSIZE VSMIN VSMAX`;
+  - `ACADVER` = `"25.0s (DVDCAD)"`, `PRODUCT` = `"DVDCAD"`, `LOCALE`, `SYSCODEPAGE`, `ACADPREFIX`, `TEMPPREFIX`…
+- **XDATA**:
+  - `(regapp "APP")`, `(entget e '("APP"))` có nhóm `-3`, `(entmod …)` / `(entmake …)` ghi `-3`; `vla-SetXData` / `vla-GetXData`.
+  - Lưu ra DXF đúng chuẩn AutoCAD (1001 / 1000 / 1040 / 1070 / 1010…) và DWG (EED). Mở lại bằng DVDCAD còn nguyên.
+- **`ssget`**:
+  - Bộ lọc logic `(-4 . "<OR")` … `(-4 . "OR>")`, `<AND`, `<NOT`, `<XOR`; so sánh `(-4 . ">")` `"<"` `">="` `"<="` `"!="` `"*"` cho số, chuỗi, điểm.
+  - Lọc theo XDATA `(-3 ("APP"))`.
+  - `"_WP"` / `"_CP"` / `"_F"` với danh sách điểm; `":L"` bỏ đối tượng trên lớp khoá.
+- **`entmake`**:
+  - `HATCH` (biên đường thẳng / đa tuyến), `DIMENSION` (thẳng, thẳng hàng);
+  - định nghĩa khối `BLOCK` … `ATTDEF` … `ENDBLK`;
+  - `INSERT` có `(66 . 1)` rồi `ATTRIB` … `SEQEND` (gán giá trị thuộc tính).
+- **ActiveX bổ sung**:
+  - hằng số `vlax-vbInteger` / `vlax-vbDouble` / `vlax-vbString` / `vlax-vbObject` / `vlax-vbVariant`…, `acRed`…`acByLayer`, `acSelectionSetAll`…, `acHatchPatternTypePreDefined`, `acAlignment…`, `acLnWt…`;
+  - `InsertBlock`, `GetAttributes` / `GetConstantAttributes` (thuộc tính: `TagString`, `TextString` đọc / ghi), `GetDynamicBlockProperties` (trạng thái hiển thị), `EffectiveName`, `Explode`;
+  - `AddHatch` + `AppendOuterLoop` / `AppendInnerLoop` / `Evaluate`, `PatternScale` / `PatternAngle`;
+  - `AddDimAligned`, `AddDimRotated`, `AddTable` (+ `SetText` / `GetText`, `Rows`, `Columns`), `AddSpline`, `AddMLeader`, `AddRegion`, `AddXline`, `AddSolid`;
+  - `SelectionSets`: `Add`, `Item`, `Select` (có bộ lọc), `SelectOnScreen`, `SelectByPolygon`, `AddItems`, `Erase`, `Delete`, `vlax-for`; `ActiveSelectionSet`;
+  - `TrueColor` (`SetRGB`, `ColorIndex`, `Red/Green/Blue`), `Preferences.Files.SupportPath`, `TextStyles` (`FontFile`, `Height`), `Layouts` (`Block`), `ZoomExtents` / `ZoomWindow`.
+- **Hàm thêm**: `vl-sort-i vl-member-if-not cddddr nentselp initdia acad_helpdlg vlax-tmatrix vlax-map-collection vlax-add-cmd layerstate-getnames / save / restore / delete / has / rename / getlayers`.
+
 Chưa làm được như AutoCAD:
 - Reactor (`vlr-…`): tạo được nhưng DVDCAD chưa phát sinh sự kiện (thông báo một lần).
 - `trans` trả nguyên điểm (DVDCAD vẽ trên một hệ toạ độ WCS); `osnap` trả nguyên điểm.
-- `entmake` cho HATCH, DIMENSION, định nghĩa khối (`BLOCK` … `ENDBLK`) chưa có; dùng `(command "_.-BLOCK" …)` / `(command "_.HATCH" …)`.
+- COM ngoài AutoCAD (`vlax-create-object "Excel.Application"`, `Scripting.FileSystemObject`), DOSLib (`dos_…`), OpenDCL (`dcl_…`) chưa có.
+- XDATA của khối chèn (INSERT) đọc từ tệp chưa giữ lại; XDATA trên đường, tròn, chữ, đa tuyến… thì giữ.
 - Registry, `getcfg` lưu trong máy (trình duyệt), không phải registry Windows.
 
 Ví dụ:

@@ -1146,6 +1146,11 @@ function parseDXF(text){
     if(i<pairs.length){ let j=i+1; while(j<pairs.length && !(pairs[j].code===0 && pairs[j].value.trim()==='ENDTAB')){ if(pairs[j].code===0 && pairs[j].value.trim()==='STYLE'){ let k=j+1; const g=[]; while(k<pairs.length && pairs[k].code!==0){ g.push(pairs[k]); k++; } const nm=str(g,2); if(nm){ const sx=shxOfStyle(str(g,3),str(g,4)); styleMap[nm]={ff:ttfFamily(str(g,3)), wf:num(g,41)||1, shx:sx.f, big:sx.b}; } j=k; } else j++; } } }
   // kiểu nét (6), tỉ lệ nét riêng (48), bề rộng nét (370: >0 = 1/100mm, -2 = ByBlock)
   function entExtra(e,g,rt){
+    // XDATA của ứng dụng khác (LISP / add-in): giữ lại để (entget e '("APP")) đọc được và lưu ra như cũ
+    { let xd=null; for(let q=0;q<g.length;q++){ if(g[q].code!==1001) continue; const app=String(g[q].value).trim(); if(/^(DVDCAD|AcDb|AcCm|ACAD|AcadAnnotative|AcadAnnoPO)/i.test(app)) continue; const items=[];
+        for(let r=q+1;r<g.length&&g[r].code!==1001;r++){ const c=g[r].code; if(c>=1010&&c<=1013){ const y=g[r+1]&&g[r+1].code===c+10?parseFloat(g[r+1].value):0, z=g[r+2]&&g[r+2].code===c+20?parseFloat(g[r+2].value):0; items.push([c,[parseFloat(g[r].value),y,z]]); continue; }
+          if(c>=1020&&c<=1033) continue; if((c>=1040&&c<=1042)) items.push([c,parseFloat(g[r].value)]); else if(c===1070||c===1071) items.push([c,parseInt(g[r].value,10)]); else if(c>=1000&&c<1072) items.push([c,String(g[r].value)]); }
+        (xd||(xd=[])).push([app,items]); } if(xd) e.xd=xd; }
     if(num(g,67)===1){ e._ps=1; const h=str(g,5); if(h) e._h=h.toUpperCase(); }   // thuộc không gian giấy (layout); handle để tìm đường cắt khung nhìn
     { const tc=num(g,420); if(tc!=null&&isFinite(tc)&&e.rgb==null) e.rgb=tc; }   // màu RGB (DXF R2004+)
     if(num(g,60)===1) e.inv=1;   // cờ ẩn (nét ngoài trạng thái hiển thị của khối động)
@@ -1586,7 +1591,7 @@ function explodeInto(list,blocks,M,out,depth,ctxAci,ix){
       const t=transformPrim(e,M);
       if(t){ const col=(e.rgb!=null)?rgbHex(e.rgb):resolveColor(e.aci,effL,ctxAci); const x=Object.assign({},t,{col});
         if(effL!==t.layer) x.layer=effL;
-        if(e.lw>0) x.lw=e.lw; else if(e.lwb&&ix&&ix.lw>0) x.lw=ix.lw; if(e.tp>0) x.tp=e.tp;
+        if(e.lw>0) x.lw=e.lw; else if(e.lwb&&ix&&ix.lw>0) x.lw=ix.lw; if(e.tp>0) x.tp=e.tp; if(e.xd&&depth===0) x.xd=e.xd;   /* XDATA của ứng dụng (LISP) */
         if(e.lt==='BYBLOCK'){ if(ix&&ix.lt&&ix.lt!=='CONTINUOUS') x.lt=ix.lt; else if(ix) x.lt='CONTINUOUS'; }
         else if(e.lt) x.lt=e.lt;
         const ls=(e.lts||1)*(ix&&e.lt==='BYBLOCK'?(ix.lts||1):1); if(Math.abs(ls-1)>1e-9) x.lts=ls;
@@ -4670,6 +4675,7 @@ function dvdDwgPrivate(buf){
 function dvdApplyX(c, items){
   try{ let js='', tag='', s3='', n=0, first=true;
     for(const [code,v0] of items){ const v=String(v0);
+      if(code===1000&&v.startsWith('XD:')){ try{ const ux=JSON.parse(v.slice(3)); c.xd=ux.map(([a,its])=>{ const o=[]; for(let i=0;i<its.length;i++){ const cc=+its[i][0], vv=its[i][1]; if(cc>=1010&&cc<=1013){ const y=its[i+1]&&+its[i+1][0]===cc+10?parseFloat(its[++i][1]):0, z=its[i+1]&&+its[i+1][0]===cc+20?parseFloat(its[++i][1]):0; o.push([cc,[parseFloat(vv),y,z]]); } else if(cc>=1040&&cc<=1042) o.push([cc,parseFloat(vv)]); else if(cc===1070||cc===1071) o.push([cc,parseInt(vv,10)]); else o.push([cc,String(vv)]); } return [a,o]; }); }catch(_){} continue; }
       if(code===1000){ if(tag==='S3D') s3+=v; else if(v.startsWith('P:')) js=v.slice(2); else if(v.startsWith('P+')) js+=v.slice(2); else if(first){ tag=v.trim(); if(tag.startsWith('RGN')){ c.rgn=1; if(tag.length>4) c._rgnG=tag.slice(4); } } first=false; }
       else if(code===1071||code===1070){ n=parseInt(v,10)||0; first=false; } }
     if(js){ try{ c._x=JSON.parse(js); }catch(_){} }
@@ -6222,6 +6228,7 @@ if('serviceWorker' in navigator && !window.dvdDesktop){
 <script src="./dvd-acad-x25.js"></script>
 <script src="./dvd-lisp.js"></script>
 <script src="./dvd-lisp2.js"></script>
+<script src="./dvd-lisp3.js"></script>
 <script src="./dvd-addins.js"></script>
 <script src="./dvd-acad-pgp.js"></script>
 <script src="./dvd-acad-cmdline.js"></script>

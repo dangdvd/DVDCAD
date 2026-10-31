@@ -27,6 +27,20 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v6f) — tiện ích LISP chạy đúng như trên AutoCAD
+- **Tuỳ chọn kiểu quốc tế** `_W`, `_J`, `_E`, `_END`… (dấu gạch dưới trước tuỳ chọn) và tên tuỳ chọn tiếng Anh đầy đủ (`Width`, `Justify`, `Rectangular`…) dùng được ở mọi lời nhắc, như AutoCAD. Script `.scr` và LISP viết cho AutoCAD bản tiếng Anh chạy được nguyên văn.
+- **Lệnh bản dòng lệnh** (cho script / LISP), hỏi lần lượt như AutoCAD, không mở hộp thoại:
+  - `-HATCH`: điểm bên trong / `S` chọn đối tượng / `P` mẫu (tên, tỉ lệ, góc) / `CO` màu / `LA` lớp; Enter = tô.
+  - `-ARRAY`: mảng cổ điển (bản sao rời): `R` hàng, cột, khoảng cách hàng, cột; `P` tâm, số phần tử, góc điền, có xoay không.
+  - `-ATTDEF`: chế độ (Ẩn / Cố định / Kiểm tra / Đặt sẵn), tag, lời nhắc, mặc định, điểm (Canh lề / Kiểu chữ), cao chữ, góc.
+  - `-TABLE`: số cột, số hàng dữ liệu, điểm chèn (`W` rộng cột, `H` cao hàng).
+  - `-WBLOCK`: tên tệp (`.dwg` ghi DWG 2018, còn lại DXF), rồi tên khối / `=` / `*` (cả bản vẽ) / Enter (chọn đối tượng).
+  - `-INSERT`: `S` tỉ lệ, `R` góc ở lời nhắc điểm chèn (không hỏi lại); `*TÊN` chèn rồi phá khối.
+- **`LEADER`** như AutoCAD: bấm các điểm, Enter, rồi gõ chữ từng dòng (dòng trống = xong). `MLEADER` vẫn là ghi chú dẫn nhiều dòng.
+- **`CHANGE`** tách khỏi CHPROP như AutoCAD: điểm thay đổi (dời đầu đường thẳng gần nhất, đổi bán kính tròn, vị trí / kiểu / cao / góc / nội dung chữ) hoặc `P` để đổi thuộc tính.
+- **XDATA** (dữ liệu riêng của tiện ích gắn vào đối tượng) đọc / ghi trong DXF và DWG như AutoCAD.
+- AutoLISP: đủ biến hệ thống tiện ích hay đọc (`DIMSCALE`, `CDATE`, `CTAB`, `USERI1`…), `ssget` có bộ lọc logic, `entmake` tạo hatch / kích thước / định nghĩa khối / thuộc tính, ActiveX `InsertBlock`, `GetAttributes`, `AddHatch`, `AddDimAligned`, `AddTable`, `SelectionSets`, `TrueColor`… Chi tiết: `ADDIN-API.md`.
+
 ## Bổ sung như AutoCAD 2027 (v6e) — chạy bộ tiện ích LISP của AutoCAD
 - **Nạp cả bộ tiện ích**: `APPLOAD` › **Nạp cả thư mục…** (chọn thư mục cài bộ LISP) hoặc **Nạp file…** chọn gói **.zip** / nhiều tệp cùng lúc.
   - Mọi tệp `.lsp`, `.dcl`, `.lin`, `.pat`, `.csv`, `.mnl`… được chép vào **thư mục hỗ trợ** của DVDCAD (như Support File Search Path của AutoCAD). Lệnh `SUPPORTFILES` để xem / xoá.
@@ -1369,7 +1383,7 @@ Trên điện thoại vẫn dùng nút Xuất như cũ (PDF xuất ra cũng là 
 - Mặt lưới RULESURF / TABSURF / REVSURF / EDGESURF / PLANESURF là khối lưới tam giác: lưu DXF thành 3DFACE và UNION / SUBTRACT không dùng cho mặt hở. Đường 2D của DVDCAD luôn nằm trên mặt bằng XY (cao độ theo ELEV), nên RULESURF / EDGESURF giữa các đường 2D ra mặt phẳng.
 - POLYSOLID vẽ theo điểm có tuỳ chọn **Cung** (cung tiếp tuyến đoạn trước, hoặc qua Điểm thứ hai) và **Đường thẳng** để quay lại đoạn thẳng, như AutoCAD.
 - Giao diện English dịch từ chuỗi tiếng Việt gốc khi hiển thị. Một vài câu ghép có thể đọc chưa trơn như AutoCAD bản tiếng Anh. Chữ do lệnh ghi vào bản vẽ (trường ngày tháng, nhãn ký hiệu, khung tên mẫu) vẫn là tiếng Việt.
-- AutoLISP của DVDCAD chạy mã nguồn `.lsp` kèm hộp thoại `.dcl` và các hàm `vla-` / `vlax-` / `vlax-curve-` thường dùng. Không chạy được `.fas` / `.vlx` (đã biên dịch, mã hoá) và `.dll` / `.arx` (chương trình chạy trong AutoCAD). Reactor chưa phát sinh sự kiện; `entmake` HATCH / DIMENSION / định nghĩa khối chưa có. Add-in và thư mục hỗ trợ lưu trên từng máy (trong trình duyệt), không đi kèm bản vẽ hay Google Drive.
+- AutoLISP của DVDCAD chạy mã nguồn `.lsp` kèm hộp thoại `.dcl` và các hàm `vla-` / `vlax-` / `vlax-curve-` thường dùng. Không chạy được `.fas` / `.vlx` (đã biên dịch, mã hoá) và `.dll` / `.arx` (chương trình chạy trong AutoCAD). Reactor chưa phát sinh sự kiện; chưa có COM ngoài AutoCAD (Excel, FileSystemObject), DOSLib, OpenDCL. Add-in và thư mục hỗ trợ lưu trên từng máy (trong trình duyệt), không đi kèm bản vẽ hay Google Drive.
 - Độ trong suốt đặt cho từng đối tượng. Độ trong suốt theo lớp: cột Độ trong suốt trong bảng Lớp, `-LAYER` › Trong suốt; đọc / ghi DXF và DWG như AutoCAD (XDATA AcCmTransparency). THICKEN chỉ làm dày được mặt phẳng; mặt cong (REVSURF…) chưa làm dày được. 3DFACE nằm ở cao độ ELEV (chưa nhập Z riêng từng đỉnh).
 - Lớp đóng băng riêng khung nhìn (VPLAYER, LAYVPI) và đường cắt khung nhìn (VPCLIP) ghi vào DXF / DWG. ETRANSMIT / ARCHIVE đóng gói bản vẽ DWG (chọn phiên bản 2018 → 2000) hoặc DXF, nén .zip. MKLTYPE chỉ tạo kiểu nét đơn giản (nét, khoảng hở, chấm), chưa có chữ / hình trong nét.
 - XCLIP: khối có đường cắt đảo ngược khi lưu DXF được ghi thành các đối tượng rời (phần nhìn thấy), không còn là khối có đường cắt, vì AutoCAD không nhận đường cắt đảo ngược do phần mềm khác tạo. Lưu DXF R12 chỉ ghi phần nhìn thấy. Trên iPhone / iPad (không giữ nhóm khối để tiết kiệm bộ nhớ), phần ngoài đường cắt bị bỏ hẳn khi mở file. Chưa có Clipdepth (cắt theo chiều sâu 3D).
