@@ -6,6 +6,23 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6k: kết xuất, đèn IES, vật liệu, cảnh quay, ANIPATH, tập bản vẽ
+- `dvd-acad-x30.js`:
+  - Kết xuất: `renderNow` đặt kiểu Thực tế, áp môi trường, tăng `renderer.setPixelRatio` theo mức (1× – 3×), `canvas.toDataURL`.
+  - Cửa sổ kết xuất: lịch sử 8 ảnh, cắt vùng bằng canvas.
+  - Môi trường / phơi sáng: `renderer.toneMappingExposure = 2^EV`, `THREE.Fog` theo % khoảng nhìn, nền `scene.background` (màu / CanvasTexture chuyển màu); lưu `dvd:render`.
+  - Đèn là `POINT` có `light` (thêm `tgt`, `free`, `web`, `ies`).
+  - `parseIES`: LM-63, TILT NONE / INCLUDE, cường độ mặt phẳng ngang đầu, góc chùm = 2 × góc lớn nhất còn ≥ 50% cực đại.
+  - Vật liệu tự tạo trong `dvd:mats` (nhập vào `A.MATS`); vật liệu theo lớp `dvd:matlayer` (khối nhận có `matL`).
+  - Ánh xạ vân: `A.uvMap(T, g, ts, e)` với `e.mapk` (B / P / C / S) và `e.mapsc`. DXF S3D ghi `mapk`, `mapsc`, `matL`.
+  - Cảnh quay: `dvd:shots:<tên bản vẽ>`. Cảnh 2D = tâm + tỉ lệ (`view`); cảnh 3D = az / el / dist / target. Chuyển cảnh nội suy (tỉ lệ theo log), easing.
+  - ANIPATH: `curvePts3` → điểm theo chiều dài, `V.camTo`; `canvas.captureStream` + `MediaRecorder` (WebM VP9 / VP8).
+- `dvd-acad-x31.js`:
+  - Tập bản vẽ trong `dvd:sheetsets` / `dvd:ssCur`.
+  - Trường `{ k: 'ss', p, lay }` (bọc `A.fieldValue`; số / tên tờ theo layout chứa trường). Cập nhật tại chỗ ở Model và mọi `paperPrims`.
+  - Bảng danh mục dùng `A.makeTable`; tệp `.dvdsst` = JSON.
+- `dvd-acad-3d.js`: dùng `A.uvMap` khi khối có `mapk`, tỉ lệ vân theo `mapsc`.
+
 ## v6j: PDF / DWFx có lớp, nền PDF / DWF, đám mây điểm
 - Xuất PDF / DWFx có lớp:
   - `dvd-acad-x24.js` `PdfCtx.setOC(lớp)`: `/OC /OCn BDC … EMC`. Đóng trước `Q` nếu `q` mở trước BDC. Đối tượng `/OCG`, `/OCProperties` trong Catalog, `/Properties` trong tài nguyên trang.

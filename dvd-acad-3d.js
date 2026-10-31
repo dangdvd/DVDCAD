@@ -369,7 +369,7 @@
       for(const { e, m, iso: isoP, parts } of meshes){
         let g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(m.p, 3)); g.setIndex(m.i);
         if(m.flat){ g = g.toNonIndexed(); } g.computeVertexNormals();
-        if(e.mat && MATS[e.mat] && MATS[e.mat].tex) boxUV(T, g, MATS[e.mat].ts / U);
+        if(e.mat && MATS[e.mat] && MATS[e.mat].tex){ if(e.mapk && A.uvMap) A.uvMap(T, g, MATS[e.mat].ts / U * (e.mapsc || 1), e); else boxUV(T, g, MATS[e.mat].ts / U * (e.mapsc || 1)); }
         const mesh = new T.Mesh(g, matOf(e.mat && MATS[e.mat] ? MATS[e.mat].c : e.col)); mesh.castShadow = true; mesh.receiveShadow = true; root.add(mesh);
         const eg = new T.EdgesGeometry(g, 25); const ed = new T.LineSegments(eg, edgeMat); root.add(ed);
         let iso = null; const IP = isoP || isoLines(e); if(IP.length){ const ig = new T.BufferGeometry(); ig.setAttribute('position', new T.Float32BufferAttribute(IP, 3)); iso = new T.LineSegments(ig, wireMat); iso.visible = false; root.add(iso); }
@@ -754,7 +754,7 @@
     for(const e of list){ const m = meshOf(e); if(!m) continue; const ly = String(e.layer || '0').replace(/[^\x20-\x7e]/g, '_');
       let aci = 256; try{ if(!(e.bl || String(e.col || '').toLowerCase() === String(A.layerHex(e.layer || '0')).toLowerCase())) aci = A.aciNear(e.col || '#ffffff'); }catch(_){}
       const nf = m.i.length / 3; let xd = null;
-      if(e.type === 'SOLID3D'){ const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
+      if(e.type === 'SOLID3D'){ const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms', 'mapk', 'mapsc', 'matL']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
         let js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); if(js.length > 15000){ delete d.ms; js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); } if(js.length > 15000) js = JSON.stringify({ k: 'mesh', mat: e.mat, srf: e.srf });
         xd = []; for(let k = 0; k < js.length; k += 240) xd.push(js.slice(k, k + 240)); }
       for(let t = 0; t < m.i.length; t += 3){ const q = [m.i[t], m.i[t + 1], m.i[t + 2], m.i[t + 2]]; P(0, '3DFACE'); P(8, ly); if(aci !== 256) P(62, aci); q.forEach((ix, j) => { P(10 + j, m.p[ix * 3]); P(20 + j, m.p[ix * 3 + 1]); P(30 + j, m.p[ix * 3 + 2]); });
@@ -782,7 +782,7 @@
       if(def && def.k && def.k !== 'mesh'){ const c = Object.assign({ type: 'SOLID3D' }, def); const m = meshOf(c);
         if(m && m.i.length / 3 === n){ const a = m.i[0] * 3; const z = (e.zs || [])[0] || 0; const sz = Math.max(1, Math.abs(m.p[a]) + Math.abs(m.p[a + 1]) + Math.abs(m.p[a + 2])); if(Math.abs(m.p[a] - e.pts[0].x) + Math.abs(m.p[a + 1] - e.pts[0].y) + Math.abs(m.p[a + 2] - z) < sz * 1e-6 + 1e-6) sol = c; } }
       if(!sol){ const P = [], I = []; for(const q of F){ const m = meshOf(q); const b = P.length / 3; for(const v of m.p) P.push(v); for(const t of m.i) I.push(t + b); } sol = meshEnt(P, I); if(sol && def && def.mat) sol.mat = def.mat; }
-      if(sol && def && sol.k === 'mesh'){ if(def.srf) sol.srf = 1; if(def.ms && A.meshApplyMs){ try{ A.meshApplyMs(sol, def.ms); }catch(_){} } }
+      if(sol && def && sol.k === 'mesh'){ if(def.srf) sol.srf = 1; for(const k of ['mapk', 'mapsc', 'matL']) if(def[k] != null) sol[k] = def[k]; if(def.ms && A.meshApplyMs){ try{ A.meshApplyMs(sol, def.ms); }catch(_){} } }
       if(!sol){ for(const q of F) out.push(q); i += n - 1; continue; }
       sol.layer = e.layer; if(e.aci !== undefined) sol.aci = e.aci; for(const k of ['lt', 'lw', 'lts']) if(e[k] != null) sol[k] = e[k];
       out.push(sol); i += n - 1;
