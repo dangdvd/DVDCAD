@@ -415,7 +415,7 @@
     MLEADEREDIT: '<path class="a" d="M3 20l8-8h10M4 6l7 6"/><path class="fa" d="M3 20l1-4 3 3zM4 6l4 1-2 2.5z"/><path d="M13 8h8"/><path class="g" d="M17 15v6M14 18h6" stroke-width="1.8"/>',
     MLEADERALIGN: '<path class="a" d="M3 6l6 2h5M3 13l6 1h5M3 20l6-2h5"/><path class="y" d="M14 3v19" stroke-dasharray="2 1.5"/><path d="M16 6h5M16 13h5M16 19h5"/>',
     MLEADERCOLLECT: '<path class="a" d="M3 5l9 7M3 19l9-7M3 12h9h3"/><path class="fa" d="M3 5l3.6 1.4-1.6 2zM3 19l1.6-3.4 2 1.6z"/><rect class="fd" x="15" y="8" width="7" height="8"/><path d="M15 10.5h7M15 13.5h7"/>',
-    TRACE: '<path class="a" d="M3 18l7-9 4 3 7-6" stroke-width="3.6" stroke-linejoin="miter"/><path d="M3 18l7-9 4 3 7-6" stroke-width=".8" opacity=".7"/>',
+    TRACEWIDE: '<path class="a" d="M3 18l7-9 4 3 7-6" stroke-width="3.6" stroke-linejoin="miter"/><path d="M3 18l7-9 4 3 7-6" stroke-width=".8" opacity=".7"/>',
     '3DSCALE': '<path class="fd" d="M3 13l5-3 6 3-5 3z"/><path d="M3 13l5-3 6 3-5 3zM3 13v5l6 3v-5M9 21l5-3v-5"/><path class="a" d="M9 7l5-3 8 4-5 3zM9 7v8M22 8v9l-5 3"/>' + AR(12, 12, 20, 4, 'y'),
     FILTER: '<path class="fd" d="M3 4h18l-7 8v7l-4 2v-9z"/><path d="M3 4h18l-7 8v7l-4 2v-9z"/><path class="a" d="M6 7h12"/>',
     PASTEBLOCK: '<rect class="fd" x="4" y="4" width="13" height="17" rx="1"/><rect x="4" y="4" width="13" height="17" rx="1"/><path d="M8 4V2.5h5V4"/><rect class="fa3" x="11" y="11" width="10" height="10"/><rect class="a" x="11" y="11" width="10" height="10"/><path class="a" d="M11 11l10 10M21 11L11 21" opacity=".6"/>',
@@ -717,5 +717,20 @@
     I.MARKUPIMPORT = MK + '<path class="y" d="M2 21h6M5.5 18.5L8 21l-2.5 2.5"/>'; I.MARKUPASSIST = MK + BSTAR; I.MARKUPCLOSE = MK + BX; I.OPENDWFMARKUP = MK + BLINK;
     I.COMPAREEXPORT = (has('COMPARE') || MK) + '<path class="y" d="M15 21h7M19.5 18.5L22 21l-2.5 2.5"/>'; I.COMPAREIMPORT = (has('COMPARE') || MK) + '<path class="y" d="M2 21h6M5.5 18.5L8 21l-2.5 2.5"/>';
     I.DBCONNECT = '<ellipse cx="10" cy="5" rx="7" ry="2.5"/><path d="M3 5v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5M3 11c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/>' + BLINK; I.DBC = I.DBCONNECT; }
+  // v6o: vết can, Design Feed, chia sẻ, xuất 3D, hình chiếu
+  { const has = k => I[k] || '';
+    const TR = '<rect x="3" y="4" width="14" height="16" rx="1"/><rect class="fa" x="7" y="3" width="14" height="16" rx="1" opacity=".55"/><path class="r" d="M10 9h8M10 12h6M10 15h7" stroke-width="1.4"/>';
+    I.TRACE = TR; I['-TRACE'] = TR; I.TRACEFRONT = TR + '<path class="y" d="M4 22h6M7 19v6"/>'; I.TRACEBACK = TR + '<path class="y" d="M3 22h7"/>'; I.TRACECLOSE = TR + BX;
+    const FD = '<path d="M3 5h18v11H9l-4 4v-4H3z"/><path class="a" d="M7 9h10M7 12h7"/>';
+    I.DESIGNFEEDOPEN = FD; I.DESIGNFEED = FD; I.DESIGNFEEDCLOSE = FD + BX;
+    I.SHAREVIEW = '<rect x="3" y="5" width="13" height="10" rx="1"/><circle class="fy" cx="19" cy="6" r="2"/><circle class="fy" cx="19" cy="18" r="2"/><path class="a" d="M16 10l2-3M16 12l2 4"/>';
+    const UP = '<path class="y" d="M12 21v-9M8.5 15.5L12 12l3.5 3.5"/>';
+    I.PUSHTODOCS = '<path d="M5 3h9l5 5v13H5z"/><path class="a" d="M14 3v5h5"/><text x="12" y="13" font-size="5" text-anchor="middle" stroke="none" fill="currentColor" font-family="Arial" font-weight="700">PDF</text>' + UP;
+    I.PUSHTOWEB = '<circle cx="12" cy="10" r="7"/><path class="a" d="M5 10h14M12 3c3 3 3 11 0 14M12 3c-3 3-3 11 0 14"/>' + '<path class="y" d="M17 21h6M20.5 18.5L23 21l-2.5 2.5"/>';
+    I.UPLOADTOCLOUD = '<path d="M7 17h11a4 4 0 0 0 0-8 6 6 0 0 0-11.5-1.5A4.5 4.5 0 0 0 7 17z"/>' + UP;
+    I['3DDWF'] = '<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path class="a" d="M4 8l8 4 8-4M12 12v8"/><path class="y" d="M15 21h7M19.5 18.5L22 21l-2.5 2.5"/>'; I['3DDWFPUBLISH'] = I['3DDWF'];
+    const VW = '<rect x="3" y="4" width="18" height="14" rx="1"/><path class="a" d="M6 14h12M6 14V8h5v6"/>';
+    I.VIEWCOMPONENT = VW + '<circle class="fy" cx="16" cy="9" r="2.5"/>'; I.VIEWSYMBOLSKETCH = '<path class="r" d="M3 7h8v10h10" stroke-dasharray="4 1.5 1 1.5" stroke-width="1.6"/><path class="y" d="M14 3l5 5-8 8H6v-5z"/>';
+    I.VIEWSKETCHCLOSE = I.VIEWSYMBOLSKETCH + BOK; I.VIEWSETPROJ = '<path d="M3 6h7l2 2h9v11H3z"/>' + BGEAR; I.TRACEWIDE = I.TRACEWIDE || has('PLINE'); }
   window.DVDIcons = I;
 })();

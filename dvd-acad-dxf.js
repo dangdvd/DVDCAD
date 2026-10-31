@@ -37,6 +37,7 @@
     try{ const im = {}; for(const e of ents) if(e.type === 'IMAGE' && e.img && !im[e.img] && A.imgDataURL){ const u = A.imgDataURL(e.img); if(u) im[e.img] = u; } if(Object.keys(im).length) o.imgs = im; }catch(_){}   // dữ liệu ảnh nhúng (IMAGEATTACH, GEOMAPIMAGE)   // vị trí địa lý (cả hệ toạ độ, điểm thiết kế, bản đồ nền)
     try{ const D = A.dynDefs ? A.dynDefs() : null; if(D){ const names = new Set(); for(const e of ents){ if(e.blk) names.add(e.blk); if(e.bm && e.bm.name) names.add(e.bm.name); } const dd = {}; for(const n of names) if(D[n]) dd[n] = D[n]; if(Object.keys(dd).length) o.dyn = dd; } }catch(_){}
     try{ const V = A.dviewsGet ? A.dviewsGet() : null; if(V && ents.some(e => e.dvw != null)) o.dvw = V; }catch(_){}
+    if(full) try{ const X = A.docExt || {}, dx = {}; for(const k of Object.keys(X)){ const v = X[k].get(); if(v != null) dx[k] = v; } if(Object.keys(dx).length) o.dx = dx; }catch(_){}   // dữ liệu theo bản vẽ của các mô-đun (vết can TRACE, Design Feed…)
     if(full) try{ const U = A.pageSetups ? A.pageSetups() : null; if(U && Object.keys(U).length) o.psu = U; }catch(_){}   // thiết lập trang có tên (PAGESETUP / PSETUPIN)   // thông số hình chiếu (Model Documentation)
     return Object.keys(o).length ? JSON.stringify(o) : null;
   }
@@ -47,6 +48,7 @@
         if(o.lay && o.lay.length && A.seedLayoutDefs) A.seedLayoutDefs(o.lay);
         if(o.geo && A.geoSet) A._geoFromFile = o.geo;
         if(o.dvw) A._dvwFromFile = o.dvw;
+        A._dxFile = o.dx && typeof o.dx === 'object' ? o.dx : {};
         if(o.psu && typeof o.psu === 'object') try{ localStorage.setItem('dvd:psetups::' + nm, JSON.stringify(o.psu)); }catch(_){}
         if(o.imgs && A.imgPut) for(const [id, u] of Object.entries(o.imgs)) fetch(u).then(r => r.blob()).then(b => A.imgPut(id, b)).then(() => { try{ draw(); }catch(_){} }).catch(() => {}); } }catch(err){ console.warn(err); }
       // khung đa tuyến mang thông số ảnh (imgx) → ảnh IMAGE như trước khi lưu
@@ -58,7 +60,7 @@
       if(prev) prev(); }; })(A.onLoad);
   function writeR2000(ents, opt){
     const full = !!(opt && opt.layouts) || (typeof modelEntities !== 'undefined' && ents === modelEntities);   // lưu cả bản vẽ → ghi kèm các layout giấy
-    ents = ents.filter(e => e && !e.xr && (!e.vh || e.dvs || e.ull));   // nét ẩn của khối động (trạng thái hiển thị khác) vẫn ghi — cờ ẩn 60
+    ents = ents.filter(e => e && !e.xr && !e.trc && (!e.vh || e.dvs || e.ull));   // trc: nét của vết can (TRACE) lưu riêng trong DVDCAD_DATA như AutoCAD   // nét ẩn của khối động (trạng thái hiển thị khác) vẫn ghi — cờ ẩn 60
     ents = ents.map((e, i) => [e, i]).sort((a, b) => ((a[0].dord | 0) - (b[0].dord | 0)) || (a[1] - b[1])).map(x => x[0]);   // thứ tự vẽ (DRAWORDER) = thứ tự trong file
     const needTC = ents.some(e => e.col && !e.bl && !isAciColor(e.col) && String(e.col).toLowerCase() !== String(A.layerHex(e.layer || '0')).toLowerCase()) || [...new Set(ents.map(e => e.layer || '0'))].some(l => !isAciColor(A.layerHex(l)));
     const VR = ACV[A.dxfVer] ? A.dxfVer : (A.dxfVer === 'AUTO' && needTC) ? 'R2004' : A.dxfVer === 'AUTO' ? 'R2000' : 'R2018';
@@ -376,7 +378,7 @@
     // khối 3D → mặt 3DFACE + XDATA thông số (mở lại trong DVDCAD vẫn là khối)
     function solid3d(e, head){
       const m = A.meshOf ? A.meshOf(e) : null; if(!m) return; const nf = m.i.length / 3; let xd = null;
-      const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms', 'mapk', 'mapsc', 'matL', 'ns', 'imp']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
+      const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms', 'mapk', 'mapsc', 'matL', 'ns', 'imp', 'pid']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
       let js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); if(js.length > 15000){ delete d.ms; js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); } if(js.length > 15000) js = JSON.stringify({ k: 'mesh', mat: e.mat, srf: e.srf }); xd = []; for(let k = 0; k < js.length; k += 240) xd.push(js.slice(k, k + 240));
       for(let t = 0; t < m.i.length; t += 3){ const q = [m.i[t], m.i[t + 1], m.i[t + 2], m.i[t + 2]]; head('3DFACE', 'AcDbFace'); q.forEach((ix, j) => { P(10 + j, m.p[ix * 3]); P(20 + j, m.p[ix * 3 + 1]); P(30 + j, m.p[ix * 3 + 2]); });
         if(t === 0){ P(1001, 'DVDCAD'); P(1000, 'S3D'); P(1071, nf); for(const c of xd) P(1000, c); } }

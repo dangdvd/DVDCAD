@@ -240,6 +240,12 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
       const back = DVDAcis.fromSAT(A.satOf([bx]).text.split('\n')); const S = A.convToNurbs({ type: 'SOLID3D', k: 'cyl', cx: 0, cy: 0, r: 2, z0: 0, h: 1 })[0]; const q = A.nurbsSurfPt(S, 0.3, 0.5);
       return [back && back.f.length / 3, Math.abs(Math.hypot(q[0], q[1]) - 2) < 1e-9, ['ACISOUT', 'IMPRINT', 'CONVTONURBS', 'SURFFILLET', 'MARKUPASSIST', 'COMPAREEXPORT', 'DBCONNECT'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
     check(v6n === '12,true,true', 'ACISOUT → ACISIN (hộp 12 tam giác), trụ NURBS đúng tròn, lệnh v6n: ' + v6n);
+    // v6o: glTF (3DDWF), vết can không ghi vào hình học DXF, lệnh mới
+    const v6o = await win.evaluate(() => { const A = DVDAcad; const bx = { type: 'SOLID3D', k: 'ext', pts: [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 2 }, { x: 0, y: 2 }], z0: 0, h: 3, tri: [0, 1, 2, 0, 2, 3] };
+      const g = A.glbOf([{ e: bx, m: A.meshOf(bx) }]); const G = A.glbParse(g.glb);
+      const t = { type: 'LINE', x1: 0, y1: 0, x2: 1, y2: 1, layer: '0', trc: 'T1' }; const dxf = entitiesToDXF([t]);
+      return [G && G.json.asset.version, g.tris, !/\n\s*0\r?\n\s*LINE\r?\n/.test(dxf), ['TRACE', 'TRACEBACK', 'TRACECLOSE', 'DESIGNFEEDOPEN', 'SHAREVIEW', 'PUSHTODOCS', 'UPLOADTOCLOUD', '3DDWF', 'VIEWCOMPONENT', 'VIEWSYMBOLSKETCH', 'VIEWSETPROJ'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
+    check(v6o === '2.0,12,true,true', '3DDWF glTF (hộp 12 tam giác), nét vết can không vào DXF, lệnh v6o: ' + v6o);
     if(process.env.DVD_DWG_OUT) for(const v of Object.keys(v6f.dwg)) fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'xdata-' + v + '.dwg'), Buffer.from(v6f.dwg[v], 'base64'));
   }
   {
