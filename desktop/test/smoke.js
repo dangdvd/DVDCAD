@@ -210,6 +210,11 @@ function pngFile(w, h){ const crc = b => { let c = 0xFFFFFFFF; for(const x of b)
     const v6h = await win.evaluate(async () => { const r = await DVDLisp.evalToString('(list (acet-str-to-list "," "a,b") (acet-list-remove-duplicates (list 1 1 2) nil) (acet-filename-ext-remove "C:\\\\x\\\\a.dwg"))');
       const H = DVDAcad.hpglParse('IN;SP1;PU0,0;PD4000,0;CI400;'); return r + ' ' + H.map(e => e.type).join(',') + ' ' + ['SUPERHATCH', 'ATTOUT', 'BTABLE', 'RTEXT', 'MKSHAPE'].every(k => DVDCmd.commands.some(c => c.k.includes(k))); });
     check(v6h === '(("a" "b") (1 2) "C:\\\\x\\\\a") LINE,CIRCLE true', 'Express Tools: acet-str / list / filename, PLT2DWG, SUPERHATCH / ATTOUT / BTABLE / RTEXT / MKSHAPE: ' + v6h);
+    // v6i: lưới (chia Loop, đùn mặt) và mặt (vá, cắt lát)
+    const v6i = await win.evaluate(() => { const A = DVDAcad; const bx = A.newProps({ type: 'SOLID3D', k: 'ext', pts: [{ x: 0, y: 0 }, { x: 9, y: 0 }, { x: 9, y: 9 }, { x: 0, y: 9 }], z0: 0, h: 9, tri: [0, 1, 2, 0, 2, 3] });
+      const m = A.toMeshOpt(bx, 1, true); const ex = A.meshExtrude({ v: m.ms.v0, f: m.ms.f0, cr: [] }, [0], 2, null); const s = A.surfPatch([[0, 0, 0], [10, 0, 2], [10, 10, 0], [0, 10, 2]], null);
+      return [m.f.length / 3, m.ms.lv, A.meshBoundaryLoops(A.weld(ex.v, ex.f).i).length, s.srf, A.meshSlice(s.v, s.f, [1, 0, 0], 5).length, ['MESHSMOOTHMORE', 'MESHEXTRUDE', 'SURFTRIM', 'SURFBLEND', 'ANALYSISZEBRA', 'PROJECTGEOMETRY'].every(k => DVDCmd.commands.some(c => c.k.includes(k)))].join(','); });
+    check(v6i === '432,1,0,1,1,true', 'Lưới / mặt 3D: MESHSMOOTH mức 1 (432 tam giác), MESHEXTRUDE kín, SURFPATCH, cắt lát, lệnh SURF* / ANALYSIS*: ' + v6i);
     if(process.env.DVD_DWG_OUT) for(const v of Object.keys(v6f.dwg)) fs.writeFileSync(path.join(process.env.DVD_DWG_OUT, 'xdata-' + v + '.dwg'), Buffer.from(v6f.dwg[v], 'base64'));
   }
   {

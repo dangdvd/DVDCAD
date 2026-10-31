@@ -691,6 +691,18 @@
       { id: 'sec2', en: 'Section', vi: 'Mặt cắt', items: [big('SECTIONPLANE', 'Section\nPlane', 'Mặt\ncắt'), col(sm('SECTION2D', 'Section to 2D', 'Mặt cắt ra 2D'), sm('FLATSHOT', 'Flatshot', 'Chiếu 2D'))] },
       { id: 'mesh2', en: 'Mesh Surfaces', vi: 'Mặt lưới', items: [big('MESH', 'Mesh\nPrimitives', 'Khối\nlưới'), col(sm('CONVTOMESH', 'Convert to Mesh', 'Đổi thành lưới'), sm('CONVTOSOLID', 'Convert to Solid', 'Đổi thành khối'), sm('THICKEN', 'Thicken', 'Làm dày')), col(sm('3DFACE', '3D Face', 'Mặt 3D'), sm('CONVTOSURFACE', 'Convert to Surface', 'Đổi thành mặt')), big('REVSURF', 'Revolved\nSurface', 'Mặt tròn\nxoay'), col(sm('RULESURF', 'Ruled Surface', 'Mặt kẻ'), sm('TABSURF', 'Tabulated Surface', 'Mặt trượt'), sm('EDGESURF', 'Edge Surface', 'Mặt 4 cạnh')), col(sm('PLANESURF', 'Planar Surface', 'Mặt phẳng'), sm('SURFTAB1', 'SURFTAB1', 'Số chia 1'), sm('SURFTAB2', 'SURFTAB2', 'Số chia 2'))] }
     ] },
+    mesh: { en: 'Mesh', vi: 'Lưới', panels: [
+      { id: 'mprim', en: 'Primitives', vi: 'Khối lưới', items: [big('MESH', 'Mesh\nPrimitives', 'Khối\nlưới'), col(sm('MESHPRIMITIVEOPTIONS', 'Primitive Options', 'Tuỳ chọn khối lưới'))] },
+      { id: 'msm', en: 'Mesh', vi: 'Làm trơn', items: [big('MESHSMOOTH', 'Smooth\nObject', 'Đổi thành\nlưới trơn'), col(sm('MESHSMOOTHMORE', 'Smooth More', 'Trơn hơn'), sm('MESHSMOOTHLESS', 'Smooth Less', 'Bớt trơn'), sm('MESHREFINE', 'Refine Mesh', 'Làm mịn lưới')), col(sm('MESHCREASE', 'Add Crease', 'Gấp cạnh'), sm('MESHUNCREASE', 'Remove Crease', 'Bỏ gấp'), sm('MESHOPTIONS', 'Mesh Options', 'Tuỳ chọn lưới'))] },
+      { id: 'medit', en: 'Mesh Edit', vi: 'Sửa lưới', items: [big('MESHEXTRUDE', 'Extrude\nFace', 'Đùn\nmặt'), col(sm('MESHSPLIT', 'Split Face', 'Tách mặt'), sm('MESHMERGE', 'Merge Face', 'Gộp mặt'), sm('MESHCOLLAPSE', 'Collapse Face or Edge', 'Thu mặt / cạnh')), col(sm('MESHSPIN', 'Spin Triangle Face', 'Xoay cạnh'), sm('MESHCAP', 'Close Hole', 'Bịt lỗ'))] },
+      { id: 'mconv', en: 'Convert Mesh', vi: 'Đổi lưới', items: [col(sm('CONVTOSOLID', 'Convert to Solid', 'Đổi thành khối'), sm('CONVTOSURFACE', 'Convert to Surface', 'Đổi thành mặt'), sm('CONVTOMESH', 'Convert to Mesh', 'Đổi thành lưới'))] }
+    ] },
+    surface: { en: 'Surface', vi: 'Mặt', panels: [
+      { id: 'screate', en: 'Create', vi: 'Tạo mặt', items: [big('SURFNETWORK', 'Network', 'Lưới\nđường'), col(sm('PLANESURF', 'Planar', 'Mặt phẳng'), sm('SURFBLEND', 'Blend', 'Chuyển tiếp'), sm('SURFPATCH', 'Patch', 'Vá mặt')), col(sm('SURFOFFSET', 'Offset', 'Dời mặt'), sm('EDGESURF', 'Edge Surface', 'Mặt 4 cạnh'), sm('RULESURF', 'Ruled', 'Mặt kẻ'))] },
+      { id: 'sedit', en: 'Edit', vi: 'Sửa mặt', items: [col(sm('SURFTRIM', 'Trim', 'Cắt mặt'), sm('SURFUNTRIM', 'Untrim', 'Bỏ cắt'), sm('SURFEXTEND', 'Extend', 'Kéo dài')), col(sm('SURFSCULPT', 'Sculpt', 'Ghép thành khối'), sm('OFFSETEDGE', 'Offset Edge', 'Song song cạnh'), sm('THICKEN', 'Thicken', 'Làm dày'))] },
+      { id: 'sproj', en: 'Project Geometry', vi: 'Chiếu hình', items: [big('PROJECTGEOMETRY', 'Project\nto Surface', 'Chiếu\nlên mặt'), col(sm('SURFEXTRACTCURVE', 'Extract Curves', 'Trích đường'))] },
+      { id: 'sana', en: 'Analysis', vi: 'Phân tích', items: [col(sm('ANALYSISZEBRA', 'Zebra', 'Sọc ngựa vằn'), sm('ANALYSISCURVATURE', 'Curvature', 'Độ cong'), sm('ANALYSISDRAFT', 'Draft', 'Góc thoát khuôn')), col(sm('ANALYSISOPTIONS', 'Analysis Options', 'Tuỳ chọn phân tích'))] }
+    ] },
     visualize: { en: 'Visualize', vi: 'Trình diễn', panels: [
       { id: 'views', en: 'Views', vi: 'Hướng nhìn', items: [col(sm('VIEWTOP', 'Top', 'Trên'), sm('VIEWFRONT', 'Front', 'Trước'), sm('VIEWRIGHT', 'Right', 'Phải')), col(sm('VIEWSWISO', 'SW Isometric', 'ISO Tây Nam'), sm('VIEWSEISO', 'SE Isometric', 'ISO Đông Nam'), sm('VIEWNEISO', 'NE Isometric', 'ISO Đông Bắc')), col(sm('VIEWNWISO', 'NW Isometric', 'ISO Tây Bắc'))] },
       { id: 'navi', en: 'Navigate', vi: 'Điều hướng', items: [big('3DORBIT', '3D\nOrbit', 'Xem\n3D'), big('3DWALK', 'Walk', 'Đi bộ'), col(sm('VPOINT', 'Viewpoint', 'Điểm nhìn'), sm('DDVPOINT', 'Viewpoint Presets', 'Hướng nhìn 2 góc'), sm('HIDE', 'Hide', 'Khuất nét'))] },
@@ -703,7 +715,7 @@
   };
   const WS = {
     draft: { en: 'Drafting & Annotation', vi: 'Vẽ 2D & Chú thích', tabs: ['home', 'insert', 'annotate', 'param', 'view', 'layout', 'manage', 'output', 'collab', 'express'] },
-    m3d: { en: '3D Modeling', vi: 'Mô hình 3D', tabs: ['home3d', 'solid', 'visualize', 'param', 'insert', 'annotate', 'view', 'layout', 'manage', 'output', 'collab', 'express'] }
+    m3d: { en: '3D Modeling', vi: 'Mô hình 3D', tabs: ['home3d', 'solid', 'surface', 'mesh', 'visualize', 'param', 'insert', 'annotate', 'view', 'layout', 'manage', 'output', 'collab', 'express'] }
   };
   let WSK = 'draft', LANG = window.DVDI18N ? DVDI18N.lang : 'en';   // một ngôn ngữ chung cho cả giao diện (dvd-i18n.js)
   try{ const w = localStorage.getItem('dvd:ws'); if(WS[w]) WSK = w; if(!window.DVDI18N){ const l = localStorage.getItem('dvd:riblang'); if(l === 'vi' || l === 'en') LANG = l; } }catch(_){}

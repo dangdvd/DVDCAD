@@ -6,6 +6,26 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6i: lưới 3D làm trơn / sửa, mặt (SURF*), phân tích bề mặt
+- `dvd-acad-x27.js`:
+  - Lưới là `SOLID3D` `k: 'mesh'` (`v` đỉnh, `f` tam giác). Lồng gốc lưu ở `e.ms = { lv, v0, f0, cr }`; `v` / `f` là kết quả chia `lv` lần (`A.meshSubdivide`).
+  - Chia Loop có cạnh gấp: luật cạnh nhọn và đỉnh 2 cạnh gấp; cạnh biên coi như cạnh gấp.
+  - Tam giác con `t` thuộc tam giác lồng `floor(t / 4^lv)`, dùng để chọn mặt trên lưới đã làm trơn.
+  - "Mặt" khi chọn = tam giác + tam giác đồng phẳng ghép qua cạnh dài nhất. Bấm trong khung 3D thì lấy cả z (`A._last3D` do `cmdClick` ghi).
+  - Hàm dùng chung:
+    - `A.toMeshOpt(e, lv, prim)`: chia đều k² theo MESHPRIMITIVEOPTIONS;
+    - `A.meshExtrude`, `A.earcut3`, `A.meshBoundaryLoops`;
+    - `A.meshSlice(V, F, n, d)`: cắt lưới bằng mặt phẳng, nối đoạn thành đường;
+    - `A.surfPatch`: earcut, chia tuyến tính, làm trơn Laplace giữ biên;
+    - `A.meshCurvature`: Gauss theo khuyết góc / diện tích, trung bình theo toán tử umbrella.
+  - `SURFTRIM`: chia tuyến tính tới cỡ ~1/60 đường cắt, bỏ tam giác theo trọng tâm, dời đỉnh biên mới về đường cắt; bản gốc giữ ở `trim0`.
+  - `MESH` / `MESHPRIMITIVEOPTIONS`: tuỳ chọn trong `dvd:meshopt`.
+- `dvd-acad-3d.js`:
+  - `R3.setAnalysis('zebra' | 'curv' | 'draft' | null)`: `ShaderMaterial` (phản xạ hướng nhìn cho zebra, `asin(n.z)` cho góc thoát khuôn, thuộc tính `acol` cho độ cong); tuỳ chọn trong `dvd:ana`.
+  - Lưới có `ms.lv > 0` vẽ pháp tuyến mượt.
+  - DXF S3D ghi thêm `srf`, `ms` (bỏ `ms` nếu quá 15 000 ký tự); `fromFaces` dựng lại lưới từ lồng.
+- `dvd-acad-ui.js`: thẻ ribbon `mesh` / `surface` trong không gian 3D Modeling.
+
 ## v6h: Express Tools đủ bộ, thư viện `acet-*`, bảng tra khối động
 - `dvd-lisp5.js` (nạp sau `dvd-lisp4.js`): 116 hàm `acet-*`.
   - `acet-error-init` / `-restore` lưu và trả biến hệ thống, có `*error*` riêng.

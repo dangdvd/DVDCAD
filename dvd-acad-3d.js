@@ -54,7 +54,7 @@
       if(area2(e.pts || []) < 0) flipI(I);   // sau MIRROR: đảo chiều mặt để pháp tuyến hướng ra ngoài
       return { p: P, i: I, flat: true };
     }
-    if(e.k === 'mesh') return { p: e.v || [], i: e.f || [], flat: true };
+    if(e.k === 'mesh'){ const sm = !!(e.ms && e.ms.lv > 0); return { p: e.v || [], i: e.f || [], flat: !sm, smooth: sm }; }
     if(e.k === 'cone'){
       const N = 48, z0 = e.z0 || 0, z1 = z0 + (e.h || 0), r1 = e.r, r2 = e.r2 != null ? e.r2 : e.r;
       const b = [], t = []; for(let k = 0; k < N; k++){ const a = k / N * TAU; b.push(v(e.cx + r1 * Math.cos(a), e.cy + r1 * Math.sin(a), z0)); } for(let k = 0; k < N; k++){ const a = k / N * TAU; t.push(v(e.cx + r2 * Math.cos(a), e.cy + r2 * Math.sin(a), z1)); }
@@ -496,7 +496,7 @@
     function cmdClick(ev){
       const r = A.reqInfo && A.reqInfo(); if(!r) return false;
       if(r.type === 'sel'){ const hs = hitSolid(ev); let e = hs && hs.ent; if(!e) e = entAtGround(ev); if(!e){ log('Không trúng đối tượng nào (bấm vào khối hoặc nét 2D) — Enter / chuột phải để xong.'); return true; } A.pickEnt3D(e, hs ? { x: hs.h.point.x, y: hs.h.point.y } : null); setTimeout(refreshHi, 0); return true; }
-      if(r.type === 'pt' || r.type === 'dist' || r.type === 'ang'){ const q = pointAt(ev, true); if(!q) return true; const pp = roundPt(q); A.input(fmt(pp.x) + ',' + fmt(pp.y)); setTimeout(refreshHi, 0); return true; }
+      if(r.type === 'pt' || r.type === 'dist' || r.type === 'ang'){ const q = pointAt(ev, true); if(!q) return true; const pp = roundPt(q); A._last3D = { x: q.p.x, y: q.p.y, z: q.p.z, t: Date.now() }; A.input(fmt(pp.x) + ',' + fmt(pp.y)); setTimeout(refreshHi, 0); return true; }
       return false;
     }
     function cmdHover(ev){
@@ -583,12 +583,32 @@
     // mỗi mặt: cột (phải, −lên, pháp tuyến) trong hệ thế giới; khối cha đổi thế giới → màn hình
     (() => { const F = { top: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], bottom: [[1, 0, 0], [0, -1, 0], [0, 0, -1]], front: [[1, 0, 0], [0, 0, 1], [0, -1, 0]], back: [[-1, 0, 0], [0, 0, 1], [0, 1, 0]], right: [[0, 1, 0], [0, 0, 1], [1, 0, 0]], left: [[0, -1, 0], [0, 0, 1], [-1, 0, 0]] };
       ov.querySelectorAll('.cube .f').forEach(d => { const [r, u, n] = F[d.dataset.v]; d.style.transform = 'matrix3d(' + [r[0], r[1], r[2], 0, -u[0], -u[1], -u[2], 0, n[0], n[1], n[2], 0, n[0] * 32, n[1] * 32, n[2] * 32, 1].join(',') + ')'; }); })();
+    // phân tích bề mặt như AutoCAD (ANALYSISZEBRA / ANALYSISCURVATURE / ANALYSISDRAFT): vật liệu riêng thay cho kiểu hiển thị
+    const anaMats = new Map();
+    const VS_N = '#include <clipping_planes_pars_vertex>\nattribute vec3 acol;\nvarying vec3 vN; varying vec3 vW; varying vec3 vC;\nvoid main(){ vN = normalize(mat3(modelMatrix) * normal); vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vC = acol; vec4 mvPosition = viewMatrix * w; gl_Position = projectionMatrix * mvPosition;\n#include <clipping_planes_vertex>\n}';
+    const FS_HEAD = '#include <clipping_planes_pars_fragment>\nvarying vec3 vN; varying vec3 vW; varying vec3 vC;\nvec3 nrm(){ vec3 n = normalize(vN); return gl_FrontFacing ? n : -n; }\nfloat lit(vec3 n){ return 0.55 + 0.45 * abs(dot(n, normalize(vec3(0.3, 0.4, 1.0)))); }\n';
+    function anaMat(kind){ const O = A.anaOpts()[kind] || {}; const key = kind + JSON.stringify(O); if(anaMats.has(key)) return anaMats.get(key);
+      let fs = '', U = {};
+      if(kind === 'zebra'){ U = { uN: { value: +O.n || 12 }, uDir: { value: O.dir ? 1 : 0 }, c1: { value: new T.Color(O.c1 || '#101010') }, c2: { value: new T.Color(O.c2 || '#f4f4f4') } };
+        fs = 'uniform float uN; uniform float uDir; uniform vec3 c1; uniform vec3 c2;\nvoid main(){\n#include <clipping_planes_fragment>\n vec3 n = nrm(); vec3 v = normalize(vW - cameraPosition); vec3 r = reflect(v, n);\n float t = uDir > 0.5 ? (asin(clamp(r.z, -1.0, 1.0)) / 3.14159265 + 0.5) : (atan(r.y, r.x) / 6.2831853 + 0.5);\n gl_FragColor = vec4(mix(c1, c2, step(0.5, fract(t * uN))), 1.0);\n}'; }
+      else if(kind === 'draft'){ U = { a0: { value: +O.a0 } , a1: { value: +O.a1 } };
+        fs = 'uniform float a0; uniform float a1;\nvoid main(){\n#include <clipping_planes_fragment>\n vec3 n = nrm(); float ang = degrees(asin(clamp(n.z, -1.0, 1.0))); float t = clamp((ang - a0) / max(a1 - a0, 1e-6), 0.0, 1.0);\n vec3 c = t < 0.5 ? mix(vec3(0.9, 0.1, 0.1), vec3(0.1, 0.8, 0.2), t * 2.0) : mix(vec3(0.1, 0.8, 0.2), vec3(0.15, 0.3, 0.95), t * 2.0 - 1.0);\n gl_FragColor = vec4(c * lit(n), 1.0);\n}'; }
+      else { fs = 'void main(){\n#include <clipping_planes_fragment>\n gl_FragColor = vec4(vC * lit(nrm()), 1.0);\n}'; }
+      const m = new T.ShaderMaterial({ uniforms: U, vertexShader: VS_N, fragmentShader: FS_HEAD + fs, side: T.DoubleSide, clipping: true, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }); anaMats.set(key, m); return m; }
+    function ramp(t){ t = Math.max(0, Math.min(1, t)); return t < 0.5 ? [0.9 + (0.1 - 0.9) * t * 2, 0.1 + 0.7 * t * 2, 0.1 + 0.1 * t * 2] : [0.1 + 0.05 * (t * 2 - 1), 0.8 - 0.5 * (t * 2 - 1), 0.2 + 0.75 * (t * 2 - 1)]; }
+    function curvCols(o, i){ const g = o.mesh.geometry, type = (A.anaOpts().curv || {}).type || 'G'; if(g.userData.acol === type) return; const M = meshes[i] && meshes[i].m; if(!M) return;
+      const K = A.meshCurvature ? A.meshCurvature(M.p, M.i, type) : null; const pa = g.attributes.position, n = pa.count, C = new Float32Array(n * 3);
+      if(K){ const vals = K.val.filter(v => isFinite(v)).sort((a, b) => a - b); const lo = vals[Math.floor(vals.length * 0.05)] || 0, hi = vals[Math.floor(vals.length * 0.95)] || 0; const m = Math.max(Math.abs(lo), Math.abs(hi), 1e-12);
+        for(let k = 0; k < n; k++){ const id = K.find(pa.getX(k), pa.getY(k), pa.getZ(k)); const v = id >= 0 ? K.val[id] : 0; const c = ramp(0.5 + 0.5 * (isFinite(v) ? v : 0) / m); C[k * 3] = c[0]; C[k * 3 + 1] = c[1]; C[k * 3 + 2] = c[2]; } }
+      g.setAttribute('acol', new T.Float32BufferAttribute(C, 3)); g.userData.acol = type; }
+    function applyAna(){ if(!V.ana) return; solids.forEach((o, i) => { if(!o.mesh.geometry.getAttribute('acol') && V.ana !== 'curv'){ o.mesh.geometry.setAttribute('acol', new T.Float32BufferAttribute(new Float32Array(o.mesh.geometry.attributes.position.count * 3), 3)); o.mesh.geometry.userData.acol = ''; }
+      if(V.ana === 'curv') curvCols(o, i); o.mesh.material = anaMat(V.ana); o.mesh.visible = true; }); }
     function applyStyle(){
       const s = V.style, real = s === 'real';
       for(const o of solids){ o.mesh.visible = s !== 'wire'; o.mesh.material = real ? o.std : s === 'hidden' ? hidMat : o.lam; o.ed.visible = s !== 'shade' && !real; o.ed.material = (s === 'wire' || s === 'hidden') ? wireMat : edgeMat; if(o.iso) o.iso.visible = s === 'wire' || s === 'xray'; }
       ground.visible = real; sun.castShadow = real; lightGroup.visible = real; applySun(); scene.environment = real ? envMap() : null; renderer.toneMapping = real ? T.ACESFilmicToneMapping : T.NoToneMapping;
       for(const m of mats.values()){ m.transparent = s === 'xray'; m.opacity = s === 'xray' ? 0.4 : 1; m.depthWrite = s !== 'xray'; m.needsUpdate = true; }
-      applyVSX();
+      applyVSX(); applyAna();
       need = true;
     }
     // kiểu hiển thị riêng (Visual Styles Manager / VSSAVE): ghi đè kiểu mặt, cạnh, màu cạnh, độ mờ, bóng đổ, màu nền lên kiểu gốc
@@ -690,7 +710,7 @@
     const onKeyUp = e => { keys.delete(e.key.toLowerCase()); if(e.key === 'Shift') keys.delete('shift'); };
     window.addEventListener('keydown', onKey, true); window.addEventListener('keyup', onKeyUp, true);
     const ro = new ResizeObserver(() => { need = true; }); ro.observe(ov);
-    R3 = { ov, renderer, scene, ro, onKey, onKeyUp, raf: 0, rebuild, rebuildLights(){ const vis = lightGroup.visible; buildLights(); lightGroup.visible = vis; need = true; }, refreshHi, cmdClickAt(x, y, btn){ const ev = { clientX: x, clientY: y }; if(btn === 2){ A.input(''); return; } cmdClick(ev); }, toClient(x, y, z){ place(); const v = new T.Vector3(x, y, z || 0).project(cam()); const r = cv3.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, pointAtXY(x, y){ const q = pointAt({ clientX: x, clientY: y }); return q ? [q.p.x, q.p.y, q.p.z, q.snap] : null; }, stop(){ if(sunAnim) clearInterval(sunAnim); sunAnim = 0; clearTimeout(capT); }, setView, flatshot, camTo, setWalk, walkKey(k, on){ if(on) keys.add(k); else keys.delete(k); }, buildCaps(){ buildCaps(); return secRegions; }, setSun(o){ Object.assign(SUN, o); syncSunUI(); applySun(); }, sunVec, buildUCS(){ buildUCS(); need = true; }, get cutPlane(){ return cutPlane; }, get state(){ return S; }, setAzEl(az, el){ S.az = az * D2R; S.el = Math.max(-89.9, Math.min(89.9, el)) * D2R; S.target.copy(ctr); S.dist = size * 1.8; need = true; }, setStyle(v){ const sel = ov.querySelector('select[data-a="style"]'); if(sel){ sel.value = v; sel.dispatchEvent(new Event('change')); } }, setVS(P){ VSX = P || null; applyStyle(); }, get vs(){ return VSX; }, get solids(){ return solids.length; }, get parts(){ let n = 0; for(const o of solids) n += o.parts.length; return n; }, get colors(){ return solids.map(o => o.col); }, get n2d(){ return l2 ? l2.geometry.attributes.position.count / 2 : 0; }, render(){ need = true; place(); renderer.render(scene, cam()); }, canvas: cv3, setCutPlane(n, o){ V.cutPl = { n, o }; V.cutMode = 'p'; V.cut = true; applyCut(); }, setCut(on, f, mode, line){ V.cut = !!on; if(f != null) V.cutF = f; if(mode) V.cutMode = mode; if(line) V.cutLine = line; applyCut(); }, setStyle(st){ V.style = st; ov.querySelector('select[data-a="style"]').value = st; applyStyle(); } };
+    R3 = { ov, renderer, scene, ro, onKey, onKeyUp, raf: 0, rebuild, rebuildLights(){ const vis = lightGroup.visible; buildLights(); lightGroup.visible = vis; need = true; }, refreshHi, cmdClickAt(x, y, btn){ const ev = { clientX: x, clientY: y }; if(btn === 2){ A.input(''); return; } cmdClick(ev); }, toClient(x, y, z){ place(); const v = new T.Vector3(x, y, z || 0).project(cam()); const r = cv3.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }, pointAtXY(x, y){ const q = pointAt({ clientX: x, clientY: y }); return q ? [q.p.x, q.p.y, q.p.z, q.snap] : null; }, stop(){ if(sunAnim) clearInterval(sunAnim); sunAnim = 0; clearTimeout(capT); }, setView, flatshot, camTo, setWalk, walkKey(k, on){ if(on) keys.add(k); else keys.delete(k); }, buildCaps(){ buildCaps(); return secRegions; }, setSun(o){ Object.assign(SUN, o); syncSunUI(); applySun(); }, sunVec, buildUCS(){ buildUCS(); need = true; }, get cutPlane(){ return cutPlane; }, get state(){ return S; }, setAzEl(az, el){ S.az = az * D2R; S.el = Math.max(-89.9, Math.min(89.9, el)) * D2R; S.target.copy(ctr); S.dist = size * 1.8; need = true; }, setStyle(v){ const sel = ov.querySelector('select[data-a="style"]'); if(sel){ sel.value = v; sel.dispatchEvent(new Event('change')); } }, setVS(P){ VSX = P || null; applyStyle(); }, setAnalysis(m){ V.ana = m || null; anaMats.clear(); for(const o of solids) o.mesh.geometry.userData.acol = null; applyStyle(); }, get analysis(){ return V.ana || null; }, get vs(){ return VSX; }, get solids(){ return solids.length; }, get parts(){ let n = 0; for(const o of solids) n += o.parts.length; return n; }, get colors(){ return solids.map(o => o.col); }, get n2d(){ return l2 ? l2.geometry.attributes.position.count / 2 : 0; }, render(){ need = true; place(); renderer.render(scene, cam()); }, canvas: cv3, setCutPlane(n, o){ V.cutPl = { n, o }; V.cutMode = 'p'; V.cut = true; applyCut(); }, setCut(on, f, mode, line){ V.cut = !!on; if(f != null) V.cutF = f; if(mode) V.cutMode = mode; if(line) V.cutLine = line; applyCut(); }, setStyle(st){ V.style = st; ov.querySelector('select[data-a="style"]').value = st; applyStyle(); } };
     applyCut();
     if(opt.cam){ V.persp = true; pc.fov = 60; const pb = ov.querySelector('[data-a="persp"]'); if(pb) pb.textContent = 'Phối cảnh'; camTo(opt.cam.pos, opt.cam.target); }
     else if(MEM.cam3 && !opt.view){ S.az = MEM.cam3.az; S.el = MEM.cam3.el; } else setView(opt.view || MEM.v3 || 'se');
@@ -734,8 +754,8 @@
     for(const e of list){ const m = meshOf(e); if(!m) continue; const ly = String(e.layer || '0').replace(/[^\x20-\x7e]/g, '_');
       let aci = 256; try{ if(!(e.bl || String(e.col || '').toLowerCase() === String(A.layerHex(e.layer || '0')).toLowerCase())) aci = A.aciNear(e.col || '#ffffff'); }catch(_){}
       const nf = m.i.length / 3; let xd = null;
-      if(e.type === 'SOLID3D'){ const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
-        let js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); if(js.length > 15000) js = JSON.stringify({ k: 'mesh', mat: e.mat });
+      if(e.type === 'SOLID3D'){ const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
+        let js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); if(js.length > 15000){ delete d.ms; js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); } if(js.length > 15000) js = JSON.stringify({ k: 'mesh', mat: e.mat, srf: e.srf });
         xd = []; for(let k = 0; k < js.length; k += 240) xd.push(js.slice(k, k + 240)); }
       for(let t = 0; t < m.i.length; t += 3){ const q = [m.i[t], m.i[t + 1], m.i[t + 2], m.i[t + 2]]; P(0, '3DFACE'); P(8, ly); if(aci !== 256) P(62, aci); q.forEach((ix, j) => { P(10 + j, m.p[ix * 3]); P(20 + j, m.p[ix * 3 + 1]); P(30 + j, m.p[ix * 3 + 2]); });
         if(t === 0 && xd){ P(1001, 'DVDCAD'); P(1000, 'S3D'); P(1071, nf); for(const c of xd) P(1000, c); } } }
@@ -762,6 +782,7 @@
       if(def && def.k && def.k !== 'mesh'){ const c = Object.assign({ type: 'SOLID3D' }, def); const m = meshOf(c);
         if(m && m.i.length / 3 === n){ const a = m.i[0] * 3; const z = (e.zs || [])[0] || 0; const sz = Math.max(1, Math.abs(m.p[a]) + Math.abs(m.p[a + 1]) + Math.abs(m.p[a + 2])); if(Math.abs(m.p[a] - e.pts[0].x) + Math.abs(m.p[a + 1] - e.pts[0].y) + Math.abs(m.p[a + 2] - z) < sz * 1e-6 + 1e-6) sol = c; } }
       if(!sol){ const P = [], I = []; for(const q of F){ const m = meshOf(q); const b = P.length / 3; for(const v of m.p) P.push(v); for(const t of m.i) I.push(t + b); } sol = meshEnt(P, I); if(sol && def && def.mat) sol.mat = def.mat; }
+      if(sol && def && sol.k === 'mesh'){ if(def.srf) sol.srf = 1; if(def.ms && A.meshApplyMs){ try{ A.meshApplyMs(sol, def.ms); }catch(_){} } }
       if(!sol){ for(const q of F) out.push(q); i += n - 1; continue; }
       sol.layer = e.layer; if(e.aci !== undefined) sol.aci = e.aci; for(const k of ['lt', 'lw', 'lts']) if(e[k] != null) sol[k] = e[k];
       out.push(sol); i += n - 1;

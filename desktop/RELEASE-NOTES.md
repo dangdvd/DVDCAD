@@ -1,55 +1,51 @@
-## DVDCAD 5.27.0 — Express Tools đủ bộ, thư viện acet-* cho tiện ích LISP, bảng tra khối động
+## DVDCAD 5.28.0 — Lưới và mặt 3D như AutoCAD: làm trơn, sửa lưới, SURF*, phân tích bề mặt
 
 Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Windows. Tên lệnh, lệnh tắt và cách dùng giống AutoCAD để người dùng chuyển sang không bỡ ngỡ.
 
 ### Tải về
-- **DVDCAD-Setup-5.27.0.exe** — bộ cài.
+- **DVDCAD-Setup-5.28.0.exe** — bộ cài.
   - Cài cho tài khoản Windows đang dùng, không cần quyền quản trị.
   - Có lối tắt Desktop và Start Menu.
   - Nhấp đúp file .dwg / .dxf là mở bằng DVDCAD.
-- **DVDCAD-5.27.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
+- **DVDCAD-5.28.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
 
 Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More info → Run anyway**.
 
 ### Có gì mới
-Bản này bổ sung các lệnh **Express Tools** còn thiếu và thư viện `acet-*` mà nhiều tiện ích LISP gọi tới.
+Không gian **3D Modeling** có thêm hai thẻ ribbon **Mesh** và **Surface**, đủ các lệnh lưới, mặt và phân tích bề mặt của AutoCAD.
 
-- **Thẻ Express Tools** (`EXPRESSTOOLS`). Các lệnh mới:
-  - **Thuộc tính khối**: `ATTOUT` xuất giá trị thuộc tính ra tệp văn bản (tab) để sửa bằng Excel; `ATTIN` nhập lại theo handle.
-  - **Tô bằng khối**: `SUPERHATCH` lát một khối lặp lại trong vùng kín, chọn khoảng cách X / Y.
-  - **Khối**: `BSCALE` đổi tỉ lệ từng khối quanh điểm chèn; `PSBSCALE` tỉ lệ khối theo khổ giấy; `BLOCKTOXREF` thay khối bằng tham chiếu ngoài; `SHP2BLK` đổi hình SHAPE thành khối.
-  - **Chữ**: `RTEXT` / `RTEDIT` (chữ lấy từ tệp hoặc biểu thức DIESEL, tự cập nhật); `PSTSCALE` cao chữ đúng trên giấy; `QLATTACH` / `QLATTACHSET` / `QLDETACHSET` gắn / tách chữ với đường dẫn.
-  - **Chọn và sửa**: `FASTSEL` chọn mọi đối tượng chạm vào đối tượng đã chọn; `BTRIM` / `BEXTEND` / `TREX`; `CLIPIT`.
-  - **Tệp**: `PLT2DWG` nhập tệp in HPGL `.plt` thành nét; `MKSHAPE` tạo hình `.shp` từ nét đã vẽ; `REDIR` / `REDIRMODE` đổi đường dẫn; `REPURLS` thay địa chỉ siêu liên kết; `MOVEBAK`; `IMAGEAPP`.
-  - **Khác**: `JULIAN`, `EDITTIME`, `LSP`, `LSPSURF`, `TFRAMES`, `EXPLAN`, `RTUCS`, `LAYOUTMERGE`.
-- **Thư viện `acet-*`**: 116 hàm Express Tools, gọi giống AutoCAD. Gồm:
-  - lỗi / biến hệ thống;
-  - danh sách, chuỗi, tên tệp;
-  - hình học, tập chọn (gộp / trừ / giao, kéo dời / xoay / tỉ lệ);
-  - lớp, khối và thuộc tính, hộp thoại.
-  
-  Tiện ích viết cho AutoCAD có dùng Express Tools nay chạy được.
-- **Soạn khối động**:
-  - `BTABLE` / `BLOOKUPTABLE`: bảng tra giá trị tham số (Block Properties Table). Mỗi hàng là một bộ giá trị; bấm **Áp dụng** là bản chèn đổi theo.
-  - `BAUTHORPALETTE`: bảng công cụ soạn khối.
-  - `BACTION`, `BACTIONSET`, `BASSOCIATE`, `BTESTBLOCK`, `BCPARAMETER`, `BCONSTRUCTION`, `BWBLOCK`, `BXCLIP`, `BESETTINGS`… có lệnh như AutoCAD.
+- **Làm trơn lưới**:
+  - `MESHSMOOTH` đổi khối 3D / mặt thành lưới trơn.
+  - `MESHSMOOTHMORE` / `MESHSMOOTHLESS` tăng / giảm độ trơn từng mức; lưới gốc được giữ nên giảm lại không mất hình.
+  - `MESHREFINE` biến mặt đã làm trơn thành mặt sửa được.
+  - `MESHCREASE` / `MESHUNCREASE` gấp cạnh để cạnh giữ sắc khi làm trơn.
+- **Sửa lưới** (bấm lên mặt để chọn): `MESHEXTRUDE` đùn mặt, `MESHSPLIT` tách mặt, `MESHMERGE` gộp mặt, `MESHCOLLAPSE` thu mặt / cạnh, `MESHSPIN` đổi đường chéo, `MESHCAP` bịt lỗ. Lưới luôn giữ kín.
+- **Tuỳ chọn**: `MESHOPTIONS` (mức trơn, giới hạn), `MESHPRIMITIVEOPTIONS` (số chia cạnh khối lưới). `MESH` tạo hộp lưới 3 × 3 × 3, làm trơn ra hộp bo tròn như AutoCAD.
+- **Mặt**:
+  - Tạo mặt: `SURFNETWORK` (qua lưới đường), `SURFBLEND` (chuyển tiếp liên tục tiếp tuyến), `SURFPATCH` (vá đường kín / lỗ), `SURFOFFSET` (mặt song song, cả hai phía, khối đặc).
+  - Sửa mặt: `SURFEXTEND` (kéo dài), `SURFTRIM` / `SURFUNTRIM` (cắt bằng đường kín / trả lại), `SURFSCULPT` (ghép mặt kín thành khối).
+  - Đường trên mặt: `SURFEXTRACTCURVE` (trích đường), `PROJECTGEOMETRY` (chiếu đường lên mặt), `OFFSETEDGE` (song song cạnh mặt).
+- **Phân tích bề mặt** trong khung 3D: `ANALYSISZEBRA` (sọc ngựa vằn), `ANALYSISCURVATURE` (độ cong Gauss / trung bình), `ANALYSISDRAFT` (góc thoát khuôn), `ANALYSISOPTIONS`.
+- Mức trơn, cạnh gấp, cờ "mặt" được lưu trong DXF / DWG, mở lại trong DVDCAD vẫn sửa tiếp được.
 
 ### Kiểm thử
 - GitHub Actions trên Windows:
-  1. Kiểm thử nhanh như 5.26.0, thêm hàm `acet-*`, PLT2DWG và các lệnh Express mới.
+  1. Kiểm thử nhanh như 5.27.0, thêm làm trơn lưới, đùn mặt kín, vá mặt, cắt lát mặt.
   2. **ODA File Converter** và **ACadSharp** đọc lại các tệp DWG do DVDCAD ghi.
   3. Bộ đọc XPS của Windows mở tệp DWFx.
   4. Cài lặng bộ cài, chạy kiểm thử trên `DVDCAD.exe` đã cài, rồi gỡ cài.
-- Kiểm thử giao diện tự động:
-  - hàm `acet-str` / `list` / `filename` / `geom` / `ss`, `acet-error-init` trả lại biến hệ thống;
-  - `FASTSEL` chọn đúng đối tượng chạm nhau; `RTEXT` với DIESEL;
-  - `ATTOUT` → `ATTIN` cập nhật thuộc tính theo handle; `BSCALE`;
-  - `PLT2DWG` đọc HPGL; `MKSHAPE` tạo và nạp hình;
-  - `SUPERHATCH` lát đúng 16 khối trong khung 20 × 20; `BTABLE` thêm hàng và áp dụng giá trị tham số.
-  - Các bộ kiểm thử LISP và cài đặt ứng dụng của 5.24.0 → 5.26.0 vẫn đạt đủ.
+- Kiểm thử giao diện tự động (32 mục):
+  - hộp lưới 3 × 3 kín, thể tích 1000;
+  - làm trơn mức 1 / 2 (432 / 1728 tam giác), giảm về mức 0 đúng lồng;
+  - gấp mọi cạnh giữ hộp sắc (thể tích 1000), bỏ gấp, làm mịn;
+  - đùn ô mặt trên (thể tích +45), tách / thu mặt giữ lưới kín, xoay cạnh, gộp mặt, bịt lỗ;
+  - DXF đọc lại giữ mức trơn và cờ mặt;
+  - `SURFNETWORK`, `SURFOFFSET`, `SURFEXTEND`, `SURFTRIM` (khoét lỗ tròn) / `SURFUNTRIM`, `SURFPATCH`, `SURFBLEND`, `SURFEXTRACTCURVE`, `PROJECTGEOMETRY`, `SURFSCULPT` (thể tích 64), `OFFSETEDGE`;
+  - zebra / độ cong / góc thoát khuôn bật / tắt trong khung 3D, không lỗi shader.
+  - Các bộ kiểm thử của 5.24.0 → 5.27.0 vẫn đạt đủ.
 
 ### Giới hạn
-- **OpenDCL** (`dcl_…`, hộp thoại của thư viện OpenDCL) chưa có. Lệnh 3D nâng cao, kết xuất (render), đám mây và nền DGN / DWF / PDF của AutoCAD chưa có. COM khác (Word, Access, ADODB…) chưa có.
+- **OpenDCL** (`dcl_…`, hộp thoại của thư viện OpenDCL) chưa có. Còn khoảng 120 lệnh AutoCAD chưa có: kết xuất (render) nâng cao, đám mây điểm, nền DGN / DWF, NURBS (`CONVTONURBS`, `SURFFILLET`), đám mây và dịch vụ trực tuyến của Autodesk. COM khác (Word, Access, ADODB…) chưa có.
 - Excel làm lại không tính công thức: công thức được ghi vào tệp, Excel tính khi mở.
 - **Không chạy được `.fas` / `.vlx`**: đây là LISP đã biên dịch và mã hoá cho riêng AutoCAD, không có mã nguồn. Nhiều bộ tiện ích thương mại chỉ phát hành dạng này, kèm khoá bản quyền. Cần xin tác giả bản `.lsp` (hoặc bản dành cho DVDCAD).
 - **Không chạy được `.dll` / `.arx` / `.dvb`**: đây là chương trình Windows (.NET, ObjectARX, VBA) chạy bên trong AutoCAD và gọi thẳng thư viện của Autodesk.
