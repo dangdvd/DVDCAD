@@ -621,5 +621,33 @@
     I.SYSWINDOWS = '<rect class="fd" x="2.5" y="4" width="9" height="16"/><rect x="2.5" y="4" width="9" height="16"/><rect class="fd" x="12.5" y="4" width="9" height="16"/><rect class="a" x="12.5" y="4" width="9" height="16"/><path d="M2.5 7h9M12.5 7h9"/>';
     I.SYSWINDOWS_V = I.SYSWINDOWS; I.SYSWINDOWS_H = '<rect x="3" y="3" width="18" height="8"/><rect class="a" x="3" y="13" width="18" height="8"/><path d="M3 5.5h18M3 15.5h18"/>';
     I.SYSWINDOWS_C = '<rect x="3" y="3" width="13" height="10"/><rect class="fd" x="6" y="6" width="13" height="10"/><rect x="6" y="6" width="13" height="10"/><rect class="fd" x="9" y="9" width="13" height="11"/><rect class="a" x="9" y="9" width="13" height="11"/>'; void has; }
+  // v6i: lưới, mặt, phân tích
+  { const has = k => I[k] || '';
+    const SM = '<rect x="3.5" y="3.5" width="17" height="17" rx="6"/><path class="a" d="M3.5 12h17M12 3.5v17"/>';
+    I.MESHSMOOTH = SM; I.MESHSMOOTHMORE = SM + BADGE + '<path class="g" d="M15.4 18h5.2M18 15.4v5.2" stroke-width="1.8"/>'; I.MESHSMOOTHLESS = SM + BADGE + '<path class="r" d="M15.4 18h5.2" stroke-width="1.8"/>';
+    I.MESHREFINE = '<rect x="3.5" y="3.5" width="17" height="17"/><path class="a" d="M7.75 3.5v17M12 3.5v17M16.25 3.5v17M3.5 7.75h17M3.5 12h17M3.5 16.25h17"/>';
+    I.MESHCREASE = '<path class="fd" d="M3 19l9-14 9 14z"/><path d="M3 19l9-14 9 14z"/><path class="r" d="M12 5v14" stroke-width="2"/>'; I.MESHUNCREASE = I.MESHCREASE + BX;
+    I.MESHEXTRUDE = '<path class="fd" d="M2.5 18l5-3.5h14l-5 3.5z"/><path d="M2.5 18l5-3.5h14l-5 3.5z"/><path class="fa" d="M8.5 9l2-1.5h5L13.5 9z"/><path class="a" d="M8.5 9l2-1.5h5L13.5 9zM8.5 9v7M13.5 9v7M15.5 7.5v7"/>';
+    I.MESHSPLIT = '<rect x="3.5" y="3.5" width="17" height="17"/><path class="r" d="M3.5 20.5l17-17" stroke-dasharray="3 1.5"/>';
+    I.MESHMERGE = '<rect class="fa" x="3.5" y="6.5" width="17" height="11"/><rect x="3.5" y="6.5" width="17" height="11"/><path d="M12 6.5v11" stroke-dasharray="1.5 1.5"/>' + BADGE + '<path class="g" d="M15.4 18.1l1.9 1.9 3.4-3.7" stroke-width="1.8"/>';
+    I.MESHCOLLAPSE = '<rect x="3.5" y="3.5" width="17" height="17"/><path class="a" d="M5 5l5 5M19 5l-5 5M5 19l5-5M19 19l-5-5"/>' + P(12, 12);
+    I.MESHSPIN = '<path d="M3 20h18L12 4z"/><path class="r" d="M12 4v16" stroke-dasharray="2 1.5"/><path class="a" d="M7 12a5 5 0 0 1 10 0"/><path class="a" d="M15 10l2 2 2-2"/>';
+    I.MESHCAP = '<ellipse class="fa" cx="12" cy="6" rx="8" ry="3"/><ellipse class="a" cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/>';
+    I.MESHOPTIONS = has('MESH') + BGEAR; I.MESHPRIMITIVEOPTIONS = has('MESH') + BGEAR;
+    const SRF = '<path class="fd" d="M3 15c3-4 6-4 9-1s6 3 9-1V8c-3 4-6 4-9 1S6 5 3 9z"/><path d="M3 15c3-4 6-4 9-1s6 3 9-1M3 9c3-4 6-4 9-1s6 3 9-1M3 9v6M21 8v5"/>';
+    I.SURFOFFSET = SRF + '<path class="a" d="M3 21c3-4 6-4 9-1s6 3 9-1" stroke-dasharray="2.5 1.5"/>';
+    I.SURFEXTEND = SRF + '<path class="y" d="M21 10.5h2" stroke-width="2"/>' + AR(18, 19, 23, 19, 'y');
+    I.SURFTRIM = SRF + '<ellipse class="r" cx="12" cy="11.5" rx="4" ry="2"/>'; I.SURFUNTRIM = I.SURFTRIM + BOK;
+    I.SURFPATCH = '<path class="fa" d="M4 16c2-6 5-10 9-10s7 4 7 8-4 6-8 6-6-1-8-4z"/><path class="y" d="M4 16c2-6 5-10 9-10s7 4 7 8-4 6-8 6-6-1-8-4z" stroke-dasharray="3 1.5"/>';
+    I.SURFBLEND = '<path class="fd" d="M2 8h6v6H2zM16 10h6v6h-6z"/><path d="M2 8h6v6H2zM16 10h6v6h-6z"/><path class="y" d="M8 8c4 0 4 2 8 2M8 14c4 0 4 2 8 2"/>';
+    I.SURFNETWORK = '<path class="a" d="M3 6c6-2 12-2 18 0M3 12c6-2 12-2 18 0M3 18c6-2 12-2 18 0"/><path d="M6 4.8v13M12 4v13M18 4.8v13"/>';
+    I.SURFSCULPT = ISO('fa') + '<path class="y" d="M4 7.5L12 3l8 4.5" stroke-width="2"/>';
+    I.SURFEXTRACTCURVE = SRF + '<path class="y" d="M12 4v16" stroke-width="2"/>';
+    I.PROJECTGEOMETRY = SRF + '<path class="a" d="M8 2v6M16 2v6"/><path class="a" d="M6 6l2 2 2-2M14 6l2 2 2-2"/>';
+    I.OFFSETEDGE = '<path class="fd" d="M7 7h10v10H7z"/><path d="M7 7h10v10H7z"/><path class="a" d="M3.5 3.5h17v17h-17z" stroke-dasharray="2.5 1.5"/>';
+    I.ANALYSISZEBRA = '<circle cx="12" cy="12" r="8.5"/><path d="M8 4.5v15M12 3.5v17M16 4.5v15" stroke-width="2.2"/>';
+    I.ANALYSISCURVATURE = '<circle class="fa" cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="8.5"/><circle class="fy" cx="9.5" cy="9.5" r="3"/>';
+    I.ANALYSISDRAFT = '<path d="M4 20h16"/><path class="a" d="M8 20l3-15h2l3 15"/><path class="y" d="M12 20V5" stroke-dasharray="2 1.5"/>';
+    I.ANALYSISOPTIONS = I.ANALYSISZEBRA + BGEAR; }
   window.DVDIcons = I;
 })();

@@ -27,6 +27,46 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v6i) — lưới và mặt 3D, phân tích bề mặt
+Không gian **3D Modeling** có thêm hai thẻ ribbon **Mesh** (Lưới) và **Surface** (Mặt) như AutoCAD.
+
+- **Làm trơn lưới**:
+  - `MESHSMOOTH`: đổi khối 3D, mặt, mặt 3DFACE thành lưới, mức trơn theo `MESHOPTIONS`.
+  - `MESHSMOOTHMORE` / `MESHSMOOTHLESS`: tăng / giảm độ trơn một mức (chia nhỏ Loop). Lưới gốc (lồng) được giữ nên giảm lại không mất hình.
+  - `MESHREFINE`: biến các mặt đã làm trơn thành mặt sửa được, mức trơn về 0.
+  - `MESHCREASE` / `MESHUNCREASE`: gấp cạnh để cạnh giữ sắc khi làm trơn. Chọn từng cạnh, hoặc `A` để gấp mọi cạnh gãy.
+- **Sửa lưới**: bấm lên mặt để chọn (hai tam giác cùng mặt phẳng tính là một mặt). Trên mặt bằng, chương trình chọn mặt trên cùng; muốn chọn mặt bên thì bấm trong khung 3D.
+  - `MESHEXTRUDE`: đùn các mặt đã chọn theo pháp tuyến hoặc theo hướng 2 điểm (`D`).
+  - `MESHSPLIT`: tách mặt bằng đường qua 2 điểm, hoặc `H` mặt ngang ở cao độ.
+  - `MESHMERGE`: gộp các mặt kề nhau.
+  - `MESHCOLLAPSE`: thu mặt / cạnh về tâm.
+  - `MESHSPIN`: đổi đường chéo giữa hai tam giác.
+  - `MESHCAP`: bịt lỗ hở.
+  
+  Mọi lệnh sửa giữ lưới kín.
+- **Tuỳ chọn**:
+  - `MESHOPTIONS`: mức trơn sau khi đổi, mức tối đa, số tam giác tối đa.
+  - `MESHPRIMITIVEOPTIONS`: số chia cạnh hộp / nêm / chóp, mức trơn của khối mới.
+  
+  Lệnh `MESH` dùng các tuỳ chọn này (mặc định hộp 3 × 3 × 3), nên làm trơn ra hộp bo tròn như AutoCAD.
+- **Mặt**:
+  - `SURFNETWORK`: mặt qua 2 + 2 đường biên (Coons), hoặc qua nhiều đường cùng hướng.
+  - `SURFBLEND`: mặt chuyển tiếp nối cạnh biên hai mặt (liên tục tiếp tuyến) hoặc hai đường; có độ phồng.
+  - `SURFPATCH`: vá đường kín 3D hoặc lỗ của mặt bằng mặt căng.
+  - `SURFOFFSET`: mặt song song (`B` cả hai phía, `S` tạo khối đặc giữa hai mặt).
+  - `SURFEXTEND`: kéo dài mọi cạnh biên hoặc cạnh chọn.
+  - `SURFTRIM` / `SURFUNTRIM`: cắt bỏ phần trong / ngoài đường cong kín (chiếu theo Z), rồi trả lại khi cần.
+  - `SURFSCULPT`: ghép các mặt bao kín thành khối đặc.
+  - `SURFEXTRACTCURVE`: trích đường 3D trên mặt qua điểm chọn (hướng X, Y hoặc mặt ngang).
+  - `PROJECTGEOMETRY`: chiếu đường thẳng / đa tuyến / tròn lên mặt hoặc khối theo phương Z, ra đa tuyến 3D nằm trên mặt.
+  - `OFFSETEDGE`: đường song song cạnh của một mặt phẳng của khối (góc nhọn hoặc tròn).
+- **Phân tích bề mặt** (hiện trong khung 3D):
+  - `ANALYSISZEBRA`: sọc ngựa vằn, kiểm tra độ liền mạch;
+  - `ANALYSISCURVATURE`: tô màu theo độ cong Gauss hoặc trung bình;
+  - `ANALYSISDRAFT`: góc thoát khuôn theo Z, đỏ → xanh lá → xanh dương;
+  - `ANALYSISOPTIONS`: hướng / số / màu sọc, kiểu độ cong, khoảng góc.
+- Mức trơn, cạnh gấp và cờ "mặt" được lưu trong DXF / DWG và giữ nguyên khi mở lại trong DVDCAD.
+
 ## Bổ sung như AutoCAD 2027 (v6h) — Express Tools đầy đủ và soạn khối động
 - **Express Tools** còn thiếu nay đã có. `EXPRESSTOOLS` mở thẻ Express trên ribbon.
   - **Khối và thuộc tính**:

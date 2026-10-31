@@ -376,8 +376,8 @@
     // khối 3D → mặt 3DFACE + XDATA thông số (mở lại trong DVDCAD vẫn là khối)
     function solid3d(e, head){
       const m = A.meshOf ? A.meshOf(e) : null; if(!m) return; const nf = m.i.length / 3; let xd = null;
-      const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
-      let js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); if(js.length > 15000) js = JSON.stringify({ k: 'mesh', mat: e.mat }); xd = []; for(let k = 0; k < js.length; k += 240) xd.push(js.slice(k, k + 240));
+      const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
+      let js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); if(js.length > 15000){ delete d.ms; js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); } if(js.length > 15000) js = JSON.stringify({ k: 'mesh', mat: e.mat, srf: e.srf }); xd = []; for(let k = 0; k < js.length; k += 240) xd.push(js.slice(k, k + 240));
       for(let t = 0; t < m.i.length; t += 3){ const q = [m.i[t], m.i[t + 1], m.i[t + 2], m.i[t + 2]]; head('3DFACE', 'AcDbFace'); q.forEach((ix, j) => { P(10 + j, m.p[ix * 3]); P(20 + j, m.p[ix * 3 + 1]); P(30 + j, m.p[ix * 3 + 2]); });
         if(t === 0){ P(1001, 'DVDCAD'); P(1000, 'S3D'); P(1071, nf); for(const c of xd) P(1000, c); } }
     }
