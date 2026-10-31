@@ -932,6 +932,8 @@
     if(!r.kw || !r.kw.length) return null; const T = deacc(t);
     for(const k of r.kw){ if(T === deacc(k.k)) return k.k; }
     for(const k of r.kw){ const w = deacc(k.t); if(T.length >= 2 && w.startsWith(T)) return k.k; }
+    // tên tuỳ chọn tiếng Anh như AutoCAD (Width, Justify, Rectangular…) — LISP / script viết theo AutoCAD
+    const EN = window.DVD_I18N_EN || (window.DVDI18N && DVDI18N.dict); if(T.length >= 2 && EN){ for(const k of r.kw){ let e = ''; try{ e = deacc(String(EN[String(k.t || '').replace(/\s+/g, ' ').trim()] || '')).replace(/[^A-Z0-9]/g, ''); }catch(_){} if(e && e !== deacc(k.t).replace(/[^A-Z0-9]/g, '') && e.startsWith(T.replace(/[^A-Z0-9]/g, ''))) return k.k; } }
     return null;
   }
   const TRANSPARENT = new Set(['Z', 'ZOOM', 'PAN', 'RE', 'REGEN', 'REDRAW', 'ZE', 'ZW']);
@@ -1018,9 +1020,11 @@
   // opt.dyn = gõ ở ô nhập động cạnh con trỏ (chuột đang trên bản vẽ) — điểm thứ hai trở đi là toạ độ tương đối như AutoCAD
   A.input = function(text, opt){ typedNow = String(text == null ? '' : text).trim(); try{ return inputImpl(text, opt || {}); } finally { typedNow = null; } };
   function inputImpl(text, opt){
-    const r = cur && cur.req; const t = String(text == null ? '' : text).trim();
+    const r = cur && cur.req; let t = String(text == null ? '' : text).trim();
     if(!cur) return false;
     if(!r){ return true; }
+    // "_W", "_END"…: tên tuỳ chọn gốc tiếng Anh như AutoCAD (LISP / script viết vậy để chạy mọi ngôn ngữ)
+    if(/^_[A-Za-z]/.test(t) && (r.type !== 'str' || (r.kw && matchKw(r, t.slice(1))))) t = t.slice(1);
     const T = t.toUpperCase().replace(/^'/, ''), word = T.split(/\s+/)[0];
     const kwHit = !!(r.kw && r.kw.some(k => deacc(k.k) === deacc(T)));
     // lệnh trong suốt: 'ZOOM 'PAN 'CAL 'DIST 'LAYER 'OSMODE… (Z / P / RE không cần dấu ')

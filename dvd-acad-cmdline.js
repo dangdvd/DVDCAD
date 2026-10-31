@@ -126,19 +126,23 @@
   cmd(['-INSERT', '-I'], 'Chèn khối bằng dòng lệnh (cho script / LISP): tên, điểm chèn, tỉ lệ, góc xoay', async () => {
     const B = A.blockList ? A.blockList() : { file: [], lib: [] };
     let r = await A.getStr('Nhập tên khối hoặc [?]', { def: A.MEM.lastIns || undefined }); let name = String(r.str || A.MEM.lastIns || '').trim();
+    // "*TÊN" = chèn rồi phá khối; "TÊN=đường dẫn" = lấy tên trước dấu = (như AutoCAD)
+    let explode = false; if(name[0] === '*'){ explode = true; name = name.slice(1); } if(name.includes('=')) name = name.split('=')[0].trim() || name.split('=')[1].replace(/^.*[\\/]/, '').replace(/\.dwg$/i, '');
     if(name === '?'){ log('Khối: ' + B.file.concat(B.lib.filter(n => !B.file.includes(n))).join(', ')); return; }
     const src = B.file.find(n => n.toUpperCase() === name.toUpperCase()) ? 'file' : B.lib.find(n => n.toUpperCase() === name.toUpperCase()) ? 'lib' : null;
     if(!src){ log('Không có khối "' + name + '".'); return; } name = (src === 'file' ? B.file : B.lib).find(n => n.toUpperCase() === name.toUpperCase()); A.MEM.lastIns = name;
-    let sc = 1, rot = 0; let p;
+    let sc = 1, rot = 0; let p, scSet = false, rotSet = false;
     for(;;){ p = await A.getPoint('Chỉ định điểm chèn', { kw: [{ k: 'S', t: 'Tỉ lệ' }, { k: 'R', t: 'Xoay' }], rubber: false, preview: (g, q) => g.ents(A.instBlock(name, src, q, sc, rot).slice(0, 1500), '#cfe3ff') });
-      if(p.kw === 'S'){ const v = await A.getNum('Chỉ định hệ số tỉ lệ', { def: sc }); if(v.num) sc = Math.abs(v.num); continue; }
-      if(p.kw === 'R'){ const v = await A.getAngle('Chỉ định góc xoay', { def: rot }); if(v.num != null) rot = v.num; continue; }
+      if(p.kw === 'S'){ const v = await A.getNum('Chỉ định hệ số tỉ lệ', { def: sc }); if(v.num){ sc = Math.abs(v.num); scSet = true; } continue; }
+      if(p.kw === 'R'){ const v = await A.getAngle('Chỉ định góc xoay', { def: rot }); if(v.num != null){ rot = v.num; rotSet = true; } continue; }
       break; }
     if(!p.pt) return;
-    const xs = await A.getNum('Nhập hệ số tỉ lệ X', { def: sc }); if(xs.num) sc = Math.abs(xs.num);
-    const ys = await A.getNum('Nhập hệ số tỉ lệ Y', { def: 'dùng hệ số X' }); if(ys.num && Math.abs(Math.abs(ys.num) - sc) > 1e-9) log('Tỉ lệ X, Y khác nhau chưa hỗ trợ — dùng ' + fmt(sc) + '.');
-    const ro = await A.getAngle('Chỉ định góc xoay', { base: p.pt, def: rot }); if(ro.num != null) rot = ro.num;
+    // như AutoCAD: đã chọn Tỉ lệ / Xoay ở lời nhắc điểm chèn thì không hỏi lại
+    if(!scSet){ const xs = await A.getNum('Nhập hệ số tỉ lệ X', { def: sc }); if(xs.num) sc = Math.abs(xs.num);
+      const ys = await A.getNum('Nhập hệ số tỉ lệ Y', { def: 'dùng hệ số X' }); if(ys.num && Math.abs(Math.abs(ys.num) - sc) > 1e-9) log('Tỉ lệ X, Y khác nhau chưa hỗ trợ — dùng ' + fmt(sc) + '.'); }
+    if(!rotSet){ const ro = await A.getAngle('Chỉ định góc xoay', { base: p.pt, def: rot }); if(ro.num != null) rot = ro.num; }
     const ents = A.instBlock(name, src, p.pt, sc, rot); if(!ents.length){ log('Khối rỗng.'); return; }
+    if(explode) for(const w of ents){ delete w.grp; delete w.blk; delete w.bip; delete w.bm; delete w.l0; }
     A.commit({ add: ents }, 'Đã chèn khối ' + name);
   });
   const OSK = { END: 'end', ENDP: 'end', ENDPOINT: 'end', MID: 'mid', MIDPOINT: 'mid', CEN: 'cen', CENTER: 'cen', GCE: 'gce', GCEN: 'gce', NOD: 'nod', NODE: 'nod', QUA: 'qua', QUAD: 'qua', QUADRANT: 'qua', INT: 'int', INTERSECTION: 'int', EXT: 'ext', EXTENSION: 'ext',

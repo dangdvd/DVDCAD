@@ -420,15 +420,21 @@
 
   /* ---------------- (command …) ---------------- */
   const argStr = a => { if(a === null || a === undefined) return ''; if(typeof a === 'string') return a; if(a instanceof LI) return String(a.v); if(typeof a === 'number') return String(+a.toPrecision(15)); if(Array.isArray(a) && a.length >= 2 && isNum(a[0])) return nv(a[0]) + ',' + nv(a[1]); if(a instanceof Ename){ return null; } if(a instanceof SS) return null; return str(a, true); };
-  async function waitPrompt(seq, maxMs){ const t0 = Date.now(); for(;;){ if(!A().busy()) return 'done'; if(A().reqInfo() && (A().reqSeq || 0) !== seq) return 'req'; if(maxMs && Date.now() - t0 > maxMs) return 'timeout'; await sleep(8); } }
+  async function waitPrompt(seq, maxMs){ const t0 = Date.now(); for(;;){ if(!A().busy()) return 'done'; if(A().textEditing && A().textEditing() && Date.now() - t0 > 30) return 'text'; if(A().reqInfo() && (A().reqSeq || 0) !== seq) return 'req'; if(maxMs && Date.now() - t0 > maxMs) return 'timeout'; await sleep(8); } }
   // như AutoCAD: trong (command …) lệnh có bản dòng lệnh (-LAYER, -INSERT, -COLOR…) chạy bản đó thay cho hộp thoại
-  const clName = n => DVDCmd.commands.some(c => c.k.includes('-' + n)) ? '-' + n : n;
-  async function command(...args){
+  // HATCH gọi từ LISP dùng lời nhắc cổ điển (tên mẫu, tỉ lệ, góc, chọn đối tượng) như AutoCAD
+  const LISPCMD = { HATCH: 'LISPHATCH', BHATCH: '-HATCH', H: 'LISPHATCH', BH: '-HATCH' };
+  const clName = n => n[0] === '-' ? (DVDCmd.commands.some(c => c.k.includes(n)) ? n : n.slice(1)) : LISPCMD[n] && DVDCmd.commands.some(c => c.k.includes(LISPCMD[n])) ? LISPCMD[n] : DVDCmd.commands.some(c => c.k.includes('-' + n)) ? '-' + n : n;
+  // lệnh đang được (command …) của LISP điều khiển — lệnh dùng để hỏi ở dòng lệnh thay cho hộp thoại, như AutoCAD
+  let cmdDepth = 0;
+  if(A()) A().fromLisp = () => cmdDepth > 0;
+  async function command(...args){ cmdDepth++; try{ return await command0(...args); } finally { cmdDepth--; } }
+  async function command0(...args){
     flushOut();
     if(!args.length){ if(A().busy()) A().cancel(true); return null; }
     let i = 0;
     if(!A().busy()){
-      const name = String(argStr(args[0]) || '').replace(/^[_.'-]+/, '').toUpperCase(); i = 1; if(!name) return null;
+      const name = String(argStr(args[0]) || '').replace(/^[_.']+/, '').toUpperCase(); i = 1; if(!name || name === '-') return null;
       const seq = A().reqSeq || 0; DVDCmd.run(clName(name)); await waitPrompt(seq, 1500);
     }
     for(; i < args.length; i++){
@@ -438,14 +444,14 @@
         const ri = A().reqInfo(); const ents = a instanceof Ename ? entsOf(a) : a.l.flatMap(entsOf); const seq = A().reqSeq || 0;
         if(ri && ri.single){ const e = ents[0]; if(e) A().pickEnt3D(e); await waitPrompt(seq, 1500); continue; }
         for(const e of ents) A().pickEnt3D(e); await sleep(5);
-        if(i + 1 >= args.length || !(args[i + 1] instanceof SS || args[i + 1] instanceof Ename)){ A().input(''); await waitPrompt(seq, 1500); } continue; }
+        if(i + 1 >= args.length || !(args[i + 1] instanceof SS || args[i + 1] instanceof Ename || args[i + 1] === '' || args[i + 1] === '\\' || (args[i + 1] instanceof Sym && args[i + 1].n === 'PAUSE'))){ A().input(''); await waitPrompt(seq, 1500); } continue; }   // LISP tự cho "" kết thúc chọn thì để nó làm
       if(!A().busy()){
-        const name = String(argStr(a) || '').replace(/^[_.'-]+/, '').toUpperCase(); if(!name) continue; const seq = A().reqSeq || 0; DVDCmd.run(clName(name)); await waitPrompt(seq, 1500); continue; }
-      const s = argStr(a); const seq = A().reqSeq || 0; A().input(s); await waitPrompt(seq, 1500);
+        const name = String(argStr(a) || '').replace(/^[_.']+/, '').toUpperCase(); if(!name || name === '-') continue; const seq = A().reqSeq || 0; DVDCmd.run(clName(name)); await waitPrompt(seq, 1500); continue; }
+      const s = argStr(a); const seq = A().reqSeq || 0; A().input(s, { lisp: true }); await waitPrompt(seq, 1500);
     }
     return null;
   }
-  BI(['COMMAND', 'VL-CMDF', 'COMMAND-S'], command);
+  BI(['COMMAND', 'COMMAND-S'], command); BI('VL-CMDF', async (...a) => { await command(...a); return T; });
 
   /* ---------------- lệnh c:XXX ---------------- */
   const cmdFns = new Map();

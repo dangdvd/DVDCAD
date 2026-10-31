@@ -292,7 +292,7 @@
   });
 
   cmd(['POINT', 'PO'], 'Đặt điểm (nhiều lần, Enter để thôi)', async () => {
-    for(;;){ const r = await A.getPoint('Chỉ định điểm'); if(!r.pt) return; A.commit({ add: [mk('POINT', { x: r.pt.x, y: r.pt.y })] }); }
+    for(;;){ const r = await A.getPoint('Chỉ định điểm'); if(!r.pt) return; A.commit({ add: [mk('POINT', { x: r.pt.x, y: r.pt.y })] }); if(A.fromLisp && A.fromLisp()) return; }   // LISP: một điểm như AutoCAD
   });
   // hướng của đoạn thẳng gần điểm bấm (LINE / XLINE / đoạn của đa tuyến)
   function segDir(e, p){
@@ -585,6 +585,30 @@
   });
 
   cmd(['ARRAY', 'AR'], 'Nhân bản dạng mảng (chữ nhật / tròn)', async () => arrayCmd(null));
+  // -ARRAY: mảng cổ điển của AutoCAD (bản sao rời, không liên kết) — LISP / script cũ hay dùng
+  cmd(['-ARRAY'], 'Mảng cổ điển (bản sao rời): R = chữ nhật (hàng, cột, khoảng cách), P = tròn (tâm, số bản, góc)', async () => {
+    const s = await A.getSel('Chọn đối tượng'); const sel = s.sel || []; if(!sel.length) return;
+    const k = await A.getKw('Nhập kiểu mảng', { kw: [{ k: 'R', t: 'Chữ nhật' }, { k: 'P', t: 'Tròn' }], def: 'Chữ nhật' }); const add = [];
+    if(k.kw !== 'P'){
+      const nr = await A.getNum('Nhập số hàng (---)', { def: 1, int: true }); const rows = Math.max(1, Math.round(nr.num || 1));
+      const nc = await A.getNum('Nhập số cột (|||)', { def: 1, int: true }); const cols = Math.max(1, Math.round(nc.num || 1));
+      if(rows * cols <= 1){ log('Mảng một phần tử — không làm gì.'); return; }
+      let dy = 0, dx = 0;
+      if(rows > 1){ const d = await A.getDist('Nhập khoảng cách giữa các hàng hoặc chỉ định ô đơn vị (---)'); if(d.pt && d.num == null){ const q = await A.getPoint('Chỉ định góc đối diện', { base: d.pt }); if(q.pt){ dx = q.pt.x - d.pt.x; dy = q.pt.y - d.pt.y; } } else dy = d.num || 0; }
+      if(cols > 1 && !dx){ const d = await A.getDist('Chỉ định khoảng cách giữa các cột (|||)'); dx = d.num || 0; }
+      for(let i = 0; i < rows; i++) for(let j = 0; j < cols; j++){ if(!i && !j) continue; add.push(...remapGroups(sel.map(e => { const w = copyOf(e); translateEnt(w, j * dx, i * dy); return w; }))); }
+    } else {
+      const c = await A.getPoint('Chỉ định tâm mảng'); if(!c.pt) return;
+      const n = await A.getNum('Nhập số phần tử của mảng', { int: true }); const N = Math.round(n.num || 0); if(N < 2) return;
+      const f = await A.getNum('Chỉ định góc cần điền (+ = ngược kim, - = thuận kim)', { def: 360 }); const fill = f.num == null ? 360 : f.num;
+      const rk = await A.getKw('Xoay đối tượng khi sao?', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: 'Có' }); const rot = rk.kw !== 'N';
+      const step = Math.abs(fill) >= 360 ? fill / N : fill / (N - 1);
+      let ref = null; if(!rot){ const bb = sel.map(e => entBBox(e)).filter(Boolean); if(bb.length) ref = { x: (Math.min(...bb.map(b => b.x0)) + Math.max(...bb.map(b => b.x1))) / 2, y: (Math.min(...bb.map(b => b.y0)) + Math.max(...bb.map(b => b.y1))) / 2 }; }
+      for(let i = 1; i < N; i++){ const a = step * i, ar = a * Math.PI / 180;
+        add.push(...remapGroups(sel.map(e => { const w = copyOf(e); if(rot) window.rotateEnt(w, a, c.pt); else if(ref){ const nx = c.pt.x + (ref.x - c.pt.x) * Math.cos(ar) - (ref.y - c.pt.y) * Math.sin(ar), ny = c.pt.y + (ref.x - c.pt.x) * Math.sin(ar) + (ref.y - c.pt.y) * Math.cos(ar); translateEnt(w, nx - ref.x, ny - ref.y); } return w; }))); }
+    }
+    if(add.length) A.commit({ add }, 'Đã tạo mảng: ' + add.length + ' đối tượng mới');
+  });
   cmd(['ARRAYRECT'], 'Mảng chữ nhật', async () => arrayCmd('R'));
   cmd(['ARRAYPOLAR'], 'Mảng tròn quanh tâm', async () => arrayCmd('PO'));
   // ARRAYRECT / ARRAYPOLAR như AutoCAD 2027: chọn đối tượng → xem trước mảng mặc định (4 × 3 / 6 phần tử) + tab "Array Creation";
@@ -913,7 +937,8 @@
     let p1 = r.pt;
     let r2 = await A.getPoint('Chỉ định điểm bẻ thứ hai', { kw: [{ k: 'F', t: 'Điểm thứ nhất' }] });
     if(r2.kw === 'F'){ const a = await A.getPoint('Chỉ định điểm bẻ thứ nhất'); if(!a.pt) return; p1 = a.pt; r2 = await A.getPoint('Chỉ định điểm bẻ thứ hai', { base: p1 }); }
-    hl([]); if(!r2.pt) return;
+    else if(r2.pt && !p1){ p1 = r2.pt; r2 = await A.getPoint('Chỉ định điểm bẻ thứ hai', { base: p1 }); }   // chọn bằng tên đối tượng (LISP): điểm đầu tiên là điểm bẻ thứ nhất
+    hl([]); if(!r2.pt || !p1) return;
     const m = doBreak(e, p1, r2.pt); if(m) log(m);
   });
   cmd(['BREAKATPOINT', 'BRP', 'BR@'], 'Tách đối tượng tại 1 điểm', async () => {
@@ -1864,6 +1889,48 @@
   }
   A.openHatchDialog = openHatchDialog; A.hsSave = () => hsSave();
   DVDCmd.register(['HATCHSET', 'HS'], 'Cài đặt mẫu hatch', () => openHatchDialog());
+
+  // tên mẫu như AutoCAD gõ ở dòng lệnh: "ANSI31", "ANSI31,O" (kiểu đảo), "S" / "SOLID", "U" (do người dùng)
+  async function askPattern(){
+    const r = await A.getStr('Nhập tên mẫu hoặc [?/Solid/User defined]', { def: HS.pat === '_USER' ? 'U' : HS.pat }); let n = String(r.str || '').trim().toUpperCase().split(',')[0] || HS.pat;
+    if(n === '?'){ log('Mẫu: ' + Object.keys(PATS).filter(k => !PATS[k].user).join(', ')); return askPattern(); }
+    if(n === 'S' || n === 'SOLID'){ HS.pat = 'SOLID'; HS.gmode = 0; hsSave(); return true; }
+    if(n === 'U' || n === '_USER'){ HS.pat = '_USER'; HS.gmode = 0;
+      const a = await A.getAngle('Chỉ định góc đường gạch', { def: HS.ang || 0 }); if(a.num != null) HS.ang = a.num;
+      const d = await A.getNum('Chỉ định khoảng cách giữa các đường', { def: HS.usp || 1 }); if(d.num > 0) HS.usp = d.num;
+      const k = await A.getKw('Gạch đôi?', { kw: [{ k: 'Y', t: 'Có' }, { k: 'N', t: 'Không' }], def: HS.udbl ? 'Y' : 'N' }); HS.udbl = k.kw ? k.kw === 'Y' : !!HS.udbl; hsSave(); return true; }
+    const key = Object.keys(PATS).find(k => k.toUpperCase() === n); if(!key){ log('Không có mẫu "' + n + '".'); return false; }
+    HS.pat = key; HS.gmode = 0;
+    const sc = await A.getNum('Chỉ định tỉ lệ mẫu', { def: HS.scale || 1 }); if(sc.num > 0) HS.scale = sc.num; else if(!(HS.scale > 0)) HS.scale = 1;
+    const an = await A.getAngle('Chỉ định góc mẫu', { def: HS.ang || 0 }); if(an.num != null) HS.ang = an.num;
+    hsSave(); return true;
+  }
+  const closedOnly = e => { const c = G.curveOf(e); return !!(c && c.closed && e.type !== 'HATCH'); };
+  // -HATCH: bản dòng lệnh của AutoCAD — gom điểm trong / đối tượng chọn, Enter = tạo một hatch
+  cmd(['-HATCH', '-BHATCH'], 'Tô vật liệu bằng dòng lệnh (cho script / LISP): P = mẫu, S = chọn đối tượng, CO = màu, LA = lớp', async () => {
+    const loops = [];
+    for(;;){
+      const r = await A.getPoint('Chỉ định điểm bên trong', { noSnap: true, rubber: false, kw: [{ k: 'P', t: 'Thuộc tính' }, { k: 'S', t: 'Chọn đối tượng' }, { k: 'CO', t: 'Màu hatch' }, { k: 'LA', t: 'Lớp' }, { k: 'O', t: 'Gốc' }] });
+      if(r.kw === 'P'){ await askPattern(); continue; }
+      if(r.kw === 'S'){ const s2 = await A.getSel('Chọn đối tượng', { pre: false, filter: closedOnly }); for(const e of s2.sel || []){ const l = hatchClosedLoop(e); if(l) loops.push(l); } continue; }
+      if(r.kw === 'CO'){ const c = await A.getStr('Nhập màu hatch (ACI, tên, #rrggbb, BYLAYER)', { def: HS.col ? HS.col : 'BYLAYER' }); const t = String(c.str || '').trim().toUpperCase();
+        HS.col = !t || t === 'BYLAYER' || t === '.' ? '' : /^#[0-9A-F]{6}$/.test(t) ? t.toLowerCase() : (typeof aciHex === 'function' && +t > 0 && +t < 256 ? aciHex(+t) : ({ RED: '#ff0000', YELLOW: '#ffff00', GREEN: '#00ff00', CYAN: '#00ffff', BLUE: '#0000ff', MAGENTA: '#ff00ff', WHITE: '#ffffff' }[t] || HS.col)); hsSave(); continue; }
+      if(r.kw === 'LA'){ const l = await A.getStr('Nhập tên lớp cho hatch', { def: '.' }); HS.layer = String(l.str || '.').trim(); continue; }
+      if(r.kw === 'O'){ await A.getPoint('Chỉ định gốc mới', {}); continue; }
+      if(r.pt){ const res = findBoundary(r.pt); if(res.err){ log(res.err); continue; } loops.push(...res.loops); continue; }
+      break;
+    }
+    if(!loops.length) return;
+    const e = makeHatch(loops); if(HS.layer && HS.layer !== '.' && A.layerNames().includes(HS.layer)){ e.layer = HS.layer; if(e.bl) e.col = A.layerHex(HS.layer); }
+    A.commit({ add: [e] }, 'Đã tô ' + loops.length + ' vùng');
+  });
+  // HATCH gọi từ (command …) của LISP: lời nhắc cổ điển của AutoCAD — tên mẫu, tỉ lệ, góc, chọn đối tượng
+  cmd(['LISPHATCH'], 'HATCH theo lời nhắc cổ điển (dùng cho LISP)', async () => {
+    if(!(await askPattern())) return;
+    const s2 = await A.getSel('Chọn đối tượng làm biên hatch', { pre: false, filter: closedOnly });
+    const loops = (s2.sel || []).map(hatchClosedLoop).filter(Boolean); if(!loops.length){ log('Không có đường kín.'); return; }
+    A.commit({ add: [makeHatch(loops)] }, 'Đã tô ' + loops.length + ' vùng');
+  });
 
   /* ===================================================================
      KHỐI / NHÓM / CLIPBOARD

@@ -249,7 +249,7 @@
       for(const [n, o] of stUsed){ rec('STYLE', o.h, 'AcDbTextStyleTableRecord'); P(2, dxfStr(n)); P(70, 0); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, o.f); P(4, o.b || ''); }
       if(hStShx){ rec('STYLE', hStShx, 'AcDbTextStyleTableRecord'); P(2, ''); P(70, 1); P(40, 0); P(41, 1); P(50, 0); P(71, 0); P(42, 2.5); P(3, 'ltypeshp.shx'); P(4, ''); } });
     table('VIEW', 0, () => {}); table('UCS', 0, () => {});
-    const dynApps = DYNX && dynBase.size ? ['AcDbDynamicBlockTrueName', 'AcDbDynamicBlockGUID', 'AcDbBlockRepETag', 'AcDbBlockRepBTag'] : [];
+    const dynApps = (DYNX && dynBase.size ? ['AcDbDynamicBlockTrueName', 'AcDbDynamicBlockGUID', 'AcDbBlockRepETag', 'AcDbBlockRepBTag'] : []).concat([...new Set(ents.flatMap(e => e.xd ? e.xd.map(x => String(x[0])) : []).concat(A.regApps ? A.regApps() : []))].filter(n => !/^(ACAD|DVDCAD|AcCmTransparency|AcDbDynamicBlockTrueName|AcDbDynamicBlockGUID|AcDbBlockRepETag|AcDbBlockRepBTag)$/i.test(n)).map(dxfStr));
     table('APPID', 3 + dynApps.length, () => { rec('APPID', hApAcad, 'AcDbRegAppTableRecord'); P(2, 'ACAD'); P(70, 0); rec('APPID', hApDvd, 'AcDbRegAppTableRecord'); P(2, 'DVDCAD'); P(70, 0); rec('APPID', H(), 'AcDbRegAppTableRecord'); P(2, 'AcCmTransparency'); P(70, 0);
       for(const n of dynApps){ rec('APPID', H(), 'AcDbRegAppTableRecord'); P(2, n); P(70, 0); } });
     const dt = A.dimTxt ? A.dimTxt() : 2.5;
@@ -277,6 +277,8 @@
       let wrote = false;
       const head = (t, sub, hh) => { wrote = true; const h = hh || H(); if(o.hs) o.hs.push(h); P(0, t); P(5, h); P(330, owner); P(100, 'AcDbEntity'); if(curPS) P(67, 1); P(8, ly); if(e.vh) P(60, 1); if(elt && t !== 'HATCH' && t !== 'TEXT' && t !== 'MTEXT') P(6, elt); if(aci !== 256) P(62, aci); if(tc != null) P(420, tc); if(lw != null) P(370, lw); if(e.tp > 0 && V2004) P(440, (0x02000000 | Math.round(255 * (1 - Math.min(90, e.tp) / 100))) >>> 0); if(e.lts && Math.abs(e.lts - 1) > 1e-9 && t !== 'TEXT' && t !== 'MTEXT') P(48, e.lts); if(sub) P(100, sub); return h; };
       const xd = () => { if(o.dimBlock) return;
+        // XDATA của ứng dụng / LISP (regapp + entmod -3): ghi lại nguyên như AutoCAD
+        if(e.xd && !o.inBlock) for(const [app, items] of e.xd){ P(1001, dxfStr(app)); for(const [c, v] of items){ if(c >= 1010 && c <= 1013){ const q = Array.isArray(v) ? v : [0, 0, 0]; P(c, +q[0] || 0); P(c + 10, +q[1] || 0); P(c + 20, +q[2] || 0); } else P(c, typeof v === 'string' ? dxfStr(v) : v); } }
         if(o.inBlock){ if(!o.dyn) return; if(DYNX && e._et != null){ P(1001, 'AcDbBlockRepETag'); P(1070, 1); P(1071, e._et); }
           const q = {}; if(e.dvs) q.dvs = e.dvs; if(o.dyn === 2 && e.dyn) q.dyn = e.dyn; if(Object.keys(q).length){ const js = JSON.stringify(q); P(1001, 'DVDCAD'); for(let k = 0; k < js.length; k += 240) P(1000, (k ? 'P+' : 'P:') + js.slice(k, k + 240)); } return; }
         const pr = {}; for(const k of XKEYS) if(e[k] != null && e[k] !== '' && !(k === 'mt' && e.type !== 'TEXT')) pr[k] = e[k];
