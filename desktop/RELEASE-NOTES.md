@@ -1,59 +1,60 @@
-## DVDCAD 5.33.0 — Xuất ACIS, mặt NURBS, in dấu, nét khuất, đánh dấu, so sánh, kết nối dữ liệu
+## DVDCAD 5.34.0 — Vết can, Design Feed, chia sẻ góc nhìn, xuất 3D glTF, thành phần mặt cắt
 
 Phần mềm CAD mã nguồn mở (GPL-3.0) chạy hoàn toàn offline trên Windows. Tên lệnh, lệnh tắt và cách dùng giống AutoCAD để người dùng chuyển sang không bỡ ngỡ.
 
 ### Tải về
-- **DVDCAD-Setup-5.33.0.exe** — bộ cài.
+- **DVDCAD-Setup-5.34.0.exe** — bộ cài.
   - Cài cho tài khoản Windows đang dùng, không cần quyền quản trị.
   - Có lối tắt Desktop và Start Menu.
   - Nhấp đúp file .dwg / .dxf là mở bằng DVDCAD.
-- **DVDCAD-5.33.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
+- **DVDCAD-5.34.0-portable.exe** — chạy ngay, không cần cài (dùng được trên USB).
 
 Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More info → Run anyway**.
 
 ### Có gì mới
-- **Khối 3D**:
-  - `ACISOUT` xuất khối ra tệp ACIS `.sat` (mặt phẳng, có lỗ, cạnh dùng chung).
-  - `BREP` bỏ lịch sử khối.
-  - `IMPRINT` in dấu đường lên mặt khối.
-  - `HLSETTINGS` hiện nét khuất (đứt / chấm / liền, màu) khi xem kiểu Hidden.
-- **Mặt NURBS** (thẻ Surface):
-  - `CONVTONURBS`: khối / mặt → mặt NURBS; trụ, cầu đúng tròn tuyệt đối.
-  - `3DEDITBAR`: kéo một điểm trên mặt tới vị trí mới.
-  - `INSERTCONTROLPOINT`: thêm hàng điểm điều khiển, hình không đổi.
-  - `SURFFILLET`: bo cung tròn giữa hai mặt phẳng và cắt mặt tới đường tiếp xúc.
-- **Đánh dấu**:
-  - `MARKUPIMPORT` nhập bản đánh dấu (PDF / ảnh / DWFx).
-  - `MARKUPASSIST` tìm vết đánh dấu đỏ: phóng tới, chèn chữ ghi chú vào bản vẽ, vẽ đám mây sửa đổi, đánh dấu đã xong.
-  - `OPENDWFMARKUP`, `MARKUPCLOSE`.
-- **So sánh**: `COMPAREEXPORT` xuất kết quả so sánh ra DXF; `COMPAREIMPORT` lấy đối tượng của bản so sánh vào bản vẽ.
-- `DBCONNECT`: nối bảng CSV / Excel với đối tượng — xem bản ghi, chọn đối tượng theo dòng, nhãn từ dữ liệu.
-- `AMECONVERT`.
+- **Vết can** (thẻ Collaborate): `TRACE` như tờ giấy can đặt lên bản vẽ — vẽ, ghi chú, góp ý mà không sửa bản vẽ gốc.
+  - `TRACEFRONT` (vẽ trên vết can, bản vẽ mờ và khoá), `TRACEBACK` (sửa bản vẽ, vết can mờ phía sau), `TRACECLOSE`, `-TRACE`.
+  - Vết can lưu kèm DWG / DXF, không lẫn vào hình học bản vẽ, không in. Lệnh nét rộng cũ đổi tên thành `TRACEWIDE`.
+- **Design Feed**: `DESIGNFEEDOPEN` / `DESIGNFEEDCLOSE` — bình luận, trả lời, gắn vị trí (bong bóng số trên bản vẽ), đánh dấu đã xong; lưu kèm bản vẽ.
+- **Chia sẻ**:
+  - `SHAREVIEW`: một tệp .html tự chứa (bản vẽ vector, phóng / kéo, các layout, bình luận) — người nhận mở bằng trình duyệt.
+  - `PUSHTODOCS`: các layout → PDF vector (một tệp nhiều trang hoặc mỗi layout một tệp trong .zip).
+  - `UPLOADTOCLOUD`, `PUSHTOWEB`: lên Google Drive của bạn / sang DVDCAD Web.
+- `3DDWF`: xuất mô hình 3D ra **glTF .glb** (Windows 3D Viewer, Blender…) hoặc **trang 3D .html** xoay / phóng được trong trình duyệt.
+- **Hình chiếu** (thẻ Layout):
+  - `VIEWCOMPONENT`: chọn khối trên hình chiếu → không bị cắt / cắt / cắt lát (như trục, bu lông trong bản vẽ cơ khí).
+  - `VIEWSYMBOLSKETCH` / `VIEWSKETCHCLOSE`: sửa đường cắt / biên hình trích bằng nét phác, hình chiếu dựng lại theo.
+  - `VIEWSETPROJ`: chọn tệp dự án Inventor (.ipj).
 
 ### Kiểm thử
 - GitHub Actions trên Windows:
-  1. Kiểm thử nhanh như 5.32.0, thêm ACISOUT → ACISIN, trụ NURBS và các lệnh mới.
+  1. Kiểm thử nhanh như 5.33.0, thêm xuất glTF, vết can không vào hình học DXF và các lệnh mới.
   2. **ODA File Converter** và **ACadSharp** đọc lại các tệp DWG do DVDCAD ghi.
   3. Bộ đọc XPS của Windows mở tệp DWFx.
   4. Cài lặng bộ cài, chạy kiểm thử trên `DVDCAD.exe` đã cài, rồi gỡ cài.
-- Kiểm thử giao diện tự động (28 mục):
-  - ACISOUT:
-    - đầu tệp SAT 7.0; hộp 6 mặt + khung có lỗ 10 mặt;
-    - mỗi cạnh đúng 2 coedge; đọc lại đúng thể tích.
-  - BREP. IMPRINT trên mặt đáy, xoá / giữ đường gốc, DXF giữ nét in. HLSETTINGS: nét khuất đứt ở kiểu Hidden.
-  - NURBS:
-    - trụ / cầu đúng tròn (sai số < 10⁻⁹), hộp → 6 mặt song tuyến;
-    - chèn nút U / V không đổi hình; 3DEDITBAR dời đúng +7;
-    - SURFFILLET R = 2 đúng điểm giữa cung, cắt sàn / tường; DXF giữ mặt NURBS.
-  - Đánh dấu:
-    - 2 vết đỏ (nét + chữ), chèn chữ, đám mây, đã xong;
-    - nhập ảnh đánh dấu đúng cỡ (192 px = 50,8 mm).
-  - So sánh thêm 2 / mất 1, COMPAREEXPORT, COMPAREIMPORT đúng lớp / màu.
-  - DBCONNECT liên kết, nhãn, bảng, chọn theo dòng.
-  - Các bộ kiểm thử của 5.24.0 → 5.32.0 vẫn đạt đủ.
+- Kiểm thử giao diện tự động (36 mục):
+  - Vết can:
+    - nét mới thuộc vết can, khoá / mờ đúng ở trước / sau, đóng thì ẩn;
+    - DXF chỉ ghi nét của bản vẽ, vết can mở lại được; bảng vết can, `-TRACE`.
+  - Design Feed: đăng, trả lời, đã xong, gắn vị trí bằng điểm chọn; lưu / mở DXF giữ nguyên.
+  - SHAREVIEW có SVG vector + bình luận; PUSHTODOCS ra PDF / .zip; UPLOADTOCLOUD và PUSHTOWEB khi chưa cấu hình Drive.
+  - 3DDWF:
+    - glTF 2.0 đọc lại đúng kích thước (mét, Y lên), số tam giác khớp;
+    - trang 3D .html mở được (WebGL, không lỗi).
+  - VIEWCOMPONENT:
+    - chọn đúng khối qua hình chiếu mặt cắt;
+    - Không / Lát / Cắt đổi đúng số vùng gạch;
+    - lưu DXF mở lại + VIEWUPDATE vẫn giữ.
+  - VIEWSYMBOLSKETCH: dời đường cắt → mặt cắt mới đúng; Bỏ giữ nguyên. VIEWSETPROJ đọc .ipj.
+  - Các bộ kiểm thử của 5.24.0 → 5.33.0 vẫn đạt đủ.
 
 ### Giới hạn
-- **OpenDCL** (`dcl_…`, hộp thoại của thư viện OpenDCL) chưa có. Còn khoảng 14 lệnh AutoCAD chưa có: phần lớn là dịch vụ đám mây / trực tuyến của Autodesk (Trace, Shared Views, Design Feed, Docs) và hình chiếu liên kết Inventor (`VIEWCOMPONENT`, `VIEWSETPROJ`, `VIEWSYMBOLSKETCH`), `3DDWF`.
+- **OpenDCL** (`dcl_…`, hộp thoại của thư viện OpenDCL) chưa có. Danh sách lệnh AutoCAD 2027 nay đã có đủ (trừ `CAD` — không rõ chức năng, trợ giúp AutoCAD không mô tả).
+- Các lệnh cộng tác chạy cục bộ, không dùng dịch vụ đám mây của Autodesk:
+  - Vết can và Design Feed lưu kèm bản vẽ nhưng chỉ DVDCAD hiển thị — AutoCAD không thấy (định dạng Trace / Design Feed của Autodesk không công bố).
+  - `SHAREVIEW` tạo tệp .html (không phải link Autodesk Viewer); `PUSHTODOCS` lưu PDF, tự đưa lên hệ thống tài liệu.
+- `3DDWF` xuất glTF / trang 3D thay cho DWF 3D (định dạng HOOPS W3D không công bố).
+- `VIEWCOMPONENT`: vùng gạch của khối bị cắt không bị khối "Không cắt" che (khi hai khối chồng lên nhau). `VIEWSETPROJ` chỉ ghi nhớ dự án — chưa đọc mô hình Inventor (.ipt / .iam).
 - ACISOUT ghi khối dạng mặt phẳng (mặt cong thành nhiều mặt phẳng nhỏ). Đã kiểm bằng bộ đọc ACIS của DVDCAD, chưa thử với AutoCAD.
 - Mặt NURBS:
   - `SURFFILLET` chỉ bo giữa hai mặt phẳng.

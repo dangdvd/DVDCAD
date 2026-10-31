@@ -227,6 +227,8 @@
   const depth = r => { let k = 0, p = r; while(p && p.par != null && k < 50){ p = DV.get(p.par); k++; } return k; };
   const kids = id => [...DV.values()].filter(r => r.par === id);
   function descend(ids){ const S = new Set(ids); let ch = true; while(ch){ ch = false; for(const r of DV.values()) if(r.par != null && S.has(r.par) && !S.has(r.id)){ S.add(r.id); ch = true; } } return [...S].map(i => DV.get(i)).filter(Boolean).sort((a, b) => depth(a) - depth(b)); }
+  // VIEWCOMPONENT: khối 3D không tham gia mặt cắt (none) / cắt lát mỏng (slice) — rec.comp = { pid: mode }, khối mang e.pid
+  function partMap(r){ const C = {}, chain = []; let p = r, k = 0; while(p && k++ < 50){ chain.unshift(p); p = p.par != null ? DV.get(p.par) : null; } for(const q of chain) Object.assign(C, q.comp || {}); if(!Object.keys(C).length) return null; const M = new Map(); for(const e of ME()) if(e.type === 'SOLID3D' && e.pid && C[e.pid]) M.set(e, C[e.pid]); return M.size ? M : null; }
   // dựng lại (hoặc dựng mới) các hình chiếu; một lần commit, hoàn tác được
   async function regen(recs, msg, opt){
     opt = opt || {}; ensureLayers();
@@ -239,7 +241,7 @@
       if(r.cut) mapCut(r, sh); if(r.det) r.det = Object.assign({}, r.det, { c: sh(r.det.c) }); }
     const need = recs.filter(r => r.k !== 'det');
     const shots = new Map();
-    if(need.length){ const ok = await withViewer(async V => { for(const r of need){ const s = r.k === 'sec' ? shootSection(V, r, DV.get(r.par)) : shootOn(V, r.d, r.u, null); if(!s) return false; shots.set(r.id, s); } return true; }); if(!ok){ log('Không dựng được hình chiếu (cần khung 3D).'); return false; } }
+    if(need.length){ const ok = await withViewer(async V => { for(const r of need){ A._secPart = r.k === 'sec' ? partMap(r) : null; let s; try{ s = r.k === 'sec' ? shootSection(V, r, DV.get(r.par)) : shootOn(V, r.d, r.u, null); } finally { A._secPart = null; } if(!s) return false; shots.set(r.id, s); } return true; }); if(!ok){ log('Không dựng được hình chiếu (cần khung 3D).'); return false; } }
     const made = new Map();   // id → đối tượng mới (để hình trích dùng nét mới của cha)
     for(const r of recs){
       for(const e of allEnts(r.id)) del.push(e);
@@ -451,5 +453,6 @@
       for(const id of [...DV.keys()]) if(!ids.has(id)) DV.delete(id);
     }catch(err){ console.warn('dview', err); } }; })(A.onLoad);
   A._dvRegistry = DV;
+  A._dvApi = { regen, idOf, isView, descend, viewEnts, allEnts, cutPts, cutType, partMap, dot, cross, unit, sub, add, mul };
   try{ DVDCmd.refresh && DVDCmd.refresh(); }catch(_){}
 })();

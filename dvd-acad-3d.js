@@ -412,7 +412,7 @@
       if(!V.cut) return; const B = cutBasis(), n = [cutPlane.normal.x, cutPlane.normal.y, cutPlane.normal.z], c = cutPlane.constant, q = size * 1e-7, eps = size * 2e-5;
       // gom đoạn cắt theo từng đối tượng (khối 'ext' có mặt bên / mặt đáy / mặt đỉnh là các lưới riêng — mặt cắt đứng cần nối chúng thành vòng kín)
       const byEnt = new Map(); for(const it of meshes0){ let g = byEnt.get(it.e); if(!g){ g = { it, ms: [] }; byEnt.set(it.e, g); } g.ms.push(it.m); }
-      for(const { it, ms } of byEnt.values()){ const segs = [];
+      for(const { it, ms } of byEnt.values()){ if(A._secPart && A._secPart.get(it.e) === 'none') continue; const segs = [];   // VIEWCOMPONENT: khối không tham gia mặt cắt
         for(const m of ms){ const p = m.p, I = m.i;
         const D = k => p[k * 3] * n[0] + p[k * 3 + 1] * n[1] + p[k * 3 + 2] * n[2] + c;
         for(let t = 0; t + 2 < I.length; t += 3){ const ix = [I[t], I[t + 1], I[t + 2]], d = ix.map(D); const P = [];
@@ -650,26 +650,28 @@
       if(o.up) fc.up.set(o.up[0], o.up[1], o.up[2]); else fc.up.copy(oc.up); fc.position.set(ctr.x + dir[0] * D, ctr.y + dir[1] * D, ctr.z + dir[2] * D); fc.lookAt(ctr); fc.updateMatrixWorld(true); fc.updateProjectionMatrix();
       const W = 2048, H = 2048, rt = new T.WebGLRenderTarget(W, H);
       const dm = new T.ShaderMaterial({ vertexShader: '#include <clipping_planes_pars_vertex>\nvoid main(){\n vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);\n gl_Position = projectionMatrix * mvPosition;\n#include <clipping_planes_vertex>\n}', fragmentShader: '#include <clipping_planes_pars_fragment>\nvec4 pk(float v){ vec4 e = vec4(1.0, 255.0, 65025.0, 16581375.0) * v; e = fract(e); e -= e.yzww * vec4(1.0/255.0, 1.0/255.0, 1.0/255.0, 0.0); return e; }\nvoid main(){\n#include <clipping_planes_fragment>\n gl_FragColor = pk(gl_FragCoord.z);\n}', side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4, clipping: true });
-      const ds = new T.Scene(); for(const o of solids) ds.add(new T.Mesh(o.mesh.geometry, dm)); if(o.caps) for(const m of capGroup.children) ds.add(new T.Mesh(m.geometry, dm));   // mặt cắt (tô kín) che nét phía sau
+      // VIEWCOMPONENT: khối 'none' không bị cắt (vẽ cả khối, không mặt cắt), khối 'slice' chỉ còn mặt cắt (không có phần phía sau)
+      const SP = A._secPart || null, dsN = new T.Scene(), tmpG = [];
+      const ds = new T.Scene(); if(SP){ for(const it of meshes0){ const md = SP.get(it.e); if(md === 'slice') continue; const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(it.m.p, 3)); g.setIndex(it.m.i); tmpG.push(g); (md === 'none' ? dsN : ds).add(new T.Mesh(g, dm)); } } else for(const o of solids) ds.add(new T.Mesh(o.mesh.geometry, dm)); if(o.caps) for(const m of capGroup.children) ds.add(new T.Mesh(m.geometry, dm));   // mặt cắt (tô kín) che nét phía sau
       const oldCC = renderer.getClearColor(new T.Color()), oldCA = renderer.getClearAlpha(), oldTM = renderer.toneMapping; renderer.toneMapping = T.NoToneMapping;
-      renderer.setRenderTarget(rt); renderer.setClearColor(0xffffff, 1); renderer.clear(); renderer.render(ds, fc);
+      renderer.setRenderTarget(rt); renderer.setClearColor(0xffffff, 1); renderer.clear(); renderer.render(ds, fc); if(dsN.children.length){ const cp = renderer.clippingPlanes, ac = renderer.autoClear; renderer.clippingPlanes = []; renderer.autoClear = false; renderer.render(dsN, fc); renderer.clippingPlanes = cp; renderer.autoClear = ac; } for(const g of tmpG) g.dispose();
       const buf = new Uint8Array(W * H * 4); renderer.readRenderTargetPixels(rt, 0, 0, W, H, buf);
       renderer.setRenderTarget(null); renderer.setClearColor(oldCC, oldCA); renderer.toneMapping = oldTM; rt.dispose(); dm.dispose(); need = true;
       const dep = (x, y) => { if(x < 0 || y < 0 || x >= W || y >= H) return 2; const i = (y * W + x) * 4; return buf[i] / 255 + buf[i + 1] / 65025 + buf[i + 2] / 16581375 + buf[i + 3] / 4228250625; };
       const right = new T.Vector3().setFromMatrixColumn(fc.matrixWorld, 0), upv = new T.Vector3().setFromMatrixColumn(fc.matrixWorld, 1);
       const out = [], hid = [], seen = new Set(), seenH = new Set(), v3 = new T.Vector3(), czOn = !!V.cut && V.cutMode !== 'v' && V.cutMode !== 'p', cz = cutZ(), tol = 1.2e-3;
       const plOn = !!V.cut && (V.cutMode === 'p' || V.cutMode === 'v'), cutEps = size * 1e-6;
-      const cutAway = (x, y, z) => (czOn && z > cz + cutEps) || (plOn && cutPlane.normal.x * x + cutPlane.normal.y * y + cutPlane.normal.z * z + cutPlane.constant < -cutEps);
+      let noCut = false; const cutAway = (x, y, z) => !noCut && ((czOn && z > cz + cutEps) || (plOn && cutPlane.normal.x * x + cutPlane.normal.y * y + cutPlane.normal.z * z + cutPlane.constant < -cutEps));
       const vis = (x, y, z) => { if(cutAway(x, y, z)) return false; v3.set(x, y, z).project(fc); const px = (v3.x * .5 + .5) * W, py = (v3.y * .5 + .5) * H, d = v3.z * .5 + .5; const ix = Math.floor(px), iy = Math.floor(py); let m = 0; for(let a = -1; a <= 1; a++) for(let b = -1; b <= 1; b++){ const q = dep(ix + a, iy + b); if(q > m) m = q; } return d <= m + tol; };
       const emit = (p, q) => { const x1 = (p[0] - ctr.x) * right.x + (p[1] - ctr.y) * right.y + (p[2] - ctr.z) * right.z, y1 = (p[0] - ctr.x) * upv.x + (p[1] - ctr.y) * upv.y + (p[2] - ctr.z) * upv.z, x2 = (q[0] - ctr.x) * right.x + (q[1] - ctr.y) * right.y + (q[2] - ctr.z) * right.z, y2 = (q[0] - ctr.x) * upv.x + (q[1] - ctr.y) * upv.y + (q[2] - ctr.z) * upv.z;
         if(Math.hypot(x2 - x1, y2 - y1) < size * 1e-6) return; const r = v => Math.round(v / (size * 1e-6)); const k1 = r(x1) + ',' + r(y1), k2 = r(x2) + ',' + r(y2), key = k1 < k2 ? k1 + '|' + k2 : k2 + '|' + k1; const H = emit.h, sn = H ? seenH : seen; if(sn.has(key)) return; sn.add(key); (H ? hid : out).push(x1, y1, x2, y2); };
-      for(const it of meshes0){ let ed = _ed.get(it.m); if(!ed){ ed = edgeData(it.m); _ed.set(it.m, ed); } const L = viewEdges(ed, dir);
+      for(const it of meshes0){ const md = SP ? SP.get(it.e) : null; if(md === 'slice') continue; noCut = md === 'none'; let ed = _ed.get(it.m); if(!ed){ ed = edgeData(it.m); _ed.set(it.m, ed); } const L = viewEdges(ed, dir);
         for(let k = 0; k < L.length; k += 6){ const a = [L[k], L[k + 1], L[k + 2]], b = [L[k + 3], L[k + 4], L[k + 5]];
           v3.set(a[0], a[1], a[2]).project(fc); const ax = v3.x, ay = v3.y; v3.set(b[0], b[1], b[2]).project(fc); const pl = Math.hypot((v3.x - ax) * W / 2, (v3.y - ay) * H / 2); const n = Math.min(4000, Math.max(2, Math.ceil(pl / 1.5)));
           let run = -1, hr = -1; const P = t => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
           for(let s2 = 0; s2 <= n; s2++){ const t = s2 / n, q = P(t), ok = vis(q[0], q[1], q[2]); if(ok && run < 0) run = t; if((!ok || s2 === n) && run >= 0){ const t1 = ok ? t : (s2 - 1) / n; if(t1 > run && ((t1 - run) * pl >= 4 || (run === 0 && t1 === 1))) emit(P(run), P(t1)); run = -1; }
             if(o.hidden){ const hd = !ok && !cutAway(q[0], q[1], q[2]); if(hd && hr < 0) hr = t; if((!hd || s2 === n) && hr >= 0){ const t1 = hd ? t : (s2 - 1) / n; if(t1 > hr && (t1 - hr) * pl >= 4){ emit.h = 1; emit(P(hr), P(t1)); emit.h = 0; } hr = -1; } } } } }
-      if(o.hidden) out.hid = hid;
+      noCut = false; if(o.hidden) out.hid = hid;
       out.B = { r: [right.x, right.y, right.z], u: [upv.x, upv.y, upv.z], c: [ctr.x, ctr.y, ctr.z] };
       return out;
     }
@@ -770,7 +772,7 @@
     for(const e of list){ const m = meshOf(e); if(!m) continue; const ly = String(e.layer || '0').replace(/[^\x20-\x7e]/g, '_');
       let aci = 256; try{ if(!(e.bl || String(e.col || '').toLowerCase() === String(A.layerHex(e.layer || '0')).toLowerCase())) aci = A.aciNear(e.col || '#ffffff'); }catch(_){}
       const nf = m.i.length / 3; let xd = null;
-      if(e.type === 'SOLID3D'){ const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms', 'mapk', 'mapsc', 'matL', 'ns', 'imp']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
+      if(e.type === 'SOLID3D'){ const d = {}; for(const k of ['k', 'pts', 'holes', 'z0', 'h', 'tri', 'cx', 'cy', 'r', 'r2', 'mat', 'srf', 'ms', 'mapk', 'mapsc', 'matL', 'ns', 'imp', 'pid']) if(e[k] != null && !(e.k === 'mesh' && k === 'pts')) d[k] = e[k];
         let js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); if(js.length > 15000){ delete d.ms; js = JSON.stringify(d, (k, v) => typeof v === 'number' ? +v.toFixed(6) : v); } if(js.length > 15000) js = JSON.stringify({ k: 'mesh', mat: e.mat, srf: e.srf });
         xd = []; for(let k = 0; k < js.length; k += 240) xd.push(js.slice(k, k + 240)); }
       for(let t = 0; t < m.i.length; t += 3){ const q = [m.i[t], m.i[t + 1], m.i[t + 2], m.i[t + 2]]; P(0, '3DFACE'); P(8, ly); if(aci !== 256) P(62, aci); q.forEach((ix, j) => { P(10 + j, m.p[ix * 3]); P(20 + j, m.p[ix * 3 + 1]); P(30 + j, m.p[ix * 3 + 2]); });
@@ -798,7 +800,7 @@
       if(def && def.k && def.k !== 'mesh'){ const c = Object.assign({ type: 'SOLID3D' }, def); const m = meshOf(c);
         if(m && m.i.length / 3 === n){ const a = m.i[0] * 3; const z = (e.zs || [])[0] || 0; const sz = Math.max(1, Math.abs(m.p[a]) + Math.abs(m.p[a + 1]) + Math.abs(m.p[a + 2])); if(Math.abs(m.p[a] - e.pts[0].x) + Math.abs(m.p[a + 1] - e.pts[0].y) + Math.abs(m.p[a + 2] - z) < sz * 1e-6 + 1e-6) sol = c; } }
       if(!sol){ const P = [], I = []; for(const q of F){ const m = meshOf(q); const b = P.length / 3; for(const v of m.p) P.push(v); for(const t of m.i) I.push(t + b); } sol = meshEnt(P, I); if(sol && def && def.mat) sol.mat = def.mat; }
-      if(sol && def && sol.k === 'mesh'){ if(def.srf) sol.srf = 1; for(const k of ['mapk', 'mapsc', 'matL', 'imp']) if(def[k] != null) sol[k] = def[k]; if(def.ms && A.meshApplyMs){ try{ A.meshApplyMs(sol, def.ms); }catch(_){} } }
+      if(sol && def && sol.k === 'mesh'){ if(def.srf) sol.srf = 1; for(const k of ['mapk', 'mapsc', 'matL', 'imp', 'pid']) if(def[k] != null) sol[k] = def[k]; if(def.ms && A.meshApplyMs){ try{ A.meshApplyMs(sol, def.ms); }catch(_){} } }
       if(!sol){ for(const q of F) out.push(q); i += n - 1; continue; }
       sol.layer = e.layer; if(e.aci !== undefined) sol.aci = e.aci; for(const k of ['lt', 'lw', 'lts']) if(e[k] != null) sol[k] = e[k];
       out.push(sol); i += n - 1;

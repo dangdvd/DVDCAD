@@ -27,6 +27,39 @@ Trên **điện thoại** giữ giao diện gọn. Bấm nút **Công cụ** ở
 - Khi chọn đối tượng gõ được (`?` = liệt kê): `W` khung trùm, `C` khung cắt, `BOX`, `ALL`, `F` hàng rào, `WP` đa giác trùm, `CP` đa giác cắt, `G` theo tên nhóm, `L` vừa vẽ, `P` lần trước, `R` bỏ, `A` thêm lại, `U` hoàn tác lần chọn, `SI` chọn 1 lần là xong.
 - Gõ thẳng **tên biến hệ thống** ở dòng lệnh để xem / đổi giá trị (vd `OSMODE`, `PDMODE`, `CLIPROMPTLINES`).
 
+## Bổ sung như AutoCAD 2027 (v6o) — vết can, Design Feed, chia sẻ, xuất 3D, thành phần mặt cắt
+- **Vết can (Trace)** — thẻ Collaborate › Trace. Như tờ giấy can đặt lên bản vẽ: vẽ, ghi chú, góp ý mà không sửa bản vẽ gốc.
+  - `TRACE`: bảng vết can — tạo mới, mở, đổi tên, xoá. `-TRACE`: cùng việc đó ở dòng lệnh (Mới / Mở / Trước / Sau / Đóng / Danh sách / Xoá).
+  - `TRACEFRONT`: vết can ở trước — nét vẽ mới thuộc vết can; bản vẽ mờ đi và bị khoá.
+  - `TRACEBACK`: vết can ở sau — sửa bản vẽ bình thường; vết can hiện mờ và bị khoá.
+  - `TRACECLOSE`: đóng vết can (nét của vết can ẩn đi).
+  - Vết can lưu kèm DWG / DXF (dữ liệu DVDCAD), không lẫn vào hình học của bản vẽ, không in ra.
+  - Lệnh `TRACE` cũ (vẽ nét đậm có độ rộng) nay là `TRACEWIDE` (`TRACELINE`), giống AutoCAD 2022 trở đi.
+- **Design Feed**: `DESIGNFEEDOPEN` mở bảng bình luận, `DESIGNFEEDCLOSE` đóng.
+  - Viết bình luận, tuỳ chọn **Gắn vị trí trên bản vẽ** (chọn điểm → bong bóng số trên bản vẽ khi bảng đang mở).
+  - Trả lời, Phóng tới, Đã xong / Mở lại, Xoá. Người viết lấy từ biến `LOGINNAME`.
+  - Bình luận lưu kèm bản vẽ (DWG / DXF): người khác mở bản vẽ bằng DVDCAD là thấy.
+- `SHAREVIEW` (Shared Views): xuất layout đang xem hoặc mọi layout thành **một tệp .html tự chứa**.
+  - Bản vẽ dạng vector (SVG): phóng (lăn chuột, nút +/−), kéo, "Vừa khung", chuyển layout; kèm bình luận Design Feed.
+  - Gửi qua email / chat hoặc đặt lên web — người nhận mở bằng trình duyệt, không cần DVDCAD hay tài khoản.
+- `PUSHTODOCS`: chọn layout → PDF vector: một tệp nhiều trang hoặc mỗi layout một PDF (.zip), để đưa lên hệ thống tài liệu (Docs, SharePoint, Google Drive…).
+- `UPLOADTOCLOUD`: tải bản vẽ lên Google Drive của bạn (cấu hình Client ID + API Key trong Tuỳ chọn đám mây); chưa cấu hình thì có nút lưu tệp DXF.
+- `PUSHTOWEB`: đưa bản vẽ sang DVDCAD Web — qua Google Drive nếu đã cấu hình; nếu không thì lưu DXF và mở https://dangdvd.github.io/DVDCAD/ (kéo tệp vào trang để mở).
+- `3DDWF` (thẻ Output › 3D Print): xuất mô hình 3D để xem / chia sẻ.
+  - **glTF .glb** (chuẩn mở, đơn vị mét, trục Y lên): mở bằng Windows 3D Viewer, Blender, trình xem web.
+  - **Trang .html 3D tự chứa**: xoay / phóng / dời, nút ISO / Trên / Trước / Phải, bật tắt cạnh — mở bằng trình duyệt bất kỳ.
+  - Tuỳ chọn chỉ xuất đối tượng đang chọn.
+- **Hình chiếu (Model Documentation)** — thẻ Layout › Create View (mở rộng):
+  - `VIEWCOMPONENT`: chọn một thành phần (khối 3D) ngay trên hình chiếu → **Tham gia mặt cắt**:
+    - **Không**: khối không bị cắt, vẽ nguyên khối (như trục, bu lông, chốt trong bản vẽ cơ khí);
+    - **Cắt** (mặc định); **Lát**: chỉ còn mặt cắt, không vẽ phần phía sau.
+    - Đặt trên hình chiếu cha thì áp cho mọi mặt cắt con. Mặt cắt dựng lại ngay; lưu kèm DXF / DWG.
+  - `VIEWSYMBOLSKETCH`: chọn ký hiệu mặt cắt (đường cắt) hoặc biên hình trích → thành nét phác trên lớp MD_Sketch.
+    - Sửa bằng grip / STRETCH / PEDIT… (thêm điểm gãy → mặt cắt bậc).
+  - `VIEWSKETCHCLOSE`: **Lưu** → dựng lại mặt cắt / hình trích (và hình chiếu con) theo nét phác; **Bỏ** → giữ nguyên.
+  - `VIEWSETPROJ`: chọn tệp dự án Inventor (.ipj) — đọc thư mục làm việc và thư viện.
+    - DVDCAD chưa đọc mô hình Inventor (.ipt / .iam): xuất SAT từ Inventor rồi `ACISIN`, sau đó `VIEWBASE`.
+
 ## Bổ sung như AutoCAD 2027 (v6n) — ACIS, mặt NURBS, in dấu, nét khuất, đánh dấu, so sánh, dữ liệu
 - **Khối 3D**:
   - `ACISOUT`: xuất khối ra tệp ACIS `.sat` (bản 7.0). Mỗi khối là một body B-rep.
@@ -1228,7 +1261,7 @@ Xem `ADDIN-API.md`.
   - `DIMASSOC`: 2 = bám theo (mặc định), 0 / 1 = không bám.
 - `DIMROTATED`: kích thước thẳng đo theo góc cho trước.
 
-**Đa tuyến có độ rộng** (PLINE W / H, PEDIT W, TRACE, mây thư pháp, file DWG / DXF)
+**Đa tuyến có độ rộng** (PLINE W / H, PEDIT W, TRACEWIDE, mây thư pháp, file DWG / DXF)
 - Giữ đúng đỉnh thật, cung và cờ kín. Trước đây bị đổi thành đường hở nhiều đỉnh.
 - Góc được lấp kiểu vát nhọn (miter) như AutoCAD.
 - Vẫn giữ độ rộng khi kéo ô nắm, thêm / xoá đỉnh, FILLET / CHAMFER, OFFSET, BREAK, MOVE, ROTATE và MIRROR.
@@ -1377,7 +1410,7 @@ Nguyên nhân: các lệnh này sửa thẳng danh sách lớp, rồi bị trạ
 
 **Đa tuyến có độ rộng**
 - `PLINE` thêm **W** (độ rộng đầu / cuối) và **H** (nửa độ rộng) — vẽ nét đậm, mũi tên vát như AutoCAD.
-- `PEDIT` → **W**: đổi độ rộng cả đa tuyến (0 = nét mảnh). `TRACE` vẽ nét rộng.
+- `PEDIT` → **W**: đổi độ rộng cả đa tuyến (0 = nét mảnh). `TRACEWIDE` vẽ nét rộng (lệnh TRACE cũ; `TRACE` nay là vết can).
 - Lưu DXF giữ độ rộng (mã 40 / 41); đa tuyến rộng di chuyển / xoay / tỉ lệ / đối xứng đúng phần tô.
 
 **3D và tiện ích**

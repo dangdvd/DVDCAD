@@ -2185,7 +2185,7 @@
   window.entitiesToDXF = function(ents){
     if(A.dxfR2000 && A.dxfVer !== 'R12') return A.dxfR2000(ents, arguments[1]);   // mặc định: DXF 2018 (dvd-acad-dxf.js)
     ents = ents.filter(e => e && !e.xh);   // R12: không có SPATIAL_FILTER → chỉ ghi phần nhìn thấy của khối bị XCLIP
-    ents = ents.filter(e => e && !e.xr);   // tham chiếu ngoài (XREF) không ghi vào file
+    ents = ents.filter(e => e && !e.xr && !e.trc);   // tham chiếu ngoài (XREF), nét vết can (TRACE) không ghi vào file
     const L = []; const P = (c, v) => { L.push(String(c)); let s; if(typeof v === 'number') s = (c >= 10 && c < 60) ? _fmtReal(v) : String(v | 0); else s = String(v); L.push(s); };
     const layers = new Set(A.layerNames().filter(n => !n.includes('|'))); for(const e of ents) layers.add(String(e.layer || '0'));
     let ext = bboxOf(ents) || { x0: 0, y0: 0, x1: 100, y1: 100 };

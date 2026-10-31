@@ -221,7 +221,7 @@
      3) TRUY VẤN NHANH THEO HỘP BAO (dùng mảng số của app)
      ===================================================================== */
   function ensureBB(){ try{ if(bbDirty || bbN !== entities.length || !bbX0) buildBBoxCache(); }catch(_){} }
-  const isHiddenB = e => !!e.vh || hiddenUserLayers.has(e.layer || '0') || !!(OBJ_HIDE && OBJ_HIDE.has(e));
+  const isHiddenB = e => !!e.vh || hiddenUserLayers.has(e.layer || '0') || !!(OBJ_HIDE && OBJ_HIDE.has(e)) || !!(A.hideHook && A.hideHook(e));   // hideHook: vết can (TRACE) đang đóng
   const isHiddenE = e => !!e.xh || isHiddenB(e);   // xh: phần khối nằm ngoài đường XCLIP
   A.isHiddenE = isHiddenE;
   function queryBox(x0, y0, x1, y1, max, opt){
@@ -246,7 +246,7 @@
   const LS = A.LS = { cur: '0', color: 'BYLAYER', off: new Set(), frozen: new Set(), locked: new Set(), hex: {}, orig: {}, extra: new Set(), lw: 'BYLAYER',
     lt: 'BYLAYER', celts: 1, ltscale: null, layLT: {}, layLW: {}, layTP: {}, ltd: {}, origLT: {}, origLW: {}, origTP: {}, origLTS: 1 };
   function lsKey(){ try{ return baseKey ? 'lay::' + baseKey : null; }catch(_){ return null; } }
-  function isLockedE(e){ return !!(e && e.xr) || LS.locked.has((e && e.layer) || '0'); }   // tham chiếu ngoài (XREF) không sửa được
+  function isLockedE(e){ return !!(e && e.xr) || LS.locked.has((e && e.layer) || '0') || !!(e && A.lockHook && A.lockHook(e)); }   // tham chiếu ngoài (XREF) không sửa được
   A.isLocked = isLockedE;
   A.layerHex = n => LS.hex[n] || LS.orig[n] || '#ffffff';
   A.layerNames = () => { const s = new Set(['0']); try{ for(const L of layerList) s.add(L.name); }catch(_){} for(const n of LS.extra) s.add(n); for(const n of Object.keys(LS.hex)) s.add(n); return [...s].sort((a, b) => a === '0' ? -1 : b === '0' ? 1 : a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })); };

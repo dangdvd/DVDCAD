@@ -6,6 +6,22 @@
 Đọc **DXF** trực tiếp và **DWG** trực tiếp (qua LibreDWG biên dịch WebAssembly); ghi DXF (2000 → 2018) và **DWG 2018 / 2013 / 2010 / 2007 / 2004 / 2000** ngay trong app.
 Sau lần nạp đầu, app **chạy hoàn toàn offline** và **cài lên màn hình chính** iPhone như một app.
 
+## v6o: vết can (TRACE), Design Feed, SHAREVIEW, PUSHTODOCS, 3DDWF (glTF), VIEWCOMPONENT, VIEWSYMBOLSKETCH
+- Dữ liệu theo bản vẽ của các mô-đun: `A.docExt[k] = { get() }` → khoá `dx` trong XRECORD `DVDCAD_DATA` (`dvd-acad-dxf.js`). Mở tệp: `A._dxFile` → `apply(v)`; tệp không có dữ liệu → `local()` (localStorage theo tên bản vẽ).
+- `dvd-acad-x39.js`:
+  - Vết can: đối tượng mang `e.trc = id` nằm trong `modelEntities` nhưng bị bỏ khỏi ENTITIES khi ghi DXF / DWG (`writeR2000`, R12) — lưu riêng trong `dx.trace = { list, ents }`.
+  - `dvd-acad-core.js`: `isHiddenB` gọi `A.hideHook` (vết can đang đóng), `isLockedE` gọi `A.lockHook` (trước: khoá bản vẽ; sau: khoá vết can). `drawEntity` bọc để làm mờ (globalAlpha 0,3 / 0,45) và bỏ khi in.
+  - `A.newProps` bọc: vết can ở trước → đối tượng mới mang `trc`.
+  - Design Feed: `dx.feed = { posts: [{ id, by, t, txt, at, rp, done }] }`; bong bóng vẽ trong `window.draw` (toạ độ màn hình).
+  - SHAREVIEW: `A.plotRender(0, false, 'svg')` cho từng layout → trang HTML (pan / zoom bằng `transform`), không cần thư viện ngoài.
+  - PUSHTODOCS: `plotRender(…, true)` → `A.pdfBuild` (nhiều trang) hoặc từng PDF + `A.zipStore`.
+- `dvd-acad-x40.js`:
+  - `A.glbOf`: gom theo màu, Z lên → Y lên (x, z, −y), mét (`unitToMM / 1000`); lưới mịn: pháp tuyến trung bình theo đỉnh, lưới phẳng: tách đỉnh theo tam giác. GLB = header 12 byte + chunk JSON (đệm khoảng trắng) + chunk BIN (đệm 0), chỉ số Uint16 / Uint32 tuỳ số đỉnh.
+  - `A.html3D`: nhúng `vendor/three.min.js` + dữ liệu lưới base64 (Float32 / Uint32) vào một trang.
+  - VIEWCOMPONENT: tia qua điểm chọn theo hướng nhìn của hình chiếu (hình trích quy về hình chiếu cha), giao tam giác Möller–Trumbore, lấy giao điểm gần người nhìn nhất (mặt cắt: bỏ phần đã cắt). `rec.comp = { pid: 'none' | 'slice' }`, khối mang `e.pid` (khoá XDATA S3D); `partMap` gộp từ hình chiếu tổ tiên.
+  - `dvd-acad-3d.js` (`A._secPart` khi dựng mặt cắt): `buildCaps` bỏ khối 'none'; `flatshot` vẽ độ sâu khối 'none' ở lượt thứ hai không có mặt phẳng cắt, bỏ khối 'slice' (chỉ còn mặt cắt), và không áp `cutAway` cho cạnh của khối 'none'.
+  - VIEWSYMBOLSKETCH: nét phác mang `vsk = id hình chiếu`; đóng → `rec.cut.pts` / `rec.det` mới → `regen` (`A._dvApi`, `dvd-acad-x19.js`) cho hình chiếu đó và con cháu.
+
 ## v6n: ACISOUT, mặt NURBS, IMPRINT, HLSETTINGS, đánh dấu, so sánh xuất / nhập, DBCONNECT
 - `dvd-acad-x36.js`:
   - `A.planarFaces(mesh)`: hàn đỉnh, gộp tam giác kề cùng mặt phẳng (BFS theo cạnh, cùng pháp tuyến và hằng số mặt phẳng), biên = cạnh có hướng xuất hiện 1 lần → vòng (vòng ngoài = diện tích lớn nhất).

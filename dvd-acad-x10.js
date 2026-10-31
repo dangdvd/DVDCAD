@@ -355,7 +355,7 @@
   /* =====================================================================
      5) ĐỘ RỘNG ĐA TUYẾN — TRACE · giữ tứ giác tô khi dời / xoay / tỉ lệ / đối xứng
      ===================================================================== */
-  cmd(['TRACE'], 'Vẽ nét đậm có độ rộng (tô đặc)', async () => {
+  cmd(['TRACEWIDE', 'TRACELINE'], 'Vẽ nét đậm có độ rộng (tô đặc) — lệnh TRACE cũ của AutoCAD; TRACE nay là vết can (Trace)', async () => {
     const w = await A.getDist('Độ rộng nét', { def: A.MEM && A.MEM.trw || 1 }); if(!(w.num > 0)) return; if(A.MEM) A.MEM.trw = w.num;
     const r = await A.getPoint('Điểm đầu'); if(!r.pt) return; const P = [r.pt];
     for(;;){ const q = await A.getPoint('Điểm tiếp theo', { base: P[P.length - 1], kw: P.length > 1 ? [{ k: 'U', t: 'Bỏ đoạn' }] : [] }); if(q.kw === 'U'){ if(P.length > 1) P.pop(); continue; } if(!q.pt) break; if(dist(q.pt, P[P.length - 1]) > 1e-12) P.push(q.pt); }
