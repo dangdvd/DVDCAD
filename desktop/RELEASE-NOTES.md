@@ -43,7 +43,7 @@ Bản chưa ký số: Windows SmartScreen có thể cảnh báo, bấm **More in
   2. **ODA File Converter** và **ACadSharp** đọc lại các tệp DWG do DVDCAD ghi.
   3. Bộ đọc XPS của Windows mở tệp DWFx.
   4. Cài lặng bộ cài, chạy kiểm thử trên `DVDCAD.exe` đã cài, rồi gỡ cài.
-- Kiểm thử giao diện tự động (IGES / DXB 24 mục; OLE và lệnh tiện ích 37 mục):
+- Kiểm thử giao diện tự động (IGES / DXB 25 mục; OLE và lệnh tiện ích 37 mục):
   - IGES ghi rồi đọc lại:
     - đủ dòng 80 cột;
     - cung, tròn, elip (cung + đủ vòng), đa tuyến có cung (thuận + nghịch), spline → NURBS đúng hình;
